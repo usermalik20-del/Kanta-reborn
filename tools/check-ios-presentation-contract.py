@@ -13,6 +13,7 @@ def verify():
     host = (APP / 'Features/Host/HostView.swift').read_text()
     stage = (APP / 'Features/Host/KantaMainPlayerView.swift').read_text()
     stage_presentation = (APP / 'Features/Host/KantaStageSheetPresentation.swift').read_text()
+    stage_background = stage.split('@ViewBuilder private var stageBackground: some View {', 1)[1].split('\n    private var header:', 1)[0]
     fullscreen = (APP / 'Features/Host/FullscreenKaraokePlayerView.swift').read_text()
     fullscreen_presenter = (APP / 'Features/Host/SingingFullscreenPresentation.swift').read_text()
     test = TEST.read_text()
@@ -107,6 +108,11 @@ def verify():
             and 'presentationGate.request(.host) { activeHostSheet = .sessionSave }' in host
             and 'A completed session must not replace Library dismissal with a save sheet' in test
             and 'The deferred session must remain available for explicit saving' in test
+        ),
+        'decorative stage visuals cannot intercept control taps': (
+            stage_background.count('.allowsHitTesting(false)') == 2
+            and 'KantaCameraPreview(capture: camera.capture)' in stage_background
+            and 'KaraokeStageView(asset:' in stage_background
         ),
         'window tap probe uses supported, comparable geometry and removes its recognizer': (
             'NSCoder.string(for: point)' in stage

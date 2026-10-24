@@ -215,13 +215,18 @@ struct KantaMainPlayerView: View {
     }
 
     @ViewBuilder private var stageBackground: some View {
+        // These layers render the stage; they never own user interaction.
+        // SwiftUI drawing/video surfaces can extend their hit-test region beyond
+        // the visible card, so taps must pass through to the controls above them.
         if camera.isEnabled {
             KantaCameraPreview(capture: camera.capture)
+                .allowsHitTesting(false)
         } else {
             KaraokeStageView(asset: backgroundsEnabled ? model.backgroundAsset : nil,
                              builtInPreset: backgroundsEnabled ? selectedPreset : nil,
                              isPlaying: model.snapshot.transport == .playing,
                              showsWatermark: false)
+                .allowsHitTesting(false)
         }
     }
 
