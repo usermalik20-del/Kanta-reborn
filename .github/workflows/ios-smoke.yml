@@ -53,29 +53,3 @@ jobs:
             apps/ios/smoke.xcresult/**
           if-no-files-found: ignore
           retention-days: 7
-
-      - name: Install RTK CLI
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Run RTK Audio Analysis Suite
-        run: |
-          set -o pipefail
-          echo "Running RTK Gain Test..."
-          rtk gain | tee rtk-gain.log
-          echo "Running RTK Latency Test..."
-          sudo rtk latency | tee rtk-latency.log
-          echo "Running RTK Spectral Integrity Test..."
-          rtk spectral | tee rtk-spectral.log
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: rtk-analysis-logs
-          path: |
-            apps/ios/rtk-gain.log
-            apps/ios/rtk-latency.log
-            apps/ios/rtk-spectral.log
-          if-no-files-found: ignore
-          retention-days: 7

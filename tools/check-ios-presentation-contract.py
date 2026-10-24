@@ -12,6 +12,7 @@ def verify():
     root = (APP / 'App/RootView.swift').read_text()
     host = (APP / 'Features/Host/HostView.swift').read_text()
     stage = (APP / 'Features/Host/KantaMainPlayerView.swift').read_text()
+    stage_presentation = (APP / 'Features/Host/KantaStageSheetPresentation.swift').read_text()
     fullscreen = (APP / 'Features/Host/FullscreenKaraokePlayerView.swift').read_text()
     fullscreen_presenter = (APP / 'Features/Host/SingingFullscreenPresentation.swift').read_text()
     test = TEST.read_text()
@@ -29,15 +30,17 @@ def verify():
             and 'showingHostControls' not in host
         ),
         'stage uses one sheet coordinator': '.sheet(item: $activeStageSheet' in stage and 'showingSearch' not in stage and 'showingQueue' not in stage,
-        'embedded Stage and Host panels share one root sheet identity': (
-            '.sheet(item: $activeHostSheet' in host
-            and 'case .stageSearch:' in host
-            and 'case .stageQueue:' in host
-            and '.sheet(item: $activeStageSheet' not in host
-            and 'setEmbeddedStageSheet' in host
+        'embedded Stage Search/Queue use a stable UIKit presenter': (
+            '@State private var activeEmbeddedStageSheet: KantaStageSheet?' in host
+            and 'KantaEmbeddedStageSheetPresentation(' in host
+            and 'activeEmbeddedStageSheet = stageSheet' in host
+            and 'case .stageSearch' not in host
+            and 'case .stageQueue' not in host
+            and 'struct KantaEmbeddedStageSheetPresentation: UIViewControllerRepresentable' in stage_presentation
+            and 'UIAdaptivePresentationControllerDelegate' in stage_presentation
+            and 'presentationControllerDidDismiss' in stage_presentation
+            and 'completeDismissal(.stage)' in stage_presentation
             and 'setEmbeddedStageSheet' in stage
-            and 'stageSheetContent(_ sheet: KantaStageSheet)' in host
-            and 'presentationGate.completeDismissal(dismissedOwner)' in host
             and 'ZStack {\n            hostContent' in host
         ),
         'fullscreen Search/Queue keep a separate child presenter': (
@@ -47,7 +50,8 @@ def verify():
         ),
         'fullscreen Search has a unique accessibility identity': (
             'stage.search.fullscreen' in stage
-            and 'stage.search.fullscreen' in test
+            and 'let fullscreenSearch = app.buttons["stage.search.fullscreen"]' in test
+            and 'let search = app.buttons["stage.search"]' in test
         ),
         'fullscreen reuses host presentation gate': (
             'presentationGate: presentationGate' in host

@@ -14,16 +14,12 @@ struct HostView: View {
     @State private var dismissedHostSheet: HostSheet?
     @State private var activeHostSheet: HostSheet? =
         ProcessInfo.processInfo.environment["KANTA_CONTROL_EXPANDED"] == "1" ? .controls : nil
+    @State private var activeEmbeddedStageSheet: KantaStageSheet?
     private enum HostSheet: String, Identifiable {
-        case controls, sessionSave, favorites, stageSearch, stageQueue
+        case controls, sessionSave, favorites
         var id: String { rawValue }
 
-        var presentationOwner: KantaPresentationGate.Owner {
-            switch self {
-            case .stageSearch, .stageQueue: return .stage
-            case .controls, .sessionSave, .favorites: return .host
-            }
-        }
+        var presentationOwner: KantaPresentationGate.Owner { .host }
     }
     @StateObject private var model: HostViewModel
     @ObservedObject private var networkHost: BonjourHostAdvertiser
@@ -81,79 +77,10 @@ struct HostView: View {
         ZStack {
             hostContent
         }
-        // Embedded Stage Search/Queue and Host panels share one presenter; keep
-        // this as the only HostView sheet to avoid competing iPad presentations.
-        .sheet(item: $activeHostSheet, onDismiss: {
-            let dismissedOwner = dismissedHostSheet?.presentationOwner
-                ?? (presentationGate.owner == .stage ? .stage : .host)
-            if dismissedHostSheet == .sessionSave {
-                model.showingSessionSavePrompt = false
-            }
-            dismissedHostSheet = nil
-            if pendingFullscreen {
-                pendingFullscreen = false
-                // Queue fullscreen before releasing CONTROL so the gate owns the
-                // transition continuously, including while the sheet animates out.
-                presentationGate.request(.fullscreen) { showingFullscreenPlayer = true }
-            }
-            presentationGate.completeDismissal(dismissedOwner)
-        }) { sheet in
-            switch sheet {
-            case .controls:
-                NavigationStack {
-                    hostControls
-                        .sheet(isPresented: $showingYouTubePreview) {
-                            KantaYouTubePreviewSheet(localPlaybackActive: model.snapshot.transport == .playing,
-                                controller: controller, audioOwnership: audioOwnership)
-                        }
-                        .safeAreaInset(edge: .bottom) {
-                            Button(action: openFullscreenPlayer) {
-                                Label("Open fullscreen player", systemImage: "arrow.up.left.and.arrow.down.right")
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .accessibilityIdentifier("controls.openFullscreen")
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(.regularMaterial)
-                        }
-                        .navigationTitle("CONTROL")
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") {
-                                    presentationGate.beginDismissal(.host)
-                                    activeHostSheet = nil
-                                }
-                                .accessibilityIdentifier("controls.done")
-                            }
-                        }
-                }
-            case .sessionSave:
-                SaveSessionFavoritesView(model: model)
-            case .favorites:
-                SavedFavoritesView(model: model)
-            case .stageSearch:
-                stageSheetContent(.search)
-            case .stageQueue:
-                stageSheetContent(.queue)
-            }
-        }
+        .sheet(item: $activeHostSheet, onDismiss: handleHostSheetDismissal, content: hostSheetContent)
         .navigationTitle("Karaoke Host")
         .navigationBarTitleDisplayMode(.large)
-        .background {
-            SingingFullscreenPresentation(
-                isPresented: $showingFullscreenPlayer,
-                model: model,
-                backgroundsEnabled: settings.stageVisualsEnabled,
-                selectedPreset: settings.selectedVisualPreset,
-                camera: camera,
-                presentationGate: presentationGate,
-                microphoneBusy: microphonePitchMonitor.status == .running
-                    || microphonePitchMonitor.status == .requestingPermission
-            )
-            .frame(width: 1, height: 1)
-        }
+        .background { hostPresentationAnchors }
         .onChange(of: model.snapshot.transport) {
             intermission.sync(model.snapshot.transport)
         }
@@ -262,6 +189,90 @@ struct HostView: View {
 
 
 
+    private func handleHostSheetDismissal() {
+        if dismissedHostSheet == .sessionSave {
+            model.showingSessionSavePrompt = false
+        }
+        dismissedHostSheet = nil
+        if pendingFullscreen {
+            pendingFullscreen = false
+            // Queue fullscreen before releasing CONTROL so the gate owns the
+            // transition continuously, including while the sheet animates out.
+            presentationGate.request(.fullscreen) { showingFullscreenPlayer = true }
+        }
+        presentationGate.completeDismissal(.host)
+    }
+
+    @ViewBuilder
+    private func hostSheetContent(_ sheet: HostSheet) -> some View {
+        switch sheet {
+        case .controls:
+            NavigationStack {
+                hostControls
+                    .sheet(isPresented: $showingYouTubePreview) {
+                        KantaYouTubePreviewSheet(
+                            localPlaybackActive: model.snapshot.transport == .playing,
+                            controller: controller,
+                            audioOwnership: audioOwnership
+                        )
+                    }
+                    .safeAreaInset(edge: .bottom) {
+                        Button(action: openFullscreenPlayer) {
+                            Label("Open fullscreen player", systemImage: "arrow.up.left.and.arrow.down.right")
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("controls.openFullscreen")
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(.regularMaterial)
+                    }
+                    .navigationTitle("CONTROL")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                presentationGate.beginDismissal(.host)
+                                activeHostSheet = nil
+                            }
+                            .accessibilityIdentifier("controls.done")
+                        }
+                    }
+            }
+        case .sessionSave:
+            SaveSessionFavoritesView(model: model)
+        case .favorites:
+            SavedFavoritesView(model: model)
+        }
+    }
+
+    private var hostPresentationAnchors: some View {
+        ZStack {
+            SingingFullscreenPresentation(
+                isPresented: $showingFullscreenPlayer,
+                model: model,
+                backgroundsEnabled: settings.stageVisualsEnabled,
+                selectedPreset: settings.selectedVisualPreset,
+                camera: camera,
+                presentationGate: presentationGate,
+                microphoneBusy: microphonePitchMonitor.status == .running
+                    || microphonePitchMonitor.status == .requestingPermission
+            )
+            .frame(width: 1, height: 1)
+
+            KantaEmbeddedStageSheetPresentation(
+                sheet: $activeEmbeddedStageSheet,
+                model: model,
+                singerName: $singerName,
+                microphoneBusy: microphonePitchMonitor.status == .running
+                    || microphonePitchMonitor.status == .requestingPermission,
+                presentationGate: presentationGate
+            )
+            .frame(width: 1, height: 1)
+        }
+        .allowsHitTesting(false)
+    }
+
     private var hostContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -279,20 +290,6 @@ struct HostView: View {
             .frame(maxWidth: .infinity)
         }
         .background(.black)
-    }
-
-    private func stageSheetContent(_ sheet: KantaStageSheet) -> some View {
-        KantaStageSheetContent(
-            sheet: sheet,
-            model: model,
-            singerName: $singerName,
-            microphoneBusy: microphonePitchMonitor.status == .running
-                || microphonePitchMonitor.status == .requestingPermission,
-            onClose: {
-                presentationGate.beginDismissal(.stage)
-                activeHostSheet = nil
-            }
-        )
     }
 
     private var embeddedStage: some View {
@@ -317,14 +314,7 @@ struct HostView: View {
             embedded: true,
             onExpand: openFullscreenPlayer,
             setEmbeddedStageSheet: { stageSheet in
-                guard let stageSheet else {
-                    activeHostSheet = nil
-                    return
-                }
-                switch stageSheet {
-                case .search: activeHostSheet = .stageSearch
-                case .queue: activeHostSheet = .stageQueue
-                }
+                activeEmbeddedStageSheet = stageSheet
             }
         )
     }

@@ -114,7 +114,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         openFullscreen.tap()
         let fullscreenExit = app.buttons["fullscreen.exit"]
         XCTAssertTrue(fullscreenExit.waitForExistence(timeout: waitSeconds))
-        let fullscreenSearch = app.buttons["stage.search"]
+        let fullscreenSearch = app.buttons["stage.search.fullscreen"]
         XCTAssertTrue(fullscreenSearch.waitForExistence(timeout: waitSeconds))
         fullscreenSearch.tap()
         XCTAssertTrue(keypadZero.waitForExistence(timeout: 10), "Search did not present inside fullscreen")

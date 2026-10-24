@@ -4,6 +4,8 @@ Date: 2026-10-15. Destination: kanta-gelo/Kanta-reborn.
 
 ## Current checkpoint
 
+Main is currently at `ca23b87871feb5b384c1613d8ba9d75457575456`. Reconstruction run [#40083690132](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40083690132) passed Android validation but failed the iOS source guard because the fullscreen Search XCTest used the embedded Search accessibility identifier. The full iPhone/iPad walkthrough [#40081230815](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40081230815) failed: iPhone hit the same fullscreen identifier mismatch, and iPad still did not expose the embedded Search keypad. The unsigned iOS archive succeeded in [#40081230851](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40081230851), but it is not a release. PR #67 carries the test-contract correction and a dedicated UIKit presenter candidate for embedded Stage Search/Queue; exact-head hosted validation is required before acceptance.
+
 PR #1 merged at `1720a54f31123f2ef59d41383dc41ef06c5855d5`. Run 38748040876 passed all 158 Swift package tests, unsigned Release simulator compilation, Android APK/lint/domain/browser checks. Historical entries below record earlier states; they are not current failure claims. The current Android media branch adds custom SF2, folder imports and controls; changed-head cloud and emulator acceptance remain pending.
 
 ## Completed preparation

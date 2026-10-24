@@ -1,10 +1,24 @@
+# Codebase Context Packet — KANTA Reborn
+
+## Current source and acceptance snapshot — October 24, 2026
+
+Canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn). Main source is `ca23b87871feb5b384c1613d8ba9d75457575456`. The latest main reconstruction [#40083690132](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40083690132) passes Android validation but fails an iOS source guard because the fullscreen Search XCTest still queries `stage.search` instead of the production identifier `stage.search.fullscreen`. The full iPhone/iPad walkthrough [#40081230815](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40081230815) also fails: the iPhone hits that identifier mismatch, while the iPad does not expose `stage.keypad.0` after embedded Search. The unsigned iOS archive passed in [#40081230851](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40081230851); this is not signed or device-accepted release evidence.
+
+PR #67 (current candidate branch) corrects the fullscreen test identifier and strengthens the source contract. It also moves embedded Stage Search/Queue to a dedicated UIKit presenter mounted in HostView's background, while retaining HostView's SwiftUI sheet for CONTROL/session-save/Favorites and the fullscreen player's own child sheet. The candidate uses the existing `KantaPresentationGate` and `HostViewModel`; no second queue or playback state is introduced. Hosted validation is running on the changing PR head; do not treat earlier checks as validation of the latest commit. Required acceptance is source guard, Swift package tests, focused iPhone smoke, reconstruction, and the complete iPhone/iPad walkthrough on one exact final SHA.
+
+The iOS and Android `SoundFontValidator` implementations currently allow up to 5 GiB and check only the RIFF/SFBK header. Classic RIFF uses a 32-bit declared size, so the 5 GiB cap and missing declared-length consistency check are an independent source-review hardening item; no failure or fix is claimed for it in this candidate.
+
+The latest available main iOS artifact is unsigned and sourced from `ca23b878`; it is only a personal-signing input. No signed IPA, published GitHub Release, or accepted current-head download package has been verified.
+
+## Historical implementation context
+
 ## Active iOS encrypted controller batch — 2026-10-16
 
 Baseline main after Android 0.10 publication. No open pull requests were returned before editing. Swift 6.2 / iOS 17 SwiftUI and Network.framework with system CryptoKit; no new dependency. LocalKaraokeController remains the iOS queue authority; Android SessionController owns the remotely controlled queue. Existing SQLite/bookmarked storage, MIDI/AVFoundation audio and imported media are unchanged.
 
 KCP1 client work connects only to explicit numeric RFC1918 IPv4 on port 45731. It will match the accepted Android handshake and direction-separated records, allow one outstanding request, expire/revoke on foreground loss and never fall back to the recovered plaintext remote. This batch implements iPhone/iPad controller → Android host; encrypted iOS hosting is a separate remaining milestone. Existing Bonjour/PIN remote remains explicitly legacy. No measured device latency or network reliability is inferred. Swift compilation, shared vectors, actual socket exchange and app build require cloud acceptance; local Python/layout checks are preliminary only.
 
-# Codebase Context Packet — KANTA Reborn
+## Prior baseline context
 
 Current snapshot: merged Android stage/party and iOS runtime work, verified download packaging and restored website. Native source revisions and checks are listed below and in the root README. This is a testing reconstruction, not a signed production release.
 

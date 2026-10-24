@@ -88,12 +88,12 @@ The real playback walkthrough waits for a rendered stage Search button after clo
 
 ## iOS modal request lifecycle
 
-The Root, Host and Stage SwiftUI sheet owners share `KantaPresentationGate`. The gate holds a request received while another sheet is presented or dismissing, coalesces a second pending request from the same owner, and activates the first pending action only after the current owner reports `onDismiss`. The Search walkthrough deliberately taps once after leaving Library; do not add retries or fixed sleeps to mask a dropped presentation request. UIKit fullscreen remains a separately owned presenter and is not covered by this gate yet.
+RootView's navigation sheet and HostView's CONTROL/session-save/Favorites sheet remain SwiftUI-owned. Embedded Stage Search/Queue use `KantaEmbeddedStageSheetPresentation`, a stable UIKit presenter attached to the Host background; navigation, Host and Stage requests are serialized by `KantaPresentationGate`. Embedded Stage dismissal completes `.stage` from UIKit's presentation/dismissal callback, while the other owners complete from their own `onDismiss`. The fullscreen projection retains its separate child Search/Queue sheet. Keep embedded Search/Queue out of the Host SwiftUI sheet and never add sleeps/retries to conceal a dropped presentation request.
 
 
 ### iOS fullscreen presentation ownership candidate
 
-The presentation contract guard checks that the UIKit fullscreen presenter acquires and releases `KantaPresentationGate` ownership through its dismissal callback, and that the gate restores fullscreen after a nested Search/Queue sheet. The UI walkthrough opens fullscreen from CONTROL, uses Search inside fullscreen, exits, and verifies normal-stage Search can present afterward. Run `tools/check-ios-presentation-contract.py` and the full reconstruction validation on the candidate SHA. A green run on a different SHA does not validate it.
+The presentation contract guard checks that the UIKit fullscreen presenter acquires and releases `KantaPresentationGate` ownership through its dismissal callback, and that the gate restores fullscreen after a nested Search/Queue sheet. The UI walkthrough opens fullscreen from CONTROL, uses Search inside fullscreen, exits, and verifies normal-stage Search can present afterward. Embedded Search/Queue are independently presented by `KantaEmbeddedStageSheetPresentation`; the embedded control uses `stage.search` and the fullscreen control uses `stage.search.fullscreen`. Run `tools/check-ios-presentation-contract.py` and the full reconstruction validation on the candidate SHA. A green run on a different SHA does not validate it.
 
 
 ## Automatic workflow triggers and release boundary
@@ -107,7 +107,7 @@ Reconstruction validation runs for relevant app, tool and workflow changes on fe
 - `ios-visual-walkthrough.yml` runs the full four-case XCTest walkthrough separately on both iPhone and iPad, with screenshots, recordings and failure diagnostics. It is manually dispatchable, scheduled weekly (Tuesday 03:00 Asia/Manila; Monday 19:00 UTC), and triggered by `ios-rc-*` tags. It does not run on ordinary pull requests or documentation commits.
 - A release candidate requires a successful visual walkthrough on the **exact candidate SHA**; weekly or unrelated-commit green evidence cannot substitute for release acceptance. CI does not sign, publish or deploy.
 - `ios-smoke.yml` runs `testFocusedNavigationSmoke` on an iPhone simulator for relevant iOS PR changes. It checks Search, fullscreen dismissal and Search recovery. This is not the full iPhone/iPad release walkthrough.
-- This split deliberately prevents the expensive walkthrough from blocking ordinary merges while keeping the full iPhone/iPad visual acceptance mandatory for release.
+- This split deliberately prevents the expensive walkthrough from blocking ordinary merges while keeping the full iPhone/iPad visual acceptance mandatory for release. The embedded Stage UIKit-presenter repair must pass the complete suite on both devices on the exact final candidate SHA; build-only and source-guard success are not device acceptance.
 
 ## GitHub Actions cost controls (October 2026)
 
@@ -151,3 +151,8 @@ Android instrumentation additionally exercises the production HTTPS adapter agai
 ### Browser-host identity entitlement gate (October 18, 2026)
 
 PR #51 native XCTest now compiles in Release through a test-only Swift SPI. Reconstruction passed at `215e02a` in run 39136036615. Focused iPhone run 39136036597 executed the native Keychain round trip and failed `SecItemAdd` with `errSecMissingEntitlement` (`-34018`), while five WebKit lifecycle and four focused UI tests passed. The existing workflow uses `CODE_SIGNING_ALLOWED=NO`. Keychain acceptance requires a separately authorized entitled simulator test host with inspected signature entitlements, then the **same** certificate/private-key/removal assertions executed and passing. This is not a reason to delete or skip the test, weaken production Keychain checks or claim signed/physical-device acceptance. See `docs/CI_FAILURE_REPAIR_LEDGER.md`.
+
+## Focused iOS smoke workflow integrity — October 24, 2026
+
+Focused simulator smoke must gate on KANTA-owned source checks, native lifecycle tests, named XCTest cases, and retained test evidence. Do not install unrelated external CLIs or label them audio analysis. On PR #67 head `61057d0`, the app build and focused XCTest step passed, including the four selected UI cases, but the overall job failed afterward at `rtk latency` with `must be run as root`. Inspection of the upstream [rtk-ai/rtk project](https://github.com/rtk-ai/rtk) confirms it is an LLM token-optimization CLI, not an audio measurement tool. The step was introduced by PR #65 and also piped a mutable remote install script directly into a shell. The repair removes this unrelated dependency rather than escalating it with sudo. Any future audio-quality/latency gate must use a KANTA-specific fixture or measurement tool with documented metrics, bounded permissions, and independently verified results; this smoke suite makes no audio-quality claim.
+
