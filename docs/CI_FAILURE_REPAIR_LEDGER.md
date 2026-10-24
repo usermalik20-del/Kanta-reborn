@@ -325,3 +325,18 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 **Repair:** mark both `KantaCameraPreview` and `KaraokeStageView` branches in `stageBackground` as non-hit-testable. These are display-only layers; user interaction must be handled by the explicit Search/Camera/Expand controls. The source guard checks that both branches carry `.allowsHitTesting(false)`.
 
 **Acceptance:** source-contract guard, Swift package tests, simulator build, focused smoke, reconstruction, unsigned archive, and the full iPhone/iPad walkthrough must pass on one exact candidate SHA. In particular, confirm that a Search tap no longer resolves to the oversized drawing surface and that `stage.keypad.0` appears on iPad. Build success or an iPhone-only pass is not device acceptance.
+
+
+## iOS — Main-menu walkthrough exceeds the per-test budget (2026-10-25)
+
+**Fingerprint:** `KantaVisualWalkthroughUITests.testMainMenuButtonsAndScreens`; XCTest message `exceeded execution time allowance of 2 minutes`; iPad simulator in [walkthrough run #40136025937](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937), source SHA `d01504e42b3e00735bb429b05e9ec886149911fe`.
+
+**Related results:** reconstruction [#40136025964](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025964) and unsigned archive [#40136025858](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858) passed. The iPhone stage passed. The iPad compact evidence is [artifact #12577317727](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937/artifacts/12577317727).
+
+**Confirmed cause:** the main-menu test relaunches and terminates the app for each of six destinations. On the iPad simulator, the sixth navigation flow was still progressing at 120 seconds; XCTest timed out and restarted the runner. The required-test manifest correctly rejected the run because `testMainMenuButtonsAndScreens` had no passing completion. This is a test-budget/lifecycle inefficiency, not evidence that Search still fails: in the same run, the keypad-focused tests passed and the tap trace showed Search reaching `_UIShapeHitTestingView`, requesting/activating the Search sheet, and beginning presentation.
+
+**Candidate fix:** keep one app process alive across the six menu destinations; after each screenshot, dismiss through the existing `navigation.done` accessibility identifier, wait for that destination to leave the hierarchy, and verify the Stage More button is visible again before opening the next destination. Preserve all six destinations and screenshot attachments. Do not raise the global timeout or weaken the required-test set merely to hide the repeated cold-start cost.
+
+**Regression:** `testMainMenuButtonsAndScreens` must complete and appear in the passed-test manifest on both iPhone and iPad; each destination must be opened, captured, and dismissed. Search keypad tests remain required.
+
+**Validation:** `candidate`; code change [`8e67e1e`](https://github.com/usermalik20-del/Kanta-reborn/commit/8e67e1e2953c0e13f077ac87421b7cd44cea1ab9). Hosted validation on the final repair SHA is pending. Do not mark verified until the full walkthrough and reconstruction pass on the exact accepted SHA.
