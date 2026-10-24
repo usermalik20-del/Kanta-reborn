@@ -308,17 +308,34 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
     func testMainMenuButtonsAndScreens() throws {
         let app = XCUIApplication()
         app.launchEnvironment["KANTA_DEMO_MODE"] = "0"
+        app.launch()
+        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: waitSeconds))
+
+        // Keep one app process alive. Relaunching for every destination made this
+        // six-screen smoke test exceed XCTest's two-minute default on iPad.
+        // Each destination is still opened, captured, and explicitly dismissed.
         for destination in ["Song Library", "KANTA Songbook", "Settings",
                             "Companion Remote", "iCloud Save", "Legal & Privacy"] {
-            app.launch()
-            XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: waitSeconds))
             openMenu(in: app, expecting: destination)
             let button = app.buttons[destination].firstMatch
             XCTAssertTrue(button.waitForExistence(timeout: 5))
             waitForRendered(button, in: app)
             button.tap()
             capture("menu-" + destination, app)
-            app.terminate()
+
+            let done = app.buttons["navigation.done"]
+            XCTAssertTrue(done.waitForExistence(timeout: waitSeconds),
+                          "The navigation host must provide Done for: " + destination)
+            waitForRendered(done, in: app)
+            done.tap()
+
+            let destinationDismissed = NSPredicate(format: "exists == false")
+            expectation(for: destinationDismissed, evaluatedWith: done)
+            waitForExpectations(timeout: waitSeconds)
+            let more = app.buttons["More"].firstMatch
+            XCTAssertTrue(more.waitForExistence(timeout: waitSeconds),
+                          "The Stage must return after dismissing: " + destination)
+            waitForRendered(more, in: app)
         }
     }
 
