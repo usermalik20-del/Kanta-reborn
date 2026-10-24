@@ -321,6 +321,17 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
             XCTAssertTrue(button.waitForExistence(timeout: 5))
             waitForRendered(button, in: app)
             button.tap()
+
+            let expectedTitle = [
+                "Song Library": "Library",
+                "KANTA Songbook": "KANTA Songbook",
+                "Settings": "Settings",
+                "Companion Remote": "CONTROL",
+                "iCloud Save": "iCloud Save",
+                "Legal & Privacy": "Legal & Privacy"
+            ][destination]!
+            XCTAssertTrue(app.navigationBars[expectedTitle].waitForExistence(timeout: waitSeconds),
+                          "Menu destination did not present its expected screen: " + destination)
             capture("menu-" + destination, app)
 
             let done = app.buttons["navigation.done"]
