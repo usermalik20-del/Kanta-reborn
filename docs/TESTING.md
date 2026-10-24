@@ -188,3 +188,14 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 **Repair:** mark both `KantaCameraPreview` and `KaraokeStageView` branches in `stageBackground` as non-hit-testable. These are display-only layers; user interaction must be handled by the explicit Search/Camera/Expand controls. The source guard checks that both branches carry `.allowsHitTesting(false)`.
 
 **Acceptance:** source-contract guard, Swift package tests, simulator build, focused smoke, reconstruction, unsigned archive, and the full iPhone/iPad walkthrough must pass on one exact candidate SHA. In particular, confirm that a Search tap no longer resolves to the oversized drawing surface and that `stage.keypad.0` appears on iPad. Build success or an iPhone-only pass is not device acceptance.
+
+
+## Post-merge iPad menu walkthrough timeout — October 25, 2026
+
+Main commit [`d01504e`](https://github.com/usermalik20-del/Kanta-reborn/commit/d01504e42b3e00735bb429b05e9ec886149911fe) passed reconstruction [run #40136025964](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025964) and unsigned archive [run #40136025858](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858), but full walkthrough [run #40136025937](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937) failed on iPad.
+
+The compact diagnostic artifact [#12577317727](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937/artifacts/12577317727) confirms that Search now reaches `_UIShapeHitTestingView`, requests and activates the Search sheet, and begins presentation. The keypad-focused tests, navigation smoke, online-preview lifecycle tests, and starter playback test all passed in this run. The remaining failure is separate: `testMainMenuButtonsAndScreens` exceeded XCTest's 120-second default execution allowance while cold-launching the app separately for six destinations. The runner then restarted and the required-test manifest correctly marked that test missing.
+
+The candidate runner repair keeps one app process alive, captures each of the same six destinations, dismisses each route through the stable `navigation.done` accessibility identifier, and waits for the Stage's More control to return before continuing. This reduces cold-start overhead without removing destinations, skipping assertions, adding blind sleeps, or weakening the required-test set.
+
+**Status:** candidate; full iPhone/iPad walkthrough and exact-SHA acceptance remain pending on the repair branch. Do not call main's full walkthrough green until the menu case passes on both devices.
