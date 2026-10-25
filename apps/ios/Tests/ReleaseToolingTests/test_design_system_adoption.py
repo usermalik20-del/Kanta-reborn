@@ -515,6 +515,9 @@ class PythonLeakTests(unittest.TestCase):
         helper_end = walkthrough.index("private func openOnlinePreview", helper_start)
         helper = walkthrough[helper_start:helper_end]
         self.assertIn('app.staticTexts["Starter Songs"]', helper)
+        self.assertIn('app.scrollViews["library.content"]', helper)
+        library = (ROOT / "Sources/Features/Library/LibraryView.swift").read_text()
+        self.assertIn('accessibilityIdentifier("library.content")', library)
         self.assertIn("scrollView.swipeUp()", helper)
         self.assertLess(
             helper.index("scrollView.swipeUp()"),
