@@ -290,7 +290,8 @@ struct HostView: View {
             .frame(maxWidth: 900)
             .frame(maxWidth: .infinity)
         }
-        .background(KantaColors.canvas)
+        // No opaque fill here: the gradient canvas and its blooms are attached
+        // behind the whole Host view and must stay visible.
     }
 
     private var embeddedStage: some View {
@@ -973,6 +974,8 @@ struct HostView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { KantaBackground().allowsHitTesting(false) }
         .safeAreaInset(edge: .bottom) {
             KantaTransportBar(
                 snapshot: model.snapshot,
