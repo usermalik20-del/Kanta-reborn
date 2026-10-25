@@ -375,3 +375,15 @@ Main advanced to [`00d2405`](https://github.com/usermalik20-del/Kanta-reborn/com
 PR #74 was closed as superseded rather than merged because its original drawer markup was based on the previous design. Its first website unit-test run [#40160477572](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160477572) failed because the new duplicate-heading test called `.values()` on the existing `PUBLIC_ROUTES` set. Commit [`bd1fff3`](https://github.com/usermalik20-del/Kanta-reborn/commit/bd1fff39c678b2bc6a922d3543fda8e4b210777e) corrected that harness bug, but the branch was not merged because the UI contract had changed.
 
 The current test-only candidate `test/web-responsive-navigation-contract-20261025` checks the six shared primary routes, flex-wrapping and visible navigation rules, duplicate heading prevention, and stylesheet hygiene. It does not change website runtime markup or native app code. Hosted validation and post-deploy confirmation remain pending until this candidate is accepted.
+
+## Main acceptance reconciliation — October 25, 2026, 13:57 PHT
+
+This checkpoint supersedes the earlier **pending candidate** wording in the preceding entries; those entries remain as historical records of the failures and their repair sequence.
+
+The validated application baseline before this documentation-only reconciliation is [`af178739`](https://github.com/usermalik20-del/Kanta-reborn/commit/af178739f9f457b917d7d0714963ccad22f4bcd2). Exact-head results for that baseline are green for [iOS/Android reconstruction #40165173586](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173586), [website validation #40165173693](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173693), [production deployment #40165173539](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173539), and [unsigned iOS archive #40165173529](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173529).
+
+The latest completed full native walkthrough is [#40154268944](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40154268944) at native commit [`a543df2`](https://github.com/usermalik20-del/Kanta-reborn/commit/a543df231322ea495eef6e9d7ad8968d17490bc7); both iPhone and iPad jobs passed. The compare from that commit to `af178739` contains only website content/assets, website verification code, and documentation, with no native app source changes.
+
+Main archive artifact [#12588545812](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173529/artifacts/12588545812) is 25,076,208 bytes with SHA-256 `857c60aaaf0a2ab6d17aee97f68441a35a645d5b88de6831853fb8ad64d6b042`; it expires 2026-11-01 05:25:49 UTC. It is unsigned and is not a directly installable production release. No signed IPA or published GitHub Release is verified.
+
+Remaining gates: maintain the current architecture/test contracts, obtain repository-administration access before claiming branch protection is enforced, and keep signing/publication gated on a signed artifact with verified provenance.
