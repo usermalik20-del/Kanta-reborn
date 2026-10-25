@@ -102,5 +102,49 @@ class WebsiteSecurityContractTests(unittest.TestCase):
                 self.assertEqual(policy_for(route)["script-src"], frozenset({"'self'"}))
 
 
+
+    def test_all_public_pages_share_the_responsive_primary_navigation(self):
+        expected_links = {
+            "/ios-download", "/android", "/guide", "/features", "/songbook", "/support",
+        }
+        for route in sorted(PUBLIC_ROUTES):
+            filename = "index.html" if route == "/" else route.lstrip("/") + ".html"
+            source = (WEB / filename).read_text(encoding="utf-8")
+            with self.subTest(route=route):
+                header_match = re.search(r"<header\b[\s\S]*?</header>", source, re.IGNORECASE)
+                self.assertIsNotNone(header_match, filename)
+                header = header_match.group(0)
+                for marker in (
+                    'class="site-header"',
+                    'class="brand"',
+                    'aria-label="KANTA home"',
+                    'class="site-nav"',
+                    'aria-label="Main navigation"',
+                ):
+                    self.assertIn(marker, header, (filename, marker))
+                nav = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+                self.assertIsNotNone(nav, filename)
+                links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', nav.group(1), re.IGNORECASE)
+                self.assertEqual(set(links), expected_links, filename)
+                self.assertEqual(len(links), len(expected_links), filename)
+
+    def test_public_pages_do_not_repeat_adjacent_feature_headings(self):
+        for route in sorted(PUBLIC_ROUTES):
+            filename = "index.html" if route == "/" else route.lstrip("/") + ".html"
+            source = (WEB / filename).read_text(encoding="utf-8")
+            with self.subTest(filename=filename):
+                self.assertIsNone(
+                    re.search(r"(<h3>[^<]+</h3>)\s*\1", source, re.IGNORECASE),
+                    filename,
+                )
+
+    def test_primary_navigation_wraps_and_remains_visible_on_mobile(self):
+        source = (WEB / "style.css").read_text(encoding="utf-8")
+        self.assertRegex(source, r"nav\{[^}]*display:flex[^}]*flex-wrap:wrap")
+        self.assertIn(".site-header .site-nav{display:flex", source)
+        self.assertIn(".site-header .site-nav{justify-content:flex-start", source)
+        self.assertNotRegex(source, r"\.site-nav[^}]*display:none")
+        self.assertNotRegex(source, r"(?m)^\s*ap:anywhere\}\s*$")
+
 if __name__ == "__main__":
     unittest.main()

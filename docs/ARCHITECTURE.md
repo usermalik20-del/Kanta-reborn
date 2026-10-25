@@ -10,6 +10,10 @@
 
 `docs/evidence/website/2026-10-15` stores exact public-site bytes, extracted readable text and URL/SHA-256 manifest. It remains immutable evidence; the active restored website is maintained separately under apps/web. No public song catalog may be added.
 
+## Public website navigation and responsive layout contract
+
+The active website uses a shared, wrapping primary navigation rather than a JavaScript mobile drawer. All ten public pages must retain the same brand link and six primary destinations. The global navigation flex layout wraps, the site header can wrap at narrow widths, and the primary navigation must remain visible instead of being hidden without an accessible replacement. Feature cards must render one heading per card. `tools/verify-website.py` and `tools/tests/test_website_security_contract.py` enforce route parity, responsive-layout declarations and heading uniqueness. A successful Vercel deployment is not proof of route-level correctness; verify the public alias and key routes after production deployment.
+
 ## Runtime contracts
 
 Each platform has one playback controller and FIFO reservation queue. UI, lyrics, fullscreen/TV stage and companion control project that owner's state. Import and persistence run away from latency-sensitive playback/UI work; commits are atomic and stale async results cannot replace newer state. Retry suppression applies to the same operation ID, never separate intentional reservations.
