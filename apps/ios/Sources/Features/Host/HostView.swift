@@ -81,6 +81,7 @@ struct HostView: View {
         .navigationTitle("Karaoke Host")
         .navigationBarTitleDisplayMode(.large)
         .background { hostPresentationAnchors }
+        .background { KantaBackground().allowsHitTesting(false) }
         .onChange(of: model.snapshot.transport) {
             intermission.sync(model.snapshot.transport)
         }
@@ -289,7 +290,7 @@ struct HostView: View {
             .frame(maxWidth: 900)
             .frame(maxWidth: .infinity)
         }
-        .background(.black)
+        .background(KantaColors.canvas)
     }
 
     private var embeddedStage: some View {
@@ -336,7 +337,7 @@ struct HostView: View {
                 .accessibilityIdentifier("host.remotePanel.toggle")
         }
         .padding(18)
-        .background(Color(white: 0.07), in: RoundedRectangle(cornerRadius: 20))
+        .background(KantaColors.surface, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private func openFullscreenPlayer() {
