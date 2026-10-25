@@ -31,12 +31,40 @@ try{
   assert.ok(config,'TLS harness did not start');
   const [origin,code]=config;
   const chrome=process.env.KANTA_CHROME||'/usr/bin/google-chrome';
-  browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking','--ignore-certificate-errors','--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1','--remote-debugging-port=0',`--user-data-dir=${path.join(scratch,'chrome')}`,'about:blank'],{stdio:'ignore'});
-  let port;
-  for(let i=0;i<100;i++){try{port=(await readFile(path.join(scratch,'chrome/DevToolsActivePort'),'utf8')).split('\n')[0];break;}catch{if(browser.exitCode!==null)throw Error('Chrome exited');await pause(100);}}
-  assert.ok(port,'Chrome DevTools did not start');
-  const targets=await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-  ws=new WebSocket(targets.find(t=>t.type==='page').webSocketDebuggerUrl);
+  let chromeStderr='';
+  let chromeSpawnError;
+  browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking','--ignore-certificate-errors','--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1','--remote-debugging-port=0',`--user-data-dir=${path.join(scratch,'chrome')}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
+  browser.stderr.on('data',data=>{chromeStderr=(chromeStderr+data.toString()).slice(-12000);});
+  browser.on('error',error=>{chromeSpawnError=error;});
+  const portFile=path.join(scratch,'chrome/DevToolsActivePort');
+  const startupDeadline=Date.now()+30_000;
+  let port,lastPortReadError;
+  while(Date.now()<startupDeadline){
+    try{
+      const activePort=await readFile(portFile,'utf8');
+      port=activePort.split(/\r?\n/)[0]?.trim();
+      if(port)break;
+    }catch(error){lastPortReadError=error;}
+    if(chromeSpawnError)throw Error(`Chrome failed to spawn: ${chromeSpawnError.message}; stderr=${chromeStderr||'(empty)'}`);
+    if(browser.exitCode!==null||browser.signalCode!==null)throw Error(`Chrome exited before DevTools became ready (exitCode=${browser.exitCode}, signal=${browser.signalCode}); stderr=${chromeStderr||'(empty)'}`);
+    await pause(100);
+  }
+  assert.ok(port,`Chrome DevTools did not start within 30s; last port-file error=${lastPortReadError?.message||'none'}; exitCode=${browser.exitCode}; signal=${browser.signalCode}; stderr=${chromeStderr||'(empty)'}`);
+  let targets,devToolsEndpointError;
+  const endpointDeadline=Date.now()+5_000;
+  while(Date.now()<endpointDeadline){
+    try{
+      const response=await fetch(`http://127.0.0.1:${port}/json/list`,{signal:AbortSignal.timeout(1_000)});
+      if(!response.ok)throw Error(`Chrome DevTools HTTP status ${response.status}`);
+      targets=await response.json();
+      if(Array.isArray(targets))break;
+      throw Error('Chrome DevTools target list was not an array');
+    }catch(error){devToolsEndpointError=error;await pause(100);}
+  }
+  assert.ok(Array.isArray(targets),`Chrome DevTools endpoint did not respond within 5s: ${devToolsEndpointError?.message||'unknown error'}; stderr=${chromeStderr||'(empty)'}`);
+  const pageTarget=targets.find(target=>target.type==='page'&&target.webSocketDebuggerUrl);
+  assert.ok(pageTarget,`Chrome DevTools returned no page target; stderr=${chromeStderr||'(empty)'}`);
+  ws=new WebSocket(pageTarget.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{ws.addEventListener('open',resolve,{once:true});ws.addEventListener('error',reject,{once:true});});
   let serial=0;const pending=new Map();const browserErrors=[];
   ws.addEventListener('message',event=>{const value=JSON.parse(event.data);if(value.method==='Runtime.exceptionThrown')browserErrors.push(value.params.exceptionDetails.exception?.description?.slice(0,200)||value.params.exceptionDetails.text);if(value.id&&pending.has(value.id)){const callback=pending.get(value.id);pending.delete(value.id);value.error?callback.reject(Error(value.error.message)):callback.resolve(value.result);}});
