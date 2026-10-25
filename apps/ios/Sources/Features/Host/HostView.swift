@@ -81,6 +81,7 @@ struct HostView: View {
         .navigationTitle("Karaoke Host")
         .navigationBarTitleDisplayMode(.large)
         .background { hostPresentationAnchors }
+        .background { KantaBackground().allowsHitTesting(false) }
         .onChange(of: model.snapshot.transport) {
             intermission.sync(model.snapshot.transport)
         }
@@ -289,7 +290,7 @@ struct HostView: View {
             .frame(maxWidth: 900)
             .frame(maxWidth: .infinity)
         }
-        .background(.black)
+        .background(KantaColors.canvas)
     }
 
     private var embeddedStage: some View {
@@ -336,7 +337,7 @@ struct HostView: View {
                 .accessibilityIdentifier("host.remotePanel.toggle")
         }
         .padding(18)
-        .background(Color(white: 0.07), in: RoundedRectangle(cornerRadius: 20))
+        .background(KantaColors.surface, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private func openFullscreenPlayer() {
@@ -580,40 +581,8 @@ struct HostView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                HStack {
-                    Button {
-                        Task {
-                            await model.togglePlayPause()
-                        }
-                    } label: {
-                        Image(
-                            systemName:
-                                model.snapshot.transport
-                                    == .playing
-                                ? "pause.fill"
-                                : "play.fill"
-                        )
-                        .font(.title2)
-                    }
-                    .accessibilityLabel(
-                        model.snapshot.transport == .playing
-                            ? "Pause"
-                            : "Play"
-                    )
-
-                    Spacer()
-
-                    Button {
-                        Task {
-                            await model.next()
-                        }
-                    } label: {
-                        Image(systemName: "forward.fill")
-                    }
-                    .accessibilityLabel("Next song")
-                }
-                .buttonStyle(.borderless)
-                .disabled(!model.isAvailable)
+                // Transport lives in the always-on bar pinned below, so the
+                // sheet does not present a second, scroll-away copy.
             }
 
             if model.snapshot.nowPlaying != nil {
@@ -917,8 +886,13 @@ struct HostView: View {
                 "Queue (\(model.snapshot.queue.count))"
             ) {
                 if model.snapshot.queue.isEmpty {
-                    Text("Queue is empty")
-                        .foregroundStyle(.secondary)
+                    KantaEmptyState(
+                        icon: "list.bullet",
+                        title: "Queue is empty",
+                        description: "Reserve a song from Songs to line one up.",
+                        actionTitle: nil,
+                        action: nil
+                    )
                 } else {
                     ForEach(model.snapshot.queue) { item in
                         HStack(spacing: 8) {
@@ -980,37 +954,36 @@ struct HostView: View {
                     )
                 } else {
                     ForEach(model.songs) { song in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(song.title)
-                                Text(
-                                    song.mediaKind.rawValue
-                                        .uppercased()
-                                )
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        KantaSongRow(
+                            code: song.code,
+                            title: song.title,
+                            subtitle: song.mediaKind.rawValue.uppercased(),
+                            isLive: model.snapshot.nowPlaying?.id == song.id,
+                            actionTitle: "Reserve",
+                            actionIcon: "plus.circle"
+                        ) {
+                            Task {
+                                await model.enqueue(song, singer: singerName)
                             }
-
-                            Spacer()
-
-                            Button {
-                                Task {
-                                    await model.enqueue(song, singer: singerName)
-                                }
-                            } label: {
-                                Label(
-                                    "Reserve",
-                                    systemImage: "plus.circle"
-                                )
-                            }
-                            .buttonStyle(.bordered)
-                            .accessibilityLabel(
-                                "Reserve " + song.title
-                            )
                         }
+                        .listRowInsets(
+                            EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8)
+                        )
                     }
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            KantaTransportBar(
+                snapshot: model.snapshot,
+                isEnabled: model.isAvailable,
+                onTogglePlayPause: {
+                    Task { await model.togglePlayPause() }
+                },
+                onNext: {
+                    Task { await model.next() }
+                }
+            )
         }
     }
 

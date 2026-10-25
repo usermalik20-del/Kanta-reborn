@@ -21,6 +21,9 @@ targets:
       - path: Sources/Features
         excludes:
           - README.md
+      - path: Sources/DesignSystem
+        excludes:
+          - README.md
       - path: Config/PrivacyInfo.xcprivacy
         buildPhase: resources
       - path: BG/BUNDLED

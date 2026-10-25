@@ -353,20 +353,27 @@ struct InAppControlCenterView: View {
             .font(.headline)
 
             if model.snapshot.queue.isEmpty {
-                Text("Queue is empty")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                KantaEmptyState(
+                    icon: "list.bullet",
+                    title: "Queue is empty",
+                    description: "Reserve a song to line one up.",
+                    actionTitle: nil,
+                    action: nil,
+                    style: .compact
+                )
             } else {
                 ForEach(Array(model.snapshot.queue.prefix(6))) { item in
                     HStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.song.title)
+                                .font(KantaTypography.songTitle)
+                                .foregroundStyle(KantaColors.textPrimary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.80)
                             if let singer = item.requestedBy {
                                 Text("Singer · " + singer)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .font(KantaTypography.caption)
+                                    .foregroundStyle(KantaColors.textSecondary)
                             }
                         }
                         .frame(
