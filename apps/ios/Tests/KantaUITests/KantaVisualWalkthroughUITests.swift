@@ -305,49 +305,64 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
     }
 
     @MainActor
-    func testMainMenuButtonsAndScreens() throws {
+    func testMenuSongLibrary() throws {
+        assertMenuDestination("Song Library", expectedTitle: "Library")
+    }
+
+    @MainActor
+    func testMenuSongbook() throws {
+        assertMenuDestination("KANTA Songbook", expectedTitle: "KANTA Songbook")
+    }
+
+    @MainActor
+    func testMenuSettings() throws {
+        assertMenuDestination("Settings", expectedTitle: "Settings")
+    }
+
+    @MainActor
+    func testMenuCompanionRemote() throws {
+        assertMenuDestination("Companion Remote", expectedTitle: "CONTROL")
+    }
+
+    @MainActor
+    func testMenuICloudSave() throws {
+        assertMenuDestination("iCloud Save", expectedTitle: "iCloud Save")
+    }
+
+    @MainActor
+    func testMenuLegalPrivacy() throws {
+        assertMenuDestination("Legal & Privacy", expectedTitle: "Legal & Privacy")
+    }
+
+    @MainActor
+    private func assertMenuDestination(_ destination: String, expectedTitle: String) {
         let app = XCUIApplication()
         app.launchEnvironment["KANTA_DEMO_MODE"] = "0"
         app.launch()
         XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: waitSeconds))
 
-        // Keep one app process alive. Relaunching for every destination made this
-        // six-screen smoke test exceed XCTest's two-minute default on iPad.
-        // Each destination is still opened, captured, and explicitly dismissed.
-        for destination in ["Song Library", "KANTA Songbook", "Settings",
-                            "Companion Remote", "iCloud Save", "Legal & Privacy"] {
-            openMenu(in: app, expecting: destination)
-            let button = app.buttons[destination].firstMatch
-            XCTAssertTrue(button.waitForExistence(timeout: 5))
-            waitForRendered(button, in: app)
-            button.tap()
+        openMenu(in: app, expecting: destination)
+        let item = app.buttons[destination].firstMatch
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        waitForRendered(item, in: app)
+        item.tap()
 
-            let expectedTitle = [
-                "Song Library": "Library",
-                "KANTA Songbook": "KANTA Songbook",
-                "Settings": "Settings",
-                "Companion Remote": "CONTROL",
-                "iCloud Save": "iCloud Save",
-                "Legal & Privacy": "Legal & Privacy"
-            ][destination]!
-            XCTAssertTrue(app.navigationBars[expectedTitle].waitForExistence(timeout: waitSeconds),
-                          "Menu destination did not present its expected screen: " + destination)
-            capture("menu-" + destination, app)
+        XCTAssertTrue(app.navigationBars[expectedTitle].waitForExistence(timeout: waitSeconds),
+                      "Menu destination did not present its expected screen: " + destination)
+        capture("menu-" + destination, app)
 
-            let done = app.buttons["navigation.done"]
-            XCTAssertTrue(done.waitForExistence(timeout: waitSeconds),
-                          "The navigation host must provide Done for: " + destination)
-            waitForRendered(done, in: app)
-            done.tap()
+        let done = app.buttons["navigation.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: waitSeconds),
+                      "The navigation host must provide Done for: " + destination)
+        waitForRendered(done, in: app)
+        done.tap()
 
-            let destinationDismissed = NSPredicate(format: "exists == false")
-            expectation(for: destinationDismissed, evaluatedWith: done)
-            waitForExpectations(timeout: waitSeconds)
-            let more = app.buttons["More"].firstMatch
-            XCTAssertTrue(more.waitForExistence(timeout: waitSeconds),
-                          "The Stage must return after dismissing: " + destination)
-            waitForRendered(more, in: app)
-        }
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: done)
+        waitForExpectations(timeout: waitSeconds)
+        let more = app.buttons["More"].firstMatch
+        XCTAssertTrue(more.waitForExistence(timeout: waitSeconds),
+                      "The Stage must return after dismissing: " + destination)
+        waitForRendered(more, in: app)
     }
 
     @MainActor

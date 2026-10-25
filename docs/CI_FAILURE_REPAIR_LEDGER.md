@@ -350,3 +350,19 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 - **Repair candidate:** make `CompanionProtocol.isValidPairingInput(address:code:)` the shared Connect/handshake policy, add pure package tests for private/public/loopback address rules and exact 32-character hexadecimal secrets, and keep the UI test focused on the initial disabled state and explanatory copy rather than typing through a flaky simulator keyboard.
 - **Regression coverage:** the same helper drives `EncryptedCompanionView` Connect enablement and handshake secret validation; the source-contract guard enforces that relationship. Existing encrypted pairing screen, disabled Connect, no Disconnect, and instructional-copy assertions remain.
 - **Validation:** candidate only; do not mark verified until the full iPhone and iPad walkthroughs both exit zero on the exact final SHA and all required cases pass in a clean run. No timeout increase, runner retry, or ignored exit status.
+
+## iOS — iPad menu walkthrough still exceeds one XCTest case budget (2026-10-25)
+
+**Fingerprint:** `KantaVisualWalkthroughUITests.testMainMenuButtonsAndScreens`; iPad visual walkthrough; missing passing case after XCTest timeout/restart.
+
+**Affected SHA and run:** PR #71 candidate `dc60e513c4829226d8bf763c60d5e047e0beb5a4`; [walkthrough #40146182462](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182462), with compact diagnostics [artifact #12580469774](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182462/artifacts/12580469774).
+
+**Cause:** the earlier optimization kept all six More destinations inside one XCTest method. Although each destination screenshot was captured, the single method still failed to record a clean pass before XCTest's per-case allowance and runner restart. The aggregate run therefore remained red; screenshots or later retry output do not satisfy the named-pass manifest.
+
+**Candidate repair:** split Song Library, KANTA Songbook, Settings, Companion Remote, iCloud Save, and Legal & Privacy into six named XCTest methods. Each retains its destination title assertion, screenshot, `navigation.done` dismissal, and Stage More return assertion. Update `tools/capture-ios-runtime.py` and `tools/check-ios-presentation-contract.py` together. Integrate PR #72's separate iPhone/iPad workflow jobs, preserving branch-level stale-run cancellation.
+
+**Regression:** the source guard requires all six test names in both the XCTest source and runtime manifest, rejects the old aggregate method, and the runtime gate rejects any missing pass. No destination/assertion was removed; no global timeout was increased.
+
+**Validation:** `candidate` until the new exact-head reconstruction, focused smoke, archive, and independent iPhone/iPad walkthrough jobs finish successfully. No green result is inferred from the previous SHA.
+
+**Recurrence rule:** if a device reports a missing menu case, inspect that individual case's XCTest result bundle and job log. Do not increase the global timeout, suppress missing cases, or treat screenshot presence as a pass.

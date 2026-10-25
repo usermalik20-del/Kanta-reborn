@@ -101,6 +101,26 @@ def verify():
             ))
         ),
         'playback does not mutate root navigation': 'snapshot.transport' not in root,
+        'main menu destinations have independent XCTest budgets': (
+            all(f'func {name}() throws' in test for name in (
+                'testMenuSongLibrary',
+                'testMenuSongbook',
+                'testMenuSettings',
+                'testMenuCompanionRemote',
+                'testMenuICloudSave',
+                'testMenuLegalPrivacy',
+            ))
+            and 'func testMainMenuButtonsAndScreens()' not in test
+            and all(f'"{name}"' in runner for name in (
+                'testMenuSongLibrary',
+                'testMenuSongbook',
+                'testMenuSettings',
+                'testMenuCompanionRemote',
+                'testMenuICloudSave',
+                'testMenuLegalPrivacy',
+            ))
+            and '"testMainMenuButtonsAndScreens"' not in runner
+        ),
         'real playback walkthrough': 'func testStarterPlaybackAndControls()' in test,
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,

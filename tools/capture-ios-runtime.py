@@ -19,7 +19,12 @@ EXPECTED_TESTS = frozenset({
     "testOnlinePreviewEntryCloseReopenAndForegroundLifecycle",
     "testOnlinePreviewPreservesPausedStarterAndLocalResume",
     "testStarterPlaybackAndControls",
-    "testMainMenuButtonsAndScreens",
+    "testMenuSongLibrary",
+    "testMenuSongbook",
+    "testMenuSettings",
+    "testMenuCompanionRemote",
+    "testMenuICloudSave",
+    "testMenuLegalPrivacy",
     "testEncryptedCompanionPairingScreenAndInputRejection",
     "testDemoKeypadCancelAndRepeatedIntentionalReservations",
 })

@@ -24,10 +24,13 @@ permissions:
 concurrency:
   group: ios-visual-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: true
+# Each device walks through in its own job so one device's result cannot mask,
+# delay or time out the other, and each reports its own status and artifacts.
 jobs:
-  visual-walkthrough:
+  iphone-walkthrough:
+    name: iPhone walkthrough
     runs-on: macos-15
-    timeout-minutes: 55
+    timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     defaults:
@@ -50,15 +53,54 @@ jobs:
           xcodebuild build-for-testing -project GeloKaraoke.xcodeproj -scheme GeloKaraoke -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee runtime-test-build.log
       - name: Real iPhone walkthrough
         run: python3 ../../tools/capture-ios-runtime.py --device iphone
+      - name: Preserve compact iPhone presentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ios-iphone-presentation-diagnostics
+          path: |
+            apps/ios/runtime-captures/iphone-tests.log
+            apps/ios/runtime-captures/iphone-presentation-diagnostics.log
+            apps/ios/runtime-captures/iphone-recording.log
+            apps/ios/runtime-captures/manifest-iphone.json
+            apps/ios/runtime-captures/iphone-screenshots/**/*.txt
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: ios-iphone-runtime-evidence
-          path: apps/ios/runtime-captures/**
+          path: |
+            apps/ios/runtime-captures/**
+            apps/ios/runtime-test-build.log
           if-no-files-found: ignore
           retention-days: 7
+
+  ipad-walkthrough:
+    name: iPad walkthrough
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    defaults:
+      run:
+        working-directory: apps/ios
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Validate resources and generate project
+        run: |
+          python3 ../../tools/verify-test-layout.py
+          python3 -m unittest discover -s Tests/ReleaseToolingTests
+          python3 Tools/verify-starter-resources.py
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+          xcodegen generate
+      - name: Compile app and UI tests
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing -project GeloKaraoke.xcodeproj -scheme GeloKaraoke -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee runtime-test-build.log
       - name: Real iPad walkthrough
-        if: ${{ !cancelled() }}
         run: python3 ../../tools/capture-ios-runtime.py --device ipad
       - name: Preserve compact iPad presentation diagnostics
         if: always()
@@ -76,7 +118,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: ios-runtime-evidence
+          name: ios-ipad-runtime-evidence
           path: |
             apps/ios/runtime-captures/**
             apps/ios/runtime-test-build.log
