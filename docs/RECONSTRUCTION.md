@@ -92,7 +92,7 @@ Repair candidate branch: `fix/ios-menu-walkthrough-timeout-20261025`. The test n
 
 ## Current main acceptance checkpoint — October 25, 2026, 13:57 PHT
 
-Main is at [`af178739`](https://github.com/usermalik20-del/Kanta-reborn/commit/af178739f9f457b917d7d0714963ccad22f4bcd2). The latest main-head validation is complete:
+The validated application baseline for this documentation reconciliation is [`af178739`](https://github.com/usermalik20-del/Kanta-reborn/commit/af178739f9f457b917d7d0714963ccad22f4bcd2). This PR changes documentation only; after merge, its merge commit will be a docs-only successor and will not change the validated native or website runtime source. The baseline's latest validation is complete:
 
 - Reconstruction (iOS + Android): [run #40165173586](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173586) — passed for both jobs.
 - Website route/security/navigation validation: [run #40165173693](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173693) — passed.
