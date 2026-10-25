@@ -2,7 +2,23 @@
 
 Date: 2026-10-25. Destination: kanta-gelo/Kanta-reborn (canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn)).
 
-## Current checkpoint
+## Current checkpoint — 2026-10-26
+
+Main is at [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5ee1893974f30829e14eda9d3e233d6b40690066), the merge of PR #81 restoring the architecture-defined six-route homepage navigation and the existing same-origin `/analytics.js` entrypoint. The production homepage is reachable at https://kanta-public.vercel.app and renders those six canonical routes.
+
+Post-merge main workflows on `5ee1893` are green: reconstruction [#40220533959](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220533959), website validation [#40220534010](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220534010), Vercel deployment [#40220534153](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220534153), and unsigned iOS archive [#40220533986](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220533986). The earlier navigation/analytics failures documented below are historical and repaired by PR #81; the production deployment gate now passes.
+
+The native application source on main remains at the accepted KANTA Stage baseline [`bf71e5d`](https://github.com/usermalik20-del/Kanta-reborn/commit/bf71e5d72a4da627781021df0ae9af572e4b3f49). The latest full main-native iPhone/iPad walkthrough is [#40178236530](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40178236530), with both device jobs passing. Main's later commits changed website content, website validation, and documentation, not native iOS/Android source.
+
+PR #80's candidate [`65e03c1`](https://github.com/usermalik20-del/Kanta-reborn/commit/65e03c170519112395d2ea514f04d12b369fed39) repairs the Starter Songs walkthrough by identifying the Library scroll container and scrolling before querying LazyVGrid cells. Its exact-candidate reconstruction [#40218224023](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218224023), focused iPhone smoke [#40218223728](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223728), full iPhone/iPad walkthrough [#40218223740](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223740), and unsigned archive [#40218223776](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223776) all passed. The full walkthrough passed on both devices and the required playback assertions remain intact.
+
+Before synchronization, PR #80's branch was 10 commits ahead and 12 behind main. This merge commit incorporates current main while preserving the candidate's 11 native source/test files and mainline website fixes. Treat the synchronized head as a new candidate: rerun reconstruction, focused smoke, archive, and both device walkthroughs on the exact new head before merging PR #80.
+
+Main archive artifact [#12608518334](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220533986/artifacts/12608518334) is 25,097,058 bytes with SHA-256 `5e357b417e9815220d9f41a4616a851bdd2828407ce1b2f72ecb548a00fd583f`; it expires 2026-11-01 18:22:35 UTC. PR #80 candidate artifact [#12608094930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223776/artifacts/12608094930) is 25,120,093 bytes with SHA-256 `b4a3a25c95a3d63c0de5ac82ca7a7a6c6181571dfeb77e789bf4d58c5b49cdcd`. Both are unsigned personal-signing inputs. No signed IPA or published GitHub Release is verified.
+
+Remaining gates: validate the synchronized PR #80 head, retain repository-admin access as a prerequisite for enforcing branch protection, and keep signing/publication claims separate from unsigned build success.
+
+## Earlier checkpoint — 2026-10-25
 
 Main is at [`00d2405`](https://github.com/usermalik20-del/Kanta-reborn/commit/00d2405b5c54d8ae56ee44fed99a98a9ab97d20e), which combines the web logo work with [`770a6dc`](https://github.com/usermalik20-del/Kanta-reborn/commit/770a6dc7c8e51337349a75afddb5fcbf08f3e80b), the newer responsive website redesign. Website validation [#40160483259](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483259) passed, and production deployment [#40160483212](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483212) passed. Its log confirms that `https://kanta-public.vercel.app` was aliased to `https://kanta-public-6grdxfkcs-gelo-tech.vercel.app`. Main reconstruction [#40160483119](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483119) was still running the unsigned simulator build and Android emulator checks at this checkpoint.
 

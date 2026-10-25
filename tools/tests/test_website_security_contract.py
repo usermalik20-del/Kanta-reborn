@@ -118,13 +118,20 @@ class WebsiteSecurityContractTests(unittest.TestCase):
                     'class="site-header"',
                     'class="brand"',
                     'aria-label="KANTA home"',
-                    'class="site-nav"',
-                    'aria-label="Main navigation"',
                 ):
                     self.assertIn(marker, header, (filename, marker))
-                nav = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+
+                nav = re.search(r"<nav\b([^>]*)>([\s\S]*?)</nav>", header, re.IGNORECASE)
                 self.assertIsNotNone(nav, filename)
-                links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', nav.group(1), re.IGNORECASE)
+                attributes, body = nav.groups()
+                class_match = re.search(r'\bclass\s*=\s*["\']([^"\']+)["\']', attributes, re.IGNORECASE)
+                self.assertIsNotNone(class_match, filename)
+                self.assertTrue(
+                    {"site-nav", "nav-links"}.intersection(class_match.group(1).split()),
+                    (filename, "unsupported primary-navigation class"),
+                )
+                self.assertRegex(attributes, r'\baria-label\s*=\s*["\']Main navigation["\']')
+                links = re.findall(r'<a\b[^>]*\bhref=["\']([^"\']+)["\']', body, re.IGNORECASE)
                 self.assertEqual(set(links), expected_links, filename)
                 self.assertEqual(len(links), len(expected_links), filename)
 
@@ -140,10 +147,14 @@ class WebsiteSecurityContractTests(unittest.TestCase):
 
     def test_primary_navigation_wraps_and_remains_visible_on_mobile(self):
         source = (WEB / "style.css").read_text(encoding="utf-8")
-        self.assertRegex(source, r"nav\{[^}]*display:flex[^}]*flex-wrap:wrap")
-        self.assertIn(".site-header .site-nav{display:flex", source)
-        self.assertIn(".site-header .site-nav{justify-content:flex-start", source)
-        self.assertNotRegex(source, r"\.site-nav[^}]*display:none")
+        self.assertRegex(
+            source,
+            r"nav\s*,\s*\.site-nav\s*,\s*\.nav-links\s*\{[^}]*display\s*:\s*flex[^}]*flex-wrap\s*:\s*wrap",
+        )
+        self.assertNotRegex(
+            source,
+            r"(?s)(?:\.site-nav|\.nav-links)[^{}]*\{[^}]*display\s*:\s*none",
+        )
         self.assertNotRegex(source, r"(?m)^\s*ap:anywhere\}\s*$")
 
 if __name__ == "__main__":

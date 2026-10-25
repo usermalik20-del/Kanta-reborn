@@ -504,5 +504,58 @@ class PythonLeakTests(unittest.TestCase):
                 )
 
 
+    def test_starter_playback_walkthrough_scrolls_before_querying_lazy_grid(self):
+        walkthrough = (ROOT / "Tests/KantaUITests/KantaVisualWalkthroughUITests.swift").read_text()
+        self.assertEqual(
+            walkthrough.count("try starterPlayButton(in: app)"),
+            2,
+            "Both real starter-playback flows must use the lazy-grid-aware helper",
+        )
+        helper_start = walkthrough.index("private func starterPlayButton(in app: XCUIApplication)")
+        helper_end = walkthrough.index("private func openOnlinePreview", helper_start)
+        helper = walkthrough[helper_start:helper_end]
+        self.assertIn('app.scrollViews["library.content"]', helper)
+        self.assertIn('let title = app.staticTexts["Morning Light"].firstMatch', helper)
+        self.assertIn("while !title.exists && Date() < deadline", helper)
+        self.assertIn('let play = app.buttons["starter.play.morning-light"]', helper)
+        self.assertIn("while !play.exists && Date() < deadline", helper)
+        self.assertIn("XCTAssertTrue(play.isHittable", helper)
+        self.assertNotIn("section.isHittable", helper,
+                         "The iPad scroll contract must target the actual song, not its heading")
+        library = (ROOT / "Sources/Features/Library/LibraryView.swift").read_text()
+        self.assertIn('accessibilityIdentifier("library.content")', library)
+        self.assertLess(
+            helper.index("while !title.exists && Date() < deadline"),
+            helper.index("XCTAssertTrue(title.waitForExistence"),
+            "Scroll the Library until the lazy starter title is materialized before requiring it",
+        )
+        self.assertLess(
+            helper.index("while !play.exists && Date() < deadline"),
+            helper.index("XCTAssertTrue(play.waitForExistence"),
+            "Scroll until the lazy starter Play control is materialized before requiring it",
+        )
+
+
+class StarterTileContractTests(unittest.TestCase):
+    """Do not ship controls that have no action or metadata that invents facts."""
+
+    def setUp(self):
+        library = (ROOT / "Sources/Features/Library/LibraryView.swift").read_text()
+        self.starter_section = library.split("private var starterSongsSection", 1)[1].split(
+            "private var starterRows", 1
+        )[0]
+        self.starter_tile = library.split("private func starterTile", 1)[1].split(
+            "private var heroCard", 1
+        )[0]
+
+    def test_starter_header_has_no_inert_see_all_control(self):
+        self.assertNotIn('Button("See all")', self.starter_section)
+        self.assertNotIn("// Action", self.starter_section)
+
+    def test_starter_tiles_do_not_display_a_fabricated_duration(self):
+        self.assertNotIn("3:12", self.starter_tile)
+        self.assertIn('Text("KANTA original")', self.starter_tile)
+
+
 if __name__ == "__main__":
     unittest.main()

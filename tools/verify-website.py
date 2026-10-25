@@ -194,17 +194,26 @@ def validate_navigation_contract(source, name):
         'class="site-header"',
         'class="brand"',
         'aria-label="KANTA home"',
-        'class="site-nav"',
-        'aria-label="Main navigation"',
     ):
         assert marker in header, (name, "missing shared navigation contract: " + marker)
 
-    nav = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+    nav = re.search(r"<nav\b([^>]*)>([\s\S]*?)</nav>", header, re.IGNORECASE)
     assert nav, (name, "missing primary navigation")
+    attributes, body = nav.groups()
+    class_match = re.search(r'\bclass\s*=\s*["\']([^"\']+)["\']', attributes, re.IGNORECASE)
+    assert class_match, (name, "primary navigation has no class")
+    classes = set(class_match.group(1).split())
+    assert classes.intersection({"site-nav", "nav-links"}), (
+        name, "primary navigation must use a supported shared class", sorted(classes)
+    )
+    assert re.search(r'\baria-label\s*=\s*["\']Main navigation["\']', attributes, re.IGNORECASE), (
+        name, "primary navigation must have an accessible name"
+    )
+
     expected_links = {
         "/ios-download", "/android", "/guide", "/features", "/songbook", "/support",
     }
-    links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', nav.group(1), re.IGNORECASE)
+    links = re.findall(r'<a\b[^>]*\bhref=["\']([^"\']+)["\']', body, re.IGNORECASE)
     assert len(links) == len(set(links)) and set(links) == expected_links, (
         name, "primary navigation routes differ from the shared contract", links
     )
@@ -215,20 +224,27 @@ def validate_navigation_contract(source, name):
 
 def validate_responsive_navigation_styles():
     source = (WEB / "style.css").read_text(encoding="utf-8")
-    assert re.search(r"nav\{[^}]*display:flex[^}]*flex-wrap:wrap", source), (
-        "Primary navigation must wrap instead of overflowing narrow viewports"
+    nav_rule = re.search(
+        r"(?:^|})\s*nav\s*,\s*\.site-nav\s*,\s*\.nav-links\s*\{([^}]*)\}",
+        source, re.IGNORECASE | re.DOTALL
     )
-    assert ".site-header .site-nav{display:flex" in source, (
+    assert nav_rule, "Shared navigation selectors must have a common style rule"
+    declarations = nav_rule.group(1)
+    assert re.search(r"\bdisplay\s*:\s*flex\b", declarations, re.IGNORECASE), (
         "Primary navigation must remain a flex layout"
     )
-    assert ".site-header .site-nav{justify-content:flex-start" in source, (
-        "Narrow viewports must align navigation to the available header space"
+    assert re.search(r"\bflex-wrap\s*:\s*wrap\b", declarations, re.IGNORECASE), (
+        "Primary navigation must wrap instead of overflowing narrow viewports"
     )
-    assert not re.search(r"\.site-nav[^}]*display:none", source), (
-        "Primary navigation must not be hidden without an accessible replacement"
-    )
+
+    for selector, declarations in re.findall(r"([^{}]+)\{([^{}]*)\}", source, re.DOTALL):
+        if re.search(r"(?<![\w-])(?:\.site-nav|\.nav-links)\b", selector):
+            assert not re.search(r"\bdisplay\s*:\s*none\b", declarations, re.IGNORECASE), (
+                "Primary navigation must not be hidden without an accessible replacement",
+                selector.strip()
+            )
     assert not re.search(r"(?m)^\s*ap:anywhere\}\s*$", source), (
-        "style.css contains an orphaned declaration fragment"
+        "Stylesheet must not contain the orphaned ap:anywhere fragment"
     )
 
 
