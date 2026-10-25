@@ -199,3 +199,12 @@ The compact diagnostic artifact [#12577317727](https://github.com/usermalik20-de
 The candidate runner repair keeps one app process alive, captures each of the same six destinations, dismisses each route through the stable `navigation.done` accessibility identifier, and waits for the Stage's More control to return before continuing. This reduces cold-start overhead without removing destinations, skipping assertions, adding blind sleeps, or weakening the required-test set.
 
 **Status:** candidate; full iPhone/iPad walkthrough and exact-SHA acceptance remain pending on the repair branch. Do not call main's full walkthrough green until the menu case passes on both devices.
+
+
+## iOS encrypted-companion input validation and keyboard-idle timeout
+
+Walkthrough run [#40140289375](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40140289375) on candidate `c1bdcf57500f45f15e83876a5b4ae6fcb6387f5f` passed the iPad stage but failed the iPhone stage. The iPhone log shows `testEncryptedCompanionPairingScreenAndInputRejection` exceeded XCTest's 120-second per-test allowance while entering the public address. `typeText("8.8.8.8")` stalled on the simulator's “App animations complete notification not received” wait for roughly 60 seconds; the runner restarted and returned exit 65. Even though the aggregate log listed all named cases as passing across attempts, that exit remains a failure and is not accepted as a green walkthrough.
+
+The repair centralizes private-address plus 32-character hexadecimal-code validation in `CompanionProtocol.isValidPairingInput`, shares `isValidPairingCode` with the handshake's secret validation, and adds package tests for valid private ranges, public/loopback rejection, empty/short/long/non-hex codes, and uppercase hex. The UI test retains the encrypted-pairing screen, disabled Connect, no Disconnect, and user-facing instruction assertions without depending on the flaky software-keyboard idle notification. No per-test timeout increase, retry, or assertion suppression is used.
+
+Acceptance: package tests and source-contract guard pass on the exact candidate SHA, then the full iPhone and iPad walkthroughs both exit zero and contain every required named test in one clean run. This is a candidate repair until those hosted results pass.
