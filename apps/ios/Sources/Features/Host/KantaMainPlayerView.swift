@@ -381,7 +381,7 @@ struct KantaMainPlayerView: View {
     }
     private var moreButton: some View {
         stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
-            .accessibilityIdentifier("stage.more")
+            .accessibilityIdentifier("stage.controls.more")
     }
     private var playButton: some View {
         Button {

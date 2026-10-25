@@ -14,6 +14,8 @@ def verify():
     stage = (APP / 'Features/Host/KantaMainPlayerView.swift').read_text()
     stage_presentation = (APP / 'Features/Host/KantaStageSheetPresentation.swift').read_text()
     stage_background = stage.split('@ViewBuilder private var stageBackground: some View {', 1)[1].split('\n    private var header:', 1)[0]
+    embedded_player = stage.split('private var embeddedPlayer: some View {', 1)[1].split('private var nowSinging: some View {', 1)[0]
+    controls_more = stage.split('private var moreButton: some View {', 1)[1].split('private var playButton: some View {', 1)[0]
     fullscreen = (APP / 'Features/Host/FullscreenKaraokePlayerView.swift').read_text()
     fullscreen_presenter = (APP / 'Features/Host/SingingFullscreenPresentation.swift').read_text()
     remote = (APP / 'Features/Remote/EncryptedCompanionView.swift').read_text()
@@ -124,6 +126,13 @@ def verify():
         'real playback walkthrough': 'func testStarterPlaybackAndControls()' in test,
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,
+        'Stage More accessibility identifier targets the embedded navigation button': (
+            'Button(action: onMore)' in embedded_player
+            and '.accessibilityLabel("More")' in embedded_player
+            and '.accessibilityIdentifier("stage.more")' in embedded_player
+            and '.accessibilityIdentifier("stage.controls.more")' in controls_more
+            and 'app.buttons["stage.more"]' in test
+        ),
         'library dismissal leaves session save opt-in': (
             'onSaveSession: {' in host
             and 'guard model.showingSessionSavePrompt else { return }' in host

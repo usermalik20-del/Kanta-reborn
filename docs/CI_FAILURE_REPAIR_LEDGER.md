@@ -431,3 +431,68 @@ Main commit [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5
 **Exact-candidate validation:** reconstruction [#40218224023](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218224023), focused smoke [#40218223728](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223728), full iPhone/iPad walkthrough [#40218223740](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223740), and unsigned archive [#40218223776](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223776) all passed on `65e03c1`; both device jobs passed. Candidate artifact [#12608094930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223776/artifacts/12608094930) is 25,120,093 bytes with SHA-256 `b4a3a25c95a3d63c0de5ac82ca7a7a6c6181571dfeb77e789bf4d58c5b49cdcd`, unsigned.
 
 **Current acceptance:** PR #80 was 10 commits ahead and 12 behind main before synchronization. The synchronized merge head must pass all four workflows again on one exact SHA before the PR can merge. Prior candidate green results do not transfer to a new head.
+
+
+## iOS Stage v2 — exact-head acceptance and merge (2026-10-26)
+
+**Candidate:** PR [#80](https://github.com/usermalik20-del/Kanta-reborn/pull/80), head [`f0b4902`](https://github.com/usermalik20-del/Kanta-reborn/commit/f0b4902f745dcfc39b1a5a8bb64425ff660b4a25); merged as [`db53397`](https://github.com/usermalik20-del/Kanta-reborn/commit/db533979834a4614914bd215299bb636e52bde36).
+
+**Original failure fingerprint:** `KantaVisualWalkthroughUITests` could not find the starter-song Play control because SwiftUI's lazy grid had not materialized off-screen cells. The iPad follow-up also asserted that the section heading itself must be hittable, which was not a reliable interaction contract.
+
+**Confirmed cause and repair:** the tests queried controls before scrolling into the Library's starter-song section. The helper now locates `library.content`, scrolls until the actual Morning Light title and `starter.play.morning-light` button exist and are hittable, and preserves the playback assertions. The matching source guard enforces the scroll-to-controls behavior rather than the heading hit test. The redesign also removes a no-op “See all” button and replaces an unsupported fixed `3:12` duration with `KANTA original` metadata.
+
+**Regression coverage:** `testStarterPlaybackAndControls`, `testOnlinePreviewPreservesPausedStarterAndLocalResume`, and the release-tooling design-system adoption tests. The playback assertions were not deleted or skipped.
+
+**Exact-head validation on `f0b4902`:**
+- Reconstruction, iOS + Android: [#40237740473](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40237740473) — passed.
+- Focused iPhone smoke: [#40237740476](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40237740476) — passed.
+- Full iPhone/iPad walkthrough: [#40237740472](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40237740472) — iPhone and iPad jobs both passed.
+- Unsigned iOS archive: [#40237740485](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40237740485) — passed.
+
+**Candidate artifact:** [#12615254075](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40237740485/artifacts/12615254075), 25,119,209 bytes, SHA-256 `e79598ff0f2966a113db82253dc5edbd188f19e8ca4f35b3572a657d3c411a35`, expiration 2026-11-01 21:58:39 UTC. Unsigned; not a signed production release.
+
+**Post-merge validation:** merge commit `db53397` triggered reconstruction [#40242088043](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242088043), iPhone/iPad walkthrough [#40242088004](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242088004), and unsigned archive [#40242088000](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242088000). All three were in progress at the time this record was added. Keep post-merge status distinct from the green PR-head evidence and append the final result when known.
+
+**Status:** candidate validated and merged; post-merge acceptance pending. Signing and publication remain unverified.
+
+**Recurrence rule:** scroll to real lazy content controls before querying them; do not use section-header hittability as a proxy for visible playable content, and do not weaken playback assertions to get a green walkthrough.
+
+
+## Android browser validation — Chrome DevTools startup deadline too short (2026-10-26)
+
+**Fingerprint:** reconstruction-validation Android job, step `Verify HTTPS companion in real Chrome`; `AssertionError: Chrome DevTools did not start`.
+
+**Affected commit / first failure:** PR #80 merge commit [`db53397`](https://github.com/usermalik20-del/Kanta-reborn/commit/db533979834a4614914bd215299bb636e52bde36), reconstruction [run #40242088043](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242088043). Android source guards, SoundFont sanitizer, Gradle build/lint/domain checks, and companion asset/request-contract checks passed before failure. The failure occurred before CDP navigation and browser assertions.
+
+**Cause:** `tools/verify-companion-browser.mjs` waited only 10 seconds for `DevToolsActivePort` and discarded Chrome stderr. The same harness passed on earlier main run [#40220533959](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220533959) after about 8.9 seconds. On the failing runner the port file did not appear inside the fixed window, and suppressed stderr prevented distinguishing slow startup from a browser launch error. This was a harness startup/diagnostic defect, not evidence of a companion protocol or app-source regression.
+
+**Fix:** PR [#82](https://github.com/usermalik20-del/Kanta-reborn/pull/82), candidate commit [`bb2313c`](https://github.com/usermalik20-del/Kanta-reborn/commit/bb2313c774f880efe710e3c00772b360a4e1c24d), merged as [`bb42695`](https://github.com/usermalik20-del/Kanta-reborn/commit/bb42695401a952c479b4fd47a2bf317191a3ce86). The harness now waits up to 30 seconds for the port file, captures the last 12 KB of Chrome stderr, distinguishes spawn/exit/timeout, and retries the local DevTools HTTP endpoint for five more seconds. The workflow's three-minute step timeout remains in place.
+
+**Regression coverage:** existing real-Chrome TLS pairing, unverified-pairing rejection, keypad, search, safe metadata, distinct reservations, cancellation, Play/Pause/Stop, disconnect and 320–1024px layout assertions remain unchanged.
+
+**Exact-candidate validation:** reconstruction [#40242647204](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242647204) passed on `bb2313c`; the Android job completed the real-Chrome browser flow, captured-browser interoperability and emulator runtime checks. The iOS job passed Swift package tests and unsigned simulator build. Unsigned archive [#40242647144](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242647144) passed.
+
+**Post-merge validation:** main reconstruction [#40243337754](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337754) and main unsigned archive [#40243337745](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337745) were queued after merge; update this record when their final results are available.
+
+**Status:** `verified on candidate; post-merge main confirmation pending`.
+
+**Recurrence rule:** if DevTools fails to start, inspect captured Chrome stderr and child exit state first. Do not suppress the browser assertion, skip real Chrome, or treat static asset checks as browser acceptance.
+
+
+## iOS UI smoke — Stage More accessibility identifier attached to the wrong control (2026-10-26)
+
+**Fingerprint:** workflow `KANTA iOS focused simulator smoke`, job `ios-smoke`, test `KantaVisualWalkthroughUITests.testOnlinePreviewPreservesPausedStarterAndLocalResume`; `XCTAssertTrue failed` in `waitForRendered` while querying `stage.more`.
+
+**Affected SHA / first observed run:** PR #83 head `6941aec198ad07eb46c5f7d8093b9361d0821750`, [focused smoke run #40244262594](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594), [job #121322606681](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594/job/121322606681). The complete job log shows the failure at `KantaVisualWalkthroughUITests.swift:525` after the test's initial menu helper could not find `stage.more`.
+
+**Cause (confirmed):** PR #83 changed menu-test queries from the accessible label `More` to `stage.more`, but the identifier was attached only to the separate `moreButton` used by the fullscreen player's `controls(wide:)`. The initial embedded player uses a different chevron button with `Button(action: onMore)` and accessibility label `More`, without that identifier. The UI test therefore waited for an identifier that the initial screen did not expose; the failing assertion occurred before the paused-starter playback assertions. This is an accessibility identity mismatch, not evidence that playback itself regressed.
+
+**Fix candidate:** commit [`1c2aeaa`](https://github.com/usermalik20-del/Kanta-reborn/commit/1c2aeaa56d864001e5894e546ba390185e57fedf) assigns `stage.more` to the actual embedded navigation button and renames the fullscreen-only control to `stage.controls.more`. It also adds a source-contract check in `tools/check-ios-presentation-contract.py` that verifies the identifier is attached to the correct button and keeps the two controls distinct.
+
+**Regression coverage:** the existing menu and online-preview walkthroughs continue to query `stage.more`; the presentation-contract guard now fails if the ID drifts back onto the fullscreen-only control. No playback assertions were removed or weakened.
+
+**Validation:** `candidate`. Fresh exact-head CI was triggered by `1c2aeaa`; its run IDs and final results must be recorded after they complete. The earlier green reconstruction/archive and the still-running walkthrough on `6941aec` do not validate this fix.
+
+**Recurrence rule:** when `stage.more` is missing, inspect identifier placement in `embeddedPlayer` versus `controls(wide:)`. Do not add sleeps or loosen assertions; give distinct accessible controls distinct stable identifiers and keep the source-contract guard aligned.
+
+**Status:** `candidate`.
