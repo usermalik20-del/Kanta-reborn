@@ -22,13 +22,8 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         let library = app.buttons["Song Library"]
         waitForRendered(library, in: app)
         library.tap()
-        let title = app.staticTexts["Morning Light"].firstMatch
-        XCTAssertTrue(title.waitForExistence(timeout: waitSeconds))
-        for _ in 0..<8 where !title.isHittable { app.swipeUp() }
+        let play = try starterPlayButton(in: app)
         capture("02-real-starter-library", app)
-        let play = app.buttons["starter.play.morning-light"]
-        for _ in 0..<5 where !play.isHittable { app.swipeUp() }
-        XCTAssertTrue(play.isHittable)
         play.tap()
         app.buttons["Done"].firstMatch.tap()
         let transport = app.buttons["stage.playPause"]
@@ -223,10 +218,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         app.launch()
         openMenu(in: app, expecting: "Song Library")
         app.buttons["Song Library"].tap()
-        let play = app.buttons["starter.play.morning-light"]
-        XCTAssertTrue(play.waitForExistence(timeout: waitSeconds))
-        for _ in 0..<5 where !play.isHittable { app.swipeUp() }
-        XCTAssertTrue(play.isHittable)
+        let play = try starterPlayButton(in: app)
         play.tap()
         app.buttons["navigation.done"].tap()
         let transport = app.buttons["stage.playPause"]
@@ -255,6 +247,47 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         waitForExpectations(timeout: 5)
         capture("online-dismissed-local-starter-resumes", app)
         transport.tap()
+    }
+
+
+    @MainActor
+    private func starterPlayButton(in app: XCUIApplication) throws -> XCUIElement {
+        let scrollView = app.scrollViews.firstMatch
+        XCTAssertTrue(scrollView.waitForExistence(timeout: waitSeconds),
+                      "Library must expose its scrollable content")
+
+        // The Stage redesign intentionally uses LazyVGrid. Its off-screen starter
+        // cells are not in the accessibility tree until the Library scrolls to
+        // them, so materialize the section before querying the Play control.
+        let deadline = Date().addingTimeInterval(waitSeconds)
+        let section = app.staticTexts["Starter Songs"].firstMatch
+        while !section.isHittable && Date() < deadline {
+            scrollView.swipeUp()
+        }
+        XCTAssertTrue(section.isHittable, "Starter Songs section must become visible")
+
+        let title = app.staticTexts["Morning Light"].firstMatch
+        while !title.exists && Date() < deadline {
+            scrollView.swipeUp()
+        }
+        XCTAssertTrue(title.waitForExistence(timeout: 5),
+                      "Morning Light must appear after scrolling into the starter grid")
+        while !title.isHittable && Date() < deadline {
+            scrollView.swipeUp()
+        }
+        XCTAssertTrue(title.isHittable, "Morning Light must be visible before playback")
+
+        let play = app.buttons["starter.play.morning-light"]
+        while !play.exists && Date() < deadline {
+            scrollView.swipeUp()
+        }
+        XCTAssertTrue(play.waitForExistence(timeout: 5),
+                      "The starter Play button must be materialized with its grid cell")
+        while !play.isHittable && Date() < deadline {
+            scrollView.swipeUp()
+        }
+        XCTAssertTrue(play.isHittable, "Starter Play must be visible and hittable")
+        return play
     }
 
     @MainActor
