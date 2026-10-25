@@ -53,6 +53,7 @@ struct LibraryView: View {
             .frame(maxWidth: .infinity)
         }
         .background(GeloVisualStyle.pageGradient)
+        .accessibilityIdentifier("library.content")
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.large)
         .task {
