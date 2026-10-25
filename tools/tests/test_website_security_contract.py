@@ -16,6 +16,7 @@ STRICT_CSP = {
     "default-src": frozenset({"'none'"}),
     "script-src": frozenset({"'self'"}),
     "style-src": frozenset({"'self'", "'unsafe-inline'"}),
+    "img-src": frozenset({"'self'"}),
     "connect-src": frozenset({"'none'"}),
     "base-uri": frozenset({"'none'"}),
     "form-action": frozenset({"'none'"}),
@@ -23,6 +24,7 @@ STRICT_CSP = {
 }
 HOMEPAGE_CSP = {
     "default-src": frozenset({"'none'"}),
+    "img-src": frozenset({"'self'"}),
     "script-src": frozenset({"'self'", "https://www.googletagmanager.com", "https://pagead2.googlesyndication.com"}),
     "style-src": frozenset({"'self'", "'unsafe-inline'"}),
     "connect-src": frozenset({"https://www.google-analytics.com"}),
