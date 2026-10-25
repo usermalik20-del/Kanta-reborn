@@ -456,3 +456,20 @@ Main commit [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5
 **Status:** candidate validated and merged; post-merge acceptance pending. Signing and publication remain unverified.
 
 **Recurrence rule:** scroll to real lazy content controls before querying them; do not use section-header hittability as a proxy for visible playable content, and do not weaken playback assertions to get a green walkthrough.
+
+
+## Android browser validation — Chrome DevTools startup deadline too short (2026-10-26)
+
+**Fingerprint:** reconstruction-validation Android job, step `Verify HTTPS companion in real Chrome`; `AssertionError: Chrome DevTools did not start`.
+
+**Affected commit / run:** merge commit [`db53397`](https://github.com/usermalik20-del/Kanta-reborn/commit/db533979834a4614914bd215299bb636e52bde36), reconstruction [run #40242088043](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242088043). The Android source guards, native SoundFont sanitizer, and Gradle build/lint/domain checks had passed before the browser step. The browser's asset and bounded-request contract checks also passed. Failure occurred before CDP navigation and browser assertions.
+
+**Cause:** `tools/verify-companion-browser.mjs` waited only 10 seconds for `DevToolsActivePort` and launched Chrome with stderr discarded. The same script passed on main run [#40220533959](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220533959), where startup took about 8.9 seconds. On the failing runner the port file was not created within the fixed window; because diagnostics were discarded, the script could not distinguish slow startup from a browser launch error. This is a harness startup/diagnostic defect, not evidence that the companion protocol or app source failed.
+
+**Candidate repair:** branch `fix/chrome-devtools-startup-20261026` increases the bounded DevTools startup wait to 30 seconds, captures a bounded tail of Chrome stderr, reports spawn/exit/timeout details, and retries the local DevTools HTTP endpoint for up to five additional seconds. The existing browser interactions and security assertions remain unchanged. The workflow's three-minute step timeout still bounds total execution.
+
+**Regression coverage:** preserve the existing real-Chrome TLS pairing, unverified-pairing rejection, keypad, search, safe metadata, distinct reservations, cancellation, Play/Pause/Stop, disconnect and responsive-layout checks. The next hosted reconstruction run must execute this unchanged acceptance path on the fix head.
+
+**Validation:** `candidate`; hosted validation on the fix branch is pending. Do not rerun the unchanged failing SHA to hide the deterministic timeout contract.
+
+**Recurrence rule:** if DevTools fails to start, inspect the captured Chrome stderr and child exit state first. Do not suppress the browser assertion, skip the real-Chrome step, or treat static asset checks as browser acceptance.
