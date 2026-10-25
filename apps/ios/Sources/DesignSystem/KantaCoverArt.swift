@@ -16,6 +16,18 @@ struct KantaCoverArt: View {
         (Color(hex: "1B7FA8"), Color(hex: "3DE0A8"))  // 7: teal -> green
     ]
 
+    /// Four diagonals, chosen independently of the colour pair, so two seeds
+    /// that land on the same pair still read as different artwork.
+    private var selectedAxis: (UnitPoint, UnitPoint) {
+        let axes: [(UnitPoint, UnitPoint)] = [
+            (.topLeading, .bottomTrailing),
+            (.bottomLeading, .topTrailing),
+            (.top, .bottom),
+            (.leading, .trailing)
+        ]
+        return axes[Int((fnv1aHash(seed) / 8) % UInt32(axes.count))]
+    }
+
     private var selectedPair: (Color, Color) {
         let hash = fnv1aHash(seed)
         let index = Int(hash % UInt32(Self.gradientPairs.count))
@@ -47,11 +59,11 @@ struct KantaCoverArt: View {
 
     var body: some View {
         let pair = selectedPair
-        ZStack(alignment: .bottomTrailing) {
+        ZStack(alignment: .topTrailing) {
             LinearGradient(
                 colors: [pair.0, pair.1],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                startPoint: selectedAxis.0,
+                endPoint: selectedAxis.1
             )
 
             RadialGradient(
@@ -65,7 +77,7 @@ struct KantaCoverArt: View {
                 .font(.system(size: 38, weight: .black, design: .rounded))
                 .foregroundStyle(.white.opacity(0.26))
                 .padding(.trailing, 12)
-                .padding(.bottom, 6)
+                .padding(.top, 8)
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay {
