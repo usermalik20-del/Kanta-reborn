@@ -7,9 +7,8 @@ import UniformTypeIdentifiers
 /// joins the song queue, records microphone audio or fetches streaming media.
 @MainActor
 final class KantaIntermissionMusic: ObservableObject {
-    @Published var enabled = false {
-        didSet { updatePlayback() }
-    }
+    @Published private(set) var enabled = false
+    private let audioOwnership: KaraokeAudioOwnership
     // Self-assignment in didSet recurses through the synthesized @Published setter.
     @Published private(set) var volume: Float = 0.23
     @Published private(set) var songTitle: String?
@@ -18,7 +17,7 @@ final class KantaIntermissionMusic: ObservableObject {
     @Published private(set) var hasTrack = false
 
     private let directory: URL
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private var player: AVAudioPlayer?
     private var trackURL: URL?
     private var transport: TransportState = .stopped
@@ -26,11 +25,15 @@ final class KantaIntermissionMusic: ObservableObject {
     private var fadeGeneration = 0
 
     private var shouldPlay: Bool {
-        enabled && isActiveHost && transport == .stopped && trackURL != nil
+        enabled && isActiveHost && !audioOwnership.onlineActive
+            && transport == .stopped && trackURL != nil
     }
 
-    init() {
-        directory = (FileManager.default.urls(
+    init(audioOwnership: KaraokeAudioOwnership, defaults: UserDefaults = .standard,
+         directory storageDirectory: URL? = nil) {
+        self.audioOwnership = audioOwnership
+        self.defaults = defaults
+        self.directory = storageDirectory ?? (FileManager.default.urls(
             for: .applicationSupportDirectory, in: .userDomainMask
         ).first ?? FileManager.default.temporaryDirectory)
             .appendingPathComponent("KANTA/Intermission", isDirectory: true)
@@ -64,6 +67,27 @@ final class KantaIntermissionMusic: ObservableObject {
         volume = bounded
         defaults.set(bounded, forKey: "kanta.intermission.volume")
         if shouldPlay { player?.setVolume(bounded, fadeDuration: 0.5) }
+    }
+
+    func setEnabled(_ value: Bool) {
+        if value {
+            do { try audioOwnership.prepareNativeAudio() }
+            catch {
+                message = "Intermission audio output is unavailable."
+                return
+            }
+        }
+        enabled = value
+        updatePlayback()
+    }
+
+    /// Immediate handoff; invalidate pending fades and require a new explicit opt-in.
+    func stopForOnlinePlayback() {
+        enabled = false
+        fadeGeneration += 1
+        player?.stop()
+        player = nil
+        isPlaying = false
     }
 
     func activate() {
@@ -223,7 +247,9 @@ struct KantaIntermissionPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle("Auto-play between songs", isOn: $intermission.enabled)
+            Toggle("Auto-play between songs", isOn: Binding(
+                get: { intermission.enabled }, set: { intermission.setEnabled($0) }
+            ))
                 .disabled(!intermission.hasTrack)
             LabeledContent(
                 "Selected music",

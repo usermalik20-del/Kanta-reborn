@@ -36,11 +36,14 @@ def audit(root: Path) -> dict:
                     errors.append(f"Unknown local test module: {file.name}: {module}")
 
     project = (ios / "project.yml").read_text()
-    ui_root = ios / "Tests/KantaUITests"
-    if "path: Tests/KantaUITests" in project and "- KantaUITests" in project:
-        ui_files = set(ui_root.rglob("*.swift"))
-        covered.update(ui_files)
-        suites["KantaUITests (Xcode)"] = len(ui_files)
+    for name in ("KantaUITests", "KantaNativeTests"):
+        path = f"Tests/{name}"
+        if f"path: {path}" in project and f"- {name}" in project:
+            files = set((ios / path).rglob("*.swift"))
+            if not files:
+                errors.append(f"Empty Xcode test target: {name}")
+            covered.update(files)
+            suites[f"{name} (Xcode)"] = len(files)
     for file in sorted((ios / "Tests").rglob("*.swift")):
         if file not in covered:
             errors.append(f"Orphaned test file: {file.relative_to(ios)}")

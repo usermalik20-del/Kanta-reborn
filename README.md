@@ -37,4 +37,6 @@ Android 0.10 companion control is implemented, accepted in run 38885716463 and p
 
 See [companion checkpoint](docs/ANDROID_COMPANION_CHECKPOINT.md), [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md), [pitch correction checkpoint](docs/ANDROID_PITCH_CORRECTION_CHECKPOINT.md), [scoring checkpoint](docs/ANDROID_SCORING_CHECKPOINT.md), [monitor checkpoint](docs/ANDROID_MONITOR_CHECKPOINT.md), [camera checkpoint](docs/ANDROID_CAMERA_CHECKPOINT.md), [personal-media checkpoint](docs/ANDROID_PERSONAL_MEDIA_CHECKPOINT.md), [iOS checkpoint](docs/IOS_RUNTIME_CHECKPOINT.md), [website checkpoint](docs/WEBSITE_07_CHECKPOINT.md) and [handover](docs/HARDENING_HANDOVER.md). Current checkpoints supersede dated recovery notes.
 
+PR #51 candidate cross-platform feature: [built-in Companion Remote and host-address browser access](docs/COMPANION_REMOTE_ROADMAP.md), with the owner's approved visual reference and pairing requirements. HTTPS host and built-in/browser remote source are implemented with pending native/browser/device acceptance; not a shipping capability.
+
 Architecture and implementation rules: [Engineering architecture contract](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md). This distinguishes existing functionality, pending extension points, and release gates.

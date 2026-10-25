@@ -713,7 +713,36 @@ public final class CoreRegressionTests {
     check(completions.get() == 1, "Concurrent completion emitted more than one result");
   }
 
+  private static void youtubeLifecycleChecks() {
+    YouTubeVideoReference a = YouTubeVideoReference.parse("https://youtu.be/abcdefghijk");
+    YouTubeVideoReference b = YouTubeVideoReference.parse("https://youtu.be/12345678901");
+    YouTubePreviewLifecycle preview = new YouTubePreviewLifecycle();
+    YouTubePreviewLifecycle.Session first = preview.open(a);
+    YouTubePreviewLifecycle.Session replacement = preview.open(b);
+    check(!preview.close(first.id) && preview.active() == replacement, "Stale online failure closed replacement");
+    YouTubePreviewLifecycle.Session repeated = preview.open(b);
+    check(!repeated.id.equals(replacement.id), "Repeated link reused a disposed player identity");
+    check(!preview.close(replacement.id), "Stale repeated-link callback closed current player");
+    check(preview.close(repeated.id) && !preview.close(repeated.id), "Repeated dismissal was not idempotent");
+    preview.open(a);
+    preview.close();
+    check(preview.active() == null, "Backgrounded player survived");
+    YouTubePreviewLifecycle.Session reopened = preview.open(b);
+    check(!preview.close(first.id) && preview.active() == reopened, "Old callback resurrected/closed a reopened player");
+    ReservationQueue queue = new ReservationQueue();
+    ReservationQueue.Entry one = queue.reserve(UUID.randomUUID(), song(), "Ana");
+    ReservationQueue.Entry two = queue.reserve(UUID.randomUUID(), song(), "Ben");
+    if (YouTubeVideoReference.parse("https://example.com/abcdefghijk") != null) throw new AssertionError("Invalid link accepted");
+    preview.close();
+    preview.open(a);
+    check(queue.snapshot().size() == 2 && queue.snapshot().get(0).id.equals(one.id)
+        && queue.snapshot().get(1).id.equals(two.id), "Online lifecycle changed local FIFO identities");
+    queue.remove(one.id);
+    check(queue.peek().id.equals(two.id) && preview.active() != null, "Explicit local mutation affected online state");
+  }
+
   public static void main(String[] args) throws Exception {
+    youtubeLifecycleChecks();
     microphonePitchChecks();
     monitorChecks();
     scoringChecks(args[0]);
@@ -1072,6 +1101,7 @@ public final class CoreRegressionTests {
       Files.write(Paths.get(args[1]), fixture.getBytes(StandardCharsets.UTF_8));
     }
     checks += CompanionRegressionTests.run();
+    checks += BrowserRemoteRegressionTests.run();
     System.out.println("KANTA Android core: " + checks + " regression checks passed");
   }
 }

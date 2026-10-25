@@ -1,38 +1,168 @@
+import hashlib
 import importlib.util
 import io
 import pathlib
 import plistlib
 import unittest
+from unittest.mock import patch
 import zipfile
-import hashlib
 
-spec = importlib.util.spec_from_file_location("prepare", pathlib.Path(__file__).parents[1] / "prepare-verified-downloads.py")
+spec = importlib.util.spec_from_file_location(
+    "prepare",
+    pathlib.Path(__file__).parents[1] / "prepare-verified-downloads.py",
+)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
-class DownloadContracts(unittest.TestCase):
-    def test_live_manifest_uses_current_repository_and_run_specific_artifact_links(self):
-        root = pathlib.Path(__file__).parents[2]
-        manifest = __import__("json").loads((root / "apps/web/downloads.json").read_text())
-        self.assertEqual(manifest["repository"], "usermalik20-del/Kanta-reborn")
-        self.assertEqual(manifest["retentionDays"], 7)
-        for platform, page in (("android", "android.html"), ("ios", "ios-download.html")):
-            build = manifest[platform]
-            link = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"]) + "/artifacts/" + str(build["artifact"])
-            self.assertIn(link, (root / "apps/web" / page).read_text())
-    def test_failed_or_moved_source_is_rejected(self):
-        expected = module.BUILDS["android"]
-        artifact = dict(id=expected["artifact"], expired=False, workflow_run=dict(id=expected["run"]))
-        with self.assertRaises(ValueError):
-            module.accepted(dict(id=expected["run"], conclusion="failure", head_sha=expected["source"]), artifact, expected)
-        with self.assertRaises(ValueError):
-            module.accepted(dict(id=expected["run"], conclusion="success", head_sha="wrong"), artifact, expected)
+SOURCE = "a" * 40
 
-    def test_expired_artifact_is_rejected(self):
-        expected = module.BUILDS["android"]
-        with self.assertRaises(ValueError):
-            module.accepted(dict(id=expected["run"], conclusion="success", head_sha=expected["source"]),
-                            dict(id=expected["artifact"], expired=True, workflow_run=dict(id=expected["run"])), expected)
+
+def run_record(run_id=41, name="KANTA reconstruction validation", source=SOURCE,
+               conclusion="success", created="2026-10-24T00:00:00Z", branch="main"):
+    return {
+        "id": run_id,
+        "name": name,
+        "head_sha": source,
+        "head_branch": branch,
+        "status": "completed",
+        "conclusion": conclusion,
+        "created_at": created,
+    }
+
+
+def artifact_record(artifact_id=81, run_id=41, name="android-reconstruction-checks",
+                    source=SOURCE, expired=False):
+    return {
+        "id": artifact_id,
+        "name": name,
+        "expired": expired,
+        "digest": "",
+        "workflow_run": {
+            "id": run_id,
+            "head_sha": source,
+            "head_branch": "main",
+        },
+    }
+
+
+class DownloadContracts(unittest.TestCase):
+    def test_latest_exact_main_run_must_succeed(self):
+        good = run_record()
+        newer_failure = run_record(
+            run_id=42, conclusion="failure", created="2026-10-24T00:01:00Z"
+        )
+        with patch.object(
+            module, "api", return_value={"workflow_runs": [good, newer_failure]}
+        ):
+            with self.assertRaisesRegex(ValueError, "latest run 42 concluded failure"):
+                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+
+    def test_wrong_sha_and_feature_branch_are_not_accepted(self):
+        wrong_sha = run_record(run_id=50, source="b" * 40)
+        feature = run_record(run_id=51, branch="feature/test")
+        with patch.object(
+            module, "api", return_value={"workflow_runs": [wrong_sha, feature]}
+        ):
+            with self.assertRaisesRegex(ValueError, "no matching run is visible"):
+                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+
+    def test_waits_for_a_run_to_become_visible(self):
+        with patch.object(
+            module, "api",
+            side_effect=[
+                {"workflow_runs": []},
+                {"workflow_runs": [run_record()]},
+            ],
+        ), patch.object(module.time, "sleep"):
+            found = module.find_source_run(
+                SOURCE, "KANTA reconstruction validation",
+                wait_seconds=2,
+            )
+        self.assertEqual(found["id"], 41)
+
+    def test_artifact_is_discovered_from_its_exact_successful_run(self):
+        run = run_record()
+        artifact = artifact_record()
+        with patch.object(module, "api", return_value={"artifacts": [artifact]}):
+            found = module.find_artifact(run, "android-reconstruction-checks")
+        expected = {"run": 41, "artifact": 81, "source": SOURCE}
+        module.accepted(run, found, expected)
+
+    def test_expired_or_ambiguous_artifacts_are_rejected(self):
+        run = run_record()
+        with patch.object(
+            module, "api",
+            return_value={"artifacts": [artifact_record(expired=True)]},
+        ):
+            with self.assertRaisesRegex(ValueError, "has expired"):
+                module.find_artifact(run, "android-reconstruction-checks")
+        with patch.object(
+            module, "api",
+            return_value={"artifacts": [
+                artifact_record(81), artifact_record(82)
+            ]},
+        ):
+            with self.assertRaisesRegex(ValueError, "found 2"):
+                module.find_artifact(run, "android-reconstruction-checks")
+
+    def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
+        walkthrough = run_record(61, "KANTA iOS visual walkthrough")
+        reconstruction = run_record(62, "KANTA reconstruction validation")
+        ios = run_record(63, "KANTA iOS unsigned artifacts")
+        android_artifact = artifact_record(82, 62, "android-reconstruction-checks")
+        ios_artifact = artifact_record(83, 63, "KANTA-personal-unsigned")
+        with patch.object(
+            module, "find_source_run",
+            side_effect=[walkthrough, reconstruction, ios],
+        ) as find_run, patch.object(
+            module, "find_artifact",
+            side_effect=[android_artifact, ios_artifact],
+        ):
+            found_walkthrough, android, device = module.resolve_source(SOURCE)
+        self.assertEqual(found_walkthrough["id"], 61)
+        self.assertEqual(android["expected"], {
+            "run": 62, "artifact": 82, "source": SOURCE
+        })
+        self.assertEqual(device["expected"], {
+            "run": 63, "artifact": 83, "source": SOURCE
+        })
+        self.assertEqual(find_run.call_count, 3)
+
+    def test_invalid_source_sha_is_rejected_before_api_access(self):
+        with patch.object(module, "api") as api_call:
+            with self.assertRaisesRegex(ValueError, "full 40-character"):
+                module.resolve_source("not-a-sha")
+        api_call.assert_not_called()
+
+    def test_wrong_run_or_source_identity_is_rejected(self):
+        expected = {"run": 41, "artifact": 81, "source": SOURCE}
+        with self.assertRaisesRegex(ValueError, "exact main revision"):
+            module.accepted(
+                run_record(source="b" * 40), artifact_record(), expected
+            )
+        with self.assertRaisesRegex(ValueError, "identity mismatch"):
+            module.accepted(
+                run_record(), artifact_record(82), expected
+            )
+
+    def test_unique_artifact_member_and_redirect_credentials(self):
+        data = io.BytesIO()
+        with zipfile.ZipFile(data, "w") as archive:
+            archive.writestr("KANTA-personal-unsigned.ipa", b"device app")
+        with zipfile.ZipFile(io.BytesIO(data.getvalue())) as archive:
+            self.assertEqual(
+                module.one(archive, "/KANTA-personal-unsigned.ipa"),
+                b"device app",
+            )
+        request = module.urllib.request.Request(
+            "https://api.github.com/artifact",
+            headers={"Authorization": "Bearer fixture"},
+        )
+        redirected = module.SafeRedirect().redirect_request(
+            request, None, 302, "Found", {},
+            "https://storage.example/artifact.zip",
+        )
+        self.assertIsNone(redirected.get_header("Authorization"))
 
     def test_ambiguous_application_is_rejected(self):
         data = io.BytesIO()
@@ -40,34 +170,42 @@ class DownloadContracts(unittest.TestCase):
             archive.writestr("one/app-debug.apk", b"one")
             archive.writestr("two/app-debug.apk", b"two")
         with zipfile.ZipFile(io.BytesIO(data.getvalue())) as archive:
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(ValueError, "ambiguous"):
                 module.one(archive, "/app-debug.apk")
-
-    def test_root_artifact_member_and_redirect_credentials(self):
-        data = io.BytesIO()
-        with zipfile.ZipFile(data, "w") as archive:
-            archive.writestr("KANTA-personal-unsigned.ipa", b"device app")
-        with zipfile.ZipFile(io.BytesIO(data.getvalue())) as archive:
-            self.assertEqual(module.one(archive, "/KANTA-personal-unsigned.ipa"), b"device app")
-        request = module.urllib.request.Request("https://api.github.com/artifact",
-                                               headers={"Authorization": "Bearer fixture"})
-        redirected = module.SafeRedirect().redirect_request(request, None, 302, "Found", {},
-                                                            "https://storage.example/artifact.zip")
-        self.assertIsNone(redirected.get_header("Authorization"))
 
     def test_unsigned_device_identity_and_checksum(self):
         data = io.BytesIO()
         with zipfile.ZipFile(data, "w") as archive:
-            archive.writestr("Payload/KANTA.app/Info.plist", plistlib.dumps(dict(CFBundleIdentifier="com.gelo.karaoke", CFBundleSupportedPlatforms=["iPhoneOS"])))
-            archive.writestr("Payload/KANTA.app/THIRD_PARTY_AUDIO_NOTICES.txt", "fixture notices")
+            archive.writestr(
+                "Payload/KANTA.app/Info.plist",
+                plistlib.dumps({
+                    "CFBundleIdentifier": "com.gelo.karaoke",
+                    "CFBundleSupportedPlatforms": ["iPhoneOS"],
+                }),
+            )
+            archive.writestr(
+                "Payload/KANTA.app/THIRD_PARTY_AUDIO_NOTICES.txt",
+                "fixture notices",
+            )
         app = data.getvalue()
-        info = dict(run_id=str(module.BUILDS["ios"]["run"]), platform="iPhoneOS", signed=False, personal_signing=True, icloud_available=False)
+        expected = {"run": 63, "source": SOURCE}
+        info = {
+            "run_id": "63",
+            "source_sha": SOURCE,
+            "platform": "iPhoneOS",
+            "signed": False,
+            "personal_signing": True,
+            "icloud_available": False,
+        }
         checksum = hashlib.sha256(app).hexdigest()
-        module.validate_ipa(app, info, checksum)
-        with self.assertRaises(ValueError):
-            module.validate_ipa(app + b"changed", info, checksum)
-        with self.assertRaises(ValueError):
-            module.validate_ipa(app, dict(info, signed=True), checksum)
+        module.validate_ipa(app, info, checksum, expected)
+        with self.assertRaisesRegex(ValueError, "checksum"):
+            module.validate_ipa(app + b"changed", info, checksum, expected)
+        with self.assertRaisesRegex(ValueError, "source identity"):
+            module.validate_ipa(app, dict(info, source_sha="b" * 40), checksum, expected)
+        with self.assertRaisesRegex(ValueError, "source identity"):
+            module.validate_ipa(app, dict(info, signed=True), checksum, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,6 +6,8 @@ on:
     paths:
       - 'apps/ios/**'
       - 'tools/check-ios-presentation-contract.py'
+      - 'tools/verify-ios-smoke-results.py'
+      - 'tools/verify-test-layout.py'
       - '.github/workflows/ios-smoke.yml'
 permissions:
   contents: read
@@ -26,20 +28,21 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Build smoke-test host and UI test bundle
+      - name: Build host, native lifecycle tests and UI test bundle
         run: |
           set -o pipefail
           python3 ../../tools/check-ios-presentation-contract.py
           if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
           xcodegen generate
-          xcodebuild build-for-testing -project GeloKaraoke.xcodeproj -scheme GeloKaraoke -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee smoke-build.log
-      - name: Run focused iPhone simulator smoke
+          xcodebuild build-for-testing -project GeloKaraoke.xcodeproj -scheme GeloKaraoke -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES 2>&1 | tee smoke-build.log
+      - name: Run native lifecycle tests and focused iPhone smoke
         run: |
           set -o pipefail
           DEVICE=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k,v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone") and x.get("isAvailable",True)))')
           xcrun simctl boot "$DEVICE" || true
           xcrun simctl bootstatus "$DEVICE" -b
-          xcodebuild test-without-building -project GeloKaraoke.xcodeproj -scheme GeloKaraoke -configuration Release -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/DerivedData -resultBundlePath smoke.xcresult -parallel-testing-enabled NO -only-testing:KantaUITests/KantaVisualWalkthroughUITests/testFocusedNavigationSmoke CODE_SIGNING_ALLOWED=NO 2>&1 | tee smoke-tests.log
+          xcodebuild test-without-building -project GeloKaraoke.xcodeproj -scheme GeloKaraoke -configuration Release -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/DerivedData -resultBundlePath smoke.xcresult -parallel-testing-enabled NO -only-testing:KantaNativeTests -only-testing:KantaUITests/KantaVisualWalkthroughUITests/testFocusedNavigationSmoke -only-testing:KantaUITests/KantaVisualWalkthroughUITests/testBrowserCompanionRoleAndInputRejection -only-testing:KantaUITests/KantaVisualWalkthroughUITests/testOnlinePreviewEntryCloseReopenAndForegroundLifecycle -only-testing:KantaUITests/KantaVisualWalkthroughUITests/testOnlinePreviewPreservesPausedStarterAndLocalResume CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES 2>&1 | tee smoke-tests.log
+          python3 ../../tools/verify-ios-smoke-results.py smoke-tests.log
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

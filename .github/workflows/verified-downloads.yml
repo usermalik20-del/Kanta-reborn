@@ -1,6 +1,11 @@
 name: Verified download packaging
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact main-branch commit SHA to package; defaults to the dispatch ref.
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -8,7 +13,7 @@ on:
       - 'tools/tests/test_verified_downloads.py'
       - '.github/workflows/verified-downloads.yml'
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
     paths:
       - 'tools/prepare-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
@@ -17,40 +22,43 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: verified-downloads-${{ github.event.pull_request.head.ref || github.ref_name }}
-  cancel-in-progress: true
+  group: verified-downloads-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: false
 jobs:
   contracts:
+    if: ${{ github.event_name != 'workflow_run' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Check artifact identity and packaging contracts
+      - name: Check exact-SHA artifact and release-gate contracts
         run: python3 -m unittest discover -s tools/tests -p test_verified_downloads.py
   package:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
     needs: contracts
-    continue-on-error: true
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Preserve validated application bytes
+      - name: Package exact-SHA accepted builds
         run: python3 tools/prepare-verified-downloads.py
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: KANTA-Android-preview-download
           path: verified-downloads/android/*
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: KANTA-iOS-personal-unsigned-download
           path: verified-downloads/ios/*
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: KANTA-verified-download-manifest
           path: verified-downloads/downloads.json

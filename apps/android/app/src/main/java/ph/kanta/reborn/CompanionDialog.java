@@ -15,6 +15,7 @@ final class CompanionDialog {
     LinearLayout body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);
     int pad=(int)(16*activity.getResources().getDisplayMetrics().density);body.setPadding(pad,pad,pad,pad);
     ScrollView scroll=new ScrollView(activity);scroll.addView(body);
+    body.addView(button(activity,"Host / Companion Remote · apps and browsers",()->BrowserCompanionDialog.show(activity,session)));
     TextView help=label(activity,"Android companion · Same private Wi-Fi/Ethernet network. The full code grants song search, reservations, cancellation and Play/Pause/Next. Share it only with someone you trust. One companion, 5-minute pairing window, 10-minute session. Leaving either app revokes the connection. iPhone/iPad can control an Android host using encrypted companion pairing. iPhone hosting still uses a separate legacy protocol.");body.addView(help);
     TextView status=label(activity,session.companion.status);body.addView(status);
     TextView pairing=label(activity,"");pairing.setTextIsSelectable(true);body.addView(pairing);

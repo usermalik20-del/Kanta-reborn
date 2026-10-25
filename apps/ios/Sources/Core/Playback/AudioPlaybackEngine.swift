@@ -72,6 +72,12 @@ public protocol AudioPlaybackEngine: Sendable {
     func setPitch(semitones: Int) async
     func setTempo(ratio: Double) async
     func snapshot() async -> AudioPlaybackSnapshot
+    /// Suspend idle rendering without changing position, transport or completion identity.
+    func suspendForOnlinePlayback() async throws
+}
+
+extension AudioPlaybackEngine {
+    public func suspendForOnlinePlayback() async throws {}
 }
 
 

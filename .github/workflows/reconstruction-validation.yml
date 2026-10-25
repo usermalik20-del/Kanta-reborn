@@ -39,6 +39,14 @@ jobs:
         run: ./gradlew --no-daemon :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest
       - name: Verify camera permission and offline notices
         run: python3 tools/verify-android-runtime-package.py
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Verify HTTPS companion in real Chrome
+        timeout-minutes: 3
+        env:
+          KANTA_BROWSER_SCREENSHOT: browser-remote.png
+        run: node tools/verify-companion-browser.mjs
       - name: Verify captured browser interoperability
         run: node tools/verify-songbook-browser-interop.mjs apps/android/app/build/synthetic-songbook.json docs/evidence/website/2026-10-15/songbook.js
       - name: Android emulator runtime checks
@@ -62,6 +70,7 @@ jobs:
             android-logcat.log
             android-runtime-stage.png
             android-runtime-camera.png
+            browser-remote.png
             emulator.log
           if-no-files-found: ignore
           retention-days: 7

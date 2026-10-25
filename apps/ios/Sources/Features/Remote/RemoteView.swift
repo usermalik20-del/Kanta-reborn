@@ -13,7 +13,10 @@ struct RemoteView: View {
     @State private var singerName = ""
     @State private var pendingCatalogSearch: Task<Void, Never>?
 
-    init() {
+    let browserHost: BrowserRemoteHost?
+
+    init(browserHost: BrowserRemoteHost? = nil) {
+        self.browserHost = browserHost
         _browser = StateObject(
             wrappedValue: BonjourHostBrowser()
         )
@@ -24,6 +27,13 @@ struct RemoteView: View {
 
     var body: some View {
         List {
+            if let browserHost {
+                Section("Apps and browser guests") {
+                    NavigationLink("Host / Companion Remote") { BrowserCompanionView(host: browserHost) }
+                        .accessibilityIdentifier("browser.companion.open")
+                    Text("Approved remote interface inside KANTA or a paired browser, with private HTTPS hosting on iOS and Android.").font(.caption)
+                }
+            }
             Section("Encrypted Android companion") {
                 NavigationLink("Control an Android host") { EncryptedCompanionView() }
                     .accessibilityIdentifier("companion.open")

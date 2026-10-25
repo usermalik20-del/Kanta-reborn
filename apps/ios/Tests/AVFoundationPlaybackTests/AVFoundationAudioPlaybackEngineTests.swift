@@ -36,6 +36,8 @@ import Testing
     #expect(snapshot.volume == 0.4)
     #expect(snapshot.pitchSemitones == 2)
     #expect(snapshot.tempoRatio == 1.25)
+    try await engine.suspendForOnlinePlayback()
+    #expect(await engine.snapshot() == snapshot)
 }
 
 @Test func fileAudioEngineRejectsMidiAsset() async throws {

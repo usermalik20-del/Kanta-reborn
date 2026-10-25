@@ -16,6 +16,7 @@ final class SessionController {
   }
 
   final CompanionControl companion;
+  final BrowserCompanion browserCompanion;
   final ReservationQueue queue = new ReservationQueue();
   final ExecutorService io = Executors.newSingleThreadExecutor();
   final ExecutorService preparation = Executors.newSingleThreadExecutor();
@@ -89,10 +90,13 @@ final class SessionController {
   private long generation = 0;
   private final AudioManager audio;
   private final AudioFocusRequest focus;
+  private UUID onlineAudioOwner;
+  private Runnable retireOnlineAudio;
 
   SessionController(Context context) {
     this.context = context;
     companion = new CompanionControl(this);
+    browserCompanion = new BrowserCompanion(this);
     monitor =
         new MicrophoneMonitor(
             context, this::publish, notice -> message = notice, this::inputReading);
@@ -479,11 +483,52 @@ final class SessionController {
           new CompletedScore(completed.playbackId, current.title, singer, completed.estimate);
   }
 
+  boolean onlineAudioAllowed() {
+    return foreground && !playing && !loading && !microphone.enabled() && !monitor.enabled();
+  }
+
+  boolean onlineAudioActive() { return onlineAudioOwner != null; }
+
+  boolean claimOnlineAudio(UUID owner, Runnable retire) {
+    Objects.requireNonNull(owner);
+    Objects.requireNonNull(retire);
+    if (!onlineAudioAllowed()) return false;
+    revokeOnlineAudio();
+    onlineAudioOwner = owner;
+    retireOnlineAudio = retire;
+    // Online playback starts only through the visible player's own controls.
+    loopEnabled = false;
+    party.stopAll();
+    audio.abandonAudioFocusRequest(focus);
+    publish();
+    return true;
+  }
+
+  void releaseOnlineAudio(UUID owner) {
+    if (onlineAudioOwner == null || !onlineAudioOwner.equals(owner)) return;
+    onlineAudioOwner = null;
+    retireOnlineAudio = null;
+    publish();
+  }
+
+  private void revokeOnlineAudio() {
+    Runnable retire = retireOnlineAudio;
+    onlineAudioOwner = null;
+    retireOnlineAudio = null;
+    // Clear the token before synchronous native teardown can call back into this owner.
+    if (retire != null) retire.run();
+  }
+
+  private int requestLocalAudioFocus() {
+    revokeOnlineAudio();
+    return audio.requestAudioFocus(focus);
+  }
+
   void startMicrophone() {
     if (!foreground
         || context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
             != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
-    if (audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+    if (requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
       message = "Microphone input needs audio focus. Try again when other audio has stopped.";
       publish();
       return;
@@ -522,7 +567,9 @@ final class SessionController {
     scoreFrameFloor = SystemClock.elapsedRealtime();
     foreground = visible;
     if (!visible) {
+      revokeOnlineAudio();
       companion.stop();
+      browserCompanion.stop();
       monitor.stop();
       microphone.stop();
       party.stopAll();
@@ -539,12 +586,13 @@ final class SessionController {
             .orElse(null);
     boolean allowed =
         foreground
+            && !onlineAudioActive()
             && loopEnabled
             && !auxiliaryInterrupted
             && current == null
             && !loading
             && queue.peek() == null;
-    if (allowed && audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+    if (allowed && requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       allowed = false;
     party.loop(
         selected == null || repository == null
@@ -563,11 +611,12 @@ final class SessionController {
   void toggleIntermission() {
     auxiliaryInterrupted = false;
     loopEnabled = !loopEnabled;
+    if (loopEnabled) revokeOnlineAudio();
     publish();
   }
 
   void triggerPad(int slot) {
-    if (!foreground || audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+    if (!foreground || requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       return;
     auxiliaryInterrupted = false;
     if (!party.trigger(slot)) {
@@ -733,10 +782,20 @@ final class SessionController {
       publish();
       return;
     }
+    if (entry.youtube != null) {
+      // Never hand a web reservation to the local file decoder.
+      message = "Online video is reserved, but host-controlled YouTube playback is not ready. "
+          + "The reservation remains in Up Next.";
+      publish();
+      return;
+    }
     prepare(entry);
   }
 
   private void prepare(ReservationQueue.Entry entry) {
+    if (entry.youtube != null) {
+      throw new IllegalArgumentException("Online media cannot enter the local decoder");
+    }
     loading = true;
     long token = ++generation;
     message = "Opening " + entry.song.title;
@@ -770,7 +829,7 @@ final class SessionController {
                             publish();
                             return;
                           }
-                          if (audio.requestAudioFocus(focus)
+                          if (requestLocalAudioFocus()
                               != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                             pending = null;
                             candidate.release();
@@ -919,7 +978,7 @@ final class SessionController {
       return;
     }
     if (playing) pause();
-    else if (audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+    else if (requestLocalAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
       try {
         player.start();
       } catch (IllegalStateException e) {

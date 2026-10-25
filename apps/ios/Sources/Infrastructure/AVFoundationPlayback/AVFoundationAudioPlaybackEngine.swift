@@ -131,6 +131,11 @@ public actor AVFoundationAudioPlaybackEngine: AudioPlaybackEngine {
         timePitch.rate = Float(tempoRatio)
     }
 
+    public func suspendForOnlinePlayback() async throws {
+        guard transport != .playing else { throw CocoaError(.userCancelled) }
+        engine.pause()
+    }
+
     public func snapshot() async -> AudioPlaybackSnapshot {
         AudioPlaybackSnapshot(
             transport: transport,

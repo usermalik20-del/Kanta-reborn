@@ -62,6 +62,9 @@ import Testing
 private actor RecordingPlaybackEngine: AudioPlaybackEngine {
     private var kinds: [MediaKind] = []
     private var stops = 0
+    private var suspensions = 0
+    func suspendForOnlinePlayback() async throws { suspensions += 1 }
+    func suspensionCount() -> Int { suspensions }
     private var state = AudioPlaybackSnapshot()
 
     func load(_ asset: AudioPlaybackAsset) async throws {
@@ -111,3 +114,18 @@ private actor RecordingPlaybackEngine: AudioPlaybackEngine {
     }
 }
 
+
+@Test func onlineHandoffSuspendsBothRenderingBackendsWithoutTransportCommands() async throws {
+    let file = RecordingPlaybackEngine(), midi = RecordingPlaybackEngine()
+    let routed = RoutedAudioPlaybackEngine(fileEngine: file, midiEngine: midi)
+    try await routed.load(AudioPlaybackAsset(songID: SongID(rawValue: "paused"),
+        url: URL(fileURLWithPath: "/tmp/paused.wav"), mediaKind: .wav))
+    try await routed.seek(toMilliseconds: 1_234)
+    let before = await routed.snapshot()
+    try await routed.suspendForOnlinePlayback()
+    #expect(await routed.snapshot() == before)
+    #expect(await file.suspensionCount() == 1)
+    #expect(await midi.suspensionCount() == 1)
+    #expect(await file.stopCount() == 0)
+    #expect(await midi.stopCount() == 0)
+}

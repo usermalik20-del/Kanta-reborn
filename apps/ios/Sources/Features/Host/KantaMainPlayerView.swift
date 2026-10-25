@@ -1,5 +1,6 @@
 import GeloKaraokeCore
 import SwiftUI
+import UIKit
 
 /// A projection of the existing Host model, never a second player or queue.
 @MainActor
@@ -16,37 +17,36 @@ struct KantaMainPlayerView: View {
     var onSaveSession: () -> Void = {}
     var embedded = false
     var onExpand: () -> Void = {}
+    var setEmbeddedStageSheet: (@MainActor (KantaStageSheet?) -> Void)? = nil
     @Environment(\.scenePhase) private var scenePhase
-    @State private var activeStageSheet: StageSheet?
+    @State private var activeStageSheet: KantaStageSheet?
 
-    private enum StageSheet: String, Identifiable {
-        case search, queue
-        var id: String { rawValue }
-    }
     @State private var transportBusy = false
 
     var body: some View {
         Group {
-            if embedded { embeddedPlayer } else { fullscreenPlayer }
-        }
-        .sheet(item: $activeStageSheet, onDismiss: {
-            presentationGate.completeDismissal(.stage)
-        }) { sheet in
-            switch sheet {
-            case .search:
-                KantaStageSearchView(model: model, singerName: $singerName,
-                                     microphoneBusy: microphoneBusy,
-                                     onClose: { presentationGate.beginDismissal(.stage); activeStageSheet = nil })
-                    .padding(12)
-                    .background(GeloVisualStyle.pageBackground)
-                    .preferredColorScheme(.dark)
-                    .presentationDetents([.large])
-            case .queue:
-                queueSheet
+            if embedded {
+                embeddedPlayer
+            } else {
+                fullscreenPlayer
+                    .sheet(item: $activeStageSheet, onDismiss: {
+                        presentationGate.completeDismissal(.stage)
+                    }) { sheet in
+                        KantaStageSheetContent(
+                            sheet: sheet,
+                            model: model,
+                            singerName: $singerName,
+                            microphoneBusy: microphoneBusy,
+                            onClose: closeStageSheet
+                        )
+                    }
             }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { camera.stop() }
+        }
+        .background {
+            KantaWindowTapProbe().frame(width: 0, height: 0)
         }
         .onDisappear { camera.stop() }
         .alert("Camera BGV", isPresented: Binding(
@@ -130,9 +130,17 @@ struct KantaMainPlayerView: View {
                 .accessibilityIdentifier("stage.controls")
             }
             VStack(alignment: .leading, spacing: 14) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top) { nowSinging; Spacer(); stageActions }
-                    VStack(alignment: .leading, spacing: 12) { nowSinging; stageActions }
+                // A single deterministic layout keeps exactly one interactive
+                // instance of the stage action buttons. `ViewThatFits` builds
+                // both candidates and the iPad walkthrough showed it selecting
+                // the horizontal branch while taps on `stage.search` never
+                // reached the button's action, so the controls are laid out
+                // once here and the title yields space instead.
+                HStack(alignment: .top, spacing: 12) {
+                    nowSinging
+                        .layoutPriority(1)
+                    Spacer(minLength: 8)
+                    stageActions
                 }
                 ZStack {
                     stageBackground.accessibilityHidden(true)
@@ -197,16 +205,28 @@ struct KantaMainPlayerView: View {
             stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
                 .accessibilityIdentifier("stage.expand")
         }
+        // Diagnostic only: fires alongside any button that consumes the tap, so
+        // it can distinguish "the touch never reaches this row" from "the touch
+        // arrives but the Button does not act". Remove once the iPad walkthrough
+        // reports a stage request.
+        .simultaneousGesture(TapGesture().onEnded {
+            NSLog("[KANTA_PROBE] actions-row tap received")
+        })
     }
 
     @ViewBuilder private var stageBackground: some View {
+        // These layers render the stage; they never own user interaction.
+        // SwiftUI drawing/video surfaces can extend their hit-test region beyond
+        // the visible card, so taps must pass through to the controls above them.
         if camera.isEnabled {
             KantaCameraPreview(capture: camera.capture)
+                .allowsHitTesting(false)
         } else {
             KaraokeStageView(asset: backgroundsEnabled ? model.backgroundAsset : nil,
                              builtInPreset: backgroundsEnabled ? selectedPreset : nil,
                              isPlaying: model.snapshot.transport == .playing,
                              showsWatermark: false)
+                .allowsHitTesting(false)
         }
     }
 
@@ -255,15 +275,44 @@ struct KantaMainPlayerView: View {
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
         }
     }
+    private func requestStageSheet(_ sheet: KantaStageSheet) {
+        guard !embedded || setEmbeddedStageSheet != nil else {
+            assertionFailure("Embedded stage sheets require a stable HostView presenter.")
+            return
+        }
+        NSLog("[KANTA_STAGE_PRESENTATION] request sheet=%@ embedded=%@ gateOwner=%@ dismissing=%@",
+              sheet.rawValue, embedded ? "true" : "false",
+              String(describing: presentationGate.owner),
+              presentationGate.dismissing ? "true" : "false")
+        presentationGate.request(.stage) {
+            NSLog("[KANTA_STAGE_PRESENTATION] activate sheet=%@ embedded=%@",
+                  sheet.rawValue, embedded ? "true" : "false")
+            if embedded {
+                setEmbeddedStageSheet?(sheet)
+            } else {
+                activeStageSheet = sheet
+            }
+        }
+    }
+
+    private func closeStageSheet() {
+        presentationGate.beginDismissal(.stage)
+        if embedded {
+            setEmbeddedStageSheet?(nil)
+        } else {
+            activeStageSheet = nil
+        }
+    }
+
     private var searchButton: some View {
         stageButton("Search", icon: "magnifyingglass") {
-            presentationGate.request(.stage) { activeStageSheet = .search }
+            requestStageSheet(.search)
         }
-            .accessibilityIdentifier("stage.search")
+            .accessibilityIdentifier(embedded ? "stage.search" : "stage.search.fullscreen")
     }
     private var queueButton: some View {
         stageButton("Queue", icon: "list.bullet") {
-            presentationGate.request(.stage) { activeStageSheet = .queue }
+            requestStageSheet(.queue)
         }
             .accessibilityValue("\(model.snapshot.queue.count) reservations")
     }
@@ -314,38 +363,88 @@ struct KantaMainPlayerView: View {
                 Image(systemName: icon).font(.system(size: 20, weight: .medium))
                     .frame(width: 44, height: 44)
                     .background(.black.opacity(0.3), in: Circle())
-                    .overlay(Circle().stroke(GeloVisualStyle.accent.opacity(0.65)))
+                    .overlay(Circle().strokeBorder(GeloVisualStyle.accent.opacity(0.65)))
                 Text(title).font(.caption)
             }
             .frame(minWidth: 44)
+            // With .plain button style SwiftUI derives the hit region from the
+            // label's content, which here is a symbol, a stroked circle and a
+            // caption rather than one solid shape. The iPad walkthrough tapped
+            // stage.search at the centre of the reported frame and no gesture in
+            // the row recognised it, so claim the whole label rectangle instead.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain).accessibilityLabel(title)
     }
-    private var queueSheet: some View {
-        NavigationStack {
-            List {
-                if model.snapshot.queue.isEmpty {
-                    Text("No reservations yet. Use Search to choose a song.")
-                }
-                ForEach(model.snapshot.queue) { item in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(item.song.title)
-                            if let singer = item.requestedBy { Text(singer).font(.caption) }
-                        }
-                        Spacer()
-                        Button(role: .destructive) {
-                            Task { await model.removeQueueItem(item.id) }
-                        } label: { Image(systemName: "trash").frame(width: 44, height: 44) }
-                        .accessibilityLabel("Remove " + item.song.title)
-                    }
-                }
-            }
-            .navigationTitle("Reservations")
-            .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { presentationGate.beginDismissal(.stage); activeStageSheet = nil }
-            } }
+}
+
+/// Diagnostic only: records where a tap in the window actually lands so a
+/// reported accessibility frame can be compared with the delivered touch.
+/// The recogniser never cancels touches, so behaviour is unchanged.
+@MainActor
+final class KantaWindowTapProbeCoordinator: NSObject, UIGestureRecognizerDelegate {
+    private weak var installedWindow: UIWindow?
+    private weak var tapRecognizer: UITapGestureRecognizer?
+
+    func install(on window: UIWindow) {
+        guard installedWindow !== window || tapRecognizer == nil else { return }
+        detach()
+        let recognizer = UITapGestureRecognizer(
+            target: self,
+            action: #selector(handleTap(_:))
+        )
+        recognizer.cancelsTouchesInView = false
+        recognizer.delegate = self
+        window.addGestureRecognizer(recognizer)
+        installedWindow = window
+        tapRecognizer = recognizer
+    }
+
+    func detach() {
+        if let tapRecognizer {
+            installedWindow?.removeGestureRecognizer(tapRecognizer)
         }
-        .preferredColorScheme(.dark)
+        tapRecognizer = nil
+        installedWindow = nil
+    }
+
+    @objc func handleTap(_ recogniser: UITapGestureRecognizer) {
+        guard let view = recogniser.view else { return }
+        let point = recogniser.location(in: view)
+        let hit = view.hitTest(point, with: nil)
+        let hitDescription = hit.map { hitView in
+            let frameInWindow = hitView.convert(hitView.bounds, to: view)
+            return "\(type(of: hitView)) \(NSCoder.string(for: frameInWindow))"
+        } ?? "nil"
+        NSLog("[KANTA_TAP] window-point=%@ hit=%@",
+              NSCoder.string(for: point),
+              hitDescription)
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool { true }
+}
+
+struct KantaWindowTapProbe: UIViewRepresentable {
+    func makeCoordinator() -> KantaWindowTapProbeCoordinator {
+        KantaWindowTapProbeCoordinator()
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let probe = UIView(frame: .zero)
+        probe.isUserInteractionEnabled = false
+        DispatchQueue.main.async {
+            guard let window = probe.window else { return }
+            context.coordinator.install(on: window)
+        }
+        return probe
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: KantaWindowTapProbeCoordinator) {
+        coordinator.detach()
     }
 }

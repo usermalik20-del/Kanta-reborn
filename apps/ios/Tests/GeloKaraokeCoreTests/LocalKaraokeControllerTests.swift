@@ -246,6 +246,22 @@ private actor FakeAudioPlaybackEngine: AudioPlaybackEngine {
         self.failingPlaySongIDs = failingPlaySongIDs
     }
 
+    private var audioOwnership: KaraokeAudioOwnership?
+    private var nativeStartOwnership: [Bool] = []
+    func checkOwnership(_ value: KaraokeAudioOwnership) { audioOwnership = value }
+    func ownershipAtNativeStarts() -> [Bool] { nativeStartOwnership }
+    private var suspendCount = 0
+    func numberOfSuspensions() -> Int { suspendCount }
+    func suspendForOnlinePlayback() async throws { suspendCount += 1 }
+    private func recordOwnership() async {
+        if let audioOwnership { nativeStartOwnership.append(await audioOwnership.onlineActive) }
+    }
+
+    private var blockLoad = false
+    private var loadWaiter: CheckedContinuation<Void, Never>?
+    func blockNextLoad() { blockLoad = true }
+    func isLoadBlocked() -> Bool { loadWaiter != nil }
+    func releaseLoad() { loadWaiter?.resume(); loadWaiter = nil }
     private var loadCount = 0
     private var blockSnapshot = false
     private var snapshotWaiter: CheckedContinuation<Void, Never>?
@@ -258,6 +274,11 @@ private actor FakeAudioPlaybackEngine: AudioPlaybackEngine {
     }
 
     func load(_ asset: AudioPlaybackAsset) async throws {
+        await recordOwnership()
+        if blockLoad {
+            blockLoad = false
+            await withCheckedContinuation { loadWaiter = $0 }
+        }
         loadCount += 1
         await Task.yield()
         if failingLoadSongIDs.contains(asset.songID) {
@@ -276,6 +297,7 @@ private actor FakeAudioPlaybackEngine: AudioPlaybackEngine {
     }
 
     func play() async throws {
+        await recordOwnership()
         guard let songID = state.songID else {
             throw AudioPlaybackEngineError.noAssetLoaded
         }
@@ -518,4 +540,153 @@ private struct FakeKaraokeLibrary: KaraokeLibraryAccess {
     let after = await controller.snapshot()
     #expect(after.nowPlaying?.id == first.id)
     #expect(after.queue == snapshot.queue)
+}
+
+
+@MainActor
+@Test func onlineHandoffPreservesPausedSongQueueAndRetiresBeforeNativeResume() async throws {
+    let song = LibrarySong(id: SongID(rawValue: "handoff"), title: "Handoff", mediaKind: .wav)
+    let engine = FakeAudioPlaybackEngine()
+    let ownership = KaraokeAudioOwnership()
+    await engine.checkOwnership(ownership)
+    let controller = LocalKaraokeController(engine: engine,
+        library: FakeKaraokeLibrary(songs: [song]), audioOwnership: ownership)
+    for _ in 0..<3 { try await controller.send(.enqueue(songID: song.id)) }
+    try await controller.send(.play)
+    let rejectedID = UUID()
+    let rejected = try await controller.claimOnlineAudio(rejectedID) { Issue.record("Playing local accepted online") }
+    #expect(!rejected)
+    try await controller.send(.seek(milliseconds: 12_345))
+    try await controller.send(.pause)
+    let before = await controller.snapshot()
+    let onlineID = UUID()
+    var retirements = 0
+    let accepted = try await controller.claimOnlineAudio(onlineID) { retirements += 1 }
+    #expect(accepted)
+    #expect(await controller.snapshot() == before)
+    #expect(await engine.numberOfSuspensions() == 1)
+    // A reservation is metadata only; it must not revoke online output.
+    try await controller.send(.enqueue(songID: song.id))
+    #expect(ownership.ownsOnlineAudio(onlineID))
+    try await controller.send(.play) // Same entry used by authenticated LAN commands.
+    #expect(retirements == 1)
+    #expect(!ownership.onlineActive)
+    #expect(await engine.ownershipAtNativeStarts().allSatisfy { !$0 })
+    let after = await controller.snapshot()
+    #expect(after.playbackID == before.playbackID)
+    #expect(after.positionMilliseconds == before.positionMilliseconds)
+    #expect(after.queue.prefix(2).map(\.id) == before.queue.map(\.id))
+    #expect(after.lastCompletion == before.lastCompletion)
+}
+
+@MainActor
+@Test func onlineHandoffEffectsAndExplicitNextKeepDistinctReservations() async throws {
+    let song = LibrarySong(id: SongID(rawValue: "effect-handoff"), title: "Effect", mediaKind: .wav)
+    let ownership = KaraokeAudioOwnership()
+    let effects = HandoffEffects(ownership: ownership)
+    let engine = FakeAudioPlaybackEngine()
+    await engine.checkOwnership(ownership)
+    let controller = LocalKaraokeController(engine: engine,
+        library: FakeKaraokeLibrary(songs: [song]), partySFX: effects, audioOwnership: ownership)
+    for _ in 0..<2 { try await controller.send(.enqueue(songID: song.id)) }
+    let before = await controller.snapshot()
+    try await controller.send(.triggerSFX(.ding))
+    let first = UUID()
+    let accepted = try await controller.claimOnlineAudio(first) {}
+    #expect(accepted)
+    #expect(await effects.active == false)
+    try await controller.send(.triggerSFX(.ding))
+    #expect(!ownership.onlineActive)
+    #expect(await effects.sawOnlineAtTrigger == false)
+    let second = UUID()
+    let reopened = try await controller.claimOnlineAudio(second) {}
+    #expect(reopened)
+    try await controller.send(.next)
+    #expect(!ownership.onlineActive)
+    let after = await controller.snapshot()
+    #expect(after.queue.map(\.id) == [before.queue[1].id])
+    #expect(await engine.ownershipAtNativeStarts().allSatisfy { !$0 })
+}
+
+@MainActor
+@Test func pendingOnlineClaimRechecksMicrophoneAndCancellationAfterAwait() async throws {
+    let ownership = KaraokeAudioOwnership()
+    let effects = HandoffEffects(ownership: ownership)
+    let controller = LocalKaraokeController(engine: FakeAudioPlaybackEngine(),
+        library: FakeKaraokeLibrary(songs: []), partySFX: effects, audioOwnership: ownership)
+    await effects.blockStop()
+    let pending = Task { try await controller.claimOnlineAudio(UUID()) {} }
+    for _ in 0..<1_000 {
+        if await effects.stopBlocked { break }
+        await Task.yield()
+    }
+    #expect(await effects.stopBlocked)
+    ownership.setMicrophoneBusy(true)
+    await effects.releaseStop()
+    let accepted = try await pending.value
+    #expect(!accepted)
+    #expect(!ownership.onlineActive)
+    ownership.setMicrophoneBusy(false)
+    await effects.blockStop()
+    let canceled = Task { try await controller.claimOnlineAudio(UUID()) {} }
+    for _ in 0..<1_000 {
+        if await effects.stopBlocked { break }
+        await Task.yield()
+    }
+    #expect(await effects.stopBlocked)
+    canceled.cancel()
+    await effects.releaseStop()
+    await #expect(throws: CancellationError.self) { try await canceled.value }
+    #expect(!ownership.onlineActive)
+    let reopened = try await controller.claimOnlineAudio(UUID()) {}
+    #expect(reopened)
+}
+
+private actor HandoffEffects: PartySFXPlayback {
+    let ownership: KaraokeAudioOwnership
+    private(set) var active = false
+    private(set) var sawOnlineAtTrigger = false
+    private var shouldBlock = false
+    private var waiter: CheckedContinuation<Void, Never>?
+    var stopBlocked: Bool { waiter != nil }
+    init(ownership: KaraokeAudioOwnership) { self.ownership = ownership }
+    func blockStop() { shouldBlock = true }
+    func releaseStop() { waiter?.resume(); waiter = nil }
+    func trigger(_ sound: PartySFX) async throws {
+        sawOnlineAtTrigger = await ownership.onlineActive
+        active = true
+    }
+    func stopAll() async {
+        if shouldBlock {
+            shouldBlock = false
+            await withCheckedContinuation { waiter = $0 }
+        }
+        active = false
+    }
+    func setSFXVolume(_ value: Float) async {}
+}
+
+
+@MainActor
+@Test func onlineClaimCannotEnterDuringNativePreparation() async throws {
+    let song = LibrarySong(id: SongID(rawValue: "preparing"), title: "Preparing", mediaKind: .wav)
+    let ownership = KaraokeAudioOwnership()
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(engine: engine,
+        library: FakeKaraokeLibrary(songs: [song]), audioOwnership: ownership)
+    try await controller.send(.enqueue(songID: song.id))
+    await engine.blockNextLoad()
+    let play = Task { try await controller.send(.play) }
+    for _ in 0..<1_000 {
+        if await engine.isLoadBlocked() { break }
+        await Task.yield()
+    }
+    #expect(await engine.isLoadBlocked())
+    let online = Task { try await controller.claimOnlineAudio(UUID()) {} }
+    await engine.releaseLoad()
+    try await play.value
+    let accepted = try await online.value
+    #expect(!accepted)
+    #expect(!ownership.onlineActive)
+    #expect(await controller.snapshot().nowPlaying?.id == song.id)
 }

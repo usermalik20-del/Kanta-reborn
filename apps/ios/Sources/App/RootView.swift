@@ -15,15 +15,21 @@ final class KantaPresentationGate: ObservableObject {
         if owner == .fullscreen, requested == .stage, !dismissing {
             owner = .stage
             fullscreenChildActive = true
+            NSLog("[KANTA_GATE] applied=fullscreen-child owner=%@ requested=%@", String(describing: owner), String(describing: requested))
             action()
             return
         }
         guard owner == nil && !dismissing else {
-            guard !pendingRequests.contains(where: { $0.owner == requested }) else { return }
+            guard !pendingRequests.contains(where: { $0.owner == requested }) else {
+                NSLog("[KANTA_GATE] dropped=duplicate owner=%@ requested=%@ dismissing=%d queued=%d", String(describing: owner), String(describing: requested), dismissing ? 1 : 0, pendingRequests.count)
+                return
+            }
+            NSLog("[KANTA_GATE] queued owner=%@ requested=%@ dismissing=%d queued=%d", String(describing: owner), String(describing: requested), dismissing ? 1 : 0, pendingRequests.count)
             pendingRequests.append(PendingRequest(owner: requested, action: action))
             return
         }
         owner = requested
+        NSLog("[KANTA_GATE] applied owner=%@ requested=%@", String(describing: owner), String(describing: requested))
         action()
     }
 
@@ -97,45 +103,62 @@ struct RootView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            HostView(services: services, presentationGate: presentationGate, navigationSheetPresented: activeNavigation != nil, onOpenNavigation: {
-                guard activeNavigation == nil else { return }
-                presentationGate.request(.navigation) {
-                    sheetRoute = .menu
-                    activeNavigation = .navigation
-                }
-            })
+        ZStack {
+            NavigationStack {
+                HostView(
+                    services: services,
+                    presentationGate: presentationGate,
+                    navigationSheetPresented: activeNavigation != nil,
+                    onOpenNavigation: {
+                        guard activeNavigation == nil else { return }
+                        presentationGate.request(.navigation) {
+                            sheetRoute = .menu
+                            activeNavigation = .navigation
+                        }
+                    }
+                )
                 .toolbar(.hidden, for: .navigationBar)
+            }
+        }
+        // Keep the navigation sheet on a sibling presentation anchor rather
+        // than on the NavigationStack that contains HostView. The shared gate
+        // serializes both owners, while separate anchors avoid the iPad losing
+        // an embedded Stage sheet in an ancestor/descendant presentation chain.
+        .background {
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
+                .sheet(item: $activeNavigation, onDismiss: {
+                    sheetRoute = .menu
+                    navigationDismissing = false
+                    presentationGate.completeDismissal(.navigation)
+                }) {
+                    _ in
+                    NavigationStack {
+                        destination(sheetRoute)
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("Done") {
+                                        guard !navigationDismissing else { return }
+                                        navigationDismissing = true
+                                        presentationGate.beginDismissal(.navigation)
+                                        activeNavigation = nil
+                                    }
+                                    .accessibilityIdentifier("navigation.done")
+                                }
+                            }
+                    }
+                }
         }
         .preferredColorScheme(.dark)
         .tint(GeloVisualStyle.accent)
-        // One optional sheet identity owns presentation and dismissal.
-        .sheet(item: $activeNavigation, onDismiss: {
-            sheetRoute = .menu
-            navigationDismissing = false
-            presentationGate.completeDismissal(.navigation)
-        }) {
-            _ in
-            NavigationStack {
-                destination(sheetRoute)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                guard !navigationDismissing else { return }
-                                navigationDismissing = true
-                                presentationGate.beginDismissal(.navigation)
-                                activeNavigation = nil
-                            }
-                            .accessibilityIdentifier("navigation.done")
-                        }
-                    }
-            }
-        }
         .task {
             services.diagnostics.beginSession()
             await services.prepare()
         }
         .onChange(of: scenePhase) { _, phase in
+            services.audioOwnership.setForeground(phase == .active)
+            if phase != .active { services.browserCompanion?.stop() }
             switch phase {
             case .active: services.diagnostics.setForeground(true)
             case .background: services.diagnostics.setForeground(false)
@@ -161,7 +184,7 @@ struct RootView: View {
             }
             .navigationTitle("More")
         case .library: LibraryView(services: services)
-        case .remote: RemoteView()
+        case .remote: RemoteView(browserHost: services.browserCompanion)
         case .settings: KantaSettingsView(services: services)
         case .legal: LegalDisclosureView()
         case .icloud: ICloudBackupView(services: services)

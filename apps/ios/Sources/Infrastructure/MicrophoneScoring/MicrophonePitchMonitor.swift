@@ -77,6 +77,7 @@ public final class MicrophonePitchMonitor: ObservableObject {
     private let voiceDelay = AVAudioUnitDelay()
     private let voiceMixer = AVAudioMixerNode()
     private var effects = VocalFXSettings()
+    public var onCaptureActivityChanged: (@MainActor (Bool) -> Void)?
     public var onDiagnosticEvent: (@MainActor (MicrophoneDiagnosticSignal) -> Void)?
 
 
@@ -332,6 +333,7 @@ public final class MicrophonePitchMonitor: ObservableObject {
         let generation = UUID()
         captureGeneration = generation
 
+        onCaptureActivityChanged?(true)
         status = .requestingPermission
         onDiagnosticEvent?(.permissionRequested)
 
@@ -343,6 +345,7 @@ public final class MicrophonePitchMonitor: ObservableObject {
         }
         guard granted else {
             status = .denied
+            onCaptureActivityChanged?(false)
             onDiagnosticEvent?(.denied)
             return
         }
@@ -474,6 +477,7 @@ public final class MicrophonePitchMonitor: ObservableObject {
             }
             engine.stop()
             status = .failed(error.localizedDescription)
+            onCaptureActivityChanged?(false)
             onDiagnosticEvent?(.failed)
             refreshMonitorSafety()
         }
@@ -496,6 +500,7 @@ public final class MicrophonePitchMonitor: ObservableObject {
         observation = nil
         inputRMS = 0
         status = .idle
+        onCaptureActivityChanged?(false)
         if wasActive { onDiagnosticEvent?(.stopped) }
     }
 

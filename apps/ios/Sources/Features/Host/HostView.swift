@@ -14,10 +14,12 @@ struct HostView: View {
     @State private var dismissedHostSheet: HostSheet?
     @State private var activeHostSheet: HostSheet? =
         ProcessInfo.processInfo.environment["KANTA_CONTROL_EXPANDED"] == "1" ? .controls : nil
-
+    @State private var activeEmbeddedStageSheet: KantaStageSheet?
     private enum HostSheet: String, Identifiable {
         case controls, sessionSave, favorites
         var id: String { rawValue }
+
+        var presentationOwner: KantaPresentationGate.Owner { .host }
     }
     @StateObject private var model: HostViewModel
     @ObservedObject private var networkHost: BonjourHostAdvertiser
@@ -26,8 +28,11 @@ struct HostView: View {
     @ObservedObject private var settings: KantaUserSettings
     @ObservedObject private var externalStage = KantaExternalStageCoordinator.shared
     @State private var singerName = ""
+    @State private var showingYouTubePreview = false
     @StateObject private var audioInputs = KantaAudioInputDiagnostics()
-    @StateObject private var intermission = KantaIntermissionMusic()
+    @ObservedObject private var intermission: KantaIntermissionMusic
+    private let controller: LocalKaraokeController?
+    private let audioOwnership: KaraokeAudioOwnership
     private let partySFX: KantaPartySFXEngine
     private let diagnostics: KantaSupportDiagnostics
     @State private var showControlCenter =
@@ -43,6 +48,9 @@ struct HostView: View {
         self.presentationGate = presentationGate
         self.navigationSheetPresented = navigationSheetPresented
         self.onOpenNavigation = onOpenNavigation
+        controller = services.controller
+        audioOwnership = services.audioOwnership
+        _intermission = ObservedObject(wrappedValue: services.intermission)
         partySFX = services.partySFX
         diagnostics = services.diagnostics
         _networkHost = ObservedObject(
@@ -66,67 +74,13 @@ struct HostView: View {
     @State private var remoteExpanded = false
 
     var body: some View {
-        hostContent
-        .sheet(item: $activeHostSheet, onDismiss: {
-            if dismissedHostSheet == .sessionSave {
-                model.showingSessionSavePrompt = false
-            }
-            dismissedHostSheet = nil
-            if pendingFullscreen {
-                pendingFullscreen = false
-                // Queue fullscreen before releasing CONTROL so the gate owns the
-                // transition continuously, including while the sheet animates out.
-                presentationGate.request(.fullscreen) { showingFullscreenPlayer = true }
-            }
-            presentationGate.completeDismissal(.host)
-        }) { sheet in
-            switch sheet {
-            case .controls:
-                NavigationStack {
-                    hostControls
-                        .safeAreaInset(edge: .bottom) {
-                            Button(action: openFullscreenPlayer) {
-                                Label("Open fullscreen player", systemImage: "arrow.up.left.and.arrow.down.right")
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .accessibilityIdentifier("controls.openFullscreen")
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(.regularMaterial)
-                        }
-                        .navigationTitle("CONTROL")
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") {
-                                    presentationGate.beginDismissal(.host)
-                                    activeHostSheet = nil
-                                }
-                            }
-                        }
-                }
-            case .sessionSave:
-                SaveSessionFavoritesView(model: model)
-            case .favorites:
-                SavedFavoritesView(model: model)
-            }
+        ZStack {
+            hostContent
         }
+        .sheet(item: $activeHostSheet, onDismiss: handleHostSheetDismissal, content: hostSheetContent)
         .navigationTitle("Karaoke Host")
         .navigationBarTitleDisplayMode(.large)
-        .background {
-            SingingFullscreenPresentation(
-                isPresented: $showingFullscreenPlayer,
-                model: model,
-                backgroundsEnabled: settings.stageVisualsEnabled,
-                selectedPreset: settings.selectedVisualPreset,
-                camera: camera,
-                presentationGate: presentationGate,
-                microphoneBusy: microphonePitchMonitor.status == .running
-                    || microphonePitchMonitor.status == .requestingPermission
-            )
-            .frame(width: 1, height: 1)
-        }
+        .background { hostPresentationAnchors }
         .onChange(of: model.snapshot.transport) {
             intermission.sync(model.snapshot.transport)
         }
@@ -192,8 +146,8 @@ struct HostView: View {
             intermission.sync(model.snapshot.transport)
         }
         .onChange(of: activeHostSheet) { previous, current in
-            if previous != nil && current == nil {
-                presentationGate.beginDismissal(.host)
+            if let previous, current == nil {
+                presentationGate.beginDismissal(previous.presentationOwner)
                 dismissedHostSheet = previous
             }
         }
@@ -235,6 +189,90 @@ struct HostView: View {
 
 
 
+    private func handleHostSheetDismissal() {
+        if dismissedHostSheet == .sessionSave {
+            model.showingSessionSavePrompt = false
+        }
+        dismissedHostSheet = nil
+        if pendingFullscreen {
+            pendingFullscreen = false
+            // Queue fullscreen before releasing CONTROL so the gate owns the
+            // transition continuously, including while the sheet animates out.
+            presentationGate.request(.fullscreen) { showingFullscreenPlayer = true }
+        }
+        presentationGate.completeDismissal(.host)
+    }
+
+    @ViewBuilder
+    private func hostSheetContent(_ sheet: HostSheet) -> some View {
+        switch sheet {
+        case .controls:
+            NavigationStack {
+                hostControls
+                    .sheet(isPresented: $showingYouTubePreview) {
+                        KantaYouTubePreviewSheet(
+                            localPlaybackActive: model.snapshot.transport == .playing,
+                            controller: controller,
+                            audioOwnership: audioOwnership
+                        )
+                    }
+                    .safeAreaInset(edge: .bottom) {
+                        Button(action: openFullscreenPlayer) {
+                            Label("Open fullscreen player", systemImage: "arrow.up.left.and.arrow.down.right")
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("controls.openFullscreen")
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(.regularMaterial)
+                    }
+                    .navigationTitle("CONTROL")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                presentationGate.beginDismissal(.host)
+                                activeHostSheet = nil
+                            }
+                            .accessibilityIdentifier("controls.done")
+                        }
+                    }
+            }
+        case .sessionSave:
+            SaveSessionFavoritesView(model: model)
+        case .favorites:
+            SavedFavoritesView(model: model)
+        }
+    }
+
+    private var hostPresentationAnchors: some View {
+        ZStack {
+            SingingFullscreenPresentation(
+                isPresented: $showingFullscreenPlayer,
+                model: model,
+                backgroundsEnabled: settings.stageVisualsEnabled,
+                selectedPreset: settings.selectedVisualPreset,
+                camera: camera,
+                presentationGate: presentationGate,
+                microphoneBusy: microphonePitchMonitor.status == .running
+                    || microphonePitchMonitor.status == .requestingPermission
+            )
+            .frame(width: 1, height: 1)
+
+            KantaEmbeddedStageSheetPresentation(
+                sheet: $activeEmbeddedStageSheet,
+                model: model,
+                singerName: $singerName,
+                microphoneBusy: microphonePitchMonitor.status == .running
+                    || microphonePitchMonitor.status == .requestingPermission,
+                presentationGate: presentationGate
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .allowsHitTesting(false)
+    }
+
     private var hostContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -274,7 +312,10 @@ struct HostView: View {
                 presentationGate.request(.host) { activeHostSheet = .sessionSave }
             },
             embedded: true,
-            onExpand: openFullscreenPlayer
+            onExpand: openFullscreenPlayer,
+            setEmbeddedStageSheet: { stageSheet in
+                activeEmbeddedStageSheet = stageSheet
+            }
         )
     }
 
@@ -292,10 +333,10 @@ struct HostView: View {
         } label: {
             Label("Remote Control", systemImage: "rectangle.and.hand.point.up.left")
                 .font(.headline)
+                .accessibilityIdentifier("host.remotePanel.toggle")
         }
         .padding(18)
         .background(Color(white: 0.07), in: RoundedRectangle(cornerRadius: 20))
-        .accessibilityIdentifier("host.remotePanel")
     }
 
     private func openFullscreenPlayer() {
@@ -310,6 +351,10 @@ struct HostView: View {
 
     private var hostControls: some View {
         List {
+            Section("Online video") {
+                Button("Open YouTube video") { showingYouTubePreview = true }
+                    .accessibilityIdentifier("youtube.preview.open")
+            }
             Section {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {

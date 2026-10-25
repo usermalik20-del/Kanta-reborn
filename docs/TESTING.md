@@ -13,6 +13,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 | AVFoundationPlaybackTests / AVFoundationMIDIPlaybackTests | Format rejection, controls and original starter synthesis | SwiftPM on macOS; physical audio remains separate |
 | MicrophoneScoringTests | Pitch detection and room gate | SwiftPM on macOS; microphone/device acceptance remains separate |
 | KantaUITests | Actual iOS stage/control walkthrough | Separate simulator UI run; not covered by an unsigned build |
+| KantaNativeTests | Real WKWebView lifecycle plus app-hosted session certificate/private-key Keychain installation and removal | Application-hosted simulator XCTest in focused smoke; no remote media or device-audio acceptance |
 | ReleaseToolingTests / starter generator | Release contracts, privacy/source guards and deterministic first-party resources | Python locally and in CI |
 | Android core regression | FIFO retry identity, Unicode search, bounded MIDI timing and encrypted exports | Gradle JavaExec |
 | Android native SoundFont | Validated SF2 references, bounded allocations, audible pitch, truncation and mutation handling | C11 ASan/UBSan host harness |
@@ -57,15 +58,25 @@ Android runtime fixtures live in the test APK behind a signature permission decl
 
 
 
-Android emulator startup uses an explicit shared AVD directory for avdmanager and emulator. The helper detects early process exits, bounds boot/ADB/instrumentation, always collects diagnostics and retires the emulator. Both native jobs run automatically on every relevant change; no validation label is required, and no source tests are skipped.
+Android emulator startup uses an explicit shared AVD directory for avdmanager and emulator. The helper detects early process exits, bounds boot/ADB/instrumentation, always collects diagnostics and retires the emulator. Use `owner-approved-android-validation` for Android-only repairs; `owner-approved-validation` still runs both native platforms. No source tests are skipped by the focused label.
 
 ## iOS KCP1 controller candidate
 
-The iOS job runs the full package and app gate automatically alongside the Android job; it no longer needs a validation label. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
+`owner-approved-ios-validation` selects the full iOS package/app gate without rerunning unchanged Android native tests. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
 
 ## iOS walkthrough runner diagnostics and suite timeout
 
-`tools/capture-ios-runtime.py` still executes the complete four-test `KantaVisualWalkthroughUITests` suite on each platform. XCTest per-case deadlines stay 120 seconds (180 seconds maximum), while the outer process deadline is 1,080 seconds so it cannot abort a legitimate multi-case run at 660 seconds. A failing process prints the last 100 lines from its test log in the Actions job and retains the full log and completed `.xcresult` attachments; partial result bundles are not passed to `xcresulttool`. The 55-minute workflow limit and existing red-on-failure/unsigned-artifact gates are unchanged. This addresses a confirmed iPad outer-runner timeout, not the separate iPhone UI assertion; the latest branch still requires an accepted iPhone/iPad runtime run before merging or updating public binaries.
+`tools/capture-ios-runtime.py` executes the complete `KantaVisualWalkthroughUITests` suite for the requested simulator and requires every name in its `EXPECTED_TESTS` manifest to have a clean passing result. The current manifest contains 13 cases: the prior eight cases, with the six-destination menu coverage split into six independently budgeted tests instead of one aggregate case.
+
+The aggregate `testMainMenuButtonsAndScreens` exceeded XCTest's per-test allowance on iPad even after reducing cold launches: its six screenshots were exported, but the test did not finish as a passing case. The repair preserves each destination, expected navigation-title assertion, screenshot, `navigation.done` dismissal, and Stage More return assertion, while giving every destination its own XCTest execution allowance. Do not raise the global per-test allowance or remove a destination to hide the timeout.
+
+Per-test limits remain 120 seconds by default and 180 seconds maximum. The outer process deadline remains 1,080 seconds, and each workflow job is bounded to 45 minutes. A timeout, runner restart, non-zero `xcodebuild` exit, or missing required test remains a failure even if a later runner attempt prints passing cases.
+
+The visual workflow now has separate `iphone-walkthrough` and `ipad-walkthrough` jobs. Each device builds and runs independently, uploads its own compact presentation diagnostics and full runtime evidence, and reports the failing device directly. Branch-level concurrency cancels stale runs on the same branch without cancelling the two device jobs within one run.
+
+## Embedded Stage presentation diagnostics
+
+The embedded Stage Search/Queue presenter logs request, gate activation, window attachment, presentation start/completion, dismissal, stale ownership, and blocked-state reasons under `KANTA_STAGE_PRESENTATION`. `tools/capture-ios-runtime.py` captures filtered simulator unified logs before shutdown, and the walkthrough uploads `ios-ipad-presentation-diagnostics` separately from the large video/result-bundle artifact. For triage: a request without activation points to gate ownership; activation without presenter configuration points to SwiftUI binding/representable propagation; configuration blocked by window/ownership identifies the presenter precondition; a completed presentation with no keypad points to sheet content/accessibility. Keep the full XCTest and result evidence; never add retries or weaken assertions to conceal a dropped presentation.
 
 ## PR #31 iPhone/iPad runtime regression checkpoint
 
@@ -87,49 +98,127 @@ The real playback walkthrough waits for a rendered stage Search button after clo
 
 ## iOS modal request lifecycle
 
-The Root, Host and Stage SwiftUI sheet owners share `KantaPresentationGate`. The gate holds a request received while another sheet is presented or dismissing, coalesces a second pending request from the same owner, and activates the first pending action only after the current owner reports `onDismiss`. The Search walkthrough deliberately taps once after leaving Library; do not add retries or fixed sleeps to mask a dropped presentation request. UIKit fullscreen remains a separately owned presenter and is not covered by this gate yet.
+RootView's navigation sheet and HostView's CONTROL/session-save/Favorites sheet remain SwiftUI-owned. Embedded Stage Search/Queue use `KantaEmbeddedStageSheetPresentation`, a stable UIKit presenter attached to the Host background; navigation, Host and Stage requests are serialized by `KantaPresentationGate`. Embedded Stage dismissal completes `.stage` from UIKit's presentation/dismissal callback, while the other owners complete from their own `onDismiss`. The fullscreen projection retains its separate child Search/Queue sheet. Keep embedded Search/Queue out of the Host SwiftUI sheet and never add sleeps/retries to conceal a dropped presentation request.
 
 
 ### iOS fullscreen presentation ownership candidate
 
-The presentation contract guard checks that the UIKit fullscreen presenter acquires and releases `KantaPresentationGate` ownership through its dismissal callback, and that the gate restores fullscreen after a nested Search/Queue sheet. The UI walkthrough opens fullscreen from CONTROL, uses Search inside fullscreen, exits, and verifies normal-stage Search can present afterward. Run `tools/check-ios-presentation-contract.py` and the full reconstruction validation on the candidate SHA. A green run on a different SHA does not validate it.
+The presentation contract guard checks that the UIKit fullscreen presenter acquires and releases `KantaPresentationGate` ownership through its dismissal callback, and that the gate restores fullscreen after a nested Search/Queue sheet. The UI walkthrough opens fullscreen from CONTROL, uses Search inside fullscreen, exits, and verifies normal-stage Search can present afterward. Embedded Search/Queue are independently presented by `KantaEmbeddedStageSheetPresentation`; the embedded control uses `stage.search` and the fullscreen control uses `stage.search.fullscreen`. Run `tools/check-ios-presentation-contract.py` and the full reconstruction validation on the candidate SHA. A green run on a different SHA does not validate it.
 
-
-## Website Content Security Policy
-
-The website validator checks that every canonical public route has exactly one explicit CSP. Only the homepage may load the allowlisted Google tag/AdSense scripts and connect to Google Analytics; all other pages, including Songbook, must retain `connect-src 'none'` and same-origin script loading. The wildcard header rule may not define CSP. The focused `tools/tests/test_website_security_contract.py` suite guards this boundary, and CI syntax-checks both `songbook.js` and `analytics.js`. A passing static contract is not proof of live response headers; verify the production deployment after the merge.
 
 ## Automatic workflow triggers and release boundary
 
-Reconstruction validation runs for relevant app, tool and workflow changes on same-repository pull requests and main pushes. Website validation runs for relevant website changes on main pushes and same-repository pull requests, and can also be started by manual dispatch. It deliberately does not run on ordinary feature-branch pushes; the pull-request event is the feature-branch validation trigger, avoiding duplicate CI for the same change. Verified-download contract and packaging checks run on their relevant pull-request and main triggers without any approval label. The full iPhone/iPad walkthrough runs on iOS pull requests, main pushes, weekly and on manual dispatch, and must pass on the exact release-candidate SHA before that SHA is treated as accepted. No workflow signs or publishes production downloads automatically.
+Reconstruction validation runs for relevant app, tool and workflow changes on feature/main pushes and pull requests. iOS runtime, website and verified-download contract checks also run on relevant feature-branch pushes so a PR does not need a manually applied label to start. iOS simulator walkthroughs follow relevant same-repository pull requests and successful main reconstruction runs. Website validation runs for relevant website changes. Verified-download contract tests run automatically; packaging the fixed, previously accepted IPA/APK artifacts still requires owner dispatch or the packaging label. No workflow signs, merges, deploys or publishes production downloads automatically.
 
 ## CI separation: fast validation, unsigned artifacts and visual acceptance
 
-- `reconstruction-validation.yml` remains the required PR source, Swift package, simulator-build, and Android validation gate. It does not execute the long XCTest UI walkthrough.
-- `ios-runtime-artifacts.yml` builds the unsigned personal-signing IPA only on manual dispatch. Its success proves packaging, not simulator interactions, signing, or installability.
-- `ios-visual-walkthrough.yml` runs the full four-case XCTest walkthrough separately on both iPhone and iPad, with screenshots, recordings and failure diagnostics. It is manually dispatchable, scheduled weekly (Tuesday 03:00 Asia/Manila; Monday 19:00 UTC), and triggered by `ios-rc-*` tags. It does not run on ordinary pull requests or documentation commits.
-- A release candidate requires a successful visual walkthrough on the **exact candidate SHA**; weekly or unrelated-commit green evidence cannot substitute for release acceptance. CI does not sign or publish production application downloads. The separate Vercel workflow deploys the public website only after its own validation job succeeds.
-- `ios-smoke.yml` runs `testFocusedNavigationSmoke` on an iPhone simulator for relevant iOS PR changes. It checks Search, fullscreen dismissal and Search recovery. This is not the full iPhone/iPad release walkthrough.
-- This split deliberately prevents the expensive walkthrough from blocking ordinary merges while keeping the full iPhone/iPad visual acceptance mandatory for release.
+- `reconstruction-validation.yml` remains the PR source, Swift package, simulator-build, and Android validation gate. It does not replace simulator UI acceptance.
+- `ios-visual-walkthrough.yml` runs on relevant iOS pushes and same-repository pull requests, with manual dispatch and the existing weekly schedule. Its independent iPhone and iPad jobs each build and execute the complete named UI suite, retain screenshots/recordings/logs, and publish compact per-device diagnostics. A pass on one device does not mask a failure on the other.
+- The unsigned iOS archive workflow proves packaging only. It does not prove interactive behavior, signing, or installability.
+- `ios-smoke.yml` remains a focused iPhone test for navigation/Search recovery and native lifecycle behavior; it is not the full release walkthrough.
+- A release candidate requires the reconstruction gate and a successful full iPhone **and** iPad walkthrough on the exact candidate SHA. Weekly, unrelated-commit, candidate-only, build-only, or one-device evidence cannot substitute.
+- CI does not sign, publish, or deploy the app. The current archive remains an unsigned personal-signing input until the authorized signing and release gates are completed.
 
 ## GitHub Actions cost controls (October 2026)
 
 - Feature branches are validated by the pull-request event only; ordinary feature-branch pushes do not duplicate the reconstruction, website or download-contract jobs. Main pushes retain post-merge verification.
 - The unsigned personal-signing IPA archive is manually dispatched only; compilation, Swift package tests and the unsigned simulator build remain in normal reconstruction CI. Do not interpret an unbuilt IPA as a release artifact.
-- Full iPhone/iPad visual walkthrough runs automatically on iOS pull requests and main pushes, plus weekly and on release-candidate tags. A release candidate must pass both devices on its exact SHA.
+- Full iPhone/iPad visual walkthrough remains manual, weekly or release-candidate-tag gated. A release candidate must pass both devices on its exact SHA.
 - Failure triage is manually dispatchable with a failed run ID; it no longer starts a skipped workflow for every successful validation. Investigators can still inspect exact job logs and report failures.
-- The separate focused iOS simulator smoke PR must be validated before merge. Workflow YAML changes require checking triggers and required status checks; do not remove an equivalent passing gate when editing them.
+- The separate focused iOS simulator smoke PR must be validated before merge. Workflow YAML changes themselves require review of triggers and required status checks; do not remove required branch protection checks without an equivalent passing gate.
 
 ## PR #43 post-merge evidence
 
-Commit `ad95e8b04eb23311127090883f309f0ec4205724` passed reconstruction run [39051661330](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/39051661330). Website validation and verified-download contracts also passed on that main-branch commit. Unsigned IPA packaging is not automatic; an absent artifact from this merge is expected. The next release candidate still needs a candidate-SHA-matched full iPhone/iPad walkthrough. Packaging runs automatically alongside; no separate approval label is required.
+Commit `ad95e8b04eb23311127090883f309f0ec4205724` passed reconstruction run [39051661330](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/39051661330). Website validation and verified-download contracts also passed on that main-branch commit. Unsigned IPA packaging is not automatic; an absent artifact from this merge is expected. The next release candidate still needs a candidate-SHA-matched full iPhone/iPad walkthrough and separately approved artifact packaging.
 
 
-## Production Vercel deployment
+## Focused smoke native execution proof
 
-- `.github/workflows/vercel-deploy.yml` runs website and deployment-contract validation on same-repository pull requests; its deployment job is skipped for every pull request.
-- Main pushes affecting `apps/web/**` or the deployment workflow, and manual dispatch from `main`, run validation before production deployment. The workflow is serialized so two deployments cannot race to assign the production alias.
-- The deployment binds explicitly to the existing GeloTech Vercel team and `kanta-public` project IDs. It must not create a new project or infer a target from interactive defaults.
-- The Vercel CLI is pinned to `65.2.0`. The job pulls the existing production project configuration, builds a prebuilt production output, then uploads that output with non-interactive confirmation. `VERCEL_TOKEN` is only a GitHub Actions secret; it must never be committed or printed.
-- The static contract test checks the explicit target, pinned CLI, validation dependency, PR deploy exclusion, non-interactive commands, and deployment concurrency. Website validation runs it whenever the deployment workflow changes.
-- A successful Vercel CLI job is not sufficient by itself: verify `/ads.txt` and `/sitemap.xml` return HTTP 200 on the production hostname after deployment. A preview URL is not production acceptance.
+The focused iPhone smoke selects all three KantaNativeTests.YouTubeEmbeddedPlayerLifecycleTests cases and the existing testFocusedNavigationSmoke. The native bundle compiles the unchanged production preview component into its test module; release-app testability is unchanged. `tools/verify-ios-smoke-results.py` requires explicit passed lines for all four names and rejects failed assertions or runner restarts anywhere in the log. Navigation-only or zero-test output is insufficient. Existing logs and xcresult retention remain unchanged. The full release walkthrough still covers all four UI cases on both iPhone and iPad separately; native component checks do not verify SwiftUI presentation, real videos/ads or hardware audio interruptions.
+
+
+## iOS audio arbitration regression candidate
+
+The expanded native smoke requires all five YouTubeEmbeddedPlayerLifecycleTests passes and focused navigation. The added cases exercise real WebKit retirement before session configuration and isolated synthetic AVAudioPlayer intermission stop/explicit restart. Controller/domain cases cover native preparation versus online claim, cancellation/microphone changes across awaits, paused position/playback/FIFO identities, SFX/Next, stale release, foreground, failed session setup and suspension of both rendering backends. Forty Swift files remain wired to seven package suites plus two Xcode bundles. Compilation, execution and application build are separately required on the changed source; no physical media/latency result follows from these fixtures.
+
+
+## Online-screen UI coverage candidate — October 18, 2026
+
+PR #51 baseline 24db7a1 now adds two real XCUIApplication flows through Stage CONTROL's actual online sheet. They cover invalid-link rejection before WebView construction, explicit valid entry, stop/reopen, background/return without resurrection, Done/reentry and navigation recovery, plus preserving a paused original starter and explicitly resuming it afterward. Stable accessibility identifiers and link-keyboard Done dismissal support the real UI; no fake player or launch-environment bypass is introduced.
+
+The synthetic video ID never autoplays. External YouTube availability is not a fixture: valid entry must reach either actual native player controls with a WebView or the production recoverable load-error state, with retained outcome screenshots. A local audio-claim failure is not accepted as an external-load error. This verifies UI lifecycle/recovery, not successful remote media or deterministic external-error delivery. Existing native process-failure, audio-handoff and controller/FIFO regressions remain required.
+
+Focused smoke retains all five native cases and navigation and now requires both named online-screen cases (eight passes total). The full release walkthrough gate also requires all seven methods in the UI suite; timeouts, serial execution, failure detection, evidence retention, signing and deployment boundaries are unchanged. Local layout/presentation/YAML/whitespace and 55 tooling tests passed. Hosted app/test compilation and actual simulator execution are pending on the resulting source. Physical embed/ads/interruption/privacy and exact-candidate full iPhone/iPad release gates remain open.
+
+
+## PR #51 HTTPS companion validation
+
+Android core regression now includes BrowserRemoteRegressionTests over real JSSE TLS sockets and generated identities. BrowserRemoteBrowserHost is a synthetic test-only owner compiled by coreRegression; `node tools/verify-companion-browser.mjs` drives the shipped page against that TLS server in actual Chrome through CDP, with no npm dependency. The disposable browser trusts only synthetic test traffic through its isolated harness configuration; this does not validate mobile trust setup. Platform asset equality and bounded request contracts are checked before browser startup. GitHub's Chrome and pinned Node 24 are required; failure to launch/run remains red.
+
+Android instrumentation additionally exercises the production HTTPS adapter against SessionController and native audio/queue state. iOS adds bounded command/HTTP framing and actual certificate/key/SAN validation plus a real role/input screen case. Focused smoke requires nine named passes; full release walkthrough requires eight UI cases, preserving all earlier tests and failure/timeout gates. Native app/browser host-client interoperability, certificate trust UX, hardware audio and independent security acceptance remain separate. See COMPANION_BROWSER_CHECKPOINT.md.
+
+
+### Browser-host identity entitlement gate (October 18, 2026)
+
+PR #51 native XCTest now compiles in Release through a test-only Swift SPI. Reconstruction passed at `215e02a` in run 39136036615. Focused iPhone run 39136036597 executed the native Keychain round trip and failed `SecItemAdd` with `errSecMissingEntitlement` (`-34018`), while five WebKit lifecycle and four focused UI tests passed. The existing workflow uses `CODE_SIGNING_ALLOWED=NO`. Keychain acceptance requires a separately authorized entitled simulator test host with inspected signature entitlements, then the **same** certificate/private-key/removal assertions executed and passing. This is not a reason to delete or skip the test, weaken production Keychain checks or claim signed/physical-device acceptance. See `docs/CI_FAILURE_REPAIR_LEDGER.md`.
+
+## Focused iOS smoke workflow integrity — October 24, 2026
+
+Focused simulator smoke must gate on KANTA-owned source checks, native lifecycle tests, named XCTest cases, and retained test evidence. Do not install unrelated external CLIs or label them audio analysis. On PR #67 head `61057d0`, the app build and focused XCTest step passed, including the four selected UI cases, but the overall job failed afterward at `rtk latency` with `must be run as root`. Inspection of the upstream [rtk-ai/rtk project](https://github.com/rtk-ai/rtk) confirms it is an LLM token-optimization CLI, not an audio measurement tool. The step was introduced by PR #65 and also piped a mutable remote install script directly into a shell. The repair removes this unrelated dependency rather than escalating it with sudo. Any future audio-quality/latency gate must use a KANTA-specific fixture or measurement tool with documented metrics, bounded permissions, and independently verified results; this smoke suite makes no audio-quality claim.
+
+
+
+## iPad embedded Stage presenter diagnostics (2026-10-24)
+
+When Stage Search does not expose `stage.keypad.0`, inspect the `KANTA_STAGE_PRESENTATION` diagnostics in the matching runtime logs and correlate the requested sheet, window attachment, existing presentation, and gate owner. The presenter now retries on layout and detects an orphaned owned controller; this is a candidate lifecycle repair until the full iPhone/iPad walkthrough passes on the same SHA. Keypad assertions must wait for each digit to exist rather than sampling `exists` immediately after a presentation animation.
+
+### Keypad assertion regression after main synchronization — October 24, 2026
+
+The source guard in [focused smoke run #40100439415](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40100439415) caught a merge-resolution regression before XCTest: the demo keypad test used immediate `.exists` checks for digits 0–9 instead of waiting for asynchronous presentation. Commit [b36108e](https://github.com/usermalik20-del/Kanta-reborn/commit/b36108e2dffc30957161b2ce0e9f24eb3c134021) restores `waitForExistence(timeout: 10)` for each digit without removing any assertion. This repairs the test contract; it does not establish that the iPad runtime presentation issue is resolved. Re-run the focused smoke and full exact-SHA iPhone/iPad walkthrough.
+
+
+## Window-tap probe compiler and evidence contract — October 25, 2026
+
+Main commit d56a4ba introduced a window-level tap probe to distinguish a delivered touch from a SwiftUI button action that never fires. Reconstruction run [#40119874396](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40119874396), unsigned archive run [#40119874432](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40119874432), and walkthrough run [#40119876903](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40119876903) all exposed a compile error: the current Swift SDK replaces NSStringFromCGPoint and NSStringFromCGRect with NSCoder.string(for:). The walkthrough's subsequent missing-bundle-ID error is downstream of the failed UI-test build; it is not a new iPad runtime result.
+
+The repair uses NSCoder.string(for:), converts the hit view's bounds into window coordinates before logging them, and removes the non-cancelling tap recognizer when its representable is dismantled. This keeps the probe's point and hit rectangle comparable and prevents repeated view lifecycles from accumulating window-level recognizers.
+
+Acceptance requires the source-contract guard, Swift/package and app builds, unsigned archive, focused smoke, and a complete iPhone plus iPad walkthrough on the same exact candidate SHA. A successful diagnostic build does not establish that the original iPad Search tap is fixed.
+
+## iPad Search intercepted by the decorative stage canvas — October 25, 2026
+
+**Runtime evidence:** PR candidate walkthrough [#40122872536](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40122872536) failed the four iPad keypad cases. Its compact diagnostic artifact [#12572620221](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40122872536/artifacts/12572620221) records a tap at `window-point={668, 148.5}`, the center of the accessibility-reported `stage.search` frame, resolving to `_UIGraphicsView {{32, 117}, {770, 433}}`. That drawing surface overlaps the Search action row and wins UIKit hit testing, so the button action never reaches the presentation gate. This is more specific than the earlier hypothesis about modal ownership.
+
+Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40126620995) and unsigned archive [#40126621029](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40126621029) passed, but full walkthrough [#40126621040](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40126621040) failed: the iPad repeated the four keypad failures, and the iPhone stage did not report `testMainMenuButtonsAndScreens` as passing. The main-run compact diagnostic artifact [#12574327088](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40126621040/artifacts/12574327088) did not preserve `[KANTA_TAP]` events, so use the earlier candidate's tap trace as the direct hit-test evidence and retain the probe until exact-head acceptance.
+
+**Repair:** mark both `KantaCameraPreview` and `KaraokeStageView` branches in `stageBackground` as non-hit-testable. These are display-only layers; user interaction must be handled by the explicit Search/Camera/Expand controls. The source guard checks that both branches carry `.allowsHitTesting(false)`.
+
+**Acceptance:** source-contract guard, Swift package tests, simulator build, focused smoke, reconstruction, unsigned archive, and the full iPhone/iPad walkthrough must pass on one exact candidate SHA. In particular, confirm that a Search tap no longer resolves to the oversized drawing surface and that `stage.keypad.0` appears on iPad. Build success or an iPhone-only pass is not device acceptance.
+
+
+## Post-merge iPad menu walkthrough timeout — October 25, 2026
+
+Main commit [`d01504e`](https://github.com/usermalik20-del/Kanta-reborn/commit/d01504e42b3e00735bb429b05e9ec886149911fe) passed reconstruction [run #40136025964](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025964) and unsigned archive [run #40136025858](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858), but full walkthrough [run #40136025937](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937) failed on iPad.
+
+The compact diagnostic artifact [#12577317727](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937/artifacts/12577317727) confirms that Search now reaches `_UIShapeHitTestingView`, requests and activates the Search sheet, and begins presentation. The keypad-focused tests, navigation smoke, online-preview lifecycle tests, and starter playback test all passed in this run. The remaining failure is separate: `testMainMenuButtonsAndScreens` exceeded XCTest's 120-second default execution allowance while cold-launching the app separately for six destinations. The runner then restarted and the required-test manifest correctly marked that test missing.
+
+The candidate runner repair keeps one app process alive, captures each of the same six destinations, dismisses each route through the stable `navigation.done` accessibility identifier, and waits for the Stage's More control to return before continuing. This reduces cold-start overhead without removing destinations, skipping assertions, adding blind sleeps, or weakening the required-test set.
+
+**Status:** candidate; full iPhone/iPad walkthrough and exact-SHA acceptance remain pending on the repair branch. Do not call main's full walkthrough green until the menu case passes on both devices.
+
+
+## iOS encrypted-companion input validation and keyboard-idle timeout
+
+Walkthrough run [#40140289375](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40140289375) on candidate `c1bdcf57500f45f15e83876a5b4ae6fcb6387f5f` passed the iPad stage but failed the iPhone stage. The iPhone log shows `testEncryptedCompanionPairingScreenAndInputRejection` exceeded XCTest's 120-second per-test allowance while entering the public address. `typeText("8.8.8.8")` stalled on the simulator's “App animations complete notification not received” wait for roughly 60 seconds; the runner restarted and returned exit 65. Even though the aggregate log listed all named cases as passing across attempts, that exit remains a failure and is not accepted as a green walkthrough.
+
+The repair centralizes private-address plus 32-character hexadecimal-code validation in `CompanionProtocol.isValidPairingInput`, shares `isValidPairingCode` with the handshake's secret validation, and adds package tests for valid private ranges, public/loopback rejection, empty/short/long/non-hex codes, and uppercase hex. The UI test retains the encrypted-pairing screen, disabled Connect, no Disconnect, and user-facing instruction assertions without depending on the flaky software-keyboard idle notification. No per-test timeout increase, retry, or assertion suppression is used.
+
+Acceptance: package tests and source-contract guard pass on the exact candidate SHA, then the full iPhone and iPad walkthroughs both exit zero and contain every required named test in one clean run. This is a candidate repair until those hosted results pass.
+
+## iOS menu destination timeout isolation — October 25, 2026
+
+Walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182462) on PR #71 head `dc60e513c4829226d8bf763c60d5e047e0beb5a4` failed on iPad because `testMainMenuButtonsAndScreens` never recorded a clean pass. The log shows XCTest restarted after a timeout and the runner correctly marked the menu test missing. All six destination screenshots were captured, so the navigation paths were reached; the single aggregate test still exceeded its per-test budget.
+
+The candidate now uses six test methods and updates the runtime's required-test manifest and source-contract guard together. PR #72's per-device workflow topology is included, with same-branch concurrency retained to cancel stale duplicate runs. No assertion, destination, or required case was removed; no global timeout was raised.
+
+**Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.

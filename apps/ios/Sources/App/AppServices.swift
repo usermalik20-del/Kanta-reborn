@@ -1,3 +1,4 @@
+import AVFoundation
 import AVFoundationMIDIPlayback
 import AVFoundationPlayback
 import Foundation
@@ -9,6 +10,8 @@ import SwiftUI
 
 @MainActor
 final class AppServices: ObservableObject {
+    let audioOwnership: KaraokeAudioOwnership
+    let intermission: KantaIntermissionMusic
     let registry: LibrarySourceRegistry?
     let library: BookmarkedKaraokeLibrary?
     let controller: LocalKaraokeController?
@@ -16,6 +19,47 @@ final class AppServices: ObservableObject {
     let partySFX: KantaPartySFXEngine
     let midiPlaybackEngine:
         AVFoundationMIDIPlaybackEngine?
+    let browserCompanion: BrowserRemoteHost?
+
+    private static func makeBrowserCompanion(controller: LocalKaraokeController, library: BookmarkedKaraokeLibrary) -> BrowserRemoteHost {
+        return BrowserRemoteHost { request in
+            try Task.checkCancellation()
+            switch request.action {
+            case "reserve":
+                let state = await controller.snapshot()
+                guard state.queue.count < 1000 else { throw CompanionError.invalidInput }
+                try Task.checkCancellation()
+                try await controller.send(.enqueueForSinger(songID: SongID(rawValue: request.argument), singer: request.singer))
+            case "cancel":
+                guard let id = UUID(uuidString: request.argument) else { throw CompanionError.invalidInput }
+                try await controller.send(.removeQueueItem(id))
+            case "play": try await controller.send(.play)
+            case "pause": try await controller.send(.pause)
+            case "next": try await controller.send(.next)
+            case "stop": try await controller.send(.stop)
+            case "snapshot", "search": break
+            default: throw CompanionError.invalidInput
+            }
+            let state = await controller.snapshot()
+            let matches: [LibrarySong]
+            if request.action == "search" {
+                matches = await library.searchSongs(matching: request.argument, limit: 10, offset: 0)
+            } else { matches = [] }
+            func bounded(_ text: String, _ count: Int) -> String { String(decoding: text.utf16.prefix(count), as: UTF16.self) }
+            let songs = matches.filter { $0.isPlayable && $0.id.rawValue.utf16.count <= 128 }.map { song -> [String: String] in
+                ["id": song.id.rawValue, "title": bounded(song.title, 128),
+                 "artist": bounded(song.artist ?? "", 80), "code": bounded(song.code ?? "", 32)]
+            }
+            let reservations = state.queue.prefix(10).map { item -> [String: String] in
+                ["id": item.id.uuidString, "title": bounded(item.song.title, 128), "singer": bounded(item.requestedBy ?? "", 80)]
+            }
+            let response: [String: Any] = ["request": request.id.uuidString, "version": 1, "source": "local",
+                "capabilities": ["snapshot", "search", "reserve", "cancel", "play", "pause", "next", "stop"],
+                "playing": state.transport == .playing, "current": bounded(state.nowPlaying?.title ?? "No song playing", 128),
+                "songs": songs, "queue": reservations]
+            return try JSONSerialization.data(withJSONObject: response)
+        }
+    }
     let networkHost: BonjourHostAdvertiser
     let microphonePitchMonitor = MicrophonePitchMonitor()
     let diagnostics = KantaSupportDiagnostics()
@@ -27,6 +71,20 @@ final class AppServices: ObservableObject {
     private var didPrepare = false
 
     init() {
+        let audioOwnership = KaraokeAudioOwnership()
+        self.audioOwnership = audioOwnership
+        let intermission = KantaIntermissionMusic(audioOwnership: audioOwnership)
+        self.intermission = intermission
+        audioOwnership.stopAuxiliaryAudio = { [weak intermission] in
+            intermission?.stopForOnlinePlayback()
+        }
+        audioOwnership.configurePlaybackSession = {
+            let session = AVAudioSession.sharedInstance()
+            if session.category != .playback || session.mode != .default {
+                try session.setCategory(.playback, mode: .default, options: [])
+            }
+            try session.setActive(true)
+        }
         let settings = KantaUserSettings()
         let sfxRoot = (FileManager.default.urls(
             for: .applicationSupportDirectory, in: .userDomainMask
@@ -83,13 +141,15 @@ final class AppServices: ObservableObject {
             let controller = LocalKaraokeController(
                 engine: routedEngine,
                 library: library,
-                partySFX: partySFX
+                partySFX: partySFX,
+                audioOwnership: audioOwnership
             )
 
             self.registry = registry
             self.library = library
             self.savedSets = savedSets
             self.controller = controller
+            self.browserCompanion = Self.makeBrowserCompanion(controller: controller, library: library)
             self.midiPlaybackEngine =
                 midiPlaybackEngine
             self.networkHost = BonjourHostAdvertiser(
@@ -115,6 +175,7 @@ final class AppServices: ObservableObject {
             library = nil
             savedSets = nil
             controller = nil
+            browserCompanion = nil
             midiPlaybackEngine = nil
             networkHost = BonjourHostAdvertiser()
             startupMessage =
@@ -122,6 +183,12 @@ final class AppServices: ObservableObject {
                 + error.localizedDescription
         }
 
+        audioOwnership.onlineEntryAllowed = { [weak settings] in
+            settings?.vocalEffects.monitorEnabled != true
+        }
+        microphonePitchMonitor.onCaptureActivityChanged = { [weak audioOwnership] busy in
+            audioOwnership?.setMicrophoneBusy(busy)
+        }
         microphonePitchMonitor.onDiagnosticEvent = { [weak self] event in
             self?.recordMicrophoneSignal(event)
         }

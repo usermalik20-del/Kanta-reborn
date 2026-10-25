@@ -1,10 +1,18 @@
 # Reconstruction evidence and work ledger
 
-Date: 2026-10-15. Destination: kanta-gelo/Kanta-reborn.
+Date: 2026-10-25. Destination: kanta-gelo/Kanta-reborn (canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn)).
 
 ## Current checkpoint
 
-PR #1 merged at `1720a54f31123f2ef59d41383dc41ef06c5855d5`. Run 38748040876 passed all 158 Swift package tests, unsigned Release simulator compilation, Android APK/lint/domain/browser checks. Historical entries below record earlier states; they are not current failure claims. The current Android media branch adds custom SF2, folder imports and controls; changed-head cloud and emulator acceptance remain pending.
+Main remains at [`d01504e`](https://github.com/usermalik20-del/Kanta-reborn/commit/d01504e42b3e00735bb429b05e9ec886149911fe), the merged Search hit-testing repair. Main reconstruction [#40136025964](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025964) and unsigned archive [#40136025858](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858) passed, but full walkthrough [#40136025937](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937) failed on the iPad main-menu test. Search/keypad and other iPad cases passed; the remaining failure is the aggregate menu test not recording a clean pass within its XCTest allowance.
+
+PR #71's previous head [`dc60e51`](https://github.com/usermalik20-del/Kanta-reborn/commit/dc60e513c4829226d8bf763c60d5e047e0beb5a4) passed reconstruction [#40146182458](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182458), focused smoke [#40146182470](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182470), and unsigned archive [#40146182453](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182453). Its full walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182462) failed on iPad because `testMainMenuButtonsAndScreens` still exceeded its single-test budget, despite exporting all six destination screenshots.
+
+PR #72's workflow-only candidate [`428f14e`](https://github.com/usermalik20-del/Kanta-reborn/commit/428f14ecd8f0e2d6c40b62b4ec2cf3bc3b9219ea) separates iPhone and iPad into independent jobs; reconstruction [#40148389958](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40148389958) passed, and the iPhone job in [walkthrough #40148389843](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40148389843) passed. At the last inspection the iPad job was still running. That workflow-only change does not itself repair the per-test timeout.
+
+The current PR #71 repair batch combines six independently budgeted menu cases with the per-device workflow, synchronizes the runner's required-test manifest and source guard, and records this failure in the ledger. The resulting head still needs exact-SHA hosted validation; no pass is claimed for the new candidate.
+
+The latest main unsigned archive is artifact [#12576634630](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858/artifacts/12576634630). It is an unsigned personal-signing input, not a signed or directly installable release. The releases endpoint is empty; no signed IPA or published GitHub Release is verified.
 
 ## Completed preparation
 
@@ -61,3 +69,31 @@ Android now has a native Java/Gradle foundation for app-private imports, MIDI/KA
 Actual checks: 50 recovered release-tooling tests, four starter-generation tests and resource guard passed. Nine Android runtime Java files compiled against official API 36 references and Java 17 libraries; 46 domain regression checks passed. New Swift files parsed with tree-sitter; five untouched original files exceed that grammar, so this is not a full Swift syntax/build result. C compiled on Linux for its unsupported-codec branch; Apple codec is untested. No Gradle APK/lint, simulator/device launch, CI run, signing, merge or deployment is claimed. Next gate: authorized cloud build validation before release claims.
 
 Actual browser interoperability check also passed: a fresh synthetic Android export decrypted through the captured browser function; wrong-code and tampered-payload checks rejected. Current root workflows now run relevant reconstruction checks automatically for feature/main pushes and pull requests, with the full iOS runtime suite following same-repository iOS pull requests and successful main validation. Website checks and download-packaging contract tests are also automatic on relevant changes. Packaging accepted binaries remains owner-gated. Automatic trigger configuration is not evidence that a run has executed; inspect the final commit's Actions runs before reporting validation.
+
+
+## PR #51 foreground player lifetime repair — October 18, 2026
+
+PR #51 foreground-lifetime source now retires replaced/backgrounded online players and fences late callbacks using independent preview UUIDs. Domain regressions and Android native instrumentation are wired. Static/Python checks passed; changed-head native compilation/runtime, iOS lifecycle acceptance and audio-focus arbitration remain open. No merge/release claim. See `YOUTUBE_LIFECYCLE_CHECKPOINT.md`.
+
+
+## PR #51 built-in and browser remote candidate — October 18, 2026
+
+Owner explicitly moved the approved Companion Remote UI and browser implementation into PR #51. Source now adds native role entry, locally served responsive remote assets, private-interface HTTPS with per-session identities and fingerprint trust bootstrap, bounded guest authentication/replay/expiry, native pinned clients and controller-owned local commands. No decoder, persistent media/queue format, native dependency, sensor permission, signing or website release change. Existing KCP1/legacy paths remain separate. The shared HTML assets are platform-owned copies checked for equality; neither native build depends on the other platform.
+
+Local Java core: 524 checks passed, including 45 actual TLS checks. API 36 compilation of PinnedBrowserTransport, 55 tooling tests, Swift layout/presentation/starter guards and captured Songbook interop passed. Local Chrome was blocked by the environment's Unix socket restriction; UI is not accepted from syntax/transport checks. Native builds, nine-case simulator smoke, full eight-case iPhone/iPad walkthrough, real-browser tests, cross-platform/device trust/security/media acceptance remain pending. Unsupported expanded shortcuts are disabled, not represented as completed features. See docs/COMPANION_BROWSER_CHECKPOINT.md (root-relative) for exact trust, expiry, limits, source and acceptance scope. No physical latency/performance result, merge, signing, deployment or release is implied.
+
+
+## Post-merge iPad Search acceptance follow-up — October 25, 2026
+
+Main is at [`d01504e`](https://github.com/usermalik20-del/Kanta-reborn/commit/d01504e42b3e00735bb429b05e9ec886149911fe), the merge commit for PR #70's display-only hit-testing repair. Post-merge reconstruction [#40136025964](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025964) and unsigned archive [#40136025858](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858) passed. Full walkthrough [#40136025937](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937) remains failed on the iPad's main-menu test timeout, not on Search/keypad interactions.
+
+The compact iPad diagnostics [artifact #12577317727](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937/artifacts/12577317727) records Search hit testing and the request/activation/start of the Search presentation. All other required iPad tests passed, including the demo keypad, focused navigation, online-preview lifecycle, and starter playback cases. The runner failure is caused by `testMainMenuButtonsAndScreens` cold-launching the app for six menu destinations and exceeding XCTest's 120-second allowance on iPad.
+
+Repair candidate branch: `fix/ios-menu-walkthrough-timeout-20261025`. The test now uses one app launch and explicitly dismisses each of the same six destinations with `navigation.done`, checking that More returns before proceeding. Testing and CI failure-ledger entries record the exact run, cause, and acceptance gate. The candidate is **not yet verified**; keep release acceptance blocked until reconstruction and the full iPhone/iPad walkthrough pass on the same final candidate SHA.
+
+
+## Current candidate checkpoint — October 25, 2026
+
+The earlier PR #71 head `dc60e513c4829226d8bf763c60d5e047e0beb5a4` passed reconstruction, focused smoke, and unsigned archive but failed the full iPad walkthrough because the aggregate six-destination menu test did not complete within its XCTest allowance. The candidate has now been reworked into six separately named destination tests and the iPhone/iPad workflow has been split into independent jobs. The runtime manifest and source-contract checker require all six new cases.
+
+This is still a candidate repair. The new exact-head CI results are pending; do not mark it verified until reconstruction, focused smoke, unsigned archive, and both device jobs pass on the same head. No main-branch change, merge, signing, or release is implied.

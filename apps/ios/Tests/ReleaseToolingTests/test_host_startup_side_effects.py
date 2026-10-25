@@ -39,7 +39,7 @@ class HostStartupSideEffectsTests(unittest.TestCase):
 
     def test_saved_intermission_track_does_not_decode_on_host_entry(self):
         code = (ROOT / "Sources/Features/Host/KantaIntermissionMusic.swift").read_text()
-        constructor = code.split("    init() {", 1)[1].split("    func activate()", 1)[0]
+        constructor = code.split("    init(audioOwnership:", 1)[1].split("    private static func boundedVolume", 1)[0]
         self.assertNotIn("AVAudioPlayer(contentsOf:", constructor)
         self.assertIn("if shouldPlay, player == nil, let trackURL", code)
         self.assertIn("player = nil", code)

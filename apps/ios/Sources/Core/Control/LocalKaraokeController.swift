@@ -30,6 +30,7 @@ extension LocalKaraokeControllerError: LocalizedError {
 public actor LocalKaraokeController: KaraokeController {
     private let engine: any AudioPlaybackEngine
     private let library: any KaraokeLibraryAccess
+    private let audioOwnership: KaraokeAudioOwnership?
     private let partySFX: (any PartySFXPlayback)?
 
     private var queue = PlaybackQueue()
@@ -97,11 +98,13 @@ public actor LocalKaraokeController: KaraokeController {
     public init(
         engine: any AudioPlaybackEngine,
         library: any KaraokeLibraryAccess,
-        partySFX: (any PartySFXPlayback)? = nil
+        partySFX: (any PartySFXPlayback)? = nil,
+        audioOwnership: KaraokeAudioOwnership? = nil
     ) {
         self.engine = engine
         self.library = library
         self.partySFX = partySFX
+        self.audioOwnership = audioOwnership
     }
 
     public func snapshot() async -> KaraokeSnapshot {
@@ -182,6 +185,7 @@ public actor LocalKaraokeController: KaraokeController {
                     let asset = try await library.playbackAsset(for: currentItem.song.id)
                     try await prepareAsset(asset, shouldPlay: true)
                 } else {
+                    try await audioOwnership?.prepareNativeAudio()
                     try await engine.play()
                 }
                 if before.transport == .stopped {
@@ -204,6 +208,9 @@ public actor LocalKaraokeController: KaraokeController {
             try await startPrevious()
 
         case let .seek(milliseconds):
+            if await engine.snapshot().transport == .playing {
+                try await audioOwnership?.prepareNativeAudio()
+            }
             try await engine.seek(toMilliseconds: milliseconds)
 
         case let .setVolume(value):
@@ -243,6 +250,7 @@ public actor LocalKaraokeController: KaraokeController {
             _ = queue.remove(id: id)
 
         case let .triggerSFX(sound):
+            try await audioOwnership?.prepareNativeAudio()
             try await partySFX?.trigger(sound)
 
         case .stopSFX:
@@ -251,6 +259,21 @@ public actor LocalKaraokeController: KaraokeController {
         case let .setSFXVolume(level):
             await partySFX?.setSFXVolume(level)
         }
+    }
+
+    /// Shares the command gate with local and LAN starts, including decoder preparation.
+    /// Opening online playback never sends Pause/Stop or consumes a reservation.
+    public func claimOnlineAudio(_ id: UUID,
+        retire: @escaping @MainActor @Sendable () -> Void
+    ) async throws -> Bool {
+        try await acquireOperation()
+        defer { releaseOperation() }
+        guard let audioOwnership,
+              await engine.snapshot().transport != .playing else { return false }
+        await partySFX?.stopAll()
+        try await engine.suspendForOnlinePlayback()
+        try Task.checkCancellation()
+        return try await audioOwnership.claimOnlineAudio(id, retire: retire)
     }
 
     /// Explicit local Play action. Existing FIFO reservations are preserved.
@@ -297,6 +320,7 @@ public actor LocalKaraokeController: KaraokeController {
 
     private func prepareAsset(_ asset: AudioPlaybackAsset, shouldPlay: Bool) async throws {
         do {
+            try await audioOwnership?.prepareNativeAudio()
             try await engine.load(asset)
             if shouldPlay { try await engine.play() }
             needsPlaybackReload = false

@@ -62,15 +62,33 @@ public struct LibrarySong: Identifiable, Hashable, Codable, Sendable {
     }
 }
 
+/// A reservation's media origin is explicit; a web reference is never a local file.
+public enum QueueMediaSource: Hashable, Codable, Sendable {
+    case local
+    case youtube(YouTubeVideoReference)
+}
+
 public struct QueueItem: Identifiable, Hashable, Codable, Sendable {
     public let id: UUID
     public let song: LibrarySong
     public let requestedBy: String?
+    public let source: QueueMediaSource
 
-    public init(id: UUID = UUID(), song: LibrarySong, requestedBy: String? = nil) {
+    public init(id: UUID = UUID(), song: LibrarySong, requestedBy: String? = nil, source: QueueMediaSource = .local) {
         self.id = id
         self.song = song
         self.requestedBy = requestedBy
+        self.source = source
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, song, requestedBy, source }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        song = try values.decode(LibrarySong.self, forKey: .song)
+        requestedBy = try values.decodeIfPresent(String.self, forKey: .requestedBy)
+        source = try values.decodeIfPresent(QueueMediaSource.self, forKey: .source) ?? .local
     }
 }
 

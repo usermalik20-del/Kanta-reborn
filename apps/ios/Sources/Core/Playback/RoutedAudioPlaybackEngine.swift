@@ -101,6 +101,11 @@ public actor RoutedAudioPlaybackEngine: AudioPlaybackEngine {
         return await engine(for: activeRoute).snapshot()
     }
 
+    public func suspendForOnlinePlayback() async throws {
+        try await fileEngine.suspendForOnlinePlayback()
+        try await midiEngine.suspendForOnlinePlayback()
+    }
+
     private func engine(
         for route: Route
     ) -> any AudioPlaybackEngine {

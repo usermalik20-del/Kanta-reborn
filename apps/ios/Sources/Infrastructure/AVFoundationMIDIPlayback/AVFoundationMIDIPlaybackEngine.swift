@@ -276,6 +276,11 @@ public actor AVFoundationMIDIPlaybackEngine: AudioPlaybackEngine {
         }
     }
 
+    public func suspendForOnlinePlayback() async throws {
+        guard transport != .playing else { throw CocoaError(.userCancelled) }
+        engine.pause()
+    }
+
     public func snapshot() async -> AudioPlaybackSnapshot {
         if transport == .playing {
             updatePositionFromClock()

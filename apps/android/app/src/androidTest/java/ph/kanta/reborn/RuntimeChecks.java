@@ -75,7 +75,9 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "KANTA")),
           "Native activity did not render");
+      youtubeLifecycleChecks();
       companionChecks();
+      browserCompanionChecks();
       Song song = session.songs.get(0);
       LibraryRepository isolated =
           new LibraryRepository(getTargetContext().createDeviceProtectedStorageContext());
@@ -371,10 +373,22 @@ public final class RuntimeChecks extends Instrumentation {
           state(() -> session.monitor.outputs().isEmpty()),
           "Clean emulator unexpectedly exposes wired/USB hardware");
       shell("pm grant ph.kanta.reborn android.permission.RECORD_AUDIO");
-      runOnMainSync(activity::toggleMicrophone);
+      runOnMainSync(() -> {
+        YouTubeEmbeddedPlayer online = openNativePreviewFixture(
+            YouTubeVideoReference.parse("https://youtu.be/abcdefghijk"));
+        activity.toggleMicrophone();
+        check(online.released() && !session.onlineAudioActive(),
+            "Microphone focus acquisition retained online audio ownership");
+      });
       await(
           () -> session.microphone.capturing() && session.microphone.reading() != null,
           "Opt-in AudioRecord did not produce input frames: " + session.message);
+      runOnMainSync(() -> {
+        activity.showYouTubeVideo(YouTubeVideoReference.parse("https://youtu.be/abcdefghijk"));
+        check(field(activity, "youtubePlayer") == null && !session.onlineAudioActive()
+                && session.microphone.capturing(),
+            "Online opening interrupted active microphone input");
+      });
       runOnMainSync(() -> session.startMonitor(rejectedSpeaker));
       check(
           state(
@@ -510,6 +524,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(session::stopParty);
       check(
           state(() -> session.party.activeVoices() == 0), "Party stop-all retained active voices");
+      youtubeAudioCoordinationChecks();
       runOnMainSync(session::next);
       await(
           () -> session.playing && session.current != null,
@@ -648,6 +663,19 @@ public final class RuntimeChecks extends Instrumentation {
             session.toggleIntermission();
           });
       await(() -> session.party.loopPlaying(), "Idle intermission did not start");
+      runOnMainSync(() -> {
+        YouTubeEmbeddedPlayer online = openNativePreviewFixture(
+            YouTubeVideoReference.parse("https://youtu.be/abcdefghijk"));
+        check(!session.party.loopPlaying() && !session.loopEnabled && session.onlineAudioActive(),
+            "Online opening retained intermission audio");
+        session.publish();
+        check(!online.released() && !session.party.loopPlaying(),
+            "Automatic publication restarted native audio during online preview");
+        session.toggleIntermission();
+        check(online.released() && !session.onlineAudioActive(),
+            "Explicit intermission action retained online player");
+      });
+      await(() -> session.party.loopPlaying(), "Explicit intermission restart did not play");
       runOnMainSync(() -> session.assignPad(6, loopSong));
       await(() -> !session.assigningPad, "Custom pad decode never acknowledged");
       check(
@@ -694,6 +722,117 @@ public final class RuntimeChecks extends Instrumentation {
     }
   }
 
+  private Object field(Object target, String name) {
+    try {
+      java.lang.reflect.Field field = target.getClass().getDeclaredField(name);
+      field.setAccessible(true);
+      return field.get(target);
+    } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+  }
+
+  private void youtubeLifecycleChecks() {
+    // Only native lifetime is asserted; remote responses and advertisements are not fixtures.
+    runOnMainSync(() -> {
+      session.reserve(session.songs.get(0), "Synthetic online lifecycle A");
+      session.reserve(session.songs.get(0), "Synthetic online lifecycle B");
+      java.util.List<ReservationQueue.Entry> before = session.queue.snapshot();
+      check(before.size() == 2 && !before.get(0).id.equals(before.get(1).id),
+          "Lifecycle fixture did not create distinct local reservations");
+      boolean playing = session.playing;
+      Song current = session.current;
+      YouTubeVideoReference a = YouTubeVideoReference.parse("https://youtu.be/abcdefghijk");
+      YouTubeVideoReference b = YouTubeVideoReference.parse("https://youtu.be/12345678901");
+      activity.showYouTubeVideo(a);
+      YouTubeEmbeddedPlayer first = (YouTubeEmbeddedPlayer) field(activity, "youtubePlayer");
+      android.webkit.WebViewClient stale = first.getWebViewClient();
+      activity.showYouTubeVideo(b);
+      YouTubeEmbeddedPlayer second = (YouTubeEmbeddedPlayer) field(activity, "youtubePlayer");
+      check(first.released() && first.getParent() == null, "Replacement mounted before prior online player retired");
+      check(second != first && !second.released(), "Replacement did not create a live native player");
+      stale.onRenderProcessGone(first, null);
+      check(field(activity, "youtubePlayer") == second && !second.released(), "Stale renderer callback retired replacement");
+      activity.showYouTubeVideo(b);
+      YouTubeEmbeddedPlayer repeated = (YouTubeEmbeddedPlayer) field(activity, "youtubePlayer");
+      check(second.released() && repeated != second, "Repeated link reused a native player");
+      // Exercise the real activity pause hook without depending on remote playback.
+      callActivityOnPause(activity);
+      check(repeated.released() && repeated.getParent() == null, "Activity pause retained online playback");
+      activity.showYouTubeVideo(a);
+      check(field(activity, "youtubePlayer") == null, "Late callback reopened online video while inactive");
+      callActivityOnResume(activity);
+      check(field(activity, "youtubePlayer") == null, "Foreground return automatically reopened online video");
+      activity.showYouTubeVideo(a);
+      YouTubeEmbeddedPlayer reopened = (YouTubeEmbeddedPlayer) field(activity, "youtubePlayer");
+      check(reopened != repeated && !reopened.released(), "Explicit reopen failed");
+      android.webkit.WebViewClient failedClient = reopened.getWebViewClient();
+      failedClient.onRenderProcessGone(reopened, null);
+      check(reopened.released(), "Renderer failure did not retire online player");
+      failedClient.onRenderProcessGone(reopened, null);
+      reopened.release();
+      reopened.show(b);
+      check(reopened.released(), "Released WebView accepted a late show");
+      check(session.current == current && session.playing == playing, "Online lifetime changed local transport");
+      java.util.List<ReservationQueue.Entry> after = session.queue.snapshot();
+      check(before.size() == after.size(), "Online lifetime consumed local FIFO");
+      for (int i = 0; i < before.size(); i++)
+        check(before.get(i).id.equals(after.get(i).id), "Online lifetime changed local reservation identity");
+      for (ReservationQueue.Entry entry : before) session.remove(entry.id);
+    });
+    // Drain Dialog's asynchronous dismissal notification before the rest of the suite.
+    waitForIdleSync();
+    check(state(() -> field(activity, "youtubePlayer") == null), "Dismissed online player remained owned");
+  }
+
+  private void youtubeAudioCoordinationChecks() {
+    runOnMainSync(() -> {
+      java.util.List<ReservationQueue.Entry> before = session.queue.snapshot();
+      Song current = session.current;
+      session.triggerPad(0);
+      check(session.party.activeVoices() > 0, "Native effect fixture did not start");
+      YouTubeVideoReference reference = YouTubeVideoReference.parse("https://youtu.be/abcdefghijk");
+      YouTubeEmbeddedPlayer first = openNativePreviewFixture(reference);
+      YouTubePreviewLifecycle lifecycle = (YouTubePreviewLifecycle) field(activity, "youtubeLifecycle");
+      java.util.UUID prior = lifecycle.active().id;
+      check(session.onlineAudioActive() && session.party.activeVoices() == 0,
+          "Online ownership did not stop native effects");
+      YouTubeEmbeddedPlayer replacement = openNativePreviewFixture(reference);
+      session.releaseOnlineAudio(prior);
+      check(first.released() && session.onlineAudioActive() && !replacement.released(),
+          "Stale online release cleared replacement audio ownership");
+      session.publish();
+      check(!replacement.released(), "Idle publication revoked online ownership");
+      session.triggerPad(0);
+      check(replacement.released() && !session.onlineAudioActive() && session.party.activeVoices() > 0,
+          "Explicit effect did not retire online player before native output");
+      session.stopParty();
+      YouTubeEmbeddedPlayer backgrounded = openNativePreviewFixture(reference);
+      session.hostVisible(false);
+      check(backgrounded.released() && !session.onlineAudioActive(),
+          "Host foreground loss retained online audio ownership");
+      session.hostVisible(true);
+      check(!session.onlineAudioActive() && field(activity, "youtubePlayer") == null,
+          "Foreground return restored online audio without opt-in");
+      check(session.current == current && !session.playing, "Online audio handoff changed local transport");
+      java.util.List<ReservationQueue.Entry> after = session.queue.snapshot();
+      check(after.size() == before.size(), "Audio ownership consumed reservations");
+      for (int i = 0; i < before.size(); i++)
+        check(before.get(i).id.equals(after.get(i).id), "Audio ownership changed reservation identity");
+    });
+    waitForIdleSync();
+  }
+
+  private YouTubeEmbeddedPlayer openNativePreviewFixture(YouTubeVideoReference reference) {
+    activity.showYouTubeVideo(reference);
+    YouTubeEmbeddedPlayer player = (YouTubeEmbeddedPlayer) field(activity, "youtubePlayer");
+    check(player != null, "Native online preview did not open");
+    // Exercise native ownership without relying on remote responses or playable video.
+    player.setWebViewClient(new android.webkit.WebViewClient());
+    player.getSettings().setBlockNetworkLoads(true);
+    player.stopLoading();
+    player.loadData("<html><body>Native lifecycle fixture</body></html>", "text/html", "UTF-8");
+    return player;
+  }
+
   private void companionChecks() throws Exception {
     check(!state(() -> session.companion.enabled()), "Companion enabled without opt-in");
     java.util.List<String> addresses = CompanionControl.addresses();
@@ -726,6 +865,32 @@ public final class RuntimeChecks extends Instrumentation {
         check(remaining.getJSONArray("queue").length() == 1, "Companion cancellation affected another turn");
         companionRequest(channel, new CompanionProtocol.Request(java.util.UUID.randomUUID(), "cancel", remaining.getJSONArray("queue").getJSONObject(0).getString("id"), ""));
         check(state(() -> session.queue.snapshot().isEmpty()), "Companion cancellation did not reach FIFO");
+        YouTubeVideoReference online = YouTubeVideoReference.parse("https://youtu.be/abcdefghijk");
+        AtomicReference<YouTubeEmbeddedPlayer> onlinePlayer = new AtomicReference<>();
+        runOnMainSync(() -> {
+          onlinePlayer.set(openNativePreviewFixture(online));
+        });
+        companionRequest(channel, new CompanionProtocol.Request(java.util.UUID.randomUUID(), "reserve", songId, "Remote playback"));
+        check(state(() -> field(activity, "youtubePlayer") == onlinePlayer.get()),
+            "Reservation alone retired online preview");
+        companionRequest(channel, new CompanionProtocol.Request(java.util.UUID.randomUUID(), "play", "", ""));
+        await(() -> session.playing && !session.loading, "Remote local playback did not start");
+        check(state(() -> onlinePlayer.get().released() && field(activity, "youtubePlayer") == null),
+            "Remote asynchronous local start retained online preview");
+        check(state(() -> session.current != null && session.current.id.equals(songId) && session.queue.snapshot().isEmpty()),
+            "Online retirement changed remote local playback or FIFO");
+        companionRequest(channel, new CompanionProtocol.Request(java.util.UUID.randomUUID(), "pause", "", ""));
+        await(() -> !session.playing, "Remote pause did not settle");
+        runOnMainSync(() -> {
+          onlinePlayer.set(openNativePreviewFixture(online));
+        });
+        companionRequest(channel, new CompanionProtocol.Request(java.util.UUID.randomUUID(), "play", "", ""));
+        await(() -> session.playing, "Remote local resume did not start");
+        check(state(() -> onlinePlayer.get().released() && field(activity, "youtubePlayer") == null),
+            "Remote local resume retained online preview");
+        runOnMainSync(session::stop);
+        check(state(() -> field(activity, "youtubePlayer") == null),
+            "Stopping local playback reopened retired online preview");
         check(!state(() -> session.microphone.enabled() || session.cameraPreviewEnabled || session.scoringEnabled), "Companion activated a sensor or scoring");
         runOnMainSync(() -> session.hostVisible(false));
         check(!state(() -> session.companion.enabled()), "Backgrounding did not revoke companion");
@@ -738,6 +903,72 @@ public final class RuntimeChecks extends Instrumentation {
     }
     runOnMainSync(() -> session.companion.startHost("0.0.0.0"));
     check(!state(() -> session.companion.enabled()), "Wildcard companion listener accepted");
+  }
+
+  private void browserCompanionChecks() throws Exception {
+    check(!state(() -> session.browserCompanion.active()), "Browser hosting enabled without opt-in");
+    String address=CompanionControl.addresses().get(0);
+    runOnMainSync(() -> session.browserCompanion.start(address));
+    await(() -> !session.browserCompanion.code.isEmpty(), "HTTPS host did not start");
+    AtomicReference<String> origin=new AtomicReference<>(),code=new AtomicReference<>(),pin=new AtomicReference<>();
+    runOnMainSync(() -> {origin.set(session.browserCompanion.address);code.set(session.browserCompanion.code);pin.set(session.browserCompanion.fingerprint);});
+    javax.net.ssl.SSLContext tls=javax.net.ssl.SSLContext.getInstance("TLS");
+    tls.init(null,new javax.net.ssl.TrustManager[]{new javax.net.ssl.X509TrustManager(){
+      public java.security.cert.X509Certificate[] getAcceptedIssuers(){return new java.security.cert.X509Certificate[0];}
+      public void checkClientTrusted(java.security.cert.X509Certificate[] c,String a)throws java.security.cert.CertificateException{throw new java.security.cert.CertificateException();}
+      public void checkServerTrusted(java.security.cert.X509Certificate[] chain,String auth)throws java.security.cert.CertificateException{
+        try{chain[0].checkValidity();StringBuilder actual=new StringBuilder();for(byte b:java.security.MessageDigest.getInstance("SHA-256").digest(chain[0].getEncoded()))actual.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
+          if(!actual.toString().equals(pin.get()))throw new java.security.cert.CertificateException("Wrong host pin");
+        }catch(java.security.GeneralSecurityException e){throw new java.security.cert.CertificateException(e);}
+      }
+    }},new java.security.SecureRandom());
+    String token=browserHttp(tls,origin.get(),"/pair","",code.get().getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+    check(token.matches("[a-f0-9]{64}"),"HTTPS host did not issue a scoped token");
+    CompanionProtocol.Request search=new CompanionProtocol.Request(java.util.UUID.randomUUID(),"search","Morning","");
+    org.json.JSONObject found=new org.json.JSONObject(browserHttp(tls,origin.get(),"/command",token,search.encode()));
+    check(found.getInt("version")==1&&found.getString("source").equals("local"),"Missing browser capability contract");
+    String song=found.getJSONArray("songs").getJSONObject(0).getString("id");
+    CompanionProtocol.Request reserve=new CompanionProtocol.Request(java.util.UUID.randomUUID(),"reserve",song,"Browser guest");
+    String first=browserHttp(tls,origin.get(),"/command",token,reserve.encode());
+    check(first.equals(browserHttp(tls,origin.get(),"/command",token,reserve.encode())),"HTTPS replay response changed");
+    check(state(() -> session.queue.snapshot().size()==1),"HTTPS retry reserved twice");
+    browserHttp(tls,origin.get(),"/command",token,new CompanionProtocol.Request(java.util.UUID.randomUUID(),"reserve",song,"Second turn").encode());
+    check(state(() -> session.queue.snapshot().size()==2),"HTTPS intentional duplicate was suppressed");
+    String reservation=new org.json.JSONObject(first).getJSONArray("queue").getJSONObject(0).getString("id");
+    browserHttp(tls,origin.get(),"/command",token,new CompanionProtocol.Request(java.util.UUID.randomUUID(),"cancel",reservation,"").encode());
+    check(state(() -> session.queue.snapshot().size()==1),"HTTPS cancellation changed the wrong queue");
+    browserHttp(tls,origin.get(),"/command",token,new CompanionProtocol.Request(java.util.UUID.randomUUID(),"play","","").encode());
+    await(() -> session.playing&&!session.loading,"HTTPS Play did not reach native audio");
+    check(state(() -> session.queue.snapshot().isEmpty()),"HTTPS Play did not consume authoritative FIFO");
+    browserHttp(tls,origin.get(),"/command",token,new CompanionProtocol.Request(java.util.UUID.randomUUID(),"pause","","").encode());
+    check(!state(() -> session.playing),"HTTPS Pause did not reach native audio");
+    byte[] stop=new CompanionProtocol.Request(java.util.UUID.randomUUID(),"next","","").encode();
+    System.arraycopy("stop".getBytes(java.nio.charset.StandardCharsets.US_ASCII),0,stop,18,4);
+    browserHttp(tls,origin.get(),"/command",token,stop);
+    check(state(() -> session.current==null),"HTTPS Stop did not reach native audio");
+    check(!state(() -> session.microphone.enabled()||session.cameraPreviewEnabled),"HTTPS companion activated a sensor");
+    runOnMainSync(() -> session.hostVisible(false));
+    check(!state(() -> session.browserCompanion.active()),"Background did not revoke HTTPS host");
+    boolean rejected=false;try{browserHttp(tls,origin.get(),"/command",token,search.encode());}catch(Exception expected){rejected=true;}
+    check(rejected,"Revoked HTTPS guest retained access");
+    runOnMainSync(() -> session.hostVisible(true));
+    check(!state(() -> session.browserCompanion.active()),"Returning restarted HTTPS hosting");
+  }
+
+  private String browserHttp(javax.net.ssl.SSLContext tls,String origin,String path,String token,byte[] body)throws Exception {
+    javax.net.ssl.HttpsURLConnection connection=(javax.net.ssl.HttpsURLConnection)new java.net.URL(origin+path).openConnection();
+    try{
+      connection.setSSLSocketFactory(tls.getSocketFactory());connection.setConnectTimeout(4000);connection.setReadTimeout(4000);
+      connection.setRequestMethod("POST");connection.setRequestProperty("Origin",origin);connection.setRequestProperty("Content-Type","application/octet-stream");
+      if(!token.isEmpty())connection.setRequestProperty("Authorization","Bearer "+token);
+      connection.setDoOutput(true);connection.setFixedLengthStreamingMode(body.length);
+      try(java.io.OutputStream output=connection.getOutputStream()){output.write(body);}
+      check(connection.getResponseCode()==200,"HTTPS browser request rejected");
+      try(java.io.InputStream input=connection.getInputStream();java.io.ByteArrayOutputStream result=new java.io.ByteArrayOutputStream()){
+        byte[] buffer=new byte[4096];int count;while((count=input.read(buffer))!=-1){result.write(buffer,0,count);if(result.size()>16384)throw new IOException("Oversized HTTPS response");}
+        return result.toString("UTF-8");
+      }
+    }finally{connection.disconnect();}
   }
 
   private org.json.JSONObject companionRequest(CompanionProtocol.Channel channel, CompanionProtocol.Request request) throws Exception {
