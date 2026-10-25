@@ -252,7 +252,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
 
     @MainActor
     private func starterPlayButton(in app: XCUIApplication) throws -> XCUIElement {
-        let scrollView = app.scrollViews.firstMatch
+        let scrollView = app.scrollViews["library.content"]
         XCTAssertTrue(scrollView.waitForExistence(timeout: waitSeconds),
                       "Library must expose its scrollable content")
 
