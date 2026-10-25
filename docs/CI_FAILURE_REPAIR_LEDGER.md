@@ -387,3 +387,18 @@ The latest completed full native walkthrough is [#40154268944](https://github.co
 Main archive artifact [#12588545812](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173529/artifacts/12588545812) is 25,076,208 bytes with SHA-256 `857c60aaaf0a2ab6d17aee97f68441a35a645d5b88de6831853fb8ad64d6b042`; it expires 2026-11-01 05:25:49 UTC. It is unsigned and is not a directly installable production release. No signed IPA or published GitHub Release is verified.
 
 Remaining gates: maintain the current architecture/test contracts, obtain repository-administration access before claiming branch protection is enforced, and keep signing/publication gated on a signed artifact with verified provenance.
+
+## iOS — Starter playback walkthrough queried a lazy cell before scrolling (2026-10-26)
+
+**Fingerprint:** KantaVisualWalkthroughUITests reports an XCTAssertTrue failure for the Morning Light starter Play control; the focused iPhone smoke and full iPhone/iPad walkthrough both fail on the same two named cases.
+
+**Affected SHA / runs:** PR #80 head e2ec539. Focused smoke [run #40215508539](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215508539), full device walkthrough [run #40215507943](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215507943). The iPhone diagnostic artifact [#12608286012](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215507943/artifacts/12608286012) contains the retained accessibility hierarchy.
+
+**Cause:** confirmed by the hierarchy: the Library is visible, but the Starter Songs heading begins below the initial viewport (y≈896 on an 874-point window), and no Morning Light cell or starter Play button exists in the exposed hierarchy. PR #80 replaced eager starter rows with LazyVGrid, whose off-screen cells are created only after scrolling. Two walkthroughs queried the title/button before scrolling, so the test failed before the intended playback assertions ran. This evidence does not establish a playback-engine defect.
+
+**Candidate fix:** both real starter-playback tests use a shared helper that scrolls the Library until Starter Songs, Morning Light, and its Play button are visible and hittable, then executes the original playback assertions. A source-contract regression test requires both flows to use the helper and enforces scroll-before-query ordering.
+
+**Validation:** candidate; rerun focused smoke and both device walkthroughs on the resulting PR #80 head. Do not mark verified from reconstruction or archive success alone.
+
+**Recurrence rule:** when a view changes from eager to lazy containers, UI tests must navigate/scroll to the target before querying off-screen descendants. Do not weaken the real playback assertion or replace it with a source-only test.
+
