@@ -387,3 +387,32 @@ The latest completed full native walkthrough is [#40154268944](https://github.co
 Main archive artifact [#12588545812](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173529/artifacts/12588545812) is 25,076,208 bytes with SHA-256 `857c60aaaf0a2ab6d17aee97f68441a35a645d5b88de6831853fb8ad64d6b042`; it expires 2026-11-01 05:25:49 UTC. It is unsigned and is not a directly installable production release. No signed IPA or published GitHub Release is verified.
 
 Remaining gates: maintain the current architecture/test contracts, obtain repository-administration access before claiming branch protection is enforced, and keep signing/publication gated on a signed artifact with verified provenance.
+
+## Website — homepage redesign diverged from the shared navigation contract (2026-10-26)
+
+**Fingerprint:** tools/verify-website.py raises AssertionError for index.html because the redesigned navigation uses nav-links rather than the old single site-nav class.
+
+**Affected commit / first observed runs:** main merge 9acf94f (PR #79). Website validation [run #40212525044](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40212525044) and deployment validation [run #40212525043](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40212525043); deployment was correctly skipped after its validation gate failed.
+
+**Cause:** the new homepage uses nav-links and a five-item mix of anchors / .html routes, while the architecture requires the same six canonical destinations on all ten public pages. The validator and unit test also hard-coded the old single site-nav class and obsolete CSS selector strings, even though the active stylesheet already groups nav, .site-nav, and .nav-links under a flex-wrapping rule. This is a real route-contract violation plus a stale test contract, not a deployment-platform failure.
+
+**Candidate fix:** branch fix/website-navigation-contract-20261026 restores the six canonical routes on the homepage, accepts either shared class token without weakening the route assertions, and validates the actual shared flex-wrap / visible-navigation CSS rule. Regression coverage remains in test_all_public_pages_share_the_responsive_primary_navigation and test_primary_navigation_wraps_and_remains_visible_on_mobile.
+
+**Validation:** candidate; hosted checks on the repair head are pending. Do not mark verified until website validation passes on the exact PR head and the post-merge deployment succeeds.
+
+**Recurrence rule:** when the site visual design changes, preserve the six canonical destinations and use semantic nav parsing; do not fix this failure by removing route-parity checks or by changing the expected set to match an incomplete homepage.
+
+## Website — redesigned homepage dropped the same-origin analytics entrypoint (2026-10-26)
+
+**Fingerprint:** website validation / Vercel deployment-contract validation raises “Homepage analytics must use the same-origin script”.
+
+**Affected candidate / runs:** PR #81 candidate before the follow-up fix; website validation [run #40217979337](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40217979337) and Vercel validation [run #40217979356](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40217979356). Deployment was correctly skipped.
+
+**Cause:** the PR #79 homepage redesign removed the existing same-origin analytics script tag, while analytics.js and the homepage's allowlisted CSP remained in the repository. This was an actual integration regression, independent of the navigation-contract failure.
+
+**Candidate fix:** commit d7eec50 restores the existing same-origin analytics entrypoint; it does not add a third-party inline script or change CSP permissions.
+
+**Validation:** candidate; rerun website validation on the current PR #81 head before marking verified.
+
+**Recurrence rule:** homepage visual rewrites must retain the same-origin analytics entrypoint unless analytics is intentionally retired with coordinated CSP, code, privacy and contract updates.
+
