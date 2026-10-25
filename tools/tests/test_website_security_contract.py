@@ -136,7 +136,8 @@ class WebsiteSecurityContractTests(unittest.TestCase):
                 self.assertIn('<script defer src="/nav.js"></script>', source, filename)
 
     def test_public_pages_do_not_repeat_adjacent_feature_headings(self):
-        for filename in sorted(set(PUBLIC_ROUTES.values())):
+        for route in sorted(PUBLIC_ROUTES):
+            filename = "index.html" if route == "/" else route.lstrip("/") + ".html"
             source = (WEB / filename).read_text(encoding="utf-8")
             with self.subTest(filename=filename):
                 self.assertIsNone(

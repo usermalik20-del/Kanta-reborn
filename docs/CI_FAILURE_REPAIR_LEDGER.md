@@ -377,3 +377,8 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 **Repair candidate:** branch `fix/web-mobile-nav-content-integrity-20261025` standardizes the same header/drawer markup across all ten public pages, removes the duplicate headings and orphaned CSS fragment, and extends `verify-website.py` plus `test_website_security_contract.py` to enforce route parity, same-origin script loading, heading uniqueness and stylesheet hygiene. Architecture and testing contracts are updated.
 
 **Acceptance:** exact-head website validation, reconstruction checks as triggered, and production deployment must pass. After deployment, re-fetch the canonical alias and confirm the mobile drawer exists and route links work on all ten pages. No native app code, signing or release artifacts are changed by this website repair. Candidate status remains unverified until hosted checks finish.
+
+
+## Website navigation regression-test harness correction — October 25, 2026
+
+The first PR #74 candidate [`5385f0f`](https://github.com/usermalik20-del/Kanta-reborn/commit/5385f0f595592953df0dbdf0987417fde56e84f2) passed `tools/verify-website.py`, but the website unit-test step failed before completing because `PUBLIC_ROUTES` in `test_website_security_contract.py` is a set, while the new duplicate-heading test incorrectly called `.values()`. This was a test-harness defect, not a production-site regression. The repair iterates the route set and derives each HTML filename from the route, matching the existing navigation test. Rerun website validation and deployment-gate tests on the new exact candidate SHA; production deployment remains blocked until they pass.
