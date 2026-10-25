@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check public-site routes, anchors, immutable reader assets and release metadata."""
 import json
+import re
 from datetime import date
 from html.parser import HTMLParser
 from pathlib import Path
@@ -184,6 +185,53 @@ def validate_public_resources():
     )
 
 
+
+def validate_navigation_contract(source, name):
+    header_match = re.search(r"<header\b[\s\S]*?</header>", source, re.IGNORECASE)
+    assert header_match, (name, "missing shared site header")
+    header = header_match.group(0)
+    for marker in (
+        'class="site-header"',
+        'class="brand"',
+        'aria-label="KANTA home"',
+        'class="site-nav"',
+        'aria-label="Main navigation"',
+    ):
+        assert marker in header, (name, "missing shared navigation contract: " + marker)
+
+    nav = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+    assert nav, (name, "missing primary navigation")
+    expected_links = {
+        "/ios-download", "/android", "/guide", "/features", "/songbook", "/support",
+    }
+    links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', nav.group(1), re.IGNORECASE)
+    assert len(links) == len(set(links)) and set(links) == expected_links, (
+        name, "primary navigation routes differ from the shared contract", links
+    )
+    assert not re.search(r"(<h3>[^<]+</h3>)\s*\1", source, re.IGNORECASE), (
+        name, "adjacent duplicate feature heading"
+    )
+
+
+def validate_responsive_navigation_styles():
+    source = (WEB / "style.css").read_text(encoding="utf-8")
+    assert re.search(r"nav\{[^}]*display:flex[^}]*flex-wrap:wrap", source), (
+        "Primary navigation must wrap instead of overflowing narrow viewports"
+    )
+    assert ".site-header .site-nav{display:flex" in source, (
+        "Primary navigation must remain a flex layout"
+    )
+    assert ".site-header .site-nav{justify-content:flex-start" in source, (
+        "Narrow viewports must align navigation to the available header space"
+    )
+    assert not re.search(r"\.site-nav[^}]*display:none", source), (
+        "Primary navigation must not be hidden without an accessible replacement"
+    )
+    assert not re.search(r"(?m)^\s*ap:anywhere\}\s*$", source), (
+        "style.css contains an orphaned declaration fragment"
+    )
+
+
 def main():
     pages = {}
     for path in WEB.glob("*.html"):
@@ -195,6 +243,7 @@ def main():
         assert "<title>" in source and 'id="content"' in source, path.name
         assert "github.com/kanta-ph/" not in source, path.name
         assert "github.com/kanta-gelo/" not in source, path.name
+        validate_navigation_contract(source, path.name)
         pages[path.name] = page
 
     assert set(pages) == set(PUBLIC_ROUTES.values()), (
@@ -223,6 +272,7 @@ def main():
         assert (WEB / name).read_bytes() == (original / name).read_bytes(), name + " reader changed"
 
     validate_public_resources()
+    validate_responsive_navigation_styles()
 
     config = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))
     validate_csp_config(config)

@@ -366,3 +366,12 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 **Validation:** `candidate` until the new exact-head reconstruction, focused smoke, archive, and independent iPhone/iPad walkthrough jobs finish successfully. No green result is inferred from the previous SHA.
 
 **Recurrence rule:** if a device reports a missing menu case, inspect that individual case's XCTest result bundle and job log. Do not increase the global timeout, suppress missing cases, or treat screenshot presence as a pass.
+
+
+## Responsive website navigation contract and superseded drawer repair — October 25, 2026
+
+Main advanced to [`00d2405`](https://github.com/usermalik20-del/Kanta-reborn/commit/00d2405b5c54d8ae56ee44fed99a98a9ab97d20e), incorporating responsive redesign commit [`770a6dc`](https://github.com/usermalik20-del/Kanta-reborn/commit/770a6dc7c8e51337349a75afddb5fcbf08f3e80b). Website validation [#40160483259](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483259) and Vercel deployment [#40160483212](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483212) passed. The new source standardizes the primary header across all ten public pages, removes the earlier adjacent duplicate feature headings and orphaned CSS fragment, and uses a visible wrapping navigation instead of a mobile drawer.
+
+PR #74 was closed as superseded rather than merged because its original drawer markup was based on the previous design. Its first website unit-test run [#40160477572](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160477572) failed because the new duplicate-heading test called `.values()` on the existing `PUBLIC_ROUTES` set. Commit [`bd1fff3`](https://github.com/usermalik20-del/Kanta-reborn/commit/bd1fff39c678b2bc6a922d3543fda8e4b210777e) corrected that harness bug, but the branch was not merged because the UI contract had changed.
+
+The current test-only candidate `test/web-responsive-navigation-contract-20261025` checks the six shared primary routes, flex-wrapping and visible navigation rules, duplicate heading prevention, and stylesheet hygiene. It does not change website runtime markup or native app code. Hosted validation and post-deploy confirmation remain pending until this candidate is accepted.
