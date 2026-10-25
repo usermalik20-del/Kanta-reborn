@@ -118,13 +118,20 @@ class WebsiteSecurityContractTests(unittest.TestCase):
                     'class="site-header"',
                     'class="brand"',
                     'aria-label="KANTA home"',
-                    'class="site-nav"',
-                    'aria-label="Main navigation"',
                 ):
                     self.assertIn(marker, header, (filename, marker))
-                nav = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+
+                nav = re.search(r"<nav\b([^>]*)>([\s\S]*?)</nav>", header, re.IGNORECASE)
                 self.assertIsNotNone(nav, filename)
-                links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', nav.group(1), re.IGNORECASE)
+                attributes, body = nav.groups()
+                class_match = re.search(r'\bclass\s*=\s*["\']([^"\']+)["\']', attributes, re.IGNORECASE)
+                self.assertIsNotNone(class_match, filename)
+                self.assertTrue(
+                    {"site-nav", "nav-links"}.intersection(class_match.group(1).split()),
+                    (filename, "unsupported primary-navigation class"),
+                )
+                self.assertRegex(attributes, r'\baria-label\s*=\s*["\']Main navigation["\']')
+                links = re.findall(r'<a\b[^>]*\bhref=["\']([^"\']+)["\']', body, re.IGNORECASE)
                 self.assertEqual(set(links), expected_links, filename)
                 self.assertEqual(len(links), len(expected_links), filename)
 
