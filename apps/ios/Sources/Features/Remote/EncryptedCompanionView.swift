@@ -112,11 +112,7 @@ struct EncryptedCompanionView: View {
         .onDisappear { stop() }
     }
     private var validPairingInput: Bool {
-        guard (try? CompanionProtocol.privateAddress(address)) != nil,
-              code.utf8.count == 32 else { return false }
-        return code.utf8.allSatisfy {
-            (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0)
-        }
+        CompanionProtocol.isValidPairingInput(address: address, code: code)
     }
 
     private func stop() { client.disconnect(); code = "" }
