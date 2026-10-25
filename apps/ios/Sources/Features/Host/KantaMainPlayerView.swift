@@ -121,6 +121,7 @@ struct KantaMainPlayerView: View {
             HStack {
                 Button(action: onMore) { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
                     .accessibilityLabel("More")
+                    .accessibilityIdentifier("stage.more")
                 Text("Karaoke Host").font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Button(action: onControls) {
@@ -377,7 +378,7 @@ struct KantaMainPlayerView: View {
     }
     private var moreButton: some View {
         stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
-            .accessibilityIdentifier("stage.more")
+            .accessibilityIdentifier("stage.controls.more")
     }
     private var playButton: some View {
         Button {
