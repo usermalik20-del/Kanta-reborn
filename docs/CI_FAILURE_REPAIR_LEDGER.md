@@ -477,3 +477,22 @@ Main commit [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5
 **Status:** `verified on candidate; post-merge main confirmation pending`.
 
 **Recurrence rule:** if DevTools fails to start, inspect captured Chrome stderr and child exit state first. Do not suppress the browser assertion, skip real Chrome, or treat static asset checks as browser acceptance.
+
+
+## iOS UI smoke — Stage More accessibility identifier attached to the wrong control (2026-10-26)
+
+**Fingerprint:** workflow `KANTA iOS focused simulator smoke`, job `ios-smoke`, test `KantaVisualWalkthroughUITests.testOnlinePreviewPreservesPausedStarterAndLocalResume`; `XCTAssertTrue failed` in `waitForRendered` while querying `stage.more`.
+
+**Affected SHA / first observed run:** PR #83 head `6941aec198ad07eb46c5f7d8093b9361d0821750`, [focused smoke run #40244262594](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594), [job #121322606681](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594/job/121322606681). The complete job log shows the failure at `KantaVisualWalkthroughUITests.swift:525` after the test's initial menu helper could not find `stage.more`.
+
+**Cause (confirmed):** PR #83 changed menu-test queries from the accessible label `More` to `stage.more`, but the identifier was attached only to the separate `moreButton` used by the fullscreen player's `controls(wide:)`. The initial embedded player uses a different chevron button with `Button(action: onMore)` and accessibility label `More`, without that identifier. The UI test therefore waited for an identifier that the initial screen did not expose; the failing assertion occurred before the paused-starter playback assertions. This is an accessibility identity mismatch, not evidence that playback itself regressed.
+
+**Fix candidate:** commit [`1c2aeaa`](https://github.com/usermalik20-del/Kanta-reborn/commit/1c2aeaa56d864001e5894e546ba390185e57fedf) assigns `stage.more` to the actual embedded navigation button and renames the fullscreen-only control to `stage.controls.more`. It also adds a source-contract check in `tools/check-ios-presentation-contract.py` that verifies the identifier is attached to the correct button and keeps the two controls distinct.
+
+**Regression coverage:** the existing menu and online-preview walkthroughs continue to query `stage.more`; the presentation-contract guard now fails if the ID drifts back onto the fullscreen-only control. No playback assertions were removed or weakened.
+
+**Validation:** `candidate`. Fresh exact-head CI was triggered by `1c2aeaa`; its run IDs and final results must be recorded after they complete. The earlier green reconstruction/archive and the still-running walkthrough on `6941aec` do not validate this fix.
+
+**Recurrence rule:** when `stage.more` is missing, inspect identifier placement in `embeddedPlayer` versus `controls(wide:)`. Do not add sleeps or loosen assertions; give distinct accessible controls distinct stable identifiers and keep the source-contract guard aligned.
+
+**Status:** `candidate`.
