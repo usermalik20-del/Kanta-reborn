@@ -366,3 +366,14 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 **Validation:** `candidate` until the new exact-head reconstruction, focused smoke, archive, and independent iPhone/iPad walkthrough jobs finish successfully. No green result is inferred from the previous SHA.
 
 **Recurrence rule:** if a device reports a missing menu case, inspect that individual case's XCTest result bundle and job log. Do not increase the global timeout, suppress missing cases, or treat screenshot presence as a pass.
+
+
+## Website mobile navigation and feature-card markup regression — October 25, 2026
+
+**Evidence:** Main commit [`d640700`](https://github.com/usermalik20-del/Kanta-reborn/commit/d640700bba46203851ff6e063b43179e8a1db9a2) merged PR #73. Reconstruction [#40155986641](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40155986641), unsigned archive [#40155986612](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40155986612), website validation [#40155986574](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40155986574), and production deployment [#40155986538](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40155986538) all passed. Live inspection of `https://kanta-public.vercel.app` and its `/support`, `/legal`, and `/android` routes exposed defects not covered by the existing static checks.
+
+**Confirmed causes:** five public pages (`support.html`, `legal.html`, `privacy.html`, `licenses.html`, and `songbook.html`) included `nav.js` but lacked the `.nav-toggle` and `#site-drawer` elements. The shared mobile CSS hides `.site-nav` at widths up to 640px, leaving those pages without reachable navigation. The homepage, Android page and iOS download page also contain adjacent duplicate `h3` elements introduced with feature-card icons. `style.css` ends with an orphaned `ap:anywhere}` fragment.
+
+**Repair candidate:** branch `fix/web-mobile-nav-content-integrity-20261025` standardizes the same header/drawer markup across all ten public pages, removes the duplicate headings and orphaned CSS fragment, and extends `verify-website.py` plus `test_website_security_contract.py` to enforce route parity, same-origin script loading, heading uniqueness and stylesheet hygiene. Architecture and testing contracts are updated.
+
+**Acceptance:** exact-head website validation, reconstruction checks as triggered, and production deployment must pass. After deployment, re-fetch the canonical alias and confirm the mobile drawer exists and route links work on all ten pages. No native app code, signing or release artifacts are changed by this website repair. Candidate status remains unverified until hosted checks finish.

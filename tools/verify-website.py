@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check public-site routes, anchors, immutable reader assets and release metadata."""
 import json
+import re
 from datetime import date
 from html.parser import HTMLParser
 from pathlib import Path
@@ -184,6 +185,49 @@ def validate_public_resources():
     )
 
 
+
+def validate_navigation_contract(source, name):
+    header_match = re.search(r"<header\b[\s\S]*?</header>", source, re.IGNORECASE)
+    assert header_match, (name, "missing shared site header")
+    header = header_match.group(0)
+    for marker in (
+        'class="nav-toggle"',
+        'aria-controls="site-drawer"',
+        'id="site-drawer"',
+        'class="site-nav"',
+        'src="/kanta-brand.png"',
+    ):
+        assert marker in header, (name, "missing responsive navigation contract: " + marker)
+
+    drawer = re.search(r'<nav id="site-drawer"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+    desktop = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+    assert drawer and desktop, (name, "missing mobile drawer or desktop navigation")
+    expected_links = {
+        "/ios-download", "/android", "/guide", "/features",
+        "/songbook", "/support", "/privacy", "/legal",
+    }
+    drawer_links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', drawer.group(1), re.IGNORECASE)
+    desktop_links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', desktop.group(1), re.IGNORECASE)
+    assert len(drawer_links) == len(set(drawer_links)) and set(drawer_links) == expected_links, (
+        name, "mobile drawer routes differ from the shared navigation", drawer_links
+    )
+    assert len(desktop_links) == len(set(desktop_links)) and set(desktop_links) == expected_links, (
+        name, "desktop navigation routes differ from the shared navigation", desktop_links
+    )
+    assert '<script defer src="/nav.js"></script>' in source, (name, "missing same-origin navigation controller")
+    assert not re.search(r"(<h3>[^<]+</h3>)\s*\1", source, re.IGNORECASE), (
+        name, "adjacent duplicate feature heading"
+    )
+
+
+def validate_stylesheet_contract():
+    source = (WEB / "style.css").read_text(encoding="utf-8")
+    assert not re.search(r"(?m)^\s*ap:anywhere\}\s*$", source), (
+        "style.css contains an orphaned declaration fragment"
+    )
+    assert ".site-drawer.open{display:block}" in source, "Missing mobile drawer open state"
+
+
 def main():
     pages = {}
     for path in WEB.glob("*.html"):
@@ -195,6 +239,7 @@ def main():
         assert "<title>" in source and 'id="content"' in source, path.name
         assert "github.com/kanta-ph/" not in source, path.name
         assert "github.com/kanta-gelo/" not in source, path.name
+        validate_navigation_contract(source, path.name)
         pages[path.name] = page
 
     assert set(pages) == set(PUBLIC_ROUTES.values()), (
@@ -223,6 +268,7 @@ def main():
         assert (WEB / name).read_bytes() == (original / name).read_bytes(), name + " reader changed"
 
     validate_public_resources()
+    validate_stylesheet_contract()
 
     config = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))
     validate_csp_config(config)

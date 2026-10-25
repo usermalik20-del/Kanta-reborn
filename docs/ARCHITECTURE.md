@@ -10,6 +10,10 @@
 
 `docs/evidence/website/2026-10-15` stores exact public-site bytes, extracted readable text and URL/SHA-256 manifest. It remains immutable evidence; the active restored website is maintained separately under apps/web. No public song catalog may be added.
 
+## Public website navigation and security contract
+
+Every public HTML route uses the same first-party brand lockup, desktop navigation, mobile drawer, and deferred same-origin `nav.js` controller. The drawer and desktop navigation must expose the same eight destination routes; responsive CSS must not hide the desktop navigation unless the mobile toggle and drawer exist. Route-specific Content Security Policy allows only same-origin brand/icon images and scripts. Feature cards must render one heading per card, and the shared stylesheet must not contain orphaned declaration fragments. `tools/verify-website.py` and `tools/tests/test_website_security_contract.py` enforce these invariants. A successful Vercel deployment is not proof of route-level correctness; verify the public alias and key mobile routes after production deployment.
+
 ## Runtime contracts
 
 Each platform has one playback controller and FIFO reservation queue. UI, lyrics, fullscreen/TV stage and companion control project that owner's state. Import and persistence run away from latency-sensitive playback/UI work; commits are atomic and stale async results cannot replace newer state. Retry suppression applies to the same operation ID, never separate intentional reservations.

@@ -102,5 +102,52 @@ class WebsiteSecurityContractTests(unittest.TestCase):
                 self.assertEqual(policy_for(route)["script-src"], frozenset({"'self'"}))
 
 
+
+    def test_every_public_route_has_matching_mobile_and_desktop_navigation(self):
+        expected_links = {
+            "/ios-download", "/android", "/guide", "/features",
+            "/songbook", "/support", "/privacy", "/legal",
+        }
+        for route in sorted(PUBLIC_ROUTES):
+            filename = "index.html" if route == "/" else route.lstrip("/") + ".html"
+            source = (WEB / filename).read_text(encoding="utf-8")
+            with self.subTest(route=route):
+                header_match = re.search(r"<header\b[\s\S]*?</header>", source, re.IGNORECASE)
+                self.assertIsNotNone(header_match, filename)
+                header = header_match.group(0)
+                for marker in (
+                    'class="nav-toggle"',
+                    'aria-controls="site-drawer"',
+                    'id="site-drawer"',
+                    'class="site-nav"',
+                    'src="/kanta-brand.png"',
+                ):
+                    self.assertIn(marker, header, (filename, marker))
+                drawer = re.search(r'<nav id="site-drawer"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+                desktop = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', header, re.IGNORECASE | re.DOTALL)
+                self.assertIsNotNone(drawer, filename)
+                self.assertIsNotNone(desktop, filename)
+                drawer_links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', drawer.group(1), re.IGNORECASE)
+                desktop_links = re.findall(r'<a\b[^>]*\bhref="([^"]+)"', desktop.group(1), re.IGNORECASE)
+                self.assertEqual(set(drawer_links), expected_links, filename)
+                self.assertEqual(len(drawer_links), len(expected_links), filename)
+                self.assertEqual(set(desktop_links), expected_links, filename)
+                self.assertEqual(len(desktop_links), len(expected_links), filename)
+                self.assertIn('<script defer src="/nav.js"></script>', source, filename)
+
+    def test_public_pages_do_not_repeat_adjacent_feature_headings(self):
+        for filename in sorted(set(PUBLIC_ROUTES.values())):
+            source = (WEB / filename).read_text(encoding="utf-8")
+            with self.subTest(filename=filename):
+                self.assertIsNone(
+                    re.search(r"(<h3>[^<]+</h3>)\s*\1", source, re.IGNORECASE),
+                    filename,
+                )
+
+    def test_stylesheet_has_no_orphaned_declaration_fragment(self):
+        source = (WEB / "style.css").read_text(encoding="utf-8")
+        self.assertNotRegex(source, r"(?m)^\s*ap:anywhere\}\s*$")
+        self.assertIn(".site-drawer.open{display:block}", source)
+
 if __name__ == "__main__":
     unittest.main()
