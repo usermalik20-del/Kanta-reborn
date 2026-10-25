@@ -37,7 +37,7 @@ struct LibraryView: View {
                         ProgressView()
                         Text("Checking and updating your library…")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(KantaColors.textSecondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 4)
@@ -53,6 +53,7 @@ struct LibraryView: View {
             .frame(maxWidth: .infinity)
         }
         .background(GeloVisualStyle.pageGradient)
+        .accessibilityIdentifier("library.content")
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.large)
         .task {
@@ -98,182 +99,266 @@ struct LibraryView: View {
     }
 
     private var starterSongsSection: some View {
-        GeloSectionCard(
-            "Starter Songs",
-            subtitle: "Three original songs with timed lyrics and built-in sound. Play offline, or use your imported SoundFont."
-        ) {
-            ForEach(StarterKaraokeStore.identifiers, id: \.self) { identifier in
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(StarterKaraokeStore.song(identifier).title).font(.headline)
-                    if model.availableStarters.contains(identifier) {
-                        HStack(spacing: 16) {
-                            Button { Task { await model.playStarter(identifier, queueOnly: false) } } label: {
-                                Label("Play", systemImage: "play.fill")
+        KantaCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Starter Songs")
+                        .font(KantaTypography.sectionHeader)
+                        .foregroundStyle(KantaColors.textPrimary)
+                    Spacer()
+                    Button("See all") {
+                        // Action
+                    }
+                    .font(KantaTypography.metadata)
+                    .foregroundStyle(KantaColors.cyan)
+                }
+
+                Text("Three original songs with timed lyrics and built-in sound. Play offline, or use your imported SoundFont.")
+                    .font(KantaTypography.metadata)
+                    .foregroundStyle(KantaColors.textSecondary)
+
+                // Deliberately not a LazyVGrid: lazy containers do not build
+                // off-screen rows, so the tiles below the fold would not exist
+                // in the accessibility tree and the walkthrough could not reach
+                // them without scrolling first.
+                VStack(spacing: 16) {
+                    ForEach(starterRows, id: \.self) { row in
+                        HStack(alignment: .top, spacing: 14) {
+                            ForEach(row, id: \.self) { identifier in
+                                starterTile(identifier)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .accessibilityIdentifier("starter.play." + identifier)
-                            Button { Task { await model.playStarter(identifier, queueOnly: true) } } label: {
-                                Label("Queue", systemImage: "text.badge.plus")
+
+                            if row.count == 1 {
+                                Color.clear.frame(maxWidth: .infinity)
                             }
-                            Spacer(minLength: 0)
-                            Button("Remove", role: .destructive) {
-                                Task { await model.changeStarter(identifier, restore: false) }
-                            }
-                        }
-                    } else {
-                        Button("Restore") {
-                            Task { await model.changeStarter(identifier, restore: true) }
                         }
                     }
                 }
-                .buttonStyle(.borderless)
-                .disabled(model.isWorking)
-                .padding(.vertical, 6)
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(StarterKaraokeStore.song(identifier).title)
-            }
-            if model.availableStarters.count < StarterKaraokeStore.identifiers.count {
-                Button("Restore All Missing Songs") {
-                    Task { await model.changeStarter(nil, restore: true) }
+
+                if model.availableStarters.count < StarterKaraokeStore.identifiers.count {
+                    Button("Restore All Missing Songs") {
+                        Task { await model.changeStarter(nil, restore: true) }
+                    }
+                    .disabled(model.isWorking)
+                    .font(KantaTypography.songTitle)
+                    .tint(KantaColors.primary)
                 }
-                .disabled(model.isWorking)
-            }
-            if let feedback = model.starterFeedback {
-                Text(feedback).font(.caption).foregroundStyle(.secondary)
+
+                if let feedback = model.starterFeedback {
+                    Text(feedback)
+                        .font(KantaTypography.caption)
+                        .foregroundStyle(KantaColors.textSecondary)
+                }
             }
         }
     }
 
+    /// Starter identifiers paired into rows of two for a fixed grid.
+    private var starterRows: [[String]] {
+        let identifiers = StarterKaraokeStore.identifiers
+        return stride(from: 0, to: identifiers.count, by: 2).map { start in
+            Array(identifiers[start..<min(start + 2, identifiers.count)])
+        }
+    }
+
+    @ViewBuilder
+    private func starterTile(_ identifier: String) -> some View {
+        let song = StarterKaraokeStore.song(identifier)
+        let isAvailable = model.availableStarters.contains(identifier)
+
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .bottomTrailing) {
+                KantaCoverArt(
+                    seed: song.title + " " + (song.artist ?? ""),
+                    cornerRadius: 22
+                )
+                .frame(height: 150)
+
+                if isAvailable {
+                    HStack(spacing: 8) {
+                        Button {
+                            Task { await model.playStarter(identifier, queueOnly: false) }
+                        } label: {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 40, height: 40)
+                                .background(KantaColors.primaryGradient, in: Circle())
+                        }
+                        .accessibilityIdentifier("starter.play." + identifier)
+
+                        Button {
+                            Task { await model.playStarter(identifier, queueOnly: true) }
+                        } label: {
+                            Image(systemName: "text.badge.plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 40, height: 40)
+                                .background(.ultraThinMaterial, in: Circle())
+                        }
+                    }
+                    .padding(12)
+                } else {
+                    Button("Restore") {
+                        Task { await model.changeStarter(identifier, restore: true) }
+                    }
+                    .font(KantaTypography.caption)
+                    .buttonStyle(.borderedProminent)
+                    .tint(KantaColors.primary)
+                    .padding(12)
+                }
+            }
+
+            // No container-level accessibilityElement here: merging the tile
+            // would hide the title and the play button from the walkthrough,
+            // which addresses them individually.
+            Text(song.title)
+                .font(KantaTypography.songTitle)
+                .foregroundStyle(KantaColors.textPrimary)
+                .lineLimit(1)
+
+            Text("Starter · 3:12")
+                .font(KantaTypography.metadata)
+                .foregroundStyle(KantaColors.textSecondary)
+        }
+    }
+
     private var heroCard: some View {
-        GeloSectionCard(
-            "Your karaoke, your storage",
-            subtitle:
-                "Bring your own library from Files or iCloud Drive. " +
-                "KANTA keeps playback local and does not upload your media."
-        ) {
-            HStack(alignment: .center, spacing: 14) {
-                Image(systemName: "music.note.house.fill")
-                    .font(.system(size: 38))
-                    .foregroundStyle(GeloVisualStyle.accent)
-                    .frame(width: 58, height: 58)
+        KantaCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your karaoke, your storage")
+                        .font(KantaTypography.sectionHeader)
+                        .foregroundStyle(KantaColors.textPrimary)
+                    Text(
+                        "Bring your own library from Files or iCloud Drive. " +
+                        "KANTA keeps playback local and does not upload your media."
+                    )
+                    .font(KantaTypography.metadata)
+                    .foregroundStyle(KantaColors.textSecondary)
+                }
+
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: "music.note.house.fill")
+                        .font(.system(size: 38))
+                        .foregroundStyle(KantaColors.primary)
+                        .frame(width: 58, height: 58)
+                        .background(
+                            KantaColors.primary.opacity(0.12),
+                            in: RoundedRectangle(
+                                cornerRadius: 16,
+                                style: .continuous
+                            )
+                        )
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Add a karaoke folder")
+                            .font(KantaTypography.songTitle)
+                            .foregroundStyle(KantaColors.textPrimary)
+                        Text(
+                            "Put your library-index file, media-container file, and optional .sf2 " +
+                            "SoundFont files in one folder, then select that " +
+                            "folder here. KANTA detects and links them automatically."
+                        )
+                        .font(KantaTypography.metadata)
+                        .foregroundStyle(KantaColors.textSecondary)
+                    }
+                }
+
+                VStack(spacing: 10) {
+                    Button {
+                        showingLibraryImporter = true
+                    } label: {
+                        Label(
+                            "Add Karaoke Folder",
+                            systemImage: "folder.badge.plus"
+                        )
+                        .font(KantaTypography.songTitle)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(KantaColors.primaryGradient, in: Capsule())
+                    }
+                    .accessibilityIdentifier("library.addFolder")
+                    .disabled(model.isWorking)
+
+                    HStack(spacing: 12) {
+                        Image(systemName: "externaldrive.badge.icloud")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 34)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 7) {
+                                Text("Google Drive")
+                                    .font(KantaTypography.songTitle)
+                                    .foregroundStyle(KantaColors.textPrimary)
+
+                                Text("COMING LATER")
+                                    .font(KantaTypography.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        .thinMaterial,
+                                        in: Capsule()
+                                    )
+                            }
+
+                            Text(
+                                "Planned cloud import source. No Google sign-in " +
+                                "or Drive access is enabled in this version."
+                            )
+                            .font(KantaTypography.caption)
+                            .foregroundStyle(.secondary)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(12)
                     .background(
-                        GeloVisualStyle.accent.opacity(0.12),
+                        .thinMaterial,
                         in: RoundedRectangle(
                             cornerRadius: 16,
                             style: .continuous
                         )
                     )
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Add a karaoke folder")
-                        .font(.headline)
-                    Text(
-                        "Put your library-index file, media-container file, and optional .sf2 " +
-                        "SoundFont files in one folder, then select that " +
-                        "folder here. KANTA detects and links them automatically."
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "Google Drive, coming later. Not available in this version."
                     )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
                 }
             }
-
-            VStack(spacing: 10) {
-                Button {
-                    showingLibraryImporter = true
-                } label: {
-                    Label(
-                        "Add Karaoke Folder",
-                        systemImage: "folder.badge.plus"
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(GeloVisualStyle.accent)
-                .disabled(model.isWorking)
-                .accessibilityIdentifier("library.addFolder")
-
-                HStack(spacing: 12) {
-                    Image(systemName: "externaldrive.badge.icloud")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 34)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 7) {
-                            Text("Google Drive")
-                                .font(.headline)
-
-                            Text("COMING LATER")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(
-                                    .thinMaterial,
-                                    in: Capsule()
-                                )
-                        }
-
-                        Text(
-                            "Planned cloud import source. No Google sign-in " +
-                            "or Drive access is enabled in this version."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-
-                    Spacer(minLength: 8)
-
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(12)
-                .background(
-                    .thinMaterial,
-                    in: RoundedRectangle(
-                        cornerRadius: 16,
-                        style: .continuous
-                    )
-                )
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(
-                    "Google Drive, coming later. Not available in this version."
-                )
-            }
-
         }
     }
 
     @ViewBuilder
     private var librariesSection: some View {
         if model.sources.isEmpty {
-            GeloSectionCard(
-                "No library connected",
-                subtitle:
-                    "Add a folder first. Background imports are placed " +
-                    "inside the library you choose."
-            ) {
-                ContentUnavailableView(
-                    "Choose a Folder",
-                    systemImage: "folder",
-                    description: Text(
-                        "Use Files or iCloud Drive. KANTA stores a " +
-                        "security-scoped bookmark so the library can " +
-                        "be reopened later."
-                    )
+            KantaCard {
+                KantaEmptyState(
+                    icon: "folder",
+                    title: "Choose a Folder",
+                    description: "Use Files or iCloud Drive. KANTA stores a security-scoped bookmark so the library can be reopened later.",
+                    actionTitle: "Choose a Folder",
+                    action: { showingLibraryImporter = true },
+                    style: .compact
                 )
-                Button("Choose a Folder") { showingLibraryImporter = true }
-                    .buttonStyle(.borderedProminent)
-                    .tint(GeloVisualStyle.accent)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier("library.chooseFolder")
-                    .disabled(model.isWorking)
+                .accessibilityIdentifier("library.chooseFolder")
             }
         } else {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Connected Libraries")
-                    .font(.title2.bold())
-                    .padding(.horizontal, 4)
+                HStack {
+                    Text("Connected Libraries")
+                        .font(KantaTypography.sectionHeader)
+                        .foregroundStyle(KantaColors.textPrimary)
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
 
                 ForEach(model.sources) { source in
                     sourceCard(source)
@@ -285,314 +370,337 @@ struct LibraryView: View {
     private func sourceCard(
         _ source: LibrarySourceRecord
     ) -> some View {
-        GeloSectionCard(
-            source.displayName,
-            subtitle: "User-supplied Files/iCloud library"
-        ) {
-            if let scan = source.lastScan {
-                if let counts = model.songCounts[source.id] {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(counts.searchableCount.formatted())
-                            .font(.title2.weight(.bold))
-                            .monospacedDigit()
-                        Text("searchable titles")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .accessibilityElement(children: .combine)
-
-                    Text(
-                        counts.playableCount.formatted() + " playable · "
-                        + counts.catalogOnlyCount.formatted() + " catalog only"
-                    )
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+        KantaCard {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(source.displayName)
+                        .font(KantaTypography.sectionHeader)
+                        .foregroundStyle(KantaColors.textPrimary)
+                    Text("User-supplied Files/iCloud library")
+                        .font(KantaTypography.metadata)
+                        .foregroundStyle(KantaColors.textSecondary)
                 }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        GeloStatusPill(
-                            title:
-                                "\(scan.looseSongCount) loose songs",
-                            systemImage: "music.note"
-                        )
-                        if scan.hasIndexedLibrary {
-                            GeloStatusPill(
-                                title: "Compatible library ready",
-                                systemImage: "checkmark.seal"
-                            )
-                        } else if scan.hasLibraryIndex {
-                            GeloStatusPill(
-                                title: "Search-only titles · media unavailable",
-                                systemImage: "exclamationmark.triangle"
-                            )
-                        } else if scan.hasLibraryContainer {
-                            GeloStatusPill(
-                                title: "Library index not detected",
-                                systemImage: "exclamationmark.triangle"
-                            )
+
+                if let scan = source.lastScan {
+                    if let counts = model.songCounts[source.id] {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(counts.searchableCount.formatted())
+                                .font(KantaTypography.title)
+                                .monospacedDigit()
+                                .foregroundStyle(KantaColors.textPrimary)
+                            Text("searchable titles")
+                                .font(KantaTypography.metadata)
+                                .foregroundStyle(KantaColors.textSecondary)
                         }
-                        if scan.soundFontCount > 0 {
+                        .accessibilityElement(children: .combine)
+
+                        Text(
+                            counts.playableCount.formatted() + " playable · "
+                            + counts.catalogOnlyCount.formatted() + " catalog only"
+                        )
+                        .font(KantaTypography.caption)
+                        .foregroundStyle(KantaColors.textSecondary)
+                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
                             GeloStatusPill(
                                 title:
-                                    "\(scan.soundFontCount) SoundFont" +
-                                    (scan.soundFontCount == 1 ? "" : "s"),
-                                systemImage: "waveform"
+                                    "\(scan.looseSongCount) loose songs",
+                                systemImage: "music.note"
                             )
-                        }
-                    }
-                }
-            } else {
-                Text("This library has not been scanned yet.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                Menu {
-                    Button {
-                        soundFontTarget = source
-                        showingSoundFontImporter = true
-                    } label: {
-                        Label(
-                            "Import SoundFonts",
-                            systemImage: "waveform.badge.plus"
-                        )
-                    }
-
-                    if !soundFontAssets(for: source).isEmpty {
-                        Menu("Preferred SoundFont") {
-                            Button {
-                                Task {
-                                    await model.setPreferredSoundFont(
-                                        nil,
-                                        for: source
-                                    )
-                                }
-                            } label: {
-                                preferredSoundFontMenuLabel(
-                                    title: "Automatic",
-                                    selected:
-                                        source
-                                            .preferredSoundFontRelativePath
-                                            == nil
+                            if scan.hasIndexedLibrary {
+                                GeloStatusPill(
+                                    title: "Compatible library ready",
+                                    systemImage: "checkmark.seal"
+                                )
+                            } else if scan.hasLibraryIndex {
+                                GeloStatusPill(
+                                    title: "Search-only titles · media unavailable",
+                                    systemImage: "exclamationmark.triangle"
+                                )
+                            } else if scan.hasLibraryContainer {
+                                GeloStatusPill(
+                                    title: "Library index not detected",
+                                    systemImage: "exclamationmark.triangle"
                                 )
                             }
+                            if scan.soundFontCount > 0 {
+                                GeloStatusPill(
+                                    title:
+                                        "\(scan.soundFontCount) SoundFont" +
+                                        (scan.soundFontCount == 1 ? "" : "s"),
+                                    systemImage: "waveform"
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Text("This library has not been scanned yet.")
+                        .font(KantaTypography.metadata)
+                        .foregroundStyle(KantaColors.textSecondary)
+                }
 
-                            ForEach(
-                                soundFontAssets(for: source),
-                                id: \.relativePath
-                            ) { asset in
+                HStack {
+                    Menu {
+                        Button {
+                            soundFontTarget = source
+                            showingSoundFontImporter = true
+                        } label: {
+                            Label(
+                                "Import SoundFonts",
+                                systemImage: "waveform.badge.plus"
+                            )
+                        }
+
+                        if !soundFontAssets(for: source).isEmpty {
+                            Menu("Preferred SoundFont") {
                                 Button {
                                     Task {
                                         await model.setPreferredSoundFont(
-                                            asset.relativePath,
+                                            nil,
                                             for: source
                                         )
                                     }
                                 } label: {
                                     preferredSoundFontMenuLabel(
-                                        title:
-                                            URL(
-                                                fileURLWithPath:
-                                                    asset.relativePath
-                                            )
-                                            .lastPathComponent,
+                                        title: "Automatic",
                                         selected:
                                             source
-                                                .preferredSoundFontRelativePath?
-                                                .caseInsensitiveCompare(
-                                                    asset.relativePath
-                                                ) == .orderedSame
+                                                .preferredSoundFontRelativePath
+                                                == nil
                                     )
+                                }
+
+                                ForEach(
+                                    soundFontAssets(for: source),
+                                    id: \.relativePath
+                                ) { asset in
+                                    Button {
+                                        Task {
+                                            await model.setPreferredSoundFont(
+                                                asset.relativePath,
+                                                for: source
+                                            )
+                                        }
+                                    } label: {
+                                        preferredSoundFontMenuLabel(
+                                            title:
+                                                URL(
+                                                    fileURLWithPath:
+                                                        asset.relativePath
+                                                )
+                                                .lastPathComponent,
+                                            selected:
+                                                source
+                                                    .preferredSoundFontRelativePath?
+                                                    .caseInsensitiveCompare(
+                                                        asset.relativePath
+                                                    ) == .orderedSame
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Button {
-                        backgroundTarget = source
-                        showingBackgroundImporter = true
-                    } label: {
-                        Label(
-                            "Add to " + KantaTerminology.mySet,
-                            systemImage: "photo.badge.plus"
-                        )
-                    }
+                        Button {
+                            backgroundTarget = source
+                            showingBackgroundImporter = true
+                        } label: {
+                            Label(
+                                "Add to " + KantaTerminology.mySet,
+                                systemImage: "photo.badge.plus"
+                            )
+                        }
 
-                    Divider()
+                        Divider()
 
-                    Button {
-                        Task {
-                            await model.rescan(source)
+                        Button {
+                            Task {
+                                await model.rescan(source)
+                            }
+                        } label: {
+                            Label(
+                                "Rescan",
+                                systemImage: "arrow.clockwise"
+                            )
+                        }
+
+                        Button(role: .destructive) {
+                            Task {
+                                await model.remove(source)
+                            }
+                        } label: {
+                            Label(
+                                "Remove Library",
+                                systemImage: "trash"
+                            )
                         }
                     } label: {
                         Label(
-                            "Rescan",
-                            systemImage: "arrow.clockwise"
+                            "Library Options",
+                            systemImage: "ellipsis.circle"
                         )
                     }
-
-                    Button(role: .destructive) {
-                        Task {
-                            await model.remove(source)
-                        }
-                    } label: {
-                        Label(
-                            "Remove Library",
-                            systemImage: "trash"
-                        )
-                    }
-                } label: {
-                    Label(
-                        "Library Options",
-                        systemImage: "ellipsis.circle"
-                    )
+                    .accessibilityLabel("Library options")
                 }
-                .accessibilityLabel("Library options")
             }
         }
     }
 
-
     private var indexedLibraryGuideCard: some View {
-        GeloSectionCard(
-            "Compatible library setup",
-            subtitle:
-                "One folder is enough. KANTA scans and connects the files automatically."
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                instruction(
-                    number: "1",
-                    title: "Put the files together",
-                    text:
-                        "Create one folder in Files or iCloud Drive and place " +
-                        "your compatible title index inside it. Add the matching media container " +
-                        "to enable playback, and your " +
-                        ".sf2 SoundFont file in the same folder if the library " +
-                        "uses MIDI/KAR songs."
-                )
+        KantaCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Compatible library setup")
+                        .font(KantaTypography.sectionHeader)
+                        .foregroundStyle(KantaColors.textPrimary)
+                    Text("One folder is enough. KANTA scans and connects the files automatically.")
+                        .font(KantaTypography.metadata)
+                        .foregroundStyle(KantaColors.textSecondary)
+                }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Example")
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 14) {
+                    instruction(
+                        number: "1",
+                        title: "Put the files together",
+                        text:
+                            "Create one folder in Files or iCloud Drive and place " +
+                            "your compatible title index inside it. Add the matching media container " +
+                            "to enable playback, and your " +
+                            ".sf2 SoundFont file in the same folder if the library " +
+                            "uses MIDI/KAR songs."
+                    )
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Example")
+                            .font(KantaTypography.songTitle)
+                            .foregroundStyle(KantaColors.textPrimary)
+
+                        Text(
+                            """
+                            My Karaoke Library/
+                            ├─ <compatible index file>
+                            ├─ <matching media container>
+                            ├─ any-name.sf2
+                            └─ optional-second-bank.sf2
+                            """
+                        )
+                        .font(KantaTypography.badge)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                    }
+                    .padding(12)
+                    .background(
+                        .thinMaterial,
+                        in: RoundedRectangle(
+                            cornerRadius: 14,
+                            style: .continuous
+                        )
+                    )
+
+                    instruction(
+                        number: "2",
+                        title: "Select the folder in KANTA",
+                        text:
+                            "Tap Add Karaoke Folder and choose that folder. " +
+                            "KANTA scans it recursively and makes recognized index titles " +
+                            "searchable even without playable media. A validated matching " +
+                            "media container enables Reserve and playback. KANTA detects " +
+                            "available SoundFonts and builds the song list " +
+                            "without modifying the original files."
+                    )
+
+                    instruction(
+                        number: "3",
+                        title: "Start singing",
+                        text:
+                            "Open Host → CONTROL, search the imported song list, " +
+                            "and tap Reserve. The first reserved song plays next " +
+                            "after the current song finishes."
+                    )
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label(
+                            "Automatic checks",
+                            systemImage: "checkmark.shield"
+                        )
+                        .font(KantaTypography.songTitle)
+                        .foregroundStyle(KantaColors.textPrimary)
+
+                        troubleshootingRow(
+                            title: "Indexed library",
+                            text:
+                                "KANTA shows Compatible library ready when both library-index file " +
+                                "and media-container file are present. If one is missing, the " +
+                                "library card tells you which file is needed."
+                        )
+
+                        troubleshootingRow(
+                            title: "SoundFont",
+                            text:
+                                "If one .sf2 is available, KANTA can use it " +
+                                "automatically for MIDI/KAR playback. If several " +
+                                "are present, Automatic selection stays available " +
+                                "and you can choose another under Library Options."
+                        )
+
+                        troubleshootingRow(
+                            title: "No songs appear",
+                            text:
+                                "Make sure matching index and media container files are a matching pair, " +
+                                "then use Library Options → Rescan. KANTA never edits " +
+                                "either file."
+                        )
+                    }
 
                     Text(
-                        """
-                        My Karaoke Library/
-                        ├─ <compatible index file>
-                        ├─ <matching media container>
-                        ├─ any-name.sf2
-                        └─ optional-second-bank.sf2
-                        """
+                        "KANTA treats these files as Bring Your Own Library content. " +
+                        "Only use libraries and SoundFonts you are authorized to use."
                     )
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                    .font(KantaTypography.caption)
+                    .foregroundStyle(KantaColors.textSecondary)
                 }
-                .padding(12)
-                .background(
-                    .thinMaterial,
-                    in: RoundedRectangle(
-                        cornerRadius: 14,
-                        style: .continuous
-                    )
-                )
-
-                instruction(
-                    number: "2",
-                    title: "Select the folder in KANTA",
-                    text:
-                        "Tap Add Karaoke Folder and choose that folder. " +
-                        "KANTA scans it recursively and makes recognized index titles " +
-                        "searchable even without playable media. A validated matching " +
-                        "media container enables Reserve and playback. KANTA detects " +
-                        "available SoundFonts and builds the song list " +
-                        "without modifying the original files."
-                )
-
-                instruction(
-                    number: "3",
-                    title: "Start singing",
-                    text:
-                        "Open Host → CONTROL, search the imported song list, " +
-                        "and tap Reserve. The first reserved song plays next " +
-                        "after the current song finishes."
-                )
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Label(
-                        "Automatic checks",
-                        systemImage: "checkmark.shield"
-                    )
-                    .font(.headline)
-
-                    troubleshootingRow(
-                        title: "Indexed library",
-                        text:
-                            "KANTA shows Compatible library ready when both library-index file " +
-                            "and media-container file are present. If one is missing, the " +
-                            "library card tells you which file is needed."
-                    )
-
-                    troubleshootingRow(
-                        title: "SoundFont",
-                        text:
-                            "If one .sf2 is available, KANTA can use it " +
-                            "automatically for MIDI/KAR playback. If several " +
-                            "are present, Automatic selection stays available " +
-                            "and you can choose another under Library Options."
-                    )
-
-                    troubleshootingRow(
-                        title: "No songs appear",
-                        text:
-                            "Make sure matching index and media container files are a matching pair, " +
-                            "then use Library Options → Rescan. KANTA never edits " +
-                            "either file."
-                    )
-                }
-
-                Text(
-                    "KANTA treats these files as Bring Your Own Library content. " +
-                    "Only use libraries and SoundFonts you are authorized to use."
-                )
-                .font(.footnote)
-                .foregroundStyle(.secondary)
             }
         }
     }
 
     private var supportedMediaCard: some View {
-        GeloSectionCard(
-            "Song formats",
-            subtitle:
-                "Playback support available in the current offline engine."
-        ) {
-            let names = MediaKind.allCases.map(displayName)
-            ViewThatFits {
-                HStack(spacing: 8) {
-                    ForEach(names, id: \.self) { name in
-                        GeloStatusPill(
-                            title: name,
-                            systemImage: "waveform"
-                        )
-                    }
+        KantaCard {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Song formats")
+                        .font(KantaTypography.sectionHeader)
+                        .foregroundStyle(KantaColors.textPrimary)
+                    Text("Playback support available in the current offline engine.")
+                        .font(KantaTypography.metadata)
+                        .foregroundStyle(KantaColors.textSecondary)
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(names, id: \.self) { name in
-                        GeloStatusPill(
-                            title: name,
-                            systemImage: "waveform"
-                        )
+                let names = MediaKind.allCases.map(displayName)
+                ViewThatFits {
+                    HStack(spacing: 8) {
+                        ForEach(names, id: \.self) { name in
+                            GeloStatusPill(
+                                title: name,
+                                systemImage: "waveform"
+                            )
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(names, id: \.self) { name in
+                            GeloStatusPill(
+                                title: name,
+                                systemImage: "waveform"
+                            )
+                        }
                     }
                 }
             }
         }
     }
-
 
     private var soundFontContentTypes: [UTType] {
         [
@@ -681,7 +789,6 @@ struct LibraryView: View {
         }
     }
 
-
     private func handleSoundFontImport(
         _ result: Result<[URL], Error>
     ) {
@@ -713,16 +820,16 @@ struct LibraryView: View {
     ) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(GeloVisualStyle.accent)
+                .foregroundStyle(KantaColors.primary)
                 .padding(.top, 2)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(KantaTypography.songTitle)
+                    .foregroundStyle(KantaColors.textPrimary)
                 Text(text)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(KantaTypography.caption)
+                    .foregroundStyle(KantaColors.textSecondary)
             }
         }
     }
@@ -734,20 +841,21 @@ struct LibraryView: View {
     ) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text(number)
-                .font(.headline)
+                .font(KantaTypography.songTitle)
                 .foregroundStyle(.white)
                 .frame(width: 30, height: 30)
                 .background(
-                    GeloVisualStyle.accent,
+                    KantaColors.primary,
                     in: Circle()
                 )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.headline)
+                    .font(KantaTypography.songTitle)
+                    .foregroundStyle(KantaColors.textPrimary)
                 Text(text)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(KantaTypography.metadata)
+                    .foregroundStyle(KantaColors.textSecondary)
             }
         }
     }
@@ -771,7 +879,6 @@ struct LibraryView: View {
         }
     }
 }
-
 
 @MainActor
 private struct SoundFontImportSummaryView: View {
@@ -809,10 +916,11 @@ private struct SoundFontImportSummaryView: View {
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.fileName)
-                                    .font(.headline)
+                                    .font(KantaTypography.songTitle)
+                                    .foregroundStyle(KantaColors.textPrimary)
                                 Text(item.detail)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(KantaTypography.caption)
+                                    .foregroundStyle(KantaColors.textSecondary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -825,8 +933,8 @@ private struct SoundFontImportSummaryView: View {
                         "KANTA copies the original SF2 bytes without " +
                         "compression, conversion, or upload."
                     )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(KantaTypography.caption)
+                    .foregroundStyle(KantaColors.textSecondary)
                 }
             }
             .navigationTitle("SoundFont Import")
@@ -839,7 +947,7 @@ private struct SoundFontImportSummaryView: View {
                 }
             }
         }
-        .tint(GeloVisualStyle.accent)
+        .tint(KantaColors.primary)
     }
 }
 
@@ -879,10 +987,11 @@ private struct BackgroundImportSummaryView: View {
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.fileName)
-                                    .font(.headline)
+                                    .font(KantaTypography.songTitle)
+                                    .foregroundStyle(KantaColors.textPrimary)
                                 Text(item.detail)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(KantaTypography.caption)
+                                    .foregroundStyle(KantaColors.textSecondary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -894,8 +1003,8 @@ private struct BackgroundImportSummaryView: View {
                         "No selected file was re-encoded, compressed, " +
                         "resized, or uploaded."
                     )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(KantaTypography.caption)
+                    .foregroundStyle(KantaColors.textSecondary)
                 }
             }
             .navigationTitle("Background Import")
@@ -908,8 +1017,6 @@ private struct BackgroundImportSummaryView: View {
                 }
             }
         }
-        .tint(GeloVisualStyle.accent)
+        .tint(KantaColors.primary)
     }
 }
-
-
