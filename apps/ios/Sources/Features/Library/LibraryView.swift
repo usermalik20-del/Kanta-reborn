@@ -116,65 +116,22 @@ struct LibraryView: View {
                     .font(KantaTypography.metadata)
                     .foregroundStyle(KantaColors.textSecondary)
 
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 16) {
-                    ForEach(StarterKaraokeStore.identifiers, id: \.self) { identifier in
-                        let song = StarterKaraokeStore.song(identifier)
-                        let isAvailable = model.availableStarters.contains(identifier)
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            ZStack(alignment: .bottomTrailing) {
-                                KantaCoverArt(
-                                    seed: song.title + " " + (song.artist ?? ""),
-                                    cornerRadius: 22
-                                )
-                                .frame(height: 150)
-
-                                if isAvailable {
-                                    HStack(spacing: 8) {
-                                        Button {
-                                            Task { await model.playStarter(identifier, queueOnly: false) }
-                                        } label: {
-                                            Image(systemName: "play.fill")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .foregroundStyle(.white)
-                                                .frame(width: 40, height: 40)
-                                                .background(KantaColors.primaryGradient, in: Circle())
-                                        }
-                                        .accessibilityIdentifier("starter.play." + identifier)
-
-                                        Button {
-                                            Task { await model.playStarter(identifier, queueOnly: true) }
-                                        } label: {
-                                            Image(systemName: "text.badge.plus")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .foregroundStyle(.white)
-                                                .frame(width: 40, height: 40)
-                                                .background(.ultraThinMaterial, in: Circle())
-                                        }
-                                    }
-                                    .padding(12)
-                                } else {
-                                    Button("Restore") {
-                                        Task { await model.changeStarter(identifier, restore: true) }
-                                    }
-                                    .font(KantaTypography.caption)
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(KantaColors.primary)
-                                    .padding(12)
-                                }
+                // Deliberately not a LazyVGrid: lazy containers do not build
+                // off-screen rows, so the tiles below the fold would not exist
+                // in the accessibility tree and the walkthrough could not reach
+                // them without scrolling first.
+                VStack(spacing: 16) {
+                    ForEach(starterRows, id: \.self) { row in
+                        HStack(alignment: .top, spacing: 14) {
+                            ForEach(row, id: \.self) { identifier in
+                                starterTile(identifier)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
 
-                            Text(song.title)
-                                .font(KantaTypography.songTitle)
-                                .foregroundStyle(KantaColors.textPrimary)
-                                .lineLimit(1)
-
-                            Text("Starter · 3:12")
-                                .font(KantaTypography.metadata)
-                                .foregroundStyle(KantaColors.textSecondary)
+                            if row.count == 1 {
+                                Color.clear.frame(maxWidth: .infinity)
+                            }
                         }
-                        .accessibilityElement(children: .contain)
-                        .accessibilityLabel(song.title)
                     }
                 }
 
@@ -193,6 +150,76 @@ struct LibraryView: View {
                         .foregroundStyle(KantaColors.textSecondary)
                 }
             }
+        }
+    }
+
+    /// Starter identifiers paired into rows of two for a fixed grid.
+    private var starterRows: [[String]] {
+        let identifiers = StarterKaraokeStore.identifiers
+        return stride(from: 0, to: identifiers.count, by: 2).map { start in
+            Array(identifiers[start..<min(start + 2, identifiers.count)])
+        }
+    }
+
+    @ViewBuilder
+    private func starterTile(_ identifier: String) -> some View {
+        let song = StarterKaraokeStore.song(identifier)
+        let isAvailable = model.availableStarters.contains(identifier)
+
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .bottomTrailing) {
+                KantaCoverArt(
+                    seed: song.title + " " + (song.artist ?? ""),
+                    cornerRadius: 22
+                )
+                .frame(height: 150)
+
+                if isAvailable {
+                    HStack(spacing: 8) {
+                        Button {
+                            Task { await model.playStarter(identifier, queueOnly: false) }
+                        } label: {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 40, height: 40)
+                                .background(KantaColors.primaryGradient, in: Circle())
+                        }
+                        .accessibilityIdentifier("starter.play." + identifier)
+
+                        Button {
+                            Task { await model.playStarter(identifier, queueOnly: true) }
+                        } label: {
+                            Image(systemName: "text.badge.plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 40, height: 40)
+                                .background(.ultraThinMaterial, in: Circle())
+                        }
+                    }
+                    .padding(12)
+                } else {
+                    Button("Restore") {
+                        Task { await model.changeStarter(identifier, restore: true) }
+                    }
+                    .font(KantaTypography.caption)
+                    .buttonStyle(.borderedProminent)
+                    .tint(KantaColors.primary)
+                    .padding(12)
+                }
+            }
+
+            // No container-level accessibilityElement here: merging the tile
+            // would hide the title and the play button from the walkthrough,
+            // which addresses them individually.
+            Text(song.title)
+                .font(KantaTypography.songTitle)
+                .foregroundStyle(KantaColors.textPrimary)
+                .lineLimit(1)
+
+            Text("Starter · 3:12")
+                .font(KantaTypography.metadata)
+                .foregroundStyle(KantaColors.textSecondary)
         }
     }
 
