@@ -340,3 +340,13 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 **Regression:** `testMainMenuButtonsAndScreens` must complete and appear in the passed-test manifest on both iPhone and iPad; each destination must be opened, captured, and dismissed. Search keypad tests remain required.
 
 **Validation:** `candidate`; code change [`8e67e1e`](https://github.com/usermalik20-del/Kanta-reborn/commit/8e67e1e2953c0e13f077ac87421b7cd44cea1ab9). Hosted validation on the final repair SHA is pending. Do not mark verified until the full walkthrough and reconstruction pass on the exact accepted SHA.
+
+
+## iOS — encrypted-companion UI keyboard-idle timeout (2026-10-25)
+
+- **Failed run:** [#40140289375](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40140289375), candidate SHA `c1bdcf57500f45f15e83876a5b4ae6fcb6387f5f`; job `visual-walkthrough`, iPhone stage failed while iPad stage passed.
+- **Fingerprint:** `testEncryptedCompanionPairingScreenAndInputRejection` exceeded XCTest's two-minute execution allowance. The iPhone log shows `typeText("8.8.8.8")` entering the host field, followed by “App animations complete notification not received” after about 60 seconds and an XCTest runner restart. The resulting `xcodebuild` exit code 65 remains a failed run even though the aggregate log listed all named cases as passing across attempts.
+- **Cause:** the UI test coupled protocol validation to software-keyboard automation; a simulator keyboard-idle stall consumed the case budget before the input-rejection flow completed. This is not evidence of a pairing-protocol failure.
+- **Repair candidate:** make `CompanionProtocol.isValidPairingInput(address:code:)` the shared Connect/handshake policy, add pure package tests for private/public/loopback address rules and exact 32-character hexadecimal secrets, and keep the UI test focused on the initial disabled state and explanatory copy rather than typing through a flaky simulator keyboard.
+- **Regression coverage:** the same helper drives `EncryptedCompanionView` Connect enablement and handshake secret validation; the source-contract guard enforces that relationship. Existing encrypted pairing screen, disabled Connect, no Disconnect, and instructional-copy assertions remain.
+- **Validation:** candidate only; do not mark verified until the full iPhone and iPad walkthroughs both exit zero on the exact final SHA and all required cases pass in a clean run. No timeout increase, runner retry, or ignored exit status.
