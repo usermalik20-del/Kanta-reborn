@@ -514,15 +514,25 @@ class PythonLeakTests(unittest.TestCase):
         helper_start = walkthrough.index("private func starterPlayButton(in app: XCUIApplication)")
         helper_end = walkthrough.index("private func openOnlinePreview", helper_start)
         helper = walkthrough[helper_start:helper_end]
-        self.assertIn('app.staticTexts["Starter Songs"]', helper)
         self.assertIn('app.scrollViews["library.content"]', helper)
+        self.assertIn('let title = app.staticTexts["Morning Light"].firstMatch', helper)
+        self.assertIn("while !title.exists && Date() < deadline", helper)
+        self.assertIn('let play = app.buttons["starter.play.morning-light"]', helper)
+        self.assertIn("while !play.exists && Date() < deadline", helper)
+        self.assertIn("XCTAssertTrue(play.isHittable", helper)
+        self.assertNotIn("section.isHittable", helper,
+                         "The iPad scroll contract must target the actual song, not its heading")
         library = (ROOT / "Sources/Features/Library/LibraryView.swift").read_text()
         self.assertIn('accessibilityIdentifier("library.content")', library)
-        self.assertIn("scrollView.swipeUp()", helper)
         self.assertLess(
-            helper.index("scrollView.swipeUp()"),
-            helper.index('app.buttons["starter.play.morning-light"]'),
-            "The Library must scroll before querying the lazily-created play control",
+            helper.index("while !title.exists && Date() < deadline"),
+            helper.index("XCTAssertTrue(title.waitForExistence"),
+            "Scroll the Library until the lazy starter title is materialized before requiring it",
+        )
+        self.assertLess(
+            helper.index("while !play.exists && Date() < deadline"),
+            helper.index("XCTAssertTrue(play.waitForExistence"),
+            "Scroll until the lazy starter Play control is materialized before requiring it",
         )
 
 
