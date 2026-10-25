@@ -416,3 +416,18 @@ Remaining gates: maintain the current architecture/test contracts, obtain reposi
 
 **Recurrence rule:** homepage visual rewrites must retain the same-origin analytics entrypoint unless analytics is intentionally retired with coordinated CSP, code, privacy and contract updates.
 
+
+
+## Reconciled acceptance — 2026-10-26, after PR #81 merge
+
+Main commit [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5ee1893974f30829e14eda9d3e233d6b40690066) restores the six canonical homepage routes and the same-origin analytics entrypoint. Post-merge reconstruction [#40220533959](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220533959), website validation [#40220534010](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220534010), Vercel deployment [#40220534153](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220534153), and unsigned archive [#40220533986](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220533986) all passed. Earlier entries recording PR #81 validation as pending are historical, not current state.
+
+## iOS Stage v2 — LazyVGrid starter playback tests required an explicit scroll (2026-10-26)
+
+**Failure evidence:** PR #80 focused smoke [#40215508539](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215508539) and full walkthrough [#40215507943](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215507943) failed before the Morning Light playback assertions because Starter Songs was below the initial viewport and LazyVGrid had not instantiated its off-screen cells.
+
+**Repair:** candidate [`65e03c1`](https://github.com/usermalik20-del/Kanta-reborn/commit/65e03c170519112395d2ea514f04d12b369fed39) identifies `library.content`, scrolls to Starter Songs before querying the play control in both starter-playback flows, and adds a source guard for the scroll container/helper relationship. The playback assertions were preserved.
+
+**Exact-candidate validation:** reconstruction [#40218224023](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218224023), focused smoke [#40218223728](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223728), full iPhone/iPad walkthrough [#40218223740](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223740), and unsigned archive [#40218223776](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223776) all passed on `65e03c1`; both device jobs passed. Candidate artifact [#12608094930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40218223776/artifacts/12608094930) is 25,120,093 bytes with SHA-256 `b4a3a25c95a3d63c0de5ac82ca7a7a6c6181571dfeb77e789bf4d58c5b49cdcd`, unsigned.
+
+**Current acceptance:** PR #80 was 10 commits ahead and 12 behind main before synchronization. The synchronized merge head must pass all four workflows again on one exact SHA before the PR can merge. Prior candidate green results do not transfer to a new head.

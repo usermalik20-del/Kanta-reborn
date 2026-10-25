@@ -143,9 +143,29 @@ struct KantaMainPlayerView: View {
                     stageActions
                 }
                 ZStack {
-                    stageBackground.accessibilityHidden(true)
-                    LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                    // With no stage visual or camera selected the tile shows real
+                    // cover art instead of an empty placeholder. Selection still
+                    // wins when the operator has chosen a background.
+                    if camera.isEnabled || backgroundsEnabled {
+                        stageBackground.accessibilityHidden(true)
+                    } else {
+                        KantaCoverArt(seed: stageArtSeed, cornerRadius: 0)
+                            .accessibilityHidden(true)
+                            .allowsHitTesting(false)
+                    }
+                    LinearGradient(colors: [.clear, .black.opacity(0.72)], startPoint: .top, endPoint: .bottom)
                         .allowsHitTesting(false)
+                    if model.snapshot.transport == .playing {
+                        VStack {
+                            HStack {
+                                stageLiveChip
+                                Spacer(minLength: 0)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(14)
+                        .allowsHitTesting(false)
+                    }
                     Group {
                         if model.hasLyrics {
                             KaraokeLyricBlock(page: model.lyricPage)
@@ -159,7 +179,12 @@ struct KantaMainPlayerView: View {
                         .allowsHitTesting(false)
                 }
                 .frame(minHeight: 280)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .stroke(KantaColors.hairline, lineWidth: 1)
+                }
+                .shadow(color: KantaColors.violet.opacity(0.35), radius: 24, y: 12)
                 HStack { playButton; Spacer(); nextButton; Spacer(); queueButton }
                 if let next = model.snapshot.queue.first {
                     Text("Up Next · " + next.song.title)
@@ -169,8 +194,14 @@ struct KantaMainPlayerView: View {
                 }
             }
             .padding(16)
-            .background(Color(white: 0.06), in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.15)))
+            .background(
+                KantaColors.surface.opacity(0.55),
+                in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(KantaColors.hairline, lineWidth: 1)
+            }
             HStack {
                 if let notice = model.sessionNotice {
                     Text(notice).font(.caption).foregroundStyle(.secondary)
@@ -187,8 +218,8 @@ struct KantaMainPlayerView: View {
 
     private var nowSinging: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("NOW SINGING").font(.caption.weight(.bold)).tracking(2)
-                .foregroundStyle(GeloVisualStyle.cyan)
+            Text("NOW SINGING").font(KantaTypography.badge).tracking(2)
+                .foregroundStyle(KantaColors.cyan)
             Text(model.snapshot.nowPlaying?.title ?? "Your stage is ready")
                 .font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("stage.currentSong")
@@ -228,6 +259,28 @@ struct KantaMainPlayerView: View {
                              showsWatermark: false)
                 .allowsHitTesting(false)
         }
+    }
+
+    /// Stable artwork seed for the stage tile: the playing song when there is
+    /// one, otherwise the app identity so the tile is never blank.
+    private var stageArtSeed: String {
+        guard let song = model.snapshot.nowPlaying else { return "KANTA Stage" }
+        return song.title + " " + (song.artist ?? "")
+    }
+
+    private var stageLiveChip: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(KantaColors.live)
+                .frame(width: 7, height: 7)
+                .shadow(color: KantaColors.live, radius: 5)
+            Text("LIVE").font(KantaTypography.badge)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(.black.opacity(0.45), in: Capsule())
+        .overlay(Capsule().stroke(KantaColors.hairline, lineWidth: 1))
+        .foregroundStyle(KantaColors.textPrimary)
     }
 
     private var header: some View {
@@ -329,11 +382,10 @@ struct KantaMainPlayerView: View {
             performTransport { await model.togglePlayPause() }
         } label: {
             Image(systemName: model.snapshot.transport == .playing ? "pause.fill" : "play.fill")
-                .font(.system(size: 26, weight: .bold)).frame(width: 62, height: 62)
-                .foregroundStyle(.black)
-                .background(GeloVisualStyle.cyan, in: Circle())
-                .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: 2))
-                .shadow(color: GeloVisualStyle.accent, radius: 10)
+                .font(.system(size: 26, weight: .bold)).frame(width: 74, height: 74)
+                .foregroundStyle(.white)
+                .background(KantaColors.primaryGradient, in: Circle())
+                .shadow(color: KantaColors.primaryHot.opacity(0.50), radius: 18)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(model.snapshot.transport == .playing ? "Pause" : "Play")
@@ -361,9 +413,9 @@ struct KantaMainPlayerView: View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Image(systemName: icon).font(.system(size: 20, weight: .medium))
-                    .frame(width: 44, height: 44)
-                    .background(.black.opacity(0.3), in: Circle())
-                    .overlay(Circle().strokeBorder(GeloVisualStyle.accent.opacity(0.65)))
+                    .frame(width: 52, height: 52)
+                    .background(KantaColors.elevated, in: Circle())
+                    .overlay(Circle().strokeBorder(KantaColors.hairline, lineWidth: 1))
                 Text(title).font(.caption)
             }
             .frame(minWidth: 44)
