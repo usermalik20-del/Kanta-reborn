@@ -402,3 +402,17 @@ Remaining gates: maintain the current architecture/test contracts, obtain reposi
 
 **Recurrence rule:** when the site visual design changes, preserve the six canonical destinations and use semantic nav parsing; do not fix this failure by removing route-parity checks or by changing the expected set to match an incomplete homepage.
 
+## Website — redesigned homepage dropped the same-origin analytics entrypoint (2026-10-26)
+
+**Fingerprint:** website validation / Vercel deployment-contract validation raises “Homepage analytics must use the same-origin script”.
+
+**Affected candidate / runs:** PR #81 candidate before the follow-up fix; website validation [run #40217979337](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40217979337) and Vercel validation [run #40217979356](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40217979356). Deployment was correctly skipped.
+
+**Cause:** the PR #79 homepage redesign removed the existing same-origin analytics script tag, while analytics.js and the homepage's allowlisted CSP remained in the repository. This was an actual integration regression, independent of the navigation-contract failure.
+
+**Candidate fix:** commit d7eec50 restores the existing same-origin analytics entrypoint; it does not add a third-party inline script or change CSP permissions.
+
+**Validation:** candidate; rerun website validation on the current PR #81 head before marking verified.
+
+**Recurrence rule:** homepage visual rewrites must retain the same-origin analytics entrypoint unless analytics is intentionally retired with coordinated CSP, code, privacy and contract updates.
+
