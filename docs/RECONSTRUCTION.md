@@ -2,7 +2,15 @@
 
 Date: 2026-10-25. Destination: kanta-gelo/Kanta-reborn (canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn)).
 
-## Current checkpoint
+## Current checkpoint — 2026-10-26
+
+Main is at 9acf94f, merging PR #79's fresh website redesign. The merge changed apps/web/index.html and apps/web/style.css only; the native application source remains at the previously accepted KANTA Stage baseline [bf71e5d](https://github.com/usermalik20-del/Kanta-reborn/commit/bf71e5d72a4da627781021df0ae9af572e4b3f49).
+
+PR #79's website validation [run #40212525044](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40212525044) failed because the redesigned homepage no longer supplied the architecture's six canonical primary-navigation routes; the Vercel contract check [run #40212525043](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40212525043) failed at the same validation gate and correctly skipped deployment. The repair candidate is branch fix/website-navigation-contract-20261026; its hosted acceptance is pending.
+
+The last completed full iPhone/iPad walkthrough on the unchanged native baseline is [run #40178236530](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40178236530); both device jobs passed on bf71e5d. The newer iOS visual redesign PR #80 is not accepted yet: reconstruction [run #40215507919](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215507919) and unsigned archive [run #40215507907](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215507907) passed, but focused smoke [run #40215508539](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215508539) and the full device walkthrough [run #40215507943](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40215507943) failed on both devices. The captured accessibility hierarchy shows the Starter Songs section begins below the initial viewport; LazyVGrid does not instantiate its off-screen starter cells until scrolling, while two tests queried the Morning Light play control before scrolling to that section. The required playback assertions remain intact; the UI tests are being corrected to scroll to the real controls before querying them.
+
+## Earlier checkpoint — 2026-10-25
 
 Main is at [`00d2405`](https://github.com/usermalik20-del/Kanta-reborn/commit/00d2405b5c54d8ae56ee44fed99a98a9ab97d20e), which combines the web logo work with [`770a6dc`](https://github.com/usermalik20-del/Kanta-reborn/commit/770a6dc7c8e51337349a75afddb5fcbf08f3e80b), the newer responsive website redesign. Website validation [#40160483259](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483259) passed, and production deployment [#40160483212](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483212) passed. Its log confirms that `https://kanta-public.vercel.app` was aliased to `https://kanta-public-6grdxfkcs-gelo-tech.vercel.app`. Main reconstruction [#40160483119](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40160483119) was still running the unsigned simulator build and Android emulator checks at this checkpoint.
 
