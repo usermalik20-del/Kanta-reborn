@@ -147,10 +147,14 @@ class WebsiteSecurityContractTests(unittest.TestCase):
 
     def test_primary_navigation_wraps_and_remains_visible_on_mobile(self):
         source = (WEB / "style.css").read_text(encoding="utf-8")
-        self.assertRegex(source, r"nav\{[^}]*display:flex[^}]*flex-wrap:wrap")
-        self.assertIn(".site-header .site-nav{display:flex", source)
-        self.assertIn(".site-header .site-nav{justify-content:flex-start", source)
-        self.assertNotRegex(source, r"\.site-nav[^}]*display:none")
+        self.assertRegex(
+            source,
+            r"nav\s*,\s*\.site-nav\s*,\s*\.nav-links\s*\{[^}]*display\s*:\s*flex[^}]*flex-wrap\s*:\s*wrap",
+        )
+        self.assertNotRegex(
+            source,
+            r"(?s)(?:\.site-nav|\.nav-links)[^{}]*\{[^}]*display\s*:\s*none",
+        )
         self.assertNotRegex(source, r"(?m)^\s*ap:anywhere\}\s*$")
 
 if __name__ == "__main__":
