@@ -124,7 +124,7 @@ struct LibraryView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             ZStack(alignment: .bottomTrailing) {
                                 KantaCoverArt(
-                                    seed: song.title + " " + song.artist,
+                                    seed: song.title + " " + (song.artist ?? ""),
                                     cornerRadius: 22
                                 )
                                 .frame(height: 150)
