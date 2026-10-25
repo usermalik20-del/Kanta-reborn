@@ -504,5 +504,24 @@ class PythonLeakTests(unittest.TestCase):
                 )
 
 
+    def test_starter_playback_walkthrough_scrolls_before_querying_lazy_grid(self):
+        walkthrough = (ROOT / "Tests/KantaUITests/KantaVisualWalkthroughUITests.swift").read_text()
+        self.assertEqual(
+            walkthrough.count("try starterPlayButton(in: app)"),
+            2,
+            "Both real starter-playback flows must use the lazy-grid-aware helper",
+        )
+        helper_start = walkthrough.index("private func starterPlayButton(in app: XCUIApplication)")
+        helper_end = walkthrough.index("private func openOnlinePreview", helper_start)
+        helper = walkthrough[helper_start:helper_end]
+        self.assertIn('app.staticTexts["Starter Songs"]', helper)
+        self.assertIn("scrollView.swipeUp()", helper)
+        self.assertLess(
+            helper.index("scrollView.swipeUp()"),
+            helper.index('app.buttons["starter.play.morning-light"]'),
+            "The Library must scroll before querying the lazily-created play control",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
