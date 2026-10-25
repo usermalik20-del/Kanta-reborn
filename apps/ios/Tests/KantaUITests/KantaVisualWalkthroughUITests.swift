@@ -367,7 +367,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["KANTA_DEMO_MODE"] = "0"
         app.launch()
-        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: waitSeconds))
+        XCTAssertTrue(app.buttons["stage.more"].waitForExistence(timeout: waitSeconds))
 
         openMenu(in: app, expecting: destination)
         let item = app.buttons[destination].firstMatch
@@ -387,7 +387,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
 
         expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: done)
         waitForExpectations(timeout: waitSeconds)
-        let more = app.buttons["More"].firstMatch
+        let more = app.buttons["stage.more"].firstMatch
         XCTAssertTrue(more.waitForExistence(timeout: waitSeconds),
                       "The Stage must return after dismissing: " + destination)
         waitForRendered(more, in: app)
@@ -398,7 +398,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["KANTA_DEMO_MODE"] = "0"
         app.launch()
-        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: waitSeconds))
+        XCTAssertTrue(app.buttons["stage.more"].waitForExistence(timeout: waitSeconds))
         openMenu(in: app, expecting: "Companion Remote")
         app.buttons["Companion Remote"].tap()
         let browser = app.buttons["browser.companion.open"]
@@ -423,7 +423,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["KANTA_DEMO_MODE"] = "0"
         app.launch()
-        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: waitSeconds))
+        XCTAssertTrue(app.buttons["stage.more"].waitForExistence(timeout: waitSeconds))
         openMenu(in: app, expecting: "Companion Remote")
         let remote = app.buttons["Companion Remote"]
         waitForRendered(remote, in: app)
@@ -454,7 +454,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["KANTA_DEMO_MODE"] = "1"
         app.launch()
-        let queue = app.buttons["Queue"]
+        let queue = app.buttons["stage.queue"]
         XCTAssertTrue(queue.waitForExistence(timeout: waitSeconds))
         let queueValuePredicate = NSPredicate(format: "value == %@", "2 reservations")
         expectation(for: queueValuePredicate, evaluatedWith: queue)
@@ -509,7 +509,7 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
 
     @MainActor
     private func openMenu(in app: XCUIApplication, expecting destination: String) {
-        let more = app.buttons["More"].firstMatch
+        let more = app.buttons["stage.more"].firstMatch
         waitForRendered(more, in: app)
         let item = app.buttons[destination].firstMatch
         XCTAssertTrue(more.isHittable, "More is obstructed before opening: " + destination)

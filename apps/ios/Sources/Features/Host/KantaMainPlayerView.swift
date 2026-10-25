@@ -368,6 +368,7 @@ struct KantaMainPlayerView: View {
             requestStageSheet(.queue)
         }
             .accessibilityValue("\(model.snapshot.queue.count) reservations")
+            .accessibilityIdentifier("stage.queue")
     }
     private var cameraButton: some View {
         stageButton("Camera", icon: camera.isEnabled ? "video.fill" : "video") { camera.toggle() }
@@ -376,6 +377,7 @@ struct KantaMainPlayerView: View {
     }
     private var moreButton: some View {
         stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
+            .accessibilityIdentifier("stage.more")
     }
     private var playButton: some View {
         Button {
