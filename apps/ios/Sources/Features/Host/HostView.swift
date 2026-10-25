@@ -277,6 +277,7 @@ struct HostView: View {
     private var hostContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                stageGreeting
                 embeddedStage
                 inlineRemote
 
@@ -292,6 +293,47 @@ struct HostView: View {
         }
         // No opaque fill here: the gradient canvas and its blooms are attached
         // behind the whole Host view and must stay visible.
+    }
+
+    /// Operator-facing header: a greeting, who is hosting, and their initial.
+    private var stageGreeting: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(greetingText)
+                    .font(KantaTypography.caption)
+                    .foregroundStyle(KantaColors.textSecondary)
+
+                Text(singerName.isEmpty ? "Karaoke Host" : singerName)
+                    .font(KantaTypography.title)
+                    .foregroundStyle(KantaColors.textPrimary)
+            }
+
+            Spacer(minLength: 0)
+
+            Text(hostInitials)
+                .font(KantaTypography.songTitle)
+                .foregroundStyle(KantaColors.textPrimary)
+                .frame(width: 46, height: 46)
+                .background(KantaColors.primaryGradient, in: Circle())
+                .overlay(Circle().stroke(KantaColors.hairline, lineWidth: 1))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("host.greeting")
+    }
+
+    private var greetingText: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 0..<12: return "Good morning"
+        case 12..<18: return "Good afternoon"
+        default: return "Good evening"
+        }
+    }
+
+    private var hostInitials: String {
+        let words = singerName.split { !$0.isLetter && !$0.isNumber }
+        let letters = words.prefix(2).compactMap { $0.first.map(String.init) }
+        let combined = letters.joined().uppercased()
+        return combined.isEmpty ? "KA" : combined
     }
 
     private var embeddedStage: some View {

@@ -83,6 +83,7 @@ struct RootView: View {
     @State private var sheetRoute: Route = .menu
     @State private var activeNavigation: NavigationSheet? = nil
     @State private var navigationDismissing = false
+    @State private var activeTab: KantaTabBar.Destination = .stage
 
     private enum NavigationSheet: String, Identifiable {
         case navigation
@@ -90,7 +91,7 @@ struct RootView: View {
     }
 
     private enum Route: String, Identifiable {
-        case menu, library, remote, settings, legal, icloud, songbook
+        case menu, library, queue, remote, settings, legal, icloud, songbook
         var id: String { rawValue }
     }
 
@@ -120,6 +121,11 @@ struct RootView: View {
                 .toolbar(.hidden, for: .navigationBar)
             }
         }
+        // The tab bar is an inset rather than an overlay so Host content is
+        // never covered, and it never intercepts the stage's own controls.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            KantaTabBar(selection: activeTab, onSelect: select)
+        }
         // Keep the navigation sheet on a sibling presentation anchor rather
         // than on the NavigationStack that contains HostView. The shared gate
         // serializes both owners, while separate anchors avoid the iPad losing
@@ -130,6 +136,7 @@ struct RootView: View {
                 .allowsHitTesting(false)
                 .sheet(item: $activeNavigation, onDismiss: {
                     sheetRoute = .menu
+                    activeTab = .stage
                     navigationDismissing = false
                     presentationGate.completeDismissal(.navigation)
                 }) {
@@ -167,6 +174,36 @@ struct RootView: View {
         }
     }
 
+    /// Tab taps route through the same presentation gate the stage uses, so
+    /// the bar cannot create a second, uncoordinated presentation.
+    private func select(_ destination: KantaTabBar.Destination) {
+        activeTab = destination
+        switch destination {
+        case .stage:
+            guard activeNavigation != nil, !navigationDismissing else { return }
+            navigationDismissing = true
+            presentationGate.beginDismissal(.navigation)
+            activeNavigation = nil
+        case .library:
+            openNavigation(.library)
+        case .queue:
+            openNavigation(.queue)
+        case .more:
+            openNavigation(.menu)
+        }
+    }
+
+    private func openNavigation(_ route: Route) {
+        if activeNavigation == nil {
+            presentationGate.request(.navigation) {
+                sheetRoute = route
+                activeNavigation = .navigation
+            }
+        } else {
+            sheetRoute = route
+        }
+    }
+
     @ViewBuilder private func destination(_ route: Route) -> some View {
         switch route {
         case .menu:
@@ -184,6 +221,7 @@ struct RootView: View {
             }
             .navigationTitle("More")
         case .library: LibraryView(services: services)
+        case .queue: KantaQueueView(services: services)
         case .remote: RemoteView(browserHost: services.browserCompanion)
         case .settings: KantaSettingsView(services: services)
         case .legal: LegalDisclosureView()
