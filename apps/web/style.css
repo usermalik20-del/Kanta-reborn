@@ -152,3 +152,14 @@
 .platform-help a{font-weight:700}
 
 .comparison-scroll{overflow-x:auto;margin:1.5rem 0}.platform-comparison{border-collapse:collapse;width:100%;min-width:38rem;text-align:left}.platform-comparison th,.platform-comparison td{padding:1rem;border-bottom:1px solid rgba(255,255,255,.15);vertical-align:top}.platform-comparison thead{color:#bcd8ff}.platform-comparison tbody th{font-weight:600}.license-text{white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* QA fix, Oct 2026: header CTA cluster and footer link cluster used by the
+   redesigned page shell. The markup referenced these classes but no rules
+   existed, so the CTA lost alignment and the footer links ran together. */
+.site-header .header-actions{display:flex;align-items:center;flex:0 0 auto;gap:10px}
+.site-header .header-cta{white-space:nowrap;padding:10px 16px;font-size:.88rem;line-height:1.35}
+.footer-links{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+@media(max-width:750px){
+ .site-header .header-actions{flex:1 1 100%}
+ .site-header .header-cta{justify-content:center;width:100%}
+}
