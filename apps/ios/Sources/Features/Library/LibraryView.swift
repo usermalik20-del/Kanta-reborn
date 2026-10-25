@@ -36,7 +36,7 @@ struct LibraryView: View {
                     HStack(spacing: 10) {
                         ProgressView()
                         Text("Checking and updating your library…")
-                            .font(KantaTypography.subheadline if hasattr(KantaTypography, 'subheadline') else .subheadline)
+                            .font(.subheadline)
                             .foregroundStyle(KantaColors.textSecondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

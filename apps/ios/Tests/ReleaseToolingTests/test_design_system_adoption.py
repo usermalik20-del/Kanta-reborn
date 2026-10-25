@@ -464,5 +464,45 @@ class WalkthroughIdentifierAdoptionTests(unittest.TestCase):
             )
 
 
+class PythonLeakTests(unittest.TestCase):
+    """A generated edit leaked a Python expression into a Swift file
+    (`KantaTypography.subheadline if hasattr(...) else .subheadline`), which
+    cost a full CI cycle. Python cannot compile as Swift."""
+
+    PYTHON_ISMS = (
+        "hasattr(",
+        "isinstance(",
+        "elif ",
+    )
+
+    def swift_files(self):
+        return sorted(SOURCES.rglob("*.swift"))
+
+    def test_no_python_expressions_in_swift_sources(self):
+        for path in self.swift_files():
+            text = path.read_text()
+            for ism in self.PYTHON_ISMS:
+                self.assertNotIn(
+                    ism, text, f"{path.name} contains Python syntax: {ism}"
+                )
+
+    def test_no_single_quoted_string_literals(self):
+        """Swift requires double quotes; a single-quoted literal is the
+        signature of a generated edit that was never compiled."""
+        # Only an identifier-like literal counts: English apostrophes inside a
+        # double-quoted sentence are legal Swift and must not be flagged.
+        pattern = re.compile(r"[\\(\\[,=:]\\s*'([A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_]\\w*)*)'")
+        for path in self.swift_files():
+            for number, line in enumerate(path.read_text().splitlines(), 1):
+                if line.strip().startswith("//"):
+                    continue
+                match = pattern.search(line)
+                self.assertIsNone(
+                    match,
+                    f"{path.name}:{number} uses a single-quoted literal "
+                    f"({match.group(0) if match else ''}); Swift needs double quotes",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
