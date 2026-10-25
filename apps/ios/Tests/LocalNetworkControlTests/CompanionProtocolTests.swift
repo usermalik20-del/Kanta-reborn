@@ -95,6 +95,20 @@ private enum Vector {
     }
 }
 
+@Test func companionPairingInputRequiresPrivateAddressAndFullHexSecret() {
+    let validCode = Vector.code
+    #expect(CompanionProtocol.isValidPairingCode(validCode))
+    #expect(CompanionProtocol.isValidPairingInput(address: "10.0.0.1", code: validCode))
+    #expect(CompanionProtocol.isValidPairingInput(address: "172.31.255.255", code: validCode))
+    #expect(!CompanionProtocol.isValidPairingInput(address: "8.8.8.8", code: validCode))
+    #expect(!CompanionProtocol.isValidPairingInput(address: "127.0.0.1", code: validCode))
+    #expect(!CompanionProtocol.isValidPairingInput(address: "10.0.0.1", code: ""))
+    #expect(!CompanionProtocol.isValidPairingCode(String(repeating: "a", count: 31)))
+    #expect(!CompanionProtocol.isValidPairingCode(String(repeating: "a", count: 33)))
+    #expect(!CompanionProtocol.isValidPairingCode(String(repeating: "g", count: 32)))
+    #expect(CompanionProtocol.isValidPairingCode(String(repeating: "A", count: 32)))
+}
+
 @Test func companionBoundsPeerJSONAndChecksRequestIdentity() throws {
     var channel = try Vector.handshake().authenticate(Vector.hostProof)
     let plain = try channel.open(Vector.hostRecord)

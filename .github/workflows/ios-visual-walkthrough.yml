@@ -21,6 +21,9 @@ on:
       - '.github/workflows/ios-visual-walkthrough.yml'
 permissions:
   contents: read
+concurrency:
+  group: ios-visual-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
 # Each device walks through in its own job so one device's result cannot mask,
 # delay or time out the other, and each reports its own status and artifacts.
 jobs:

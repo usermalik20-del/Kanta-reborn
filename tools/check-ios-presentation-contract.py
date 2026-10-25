@@ -16,6 +16,9 @@ def verify():
     stage_background = stage.split('@ViewBuilder private var stageBackground: some View {', 1)[1].split('\n    private var header:', 1)[0]
     fullscreen = (APP / 'Features/Host/FullscreenKaraokePlayerView.swift').read_text()
     fullscreen_presenter = (APP / 'Features/Host/SingingFullscreenPresentation.swift').read_text()
+    remote = (APP / 'Features/Remote/EncryptedCompanionView.swift').read_text()
+    companion_protocol = (ROOT / 'apps/ios/Sources/Infrastructure/LocalNetworkControl/CompanionProtocol.swift').read_text()
+    companion_tests = (ROOT / 'apps/ios/Tests/LocalNetworkControlTests/CompanionProtocolTests.swift').read_text()
     test = TEST.read_text()
     runner = (ROOT / 'tools/capture-ios-runtime.py').read_text()
     workflow = (ROOT / '.github/workflows/ios-visual-walkthrough.yml').read_text()
@@ -98,6 +101,26 @@ def verify():
             ))
         ),
         'playback does not mutate root navigation': 'snapshot.transport' not in root,
+        'main menu destinations have independent XCTest budgets': (
+            all(f'func {name}() throws' in test for name in (
+                'testMenuSongLibrary',
+                'testMenuSongbook',
+                'testMenuSettings',
+                'testMenuCompanionRemote',
+                'testMenuICloudSave',
+                'testMenuLegalPrivacy',
+            ))
+            and 'func testMainMenuButtonsAndScreens()' not in test
+            and all(f'"{name}"' in runner for name in (
+                'testMenuSongLibrary',
+                'testMenuSongbook',
+                'testMenuSettings',
+                'testMenuCompanionRemote',
+                'testMenuICloudSave',
+                'testMenuLegalPrivacy',
+            ))
+            and '"testMainMenuButtonsAndScreens"' not in runner
+        ),
         'real playback walkthrough': 'func testStarterPlaybackAndControls()' in test,
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,
@@ -113,6 +136,13 @@ def verify():
             stage_background.count('.allowsHitTesting(false)') == 2
             and 'KantaCameraPreview(capture: camera.capture)' in stage_background
             and 'KaraokeStageView(asset:' in stage_background
+        ),
+        'encrypted companion UI and handshake share bounded pairing validation': (
+            'CompanionProtocol.isValidPairingInput(address: address, code: code)' in remote
+            and 'public static func isValidPairingCode' in companion_protocol
+            and 'public static func isValidPairingInput' in companion_protocol
+            and 'guard isValidPairingCode(code)' in companion_protocol
+            and 'companionPairingInputRequiresPrivateAddressAndFullHexSecret' in companion_tests
         ),
         'window tap probe uses supported, comparable geometry and removes its recognizer': (
             'NSCoder.string(for: point)' in stage

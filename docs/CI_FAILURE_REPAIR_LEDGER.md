@@ -325,3 +325,44 @@ Main's current reconstruction [#40126620995](https://github.com/usermalik20-del/
 **Repair:** mark both `KantaCameraPreview` and `KaraokeStageView` branches in `stageBackground` as non-hit-testable. These are display-only layers; user interaction must be handled by the explicit Search/Camera/Expand controls. The source guard checks that both branches carry `.allowsHitTesting(false)`.
 
 **Acceptance:** source-contract guard, Swift package tests, simulator build, focused smoke, reconstruction, unsigned archive, and the full iPhone/iPad walkthrough must pass on one exact candidate SHA. In particular, confirm that a Search tap no longer resolves to the oversized drawing surface and that `stage.keypad.0` appears on iPad. Build success or an iPhone-only pass is not device acceptance.
+
+
+## iOS — Main-menu walkthrough exceeds the per-test budget (2026-10-25)
+
+**Fingerprint:** `KantaVisualWalkthroughUITests.testMainMenuButtonsAndScreens`; XCTest message `exceeded execution time allowance of 2 minutes`; iPad simulator in [walkthrough run #40136025937](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937), source SHA `d01504e42b3e00735bb429b05e9ec886149911fe`.
+
+**Related results:** reconstruction [#40136025964](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025964) and unsigned archive [#40136025858](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858) passed. The iPhone stage passed. The iPad compact evidence is [artifact #12577317727](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937/artifacts/12577317727).
+
+**Confirmed cause:** the main-menu test relaunches and terminates the app for each of six destinations. On the iPad simulator, the sixth navigation flow was still progressing at 120 seconds; XCTest timed out and restarted the runner. The required-test manifest correctly rejected the run because `testMainMenuButtonsAndScreens` had no passing completion. This is a test-budget/lifecycle inefficiency, not evidence that Search still fails: in the same run, the keypad-focused tests passed and the tap trace showed Search reaching `_UIShapeHitTestingView`, requesting/activating the Search sheet, and beginning presentation.
+
+**Candidate fix:** keep one app process alive across the six menu destinations; after each screenshot, dismiss through the existing `navigation.done` accessibility identifier, wait for that destination to leave the hierarchy, and verify the Stage More button is visible again before opening the next destination. Preserve all six destinations and screenshot attachments. Do not raise the global timeout or weaken the required-test set merely to hide the repeated cold-start cost.
+
+**Regression:** `testMainMenuButtonsAndScreens` must complete and appear in the passed-test manifest on both iPhone and iPad; each destination must be opened, captured, and dismissed. Search keypad tests remain required.
+
+**Validation:** `candidate`; code change [`8e67e1e`](https://github.com/usermalik20-del/Kanta-reborn/commit/8e67e1e2953c0e13f077ac87421b7cd44cea1ab9). Hosted validation on the final repair SHA is pending. Do not mark verified until the full walkthrough and reconstruction pass on the exact accepted SHA.
+
+
+## iOS — encrypted-companion UI keyboard-idle timeout (2026-10-25)
+
+- **Failed run:** [#40140289375](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40140289375), candidate SHA `c1bdcf57500f45f15e83876a5b4ae6fcb6387f5f`; job `visual-walkthrough`, iPhone stage failed while iPad stage passed.
+- **Fingerprint:** `testEncryptedCompanionPairingScreenAndInputRejection` exceeded XCTest's two-minute execution allowance. The iPhone log shows `typeText("8.8.8.8")` entering the host field, followed by “App animations complete notification not received” after about 60 seconds and an XCTest runner restart. The resulting `xcodebuild` exit code 65 remains a failed run even though the aggregate log listed all named cases as passing across attempts.
+- **Cause:** the UI test coupled protocol validation to software-keyboard automation; a simulator keyboard-idle stall consumed the case budget before the input-rejection flow completed. This is not evidence of a pairing-protocol failure.
+- **Repair candidate:** make `CompanionProtocol.isValidPairingInput(address:code:)` the shared Connect/handshake policy, add pure package tests for private/public/loopback address rules and exact 32-character hexadecimal secrets, and keep the UI test focused on the initial disabled state and explanatory copy rather than typing through a flaky simulator keyboard.
+- **Regression coverage:** the same helper drives `EncryptedCompanionView` Connect enablement and handshake secret validation; the source-contract guard enforces that relationship. Existing encrypted pairing screen, disabled Connect, no Disconnect, and instructional-copy assertions remain.
+- **Validation:** candidate only; do not mark verified until the full iPhone and iPad walkthroughs both exit zero on the exact final SHA and all required cases pass in a clean run. No timeout increase, runner retry, or ignored exit status.
+
+## iOS — iPad menu walkthrough still exceeds one XCTest case budget (2026-10-25)
+
+**Fingerprint:** `KantaVisualWalkthroughUITests.testMainMenuButtonsAndScreens`; iPad visual walkthrough; missing passing case after XCTest timeout/restart.
+
+**Affected SHA and run:** PR #71 candidate `dc60e513c4829226d8bf763c60d5e047e0beb5a4`; [walkthrough #40146182462](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182462), with compact diagnostics [artifact #12580469774](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182462/artifacts/12580469774).
+
+**Cause:** the earlier optimization kept all six More destinations inside one XCTest method. Although each destination screenshot was captured, the single method still failed to record a clean pass before XCTest's per-case allowance and runner restart. The aggregate run therefore remained red; screenshots or later retry output do not satisfy the named-pass manifest.
+
+**Candidate repair:** split Song Library, KANTA Songbook, Settings, Companion Remote, iCloud Save, and Legal & Privacy into six named XCTest methods. Each retains its destination title assertion, screenshot, `navigation.done` dismissal, and Stage More return assertion. Update `tools/capture-ios-runtime.py` and `tools/check-ios-presentation-contract.py` together. Integrate PR #72's separate iPhone/iPad workflow jobs, preserving branch-level stale-run cancellation.
+
+**Regression:** the source guard requires all six test names in both the XCTest source and runtime manifest, rejects the old aggregate method, and the runtime gate rejects any missing pass. No destination/assertion was removed; no global timeout was increased.
+
+**Validation:** `candidate` until the new exact-head reconstruction, focused smoke, archive, and independent iPhone/iPad walkthrough jobs finish successfully. No green result is inferred from the previous SHA.
+
+**Recurrence rule:** if a device reports a missing menu case, inspect that individual case's XCTest result bundle and job log. Do not increase the global timeout, suppress missing cases, or treat screenshot presence as a pass.

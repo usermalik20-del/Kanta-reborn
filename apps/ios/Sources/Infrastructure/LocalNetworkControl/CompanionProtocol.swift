@@ -25,10 +25,19 @@ public enum CompanionProtocol {
         return text
     }
 
-    static func secret(_ code: String) throws -> SymmetricKey {
-        guard code.utf8.count == 32, code.utf8.allSatisfy({
+    public static func isValidPairingCode(_ code: String) -> Bool {
+        code.utf8.count == 32 && code.utf8.allSatisfy {
             (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0)
-        }) else { throw CompanionError.invalidInput }
+        }
+    }
+
+    public static func isValidPairingInput(address: String, code: String) -> Bool {
+        guard (try? privateAddress(address)) != nil else { return false }
+        return isValidPairingCode(code)
+    }
+
+    static func secret(_ code: String) throws -> SymmetricKey {
+        guard isValidPairingCode(code) else { throw CompanionError.invalidInput }
         let characters = Array(code)
         var bytes = Data()
         for index in stride(from: 0, to: 32, by: 2) {
