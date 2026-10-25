@@ -536,5 +536,26 @@ class PythonLeakTests(unittest.TestCase):
         )
 
 
+class StarterTileContractTests(unittest.TestCase):
+    """Do not ship controls that have no action or metadata that invents facts."""
+
+    def setUp(self):
+        library = (ROOT / "Sources/Features/Library/LibraryView.swift").read_text()
+        self.starter_section = library.split("private var starterSongsSection", 1)[1].split(
+            "private var starterRows", 1
+        )[0]
+        self.starter_tile = library.split("private func starterTile", 1)[1].split(
+            "private var heroCard", 1
+        )[0]
+
+    def test_starter_header_has_no_inert_see_all_control(self):
+        self.assertNotIn('Button("See all")', self.starter_section)
+        self.assertNotIn("// Action", self.starter_section)
+
+    def test_starter_tiles_do_not_display_a_fabricated_duration(self):
+        self.assertNotIn("3:12", self.starter_tile)
+        self.assertIn('Text("KANTA original")', self.starter_tile)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -101,17 +101,9 @@ struct LibraryView: View {
     private var starterSongsSection: some View {
         KantaCard {
             VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Starter Songs")
-                        .font(KantaTypography.sectionHeader)
-                        .foregroundStyle(KantaColors.textPrimary)
-                    Spacer()
-                    Button("See all") {
-                        // Action
-                    }
-                    .font(KantaTypography.metadata)
-                    .foregroundStyle(KantaColors.cyan)
-                }
+                Text("Starter Songs")
+                    .font(KantaTypography.sectionHeader)
+                    .foregroundStyle(KantaColors.textPrimary)
 
                 Text("Three original songs with timed lyrics and built-in sound. Play offline, or use your imported SoundFont.")
                     .font(KantaTypography.metadata)
@@ -218,7 +210,7 @@ struct LibraryView: View {
                 .foregroundStyle(KantaColors.textPrimary)
                 .lineLimit(1)
 
-            Text("Starter · 3:12")
+            Text("KANTA original")
                 .font(KantaTypography.metadata)
                 .foregroundStyle(KantaColors.textSecondary)
         }
