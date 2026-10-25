@@ -119,8 +119,12 @@ struct KantaMainPlayerView: View {
     private var embeddedPlayer: some View {
         VStack(spacing: 18) {
             HStack {
+                // The embedded stage reaches the menu through this chevron; the
+                // fullscreen player uses stageButton("More"). They are never on
+                // screen at the same time, so they share one identity.
                 Button(action: onMore) { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
                     .accessibilityLabel("More")
+                    .accessibilityIdentifier("stage.more")
                 Text("Karaoke Host").font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Button(action: onControls) {
