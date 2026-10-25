@@ -90,8 +90,15 @@ The compact iPad diagnostics [artifact #12577317727](https://github.com/usermali
 Repair candidate branch: `fix/ios-menu-walkthrough-timeout-20261025`. The test now uses one app launch and explicitly dismisses each of the same six destinations with `navigation.done`, checking that More returns before proceeding. Testing and CI failure-ledger entries record the exact run, cause, and acceptance gate. The candidate is **not yet verified**; keep release acceptance blocked until reconstruction and the full iPhone/iPad walkthrough pass on the same final candidate SHA.
 
 
-## Current candidate checkpoint — October 25, 2026
+## Current main acceptance checkpoint — October 25, 2026, 13:57 PHT
 
-The earlier PR #71 head `dc60e513c4829226d8bf763c60d5e047e0beb5a4` passed reconstruction, focused smoke, and unsigned archive but failed the full iPad walkthrough because the aggregate six-destination menu test did not complete within its XCTest allowance. The candidate has now been reworked into six separately named destination tests and the iPhone/iPad workflow has been split into independent jobs. The runtime manifest and source-contract checker require all six new cases.
+Main is at [`af178739`](https://github.com/usermalik20-del/Kanta-reborn/commit/af178739f9f457b917d7d0714963ccad22f4bcd2). The latest main-head validation is complete:
 
-This is still a candidate repair. The new exact-head CI results are pending; do not mark it verified until reconstruction, focused smoke, unsigned archive, and both device jobs pass on the same head. No main-branch change, merge, signing, or release is implied.
+- Reconstruction (iOS + Android): [run #40165173586](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173586) — passed for both jobs.
+- Website route/security/navigation validation: [run #40165173693](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173693) — passed.
+- Production Vercel deployment: [run #40165173539](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173539) — passed.
+- Unsigned iOS archive: [run #40165173529](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173529) — passed; artifact [#12588545812](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40165173529/artifacts/12588545812), 25,076,208 bytes, SHA-256 `857c60aaaf0a2ab6d17aee97f68441a35a645d5b88de6831853fb8ad64d6b042`, expires 2026-11-01 05:25:49 UTC.
+
+The latest completed full device walkthrough is [run #40154268944](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40154268944) on native source commit [`a543df2`](https://github.com/usermalik20-del/Kanta-reborn/commit/a543df231322ea495eef6e9d7ad8968d17490bc7). Both the iPhone and iPad jobs completed successfully. The comparison from `a543df2` to `af178739` contains website pages/assets, website verification tests, and documentation only; no native iOS or Android source changed, so this website-only merge did not require a new native walkthrough.
+
+The responsive website navigation contract is now merged and validated; the previous pending-candidate statements above are historical checkpoints, not current status. The archive is an unsigned personal-signing input only. No signed production IPA or published GitHub Release is verified. Packaging, signing, and public release remain separate acceptance steps.
