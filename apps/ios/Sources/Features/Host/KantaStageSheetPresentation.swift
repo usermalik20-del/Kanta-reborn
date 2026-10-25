@@ -241,14 +241,25 @@ struct KantaStageSheetContent: View {
             NavigationStack {
                 List {
                     if model.snapshot.queue.isEmpty {
-                        Text("No reservations yet. Use Search to choose a song.")
+                        KantaEmptyState(
+                            icon: "list.bullet",
+                            title: "No reservations yet",
+                            description: "Use Search to choose a song.",
+                            actionTitle: nil,
+                            action: nil,
+                            style: .compact
+                        )
                     }
                     ForEach(model.snapshot.queue) { item in
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(item.song.title)
+                                    .font(KantaTypography.songTitle)
+                                    .foregroundStyle(KantaColors.textPrimary)
                                 if let singer = item.requestedBy {
-                                    Text(singer).font(.caption)
+                                    Text(singer)
+                                        .font(KantaTypography.caption)
+                                        .foregroundStyle(KantaColors.textSecondary)
                                 }
                             }
                             Spacer()

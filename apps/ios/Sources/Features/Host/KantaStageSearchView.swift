@@ -22,7 +22,9 @@ struct KantaStageSearchView: View {
             let wide = geometry.size.width > 580
             VStack(spacing: 8) {
                 HStack {
-                    Text("Search songs").font(.title3.bold())
+                    Text("Search songs")
+                        .font(KantaTypography.sectionHeader)
+                        .foregroundStyle(KantaColors.textPrimary)
                     Spacer()
                     Button { close() } label: {
                         Image(systemName: "xmark").frame(width: 44, height: 44)
@@ -46,6 +48,7 @@ struct KantaStageSearchView: View {
                         .buttonStyle(.borderedProminent)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .disabled(reserving || searching || selectedSong == nil || !model.isAvailable)
+                        .tint(KantaColors.primary)
                         .accessibilityIdentifier("stage.reserve")
                 }
             }
@@ -86,7 +89,11 @@ struct KantaStageSearchView: View {
                 .accessibilityLabel("Voice search")
             }
             .padding(.leading, 10)
-            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .background(KantaColors.elevated, in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(KantaColors.primary.opacity(0.28), lineWidth: 1)
+            }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 8) {
                     if showingVoice {
@@ -98,8 +105,14 @@ struct KantaStageSearchView: View {
                     if searching || model.isLoading {
                         Text("Searching…").font(.caption)
                     } else if model.songs.isEmpty {
-                        Text("No matching songs. Add your songs through More → Song Library.")
-                            .font(.caption).foregroundStyle(.secondary)
+                        KantaEmptyState(
+                            icon: "magnifyingglass",
+                            title: "No matching songs",
+                            description: "Add your songs through More → Song Library.",
+                            actionTitle: nil,
+                            action: nil,
+                            style: .compact
+                        )
                     }
                     ForEach(model.songs) { song in
                         Button {
@@ -109,15 +122,18 @@ struct KantaStageSearchView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text((song.code.map { $0 + " · " } ?? "") + song.title)
-                                        .font(.subheadline.bold()).lineLimit(2)
+                                        .font(KantaTypography.songTitle)
+                                        .foregroundStyle(KantaColors.textPrimary)
+                                        .lineLimit(2)
                                     Text(song.isPlayable ? (song.artist ?? "Local library") : "Catalog only · media unavailable")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(KantaTypography.caption)
+                                        .foregroundStyle(KantaColors.textSecondary)
                                 }
                                 Spacer(minLength: 4)
                                 if selectedID == song.id { Image(systemName: "checkmark.circle.fill") }
                             }
                             .padding(10).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                            .background(selectedID == song.id ? GeloVisualStyle.accent.opacity(0.25) : .clear,
+                            .background(selectedID == song.id ? KantaColors.primary.opacity(0.25) : .clear,
                                         in: RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.plain)
@@ -154,7 +170,7 @@ struct KantaStageSearchView: View {
                         else { Text(key).font(key == "Clear" ? .caption.bold() : .title3.bold()) }
                     }
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .background(.white.opacity(0.09), in: RoundedRectangle(cornerRadius: 10))
+                    .background(KantaColors.elevated, in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain).accessibilityLabel(key)
                 .accessibilityIdentifier("stage.keypad." + key)
