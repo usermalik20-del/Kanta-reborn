@@ -4,23 +4,23 @@
   "retentionDays": 7,
   "signInRequired": true,
   "android": {
-    "source": "abda7c27251af9f1019aa23831c6770032d754c9",
-    "run": 40258066829,
-    "artifact": 12622994480,
+    "source": "086713405002f75ab5c7fc49cd815cf2a3469041",
+    "run": 40320555135,
+    "artifact": 12648928676,
     "signed": "debug",
     "version": "0.10.0-reconstruction",
     "artifactName": "android-reconstruction-checks",
-    "sha256": "792984910d58dbdb350e70b39136477c98de392f96921fe4f2d0cabcdde460a5"
+    "sha256": "928cbc8603b918a81257ef54327bf90238d27cab791ecb02ace3dea9eca4b2dc"
   },
   "ios": {
-    "source": "abda7c27251af9f1019aa23831c6770032d754c9",
-    "run": 40258066875,
-    "artifact": 12622974482,
+    "source": "086713405002f75ab5c7fc49cd815cf2a3469041",
+    "run": 40320554747,
+    "artifact": 12649740030,
     "signed": false,
     "personalSigningRequired": true,
     "icloudAvailable": false,
     "artifactName": "KANTA-personal-unsigned",
-    "sha256": "f17c0195c679270916febc2f0612ddb5d90d9f2c235097849615fcf26e7b00fb",
-    "walkthroughRun": 40258066852
+    "sha256": "6a53aa37227ebd0561d064a18918aeeb6da9ffce8c14818135cb6e21144a734b",
+    "walkthroughRun": 40320554824
   }
 }
