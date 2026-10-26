@@ -347,3 +347,12 @@ The stage scene and camera preview are decorative surfaces, not interaction owne
 The six More destinations (Song Library, KANTA Songbook, Settings, Companion Remote, iCloud Save, and Legal & Privacy) are separate XCTest cases. Each case launches once, opens one destination, verifies its expected navigation title, captures evidence, dismisses through `navigation.done`, and verifies that Stage More returns. This keeps each destination within XCTest's per-case execution budget without removing navigation coverage or increasing the global timeout.
 
 `tools/capture-ios-runtime.py` must require every named case, and `tools/check-ios-presentation-contract.py` guards the relationship between the test methods and the runner manifest. The visual workflow uses independent iPhone and iPad jobs, each with its own compile/run/evidence result. Stale runs on the same branch may be cancelled; sibling device jobs within a run remain independent. These changes partition test work only and do not change production navigation or presentation ownership. Release acceptance still requires every case to pass on both devices on one exact candidate SHA.
+
+
+## iOS source-target completeness gate — October 27, 2026
+
+Every Swift file under `apps/ios/Sources` is part of the generated application target unless the project configuration explicitly excludes it. A file is not a harmless design sketch merely because no screen instantiates it: unresolved types, modifiers, property-wrapper requirements, or lifecycle contracts in that directory can break the entire simulator build and device archive.
+
+A workspace redesign must therefore be implemented at the real composition boundary before its new view is added to the app target. All referenced views, presentation models, modifiers, and enums must exist and compile; the integrated view must preserve the current single playback owner and the existing Host/presentation coordinator. Do not land an unintegrated scaffold or add placeholder types simply to silence compilation. If a planned workspace is not ready, keep it out of the compiled source target and document it as planned.
+
+The October 27 regression in `KantaWorkspace.swift` violated this gate: the file was not instantiated by `HostView` and referenced undefined workspace types/modifiers. PR #98 removes that unused scaffold while the complete compact workspace remains a separate, unaccepted feature candidate. See `docs/CI_FAILURE_REPAIR_LEDGER.md` for the failing run IDs, compiler diagnostics, repair commit, and pending smoke/iPhone acceptance.
