@@ -318,3 +318,8 @@ The Release test-module SPI repair compiles and passes Swift package tests at `2
 ## Compact persistent workspace — 2026-10-26
 
 Implementation candidate on `feat/compact-persistent-workspace-20261026`: the iOS embedded Host now composes a persistent Stage surface, a persistent now-playing strip, and width-aware contextual actions. Existing Search/Queue presentation, Host More navigation, and the Settings/CONTROL sheet remain authoritative. The candidate preserves the no-Previous/no-progress-bar contract. Static source guard coverage was extended for stable accessibility IDs and layout invariants; hosted compiler and iPhone/iPad walkthrough results must be recorded from this exact head before the feature is considered validated.
+
+
+## KANTA Host branding and borderless player — 2026-10-26
+
+The compact workspace now uses KANTA Karaoke branding in Host navigation/header, keeps the KANTA mark visible, renames the Bonjour-discovered Host and external-stage standby copy, and updates the user-facing legacy playback error. The embedded stage/player bleeds horizontally to device edges and removes the decorative card strokes. Internal GeloKaraokeCore module names remain unchanged. New source guards enforce visible brand/logo and borderless composition; hosted iOS source build and iPhone/iPad walkthrough results remain pending on the latest PR head.
