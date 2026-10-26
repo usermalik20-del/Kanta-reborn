@@ -603,6 +603,47 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 **Recurrence rule:** after any native-source merge, resolve successful reconstruction, unsigned iOS artifact and full iPhone/iPad walkthrough runs for one identical main SHA. Update the manifest, pages and pinned contract together only after all three pass. Do not update the website to a merely compiled or unsigned-only candidate.
 
 **Status:** candidate.
+
+
+
+## 2026-10-27 — Main iOS compile failure from unintegrated KantaWorkspace scaffold
+
+**Fingerprint:** `ios-unsigned-simulator-build / undefined workspace presentation types`.
+
+**Failing source SHA:** [`ea24b63`](https://github.com/usermalik20-del/Kanta-reborn/commit/ea24b63a68ded8bbe7a8f6deba9a396d454b4dc6).
+
+**Failure evidence:**
+- Main reconstruction [run #40365687028](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687028), iOS job [#121722620353](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687028/job/121722620353) failed at **Unsigned simulator build** (exit 65).
+- Main visual walkthrough [run #40365687013](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687013), iPhone job [#121722620227](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687013/job/121722620227) failed while compiling the app/UI-test bundle, so the actual iPhone walkthrough was skipped; the iPad job remained queued. Main unsigned archive run [#40365687280](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687280) was cancelled.
+
+**Confirmed cause:** commit `ea24b63` added `apps/ios/Sources/DesignSystem/KantaWorkspace.swift` to a directory compiled by the app target, but the file was an unintegrated scaffold. Xcode reported missing `PersistentStageView`, `AccessoryPresentationLayer`, `WorkspaceAccessory`, `NavigationSheet`, `.workspaceToolbar`, and `.workspaceVisualHierarchy`; it also reported that `WorkspacePresentationState` did not satisfy `ObservableObject` for `@ObservedObject` and that its `NSObject.init` override was missing `override`. `HostView` did not instantiate the scaffold. This is a source-completeness/architecture failure, not an SDK transient.
+
+**Repair candidate:** [PR #98](https://github.com/usermalik20-del/Kanta-reborn/pull/98), commit [`3e1eeb7`](https://github.com/usermalik20-del/Kanta-reborn/commit/3e1eeb7f81c36f0be4ed8759c7779c96905d91e6), removes the 54-line unused scaffold rather than adding placeholder types or changing the existing presentation owners.
+
+**Regression/validation evidence on the repair candidate:**
+- Reconstruction [run #40366928445](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366928445): iOS and Android jobs passed.
+- Unsigned iOS archive [run #40366928611](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366928611): passed.
+- Full walkthrough [run #40366929004](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366929004): iPad passed; iPhone job was queued at this ledger update.
+- Focused iOS smoke [run #40366928538](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366928538): still running at this ledger update.
+
+**Status:** candidate; partial validation green. Do not mark verified or merge until the focused iOS smoke and iPhone walkthrough complete successfully on the repair candidate. After the final gate, append the first green evidence and update the reconstruction checkpoint. Preserve the failed main runs as historical evidence.
+
+
+## Recurrence — compact-workspace PR branch retains the same unbuildable scaffold (October 27, 2026)
+
+**Affected candidate:** [PR #97](https://github.com/usermalik20-del/Kanta-reborn/pull/97), branch `feat/compact-workspace-redesign-20261026`, source [`9b052b8`](https://github.com/usermalik20-del/Kanta-reborn/commit/9b052b8f5ae38229799f521fed69115216958f0d).
+
+**New failure evidence:**
+- Full visual walkthrough [run #40367142976](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367142976) failed during app/UI-test compilation on both iPhone and iPad; neither device walkthrough executed.
+- Unsigned archive [run #40367143404](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367143404) failed during archive compilation.
+- Reconstruction [run #40367143008](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367143008) and focused smoke [run #40367142939](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367142939) were still running at this update.
+
+**Confirmed recurrence:** the archive compiler reports the same unresolved types/modifiers in `apps/ios/Sources/DesignSystem/KantaWorkspace.swift` as main's `ea24b63` failure. The PR #97 branch is not a clean descendant of current main: it diverged from main's merge base `fa10eed`, is 23 commits ahead and one behind, and carries the scaffold independently. Removing the file only in PR #98 therefore does not repair PR #97.
+
+**Required action:** do not merge PR #97 in this state. Reconcile its branch with the scaffold-removal repair (or remove the file there without disturbing the interactive Host implementation), then rerun reconstruction, focused smoke, unsigned archive, and both device walkthroughs on the reconciled code. Keep the accessibility-identifier repair intact and do not claim the compact workspace accepted until the full device suite passes.
+
+**Status:** recurrence confirmed; PR #97 remains an unaccepted candidate.
+
 ## PR #96 compact workspace accessibility regression — 2026-10-27
 
 **Failure evidence:** focused smoke [run #40348703963](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348703963) and full iPhone/iPad walkthrough [run #40348710266](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266), candidate head `9c2e12a`. Diagnostic artifact [#12665410375](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266/artifacts/12665410375) contains the actual iPhone accessibility hierarchy.
@@ -610,3 +651,12 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 **Confirmed root cause:** the interactive transport `HStack` applied `stage.persistentPlayer` to its descendants. The captured hierarchy shows the Play/Pause, Next and Queue buttons all carrying that parent identifier instead of `stage.playPause`, `stage.next` and `stage.queue`. The toolbar's Host-controls button also used the visible label `Settings`, colliding with the real Settings navigation destination.
 
 **Candidate repair:** remove the identifier from the interactive parent, retain stable identifiers on each control, rename the toolbar label to `More controls`, and enforce these invariants in `tools/check-ios-presentation-contract.py`. The Search → keypad failure in `testDemoKeypadCancelAndRepeatedIntentionalReservations` is a separate observed failure; its exact runtime cause is not yet confirmed and this change must not be reported as fixing it. Reconstruction, focused smoke and both full device walkthroughs must pass on the exact new PR head before acceptance.
+
+
+## PR #96 branch synchronization and missing-head validation — 2026-10-27
+
+**Observed before synchronization:** candidate [`ee1a5e7`](https://github.com/usermalik20-del/Kanta-reborn/commit/ee1a5e7ccf692256df23eedbcd8162cb61f77bf9) was based on an older main history; current main was [`c23b88d`](https://github.com/usermalik20-del/Kanta-reborn/commit/c23b88d870fdf9c6fa685a840f3e9125bdc7e422). GitHub reported PR #96 as `mergeable_state=dirty`; compare showed 23 candidate commits ahead and 6 main commits behind merge base `fa10eed`. No checks or Actions runs were attached to exact head `ee1a5e7`; latest completed smoke [#40348703963](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348703963) and device walkthrough [#40348710266](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266) were on older head `9c2e12a`.
+
+**Synchronization repair:** current main's architecture and CI-ledger updates were merged with the candidate's branding/accessibility documentation, preserving the compact workspace source and child-identifier repair. This resolves the known branch-behind condition; GitHub's refreshed mergeability and new-head workflow runs must still be checked before acceptance.
+
+**Runtime gates remain open:** the Search-to-keypad interaction and starter-playback state transition are not declared fixed by this documentation/branch-sync repair. Reconstruction, focused smoke, unsigned archive, and both iPhone/iPad walkthrough jobs must pass on the synchronized code SHA. If no workflow is emitted for that head, treat it as an Actions-trigger blocker rather than success.

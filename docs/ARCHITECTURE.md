@@ -29,12 +29,6 @@ Companion commands require explicit pairing, authorization, bounded replay prote
 
 The owner-approved [Companion Remote roadmap](COMPANION_REMOTE_ROADMAP.md) defines the supplied remote design as a built-in role in both native apps, with host-address browser access for guests without KANTA. Pairing and host authorization are mandatory; both interfaces project the existing host/source owners and never create a queue. Native iOS hosting, browser transport/trust bootstrap and expanded controls remain planned. The reference is preserved in docs/design-references/companion-remote-reference.jpeg. The owner moved this implementation into PR #51 on October 18. The initial planning-only status is superseded by the candidate described below.
 
-## Compact persistent Stage workspace — 2026-10-26
-
-The embedded iOS Host now follows a persistent-workspace layout: one visible Stage surface, one compact player strip, and contextual toolbar actions. The Stage and player remain in the Host tree while Search and Queue use the existing gate-owned accessory presenter; More continues to open the existing navigation menu, while the Settings/CONTROL action retains the existing Host controls sheet. Narrow layouts move Search, Camera, Expand, and More to a bottom action rail, while wider layouts keep them in the header. These are projections of the existing `HostViewModel` and controller; no playback clock, reservation queue, or duplicate player state is introduced.
-
-The workspace intentionally retains the established product contract: no Previous button or playback progress/scrub bar on the main player. The visual reference's transport strip is adapted to KANTA's approved Play/Pause + Next controls. Stage Visuals, Remote, Settings, and iCloud remain in the existing Host accessory flows until each receives its own reviewed implementation; do not label a placeholder as a working control. Exact-head reconstruction and iPhone/iPad walkthroughs are required before acceptance.
-
 ## iOS app navigation, Queue projection, and online-player retirement
 
 The app-level `KantaTabBar` is presentation-only: it emits a destination and owns no navigation or playback state. `RootView` owns selected-tab and route presentation state, and routes Library, Queue, and More through the existing `KantaPresentationGate`. The bottom bar uses `.safeAreaInset`, not an overlay, so it does not cover Host controls or become a competing interaction owner.
@@ -355,6 +349,14 @@ The six More destinations (Song Library, KANTA Songbook, Settings, Companion Rem
 `tools/capture-ios-runtime.py` must require every named case, and `tools/check-ios-presentation-contract.py` guards the relationship between the test methods and the runner manifest. The visual workflow uses independent iPhone and iPad jobs, each with its own compile/run/evidence result. Stale runs on the same branch may be cancelled; sibling device jobs within a run remain independent. These changes partition test work only and do not change production navigation or presentation ownership. Release acceptance still requires every case to pass on both devices on one exact candidate SHA.
 
 
+## iOS source-target completeness gate — October 27, 2026
+
+Every Swift file under `apps/ios/Sources` is part of the generated application target unless the project configuration explicitly excludes it. A file is not a harmless design sketch merely because no screen instantiates it: unresolved types, modifiers, property-wrapper requirements, or lifecycle contracts in that directory can break the entire simulator build and device archive.
+
+A workspace redesign must therefore be implemented at the real composition boundary before its new view is added to the app target. All referenced views, presentation models, modifiers, and enums must exist and compile; the integrated view must preserve the current single playback owner and the existing Host/presentation coordinator. Do not land an unintegrated scaffold or add placeholder types simply to silence compilation. If a planned workspace is not ready, keep it out of the compiled source target and document it as planned.
+
+The October 27 regression in `KantaWorkspace.swift` violated this gate: the file was not instantiated by `HostView` and referenced undefined workspace types/modifiers. PR #98 removes that unused scaffold while the complete compact workspace remains a separate, unaccepted feature candidate. See `docs/CI_FAILURE_REPAIR_LEDGER.md` for the failing run IDs, compiler diagnostics, repair commit, and pending smoke/iPhone acceptance.
+
 ## KANTA Host branding and edge-to-edge player — 2026-10-26
 
 The iOS Host's public-facing name is **KANTA Karaoke**. The visible KANTA brand mark appears in the Host greeting and player header; the navigation title, fullscreen header, external-stage standby copy, Bonjour service display name, and user-facing legacy-playback errors use KANTA branding. Internal Swift module and target identifiers such as `GeloKaraokeCore` remain unchanged for compatibility.
@@ -363,3 +365,8 @@ The embedded stage/player intentionally bleeds to the device's horizontal edges 
 ## Compact workspace accessibility identity invariant — 2026-10-27
 
 The persistent transport row is interactive, so its parent `HStack` must not carry an accessibility identifier. On the compact-workspace candidate, the parent identifier `stage.persistentPlayer` was propagated to its descendants. The captured iPhone hierarchy shows the Play/Pause, Next and Queue buttons carrying that parent identifier instead of `stage.playPause`, `stage.next` and `stage.queue`, hiding the controls' own stable identifiers from XCTest and assistive-technology queries. Keep the visual row ungrouped and put identifiers on each actionable child. The toolbar action that opens Host controls must be labelled **More controls**, not **Settings**, because Settings is also a real navigation destination. The presentation-contract guard protects both rules. The separate Search/keypad presentation failure remains unaccepted until runtime evidence proves its cause and the exact candidate passes both device walkthroughs.
+
+
+## PR branch freshness and exact-SHA acceptance — 2026-10-27
+
+A pull request is not eligible for acceptance while GitHub reports a dirty/unmergeable state or its latest head has no validation runs. First reconcile the branch with current main while preserving candidate-only implementation and documentation. Then require reconstruction, focused iOS smoke, unsigned archive, and independent iPhone/iPad walkthrough results for the same resulting code SHA. A prior green run on an older head is historical evidence only; never infer validation from a commit that has no attached run or from a branch that cannot merge cleanly.
