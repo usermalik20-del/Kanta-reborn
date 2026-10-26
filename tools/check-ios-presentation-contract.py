@@ -142,6 +142,26 @@ def verify():
             '.accessibilityIdentifier("stage.controls")' in embedded_player
             and 'onControls()' in embedded_player
         ),
+        'KANTA Host branding and logo are visible': (
+            '.navigationTitle("KANTA Karaoke")' in host
+            and 'Text("KANTA KARAOKE")' in host
+            and 'KantaBrandMark(size: 28)' in host
+            and 'Text("KANTA")' in stage
+            and 'KantaBrandMark(size: 30)' in stage
+            and 'Text("KANTA Karaoke")' in stage
+        ),
+        'embedded player is edge-to-edge and has no decorative border': (
+            '.padding(.zero)' in embedded_player
+            and '.overlay {' not in embedded_player
+            and '.stroke(KantaColors.hairline' not in embedded_player
+            and '.accessibilityIdentifier("stage.persistentSurface")' in embedded_player
+            and '.accessibilityIdentifier("stage.persistentPlayer")' in embedded_player
+        ),
+        'host branding uses KANTA Karaoke for network and playback errors': (
+            'displayName: String = "KANTA Karaoke"' in (APP / 'Infrastructure/LocalNetworkControl/BonjourHostAdvertiser.swift').read_text()
+            and 'KANTA Karaoke could not create a temporary playback file.' in (APP / 'Infrastructure/LegacyCompatibility/ShubBlobPayloadResolver.swift').read_text()
+            and 'Open KANTA Karaoke on the connected device.' in (APP / 'Features/Host/KantaExternalStageScene.swift').read_text()
+        ),
         'compact workspace preserves approved transport controls': (
             'private var playButton: some View' in stage
             and 'private var nextButton: some View' in stage
