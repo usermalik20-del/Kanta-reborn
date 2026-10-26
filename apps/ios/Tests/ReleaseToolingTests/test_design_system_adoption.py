@@ -131,6 +131,8 @@ class CompactWorkspaceContractTests(unittest.TestCase):
         self.assertIn("externalStage.isPresenting", host)
         self.assertIn("onDisplay: {", host)
         self.assertIn('stageButton("Display", icon: "display", action: onDisplay)', player)
+        self.assertIn('stage.display.popover', host)
+        self.assertIn('stage.display.done', host)
 
 
 class TransportSingleSourceTests(unittest.TestCase):
