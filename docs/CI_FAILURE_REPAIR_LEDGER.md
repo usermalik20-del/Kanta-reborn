@@ -543,3 +543,18 @@ The original crash remains documented at [run #40243129249](https://github.com/u
 The failure did **not** reproduce on the synchronized PR candidate: Android reconstruction job #121354013913 passed in [run #40254725851](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725851). Post-merge Android reconstruction also passed in [run #40258066829](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066829), including build/lint/domain regression, real Chrome, browser interoperability and emulator runtime checks.
 
 **Status:** `non-reproduced; root cause unconfirmed`, not a proven JVM fix. If it recurs, retain `apps/android/hs_err_pid*.log` and inspect the fatal-error header, signal, problematic frame and resource state before changing heap settings or application code.
+
+
+## PR #90 homepage navigation regression — repair candidate (2026-10-26)
+
+**Regression:** PR [#90 — Premium UI/UX redesign](https://github.com/usermalik20-del/Kanta-reborn/pull/90), merged as [`af2d2f1`](https://github.com/usermalik20-del/Kanta-reborn/commit/af2d2f1a21ecdee7acb9857d013c55f0025a4b27), replaced the homepage's shared six-route primary navigation with a partial set containing in-page anchors, legacy `.html` links, and a duplicated `#downloads` destination. This violated the already-documented public-site contract: every public page must expose the same six canonical primary destinations.
+
+**Failure evidence:**
+- Website validation [run #40276300823](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40276300823) failed in `tools/verify-website.py` at `validate_navigation_contract`, with observed links `['#features', 'guide.html', 'features.html', '#downloads', '#downloads']`.
+- Vercel deploy workflow [run #40276301038](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40276301038) failed its pre-deployment validation for the same assertion. Its deploy job was skipped; no production deployment was attempted from this invalid candidate.
+
+**Repair candidate:** [commit `69f27e3`](https://github.com/usermalik20-del/Kanta-reborn/commit/69f27e30272b5c5b9ec08f95d5ec7da40e434db9) restores the six unique canonical routes `/ios-download`, `/android`, `/guide`, `/features`, `/songbook`, and `/support` while preserving the redesign and its primary CTA. The existing validator and security/navigation tests remain enabled; no acceptance assertions were relaxed.
+
+**Preflight:** source-level check confirmed exactly six unique primary-navigation hrefs and exact set parity with the shared contract. This is not a substitute for the hosted website/security tests. Exact-head validation and the production deployment remain pending on the repair branch.
+
+**Next action:** require website validation and its security/deployment contract tests to pass on the PR head. Only then allow the existing gated Vercel deployment workflow to deploy, and verify the public homepage and canonical routes after deployment.
