@@ -138,6 +138,10 @@ def verify():
             and 'if compact {' in embedded_player
             and 'stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)' in embedded_player
         ),
+        'compact workspace retains the Host controls entry': (
+            '.accessibilityIdentifier("stage.controls")' in embedded_player
+            and 'onControls()' in embedded_player
+        ),
         'compact workspace preserves approved transport controls': (
             'private var playButton: some View' in stage
             and 'private var nextButton: some View' in stage
