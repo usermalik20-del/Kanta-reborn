@@ -2,7 +2,7 @@
 
 Date: 2026-10-26. Destination: kanta-gelo/Kanta-reborn (canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn)).
 
-## Current checkpoint — 2026-10-26, 14:15 PHT
+## Current checkpoint — 2026-10-26 (PR #91 repair in progress)
 
 The current code-bearing main commit is [`af2d2f1`](https://github.com/usermalik20-del/Kanta-reborn/commit/af2d2f1a21ecdee7acb9857d013c55f0025a4b27), which merged PR [#90 — Premium UI/UX redesign](https://github.com/usermalik20-del/Kanta-reborn/pull/90). The PR changed only `apps/web/index.html`; the native source remains the accepted Stage v2 baseline from [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9).
 
@@ -10,8 +10,9 @@ The current code-bearing main commit is [`af2d2f1`](https://github.com/usermalik
 
 **New website regression — release deployment blocked:** 
 - Website validation [run #40276300823](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40276300823) failed in `tools/verify-website.py` because the homepage primary navigation no longer matched the shared six-route contract. The observed links were `#features`, `guide.html`, `features.html`, `#downloads`, and a duplicate `#downloads`.
-- Vercel deploy workflow [run #40276301038](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40276301038) failed the same pre-deployment validation; its deploy job was skipped. No production deployment was attempted from the invalid candidate.
-- Repair branch [`fix/homepage-primary-nav-20261026`](https://github.com/usermalik20-del/Kanta-reborn/tree/fix/homepage-primary-nav-20261026) contains [commit `69f27e3`](https://github.com/usermalik20-del/Kanta-reborn/commit/69f27e30272b5c5b9ec08f95d5ec7da40e434db9), restoring six unique canonical destinations: `/ios-download`, `/android`, `/guide`, `/features`, `/songbook`, and `/support`. A source-level preflight confirmed the exact route set. Hosted website/security validation is pending; do not treat the preflight as a green CI run.
+- Vercel deploy workflow [main run #40276301038](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40276301038) failed the same pre-deployment validation; its deploy job was skipped. No production deployment was attempted from the invalid candidate.
+- After the navigation correction, PR validation [run #40279129599](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40279129599) exposed a second removed contract: the homepage no longer loaded same-origin `/analytics.js`. PR Vercel validation [run #40279128575](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40279128575) failed on that same assertion, and its deploy job was skipped.
+- Repair branch [`fix/homepage-primary-nav-20261026`](https://github.com/usermalik20-del/Kanta-reborn/tree/fix/homepage-primary-nav-20261026) now includes [navigation fix `69f27e3`](https://github.com/usermalik20-del/Kanta-reborn/commit/69f27e30272b5c5b9ec08f95d5ec7da40e434db9) and [analytics fix `4c72824`](https://github.com/usermalik20-del/Kanta-reborn/commit/4c72824c18ae28bfcc7c52a4c5d30c627cb346a7). The homepage now has the six unique canonical destinations `/ios-download`, `/android`, `/guide`, `/features`, `/songbook`, and `/support`, plus exactly one deferred same-origin `/analytics.js` script. Source-level preflight confirms both contracts; hosted website/security validation is pending on the updated PR head, and preflight is not a green CI result.
 
 **Latest native device acceptance:** full iPhone/iPad walkthrough [run #40258066852](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066852) passed on the unchanged native source at `abda7c2`; the [iPhone job](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066852/job/121364125946) and [iPad job](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066852/job/121364126161) both passed and uploaded diagnostics. PR #90 changed no native source, so those device results remain applicable to the current native code. No new device walkthrough was triggered by the website-only change.
 
