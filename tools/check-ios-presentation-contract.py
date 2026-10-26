@@ -126,12 +126,23 @@ def verify():
         'real playback walkthrough': 'func testStarterPlaybackAndControls()' in test,
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,
-        'Stage More accessibility identifier targets the embedded navigation button': (
-            'Button(action: onMore)' in embedded_player
-            and '.accessibilityLabel("More")' in embedded_player
+        'compact workspace keeps stable More identity and existing Host ownership': (
+            'stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }' in embedded_player
             and '.accessibilityIdentifier("stage.more")' in embedded_player
             and '.accessibilityIdentifier("stage.controls.more")' in controls_more
             and 'app.buttons["stage.more"]' in test
+        ),
+        'compact workspace keeps Stage and player persistently visible': (
+            '.accessibilityIdentifier("stage.persistentSurface")' in embedded_player
+            and '.accessibilityIdentifier("stage.persistentPlayer")' in embedded_player
+            and 'if compact {' in embedded_player
+            and 'stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)' in embedded_player
+        ),
+        'compact workspace preserves approved transport controls': (
+            'private var playButton: some View' in stage
+            and 'private var nextButton: some View' in stage
+            and 'Previous' not in embedded_player
+            and 'ProgressView' not in embedded_player
         ),
         'library dismissal leaves session save opt-in': (
             'onSaveSession: {' in host
