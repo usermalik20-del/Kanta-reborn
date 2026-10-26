@@ -130,15 +130,15 @@ def verify():
         'stage search accessibility identifier': 'stage.search' in stage,
         'workspace toolbar preserves independent child accessibility identities': (
             '.accessibilityIdentifier("stage.workspaceToolbar")' not in workspace_toolbar
-            and '.accessibilityIdentifier("stage.search")' in stage
+            and '.accessibilityIdentifier(embedded ? "stage.search" : "stage.search.fullscreen")' in stage
             and '.accessibilityIdentifier("stage.camera")' in stage
             and '.accessibilityIdentifier("stage.display")' in workspace_toolbar
             and '.accessibilityIdentifier("stage.more")' in workspace_toolbar
         ),
         'display popover identity stays on its noninteractive title': (
-            'Label("Stage Display", systemImage: "display")\\n                    .font(.headline)\\n                    .accessibilityIdentifier("stage.display.popover")' in display_popover
+            'Label("Stage Display", systemImage: "display")\n                    .font(.headline)\n                    .accessibilityIdentifier("stage.display.popover")' in display_popover
             and '.accessibilityIdentifier("stage.display.done")' in display_popover
-            and '.background(KantaColors.surface)\\n        .accessibilityIdentifier("stage.display.popover")' not in display_popover
+            and '.background(KantaColors.surface)\n        .accessibilityIdentifier("stage.display.popover")' not in display_popover
         ),
         'Stage More accessibility identifier targets the embedded navigation button': (
             (
