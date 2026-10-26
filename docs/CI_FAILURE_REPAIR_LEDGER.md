@@ -584,3 +584,23 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 **Repair candidate:** branch [`fix/verified-download-provenance-20261026`](https://github.com/usermalik20-del/Kanta-reborn/tree/fix/verified-download-provenance-20261026) updates `apps/web/downloads.json`, the iOS/Android download sections and support retention copy. The iOS page links the verified successful walkthrough and distinguishes the ZIP digest from the inner IPA checksum. The Android page describes the actual artifact contents and labels the ZIP digest accurately. `tools/verify-website.py` and `tools/tests/test_website_security_contract.py` now enforce artifact URL/source/digest parity, exact walkthrough linkage and absence of the stale failed-walkthrough claim. `docs/ARCHITECTURE.md` records this public download-provenance contract.
 
 **Validation status:** source changes are prepared on the repair branch; hosted website/security, Vercel contract and reconstruction validation must pass on the exact branch head before merge. The current main deployment is healthy; this is a content/provenance defect in the live download pages, not a deployment failure. Do not claim a signed or published release.
+
+
+## Website — download manifest lagged accepted native baseline (2026-10-26)
+
+**Fingerprint:** `apps/web/downloads.json` platform source SHA remains `abda7c2` while the latest accepted native-source merge is `0867134`; platform-page artifact links and checksums point to the older build.
+
+**Observed:** merge [`0867134`](https://github.com/usermalik20-del/Kanta-reborn/commit/086713405002f75ab5c7fc49cd815cf2a3469041) removed diagnostic tap/window probes from `RootView.swift` and `KantaMainPlayerView.swift` and replaced the probe-specific source assertion. Exact-source reconstruction [run #40320555135](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320555135), unsigned iOS artifact [run #40320554747](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320554747), and iPhone/iPad walkthrough [run #40320554824](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320554824) all passed on `086713405002f75ab5c7fc49cd815cf2a3469041`. The current main commit [`865ed5f`](https://github.com/usermalik20-del/Kanta-reborn/commit/865ed5fdfbd3abacbba18b3014d0b1d5fb0cd062) changes only website HTML/CSS.
+
+**Cause:** the website manifest was refreshed after PR #92, but a later native-source merge did not advance the manifest or platform-page links. Existing tests verified that the pages matched the manifest internally, not that the manifest matched the current accepted native baseline.
+
+**Repair candidate:** the current PR updates `downloads.json`, both platform pages, the verified-download ledger and reconstruction checkpoint to Android artifact [#12648928676](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320555135/artifacts/12648928676) (ZIP SHA-256 `928cbc8603b918a81257ef54327bf90238d27cab791ecb02ace3dea9eca4b2dc`) and unsigned iOS artifact [#12649740030](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320554747/artifacts/12649740030) (ZIP SHA-256 `6a53aa37227ebd0561d064a18918aeeb6da9ffce8c14818135cb6e21144a734b`). It adds a fail-closed source/run/artifact/digest pin to `test_download_manifest_matches_current_accepted_native_baseline`.
+
+**Regression coverage:** website security-contract tests now fail if the public manifest is left on the prior accepted source or if either platform's exact run, artifact, digest or the iOS walkthrough identity is not advanced with the accepted baseline.
+
+**Validation:** `candidate`; hosted validation on the repair PR is pending. The exact-source native runs above are already green, but they do not validate the new website metadata or tests.
+
+**Recurrence rule:** after any native-source merge, resolve successful reconstruction, unsigned iOS artifact and full iPhone/iPad walkthrough runs for one identical main SHA. Update the manifest, pages and pinned contract together only after all three pass. Do not update the website to a merely compiled or unsigned-only candidate.
+
+**Status:** candidate.
+

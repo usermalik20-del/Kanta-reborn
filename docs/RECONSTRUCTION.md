@@ -2,7 +2,23 @@
 
 Date: 2026-10-26. Destination: kanta-gelo/Kanta-reborn (canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn)).
 
-## Current checkpoint — 2026-10-26 (main `fd799b4`; verified-download provenance repair in progress)
+## Current checkpoint — 2026-10-26 (main `865ed5f`; accepted native source `0867134`)
+
+Main is at [`865ed5f`](https://github.com/usermalik20-del/Kanta-reborn/commit/865ed5fdfbd3abacbba18b3014d0b1d5fb0cd062), a website-only mobile-responsiveness and verifier-contract change. The most recent native-source change is merge commit [`0867134`](https://github.com/usermalik20-del/Kanta-reborn/commit/086713405002f75ab5c7fc49cd815cf2a3469041), which removes temporary iOS diagnostic tap/window probes and updates the source guard. That merge changed `apps/ios/Sources/App/RootView.swift`, `apps/ios/Sources/Features/Host/KantaMainPlayerView.swift`, and `tools/check-ios-presentation-contract.py`; the older public download manifest still referenced `abda7c2`, so it no longer described the accepted native build.
+
+**Exact-source acceptance on `086713405002f75ab5c7fc49cd815cf2a3469041`:**
+- Reconstruction [run #40320555135](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320555135) passed Android and iOS.
+- Unsigned iOS artifact [run #40320554747](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320554747) passed and produced artifact [#12649740030](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320554747/artifacts/12649740030), 25,130,708 bytes, ZIP SHA-256 `6a53aa37227ebd0561d064a18918aeeb6da9ffce8c14818135cb6e21144a734b`.
+- Full iPhone/iPad walkthrough [run #40320554824](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320554824) passed both devices and uploaded runtime evidence/diagnostics.
+- Android artifact [#12648928676](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40320555135/artifacts/12648928676) is 28,698,941 bytes with ZIP SHA-256 `928cbc8603b918a81257ef54327bf90238d27cab791ecb02ace3dea9eca4b2dc`.
+- Current-main website validation [run #40329045569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40329045569) and Vercel deployment [run #40329045595](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40329045595) passed on `865ed5f`.
+- Current-main reconstruction [run #40329045609](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40329045609) was still running at checkpoint time; both native jobs were in progress. The latest accepted native source is nevertheless `086713`, whose exact-source checks above are green.
+
+**Provenance repair:** the candidate updates `apps/web/downloads.json`, both platform pages, and this checkpoint to the exact accepted `086713` artifacts. The website security-contract suite now pins the current source SHA, artifact IDs/digests and matching iPhone/iPad walkthrough so future native changes cannot silently leave the public pages on older builds. Validation on the repair PR is pending.
+
+**Release and governance:** raw Actions artifacts require GitHub sign-in and expire on November 2, 2026. They remain preview/testing builds. The GitHub [Releases page](https://github.com/usermalik20-del/Kanta-reborn/releases) is empty; no signed production IPA or published release is verified. Physical-device audio/microphone/camera acceptance and repository branch protection remain open.
+
+## Historical checkpoint — 2026-10-26 (main `fd799b4`; superseded by the current checkpoint above)
 
 The latest main commit is [`fd799b4`](https://github.com/usermalik20-del/Kanta-reborn/commit/fd799b46fab24425d8a18cfa008d9cd9651db47a), which merged PR [#91 — restore canonical homepage navigation and analytics](https://github.com/usermalik20-del/Kanta-reborn/pull/91). The native application baseline remains [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9); commits after it changed website and engineering records, not native app source.
 
