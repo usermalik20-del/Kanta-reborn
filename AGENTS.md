@@ -1,5 +1,13 @@
 # Astra repository operating standard
 
+## 0. Autonomous agent handover and repository stabilization
+
+Before continuing any existing in-flight project or PR, read [`docs/AUTONOMOUS_AGENT_HANDOVER.md`](docs/AUTONOMOUS_AGENT_HANDOVER.md). It contains the latest known handoff context, known validation gaps, PR overlap warnings, and the mandatory stabilization/merge gates. Recheck all GitHub state live; the handover is evidence of context, not a substitute for current workflow results.
+
+When the repository has a compile failure, repeated failed pushes, queued/cancelled/skipped checks, or overlapping PRs touching the same architecture, prioritize recovery and validation over new feature work. Do not stack speculative commits. Fix the first root-cause error, run the appropriate checks against the exact resulting SHA, inspect logs, and record the first green run in `docs/CI_FAILURE_REPAIR_LEDGER.md`. Never treat queued, skipped, cancelled, in-progress, or green-on-another-SHA checks as acceptance. Never weaken tests or required checks merely to obtain green status.
+
+Progress reports must separate verified work, unverified changes, active runs, and blockers. Do not claim autonomous background work unless an actual running automation/agent exists. Do not merge or deploy until repository policy and the required validation gates are satisfied.
+
 ## 1. Scope and instruction precedence
 
 Apply this standard to existing and new code across the native iOS and Android projects.
