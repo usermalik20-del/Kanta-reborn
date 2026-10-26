@@ -111,6 +111,71 @@ nav a[aria-current=page], .site-nav a[aria-current=page] {
 }
 .nav-cta:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
+/* Mobile Navigation */
+.mobile-nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 10px;
+  z-index: 101;
+}
+
+@media(max-width: 768px) {
+
+  .mobile-nav-toggle { display: block; }
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: 80%;
+  max-width: 300px;
+  height: 100vh;
+  background: #0d1026;
+  z-index: 200;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 80px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+}
+.nav-drawer.open { right: 0; }
+.nav-drawer a {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #c7d0ea;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.nav-drawer a:hover { color: #fff; }
+.nav-drawer .nav-cta {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+
+
 /* Main content layout */
 main {
   max-width: 1160px;
@@ -484,8 +549,20 @@ footer .fine {
   .mockup-desktop { max-width: 100%; height: 380px; }
   .mockup-phone-float { position: static; margin: 20px auto 0; width: 240px; height: 400px; }
 }
-@media(max-width: 600px) {
-  .feature-grid, .features-grid { grid-template-columns: 1fr; }
+@media(max-width: 768px) {
+  .button, .btn {
+    min-height: 48px;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    justify-content: center;
+  }
+  .actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .actions .button, .actions .btn {
+    width: 100%;
+  }
 }
 
 /* Backwards compatibility for other pages */
@@ -509,3 +586,26 @@ footer .fine {
 .platform-comparison th, .platform-comparison td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.92rem; }
 .platform-comparison th { color: #fff; font-weight: 800; }
 .license-text { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; font-family: monospace; font-size: 0.85rem; overflow-x: auto; color: #a9b7d0; }
+
+/* Mobile Drawer & Responsive Navigation */
+.mobile-nav-toggle { display: none; background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 8px; border-radius: 8px; cursor: pointer; }
+.drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 150; backdrop-filter: blur(4px); }
+.nav-drawer { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 280px; background: #0e1224; border-left: 1px solid rgba(255,255,255,0.1); z-index: 200; padding: 70px 24px 30px; flex-direction: column; gap: 16px; overflow-y: auto; }
+.nav-drawer a { color: #fff; font-size: 1.1rem; font-weight: 600; text-decoration: none; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.nav-drawer.open, .drawer-overlay.open { display: flex !important; }
+
+@media(max-width: 768px) {
+  .site-header {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .site-nav, .nav-links {
+    gap: 12px;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 4px;
+  }
+  .mobile-nav-toggle { display: none !important; }
+}

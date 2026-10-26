@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script defer src="/analytics.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="KANTA Karaoke — a premium karaoke app built from scratch for iPhone, iPad and Android. Sing your own music with timed lyrics, singer queues and personal stages.">
@@ -9,18 +10,31 @@
 <link rel="apple-touch-icon" sizes="180x180" href="kanta-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="kanta-icon.png">
 <link rel="stylesheet" href="style.css">
+<script defer src="/nav.js"></script>
 </head>
 <body id="home">
 
 <a class="skip" href="#content">Skip to content</a>
 
 <header class="site-header">
-  <a class="brand" href="index.html" aria-label="KANTA home">
-    <span class="brand-mark" aria-hidden="true">✦</span>
-    KANTA
+  <a class="brand" href="/" aria-label="KANTA home">
+    <img src="/kanta-brand.png" alt="KANTA" width="32" height="32" loading="eager" decoding="async">
+    <span class="brand-mark">KANTA</span>
   </a>
-  <nav class="nav-links" aria-label="Main navigation">
-    <a class="nav-cta" href="/ios-download">Get KANTA · iPhone / iPad</a>
+  <button class="nav-toggle mobile-nav-toggle" aria-expanded="false" aria-controls="site-drawer" aria-label="Open menu" id="menuToggle">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+  </button>
+  <nav id="site-drawer" class="site-drawer site-nav nav-drawer" aria-label="Main navigation">
+    <button class="close-drawer" id="closeDrawer" aria-label="Close Menu" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem;">✕</button>
+    <a href="/ios-download">iPhone / iPad</a>
+    <a href="/android">Android</a>
+    <a href="/guide">How to Use</a>
+    <a href="/features">Features</a>
+    <a href="/songbook">My Songbook</a>
+    <a href="/support">Help</a>
+  </nav>
+  <nav class="site-nav nav-links" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a>
     <a href="/android">Android</a>
     <a href="/guide">How to Use</a>
     <a href="/features">Features</a>
@@ -28,6 +42,8 @@
     <a href="/support">Help</a>
   </nav>
 </header>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
 
 <main id="content">
 
@@ -42,7 +58,7 @@
           <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8.5M12 22v-8.5M5 12h7M19 12h-7"/></svg>
           Download KANTA
         </a>
-        <a class="button" href="guide.html">Explore Guide →</a>
+        <a class="button" href="/guide">Explore Guide →</a>
       </div>
     </div>
 
@@ -134,8 +150,8 @@
         <h2>Up and running in seconds.</h2>
         <p style="color: #cbd3e8; margin-bottom: 20px;">KANTA ships as native packages for both iOS and Android. No mandatory cloud accounts or subscriptions &mdash; download your testing preview and start singing instantly.</p>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <a class="button primary" href="ios-download.html">iPhone / iPad Guide</a>
-          <a class="button" href="android.html">Android Preview</a>
+          <a class="button primary" href="/ios-download">iPhone / iPad Guide</a>
+          <a class="button" href="/android">Android Preview</a>
         </div>
       </div>
       <div class="stat">
@@ -163,7 +179,7 @@
           <li>Full timed lyrics &amp; queue manager</li>
           <li>Private browser Songbook export</li>
         </ul>
-        <a class="btn primary" href="ios-download.html">View iOS Build →</a>
+        <a class="btn primary" href="/ios-download">View iOS Build →</a>
       </div>
       <div class="download-card">
         <div style="font-size: 2.2rem; margin-bottom: 14px;">🤖</div>
@@ -174,7 +190,7 @@
           <li>Scenic stage presets &amp; camera backgrounds</li>
           <li>Encrypted companion control options</li>
         </ul>
-        <a class="btn primary" href="android.html">View Android Build →</a>
+        <a class="btn primary" href="/android">View Android Build →</a>
       </div>
     </div>
   </section>
@@ -190,25 +206,25 @@
     <div class="col">
       <h4>Platform</h4>
       <ul>
-        <li><a href="ios-download.html">iPhone / iPad</a></li>
-        <li><a href="android.html">Android Preview</a></li>
-        <li><a href="features.html">Feature Matrix</a></li>
+        <li><a href="/ios-download">iPhone / iPad</a></li>
+        <li><a href="/android">Android Preview</a></li>
+        <li><a href="/features">Feature Matrix</a></li>
       </ul>
     </div>
     <div class="col">
       <h4>Resources</h4>
       <ul>
-        <li><a href="guide.html">How to Use</a></li>
-        <li><a href="songbook.html">My Songbook</a></li>
-        <li><a href="support.html">Support &amp; Testing</a></li>
+        <li><a href="/guide">How to Use</a></li>
+        <li><a href="/songbook">My Songbook</a></li>
+        <li><a href="/support">Help</a></li>
       </ul>
     </div>
     <div class="col">
       <h4>Legal &amp; Privacy</h4>
       <ul>
-        <li><a href="privacy.html">Privacy Policy</a></li>
-        <li><a href="legal.html">Music Rights</a></li>
-        <li><a href="licenses.html">Open-Source Licenses</a></li>
+        <li><a href="/privacy">Privacy Policy</a></li>
+        <li><a href="/legal">Music Rights</a></li>
+        <li><a href="/licenses">Open-Source Licenses</a></li>
       </ul>
     </div>
     <div class="fine">
@@ -217,6 +233,5 @@
   </div>
 </footer>
 
-<script defer src="/analytics.js"></script>
 </body>
 </html>
