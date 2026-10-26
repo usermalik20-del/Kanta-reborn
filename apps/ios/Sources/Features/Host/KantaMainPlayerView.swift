@@ -129,7 +129,8 @@ struct KantaMainPlayerView: View {
                         queueButton
                         stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
                             .accessibilityIdentifier("stage.expand")
-                        moreButton
+                        stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
+                            .accessibilityIdentifier("stage.more")
                     }
                 }
                 .padding(.horizontal, compact ? 4 : 8)
@@ -226,7 +227,8 @@ struct KantaMainPlayerView: View {
                         stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
                             .accessibilityIdentifier("stage.expand")
                         Spacer(minLength: 4)
-                        moreButton
+                        stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
+                            .accessibilityIdentifier("stage.more")
                     }
                     .padding(.horizontal, 6)
                     .padding(.top, 2)
@@ -258,7 +260,7 @@ struct KantaMainPlayerView: View {
             .padding(compact ? 10 : 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .foregroundStyle(.white)
-            .background(KantaColors.page.ignoresSafeArea())
+            .background(GeloVisualStyle.pageBackground.ignoresSafeArea())
         }
     }
 
