@@ -353,3 +353,10 @@ The stage scene and camera preview are decorative surfaces, not interaction owne
 The six More destinations (Song Library, KANTA Songbook, Settings, Companion Remote, iCloud Save, and Legal & Privacy) are separate XCTest cases. Each case launches once, opens one destination, verifies its expected navigation title, captures evidence, dismisses through `navigation.done`, and verifies that Stage More returns. This keeps each destination within XCTest's per-case execution budget without removing navigation coverage or increasing the global timeout.
 
 `tools/capture-ios-runtime.py` must require every named case, and `tools/check-ios-presentation-contract.py` guards the relationship between the test methods and the runner manifest. The visual workflow uses independent iPhone and iPad jobs, each with its own compile/run/evidence result. Stale runs on the same branch may be cancelled; sibling device jobs within a run remain independent. These changes partition test work only and do not change production navigation or presentation ownership. Release acceptance still requires every case to pass on both devices on one exact candidate SHA.
+
+
+## KANTA Host branding and edge-to-edge player — 2026-10-26
+
+The iOS Host's public-facing name is **KANTA Karaoke**. The visible KANTA brand mark appears in the Host greeting and player header; the navigation title, fullscreen header, external-stage standby copy, Bonjour service display name, and user-facing legacy-playback errors use KANTA branding. Internal Swift module and target identifiers such as `GeloKaraokeCore` remain unchanged for compatibility.
+
+The embedded stage/player intentionally bleeds to the device's horizontal edges on compact devices and no longer draws a decorative hairline border around either the stage surface or persistent player strip. The existing fullscreen stage background already ignores safe areas. Keep the stage background non-interactive and preserve existing presentation/controller ownership. Static source guards cover the visible logo/title, network label, playback error wording, and borderless stage/player composition; simulator walkthroughs remain the acceptance gate.
