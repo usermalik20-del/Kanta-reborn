@@ -152,9 +152,11 @@ struct KantaMainPlayerView: View {
                     )
                     .allowsHitTesting(false)
                     VStack {
-                        HStack {
-                            stageLiveChip
-                            Spacer()
+                        if model.snapshot.transport == .playing {
+                            HStack {
+                                stageLiveChip
+                                Spacer()
+                            }
                         }
                         Spacer(minLength: 0)
                         Group {
