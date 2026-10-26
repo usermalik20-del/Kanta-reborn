@@ -1239,3 +1239,8 @@ The embedded Host is a single persistent workspace rather than a destination scr
 
 Keep the stage as the highest-priority visual surface and keep its background non-interactive so it cannot intercept control taps. Preserve the approved main-player transport invariant: one Play/Pause toggle plus Next, with no Previous or progress/scrub bar. Stage Visuals, Remote, Settings, and iCloud must continue to use their existing owners until implemented as separately validated accessories.
 
+
+
+## KANTA Host branding and borderless stage — 2026-10-26
+
+Visible Host branding is KANTA Karaoke, with the KANTA brand mark rendered on the Host greeting and the player header. External-stage standby and Bonjour discovery use the same product name. The embedded stage/player is full-bleed horizontally on compact devices, with no decorative border on the stage or persistent player. Preserve the existing single HostViewModel, presentation gate and LocalKaraokeController owners; module names are not product-facing copy and remain unchanged.
