@@ -8,13 +8,14 @@ struct KantaMainPlayerView: View {
     @ObservedObject var model: HostViewModel
     @ObservedObject var camera: KantaCameraBackground
     @ObservedObject var presentationGate: KantaPresentationGate
+    @ObservedObject private var externalStage = KantaExternalStageCoordinator.shared
+    @State private var showingDisplayStatus = false
     let backgroundsEnabled: Bool
     let selectedPreset: KantaBuiltInVisualPreset
     @Binding var singerName: String
     var microphoneBusy = false
     var onControls: () -> Void = {}
     var onMore: () -> Void = {}
-    var onDisplay: () -> Void = {}
     var onSaveSession: () -> Void = {}
     var embedded = false
     var onExpand: () -> Void = {}
@@ -237,8 +238,14 @@ struct KantaMainPlayerView: View {
             Spacer(minLength: 4)
             cameraButton
             Spacer(minLength: 4)
-            stageButton("Display", icon: "display", action: onDisplay)
-                .accessibilityIdentifier("stage.display")
+            stageButton("Display", icon: "display") {
+                showingDisplayStatus = true
+            }
+            .accessibilityIdentifier("stage.display")
+            .popover(isPresented: $showingDisplayStatus, arrowEdge: .bottom) {
+                displayStatusPopover
+                    .presentationCompactAdaptation(.sheet)
+            }
             Spacer(minLength: 4)
             stageButton("More", icon: "ellipsis", action: onMore)
                 .accessibilityIdentifier("stage.more")
@@ -248,6 +255,33 @@ struct KantaMainPlayerView: View {
         .background(.ultraThinMaterial, in: Capsule())
         .overlay(Capsule().stroke(KantaColors.hairline, lineWidth: 1))
         .accessibilityIdentifier("stage.workspaceToolbar")
+    }
+
+    private var displayStatusPopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Stage Display", systemImage: "display")
+                    .font(.headline)
+                Spacer()
+                Button("Done") { showingDisplayStatus = false }
+                    .labelStyle(.titleOnly)
+                    .accessibilityIdentifier("stage.display.done")
+            }
+            Text(externalStage.isPresenting
+                 ? "Extended stage is active."
+                 : externalStage.isConnected
+                    ? "A display is connected. Open the Host to start the extended stage."
+                    : "No extended display connected.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text("Connect a compatible HDMI/USB-C or AirPlay display. Mirroring may show this device’s controls.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(18)
+        .frame(minWidth: 260, maxWidth: 320)
+        .background(KantaColors.surface)
+        .accessibilityIdentifier("stage.display.popover")
     }
 
     @ViewBuilder private var stageBackground: some View {
