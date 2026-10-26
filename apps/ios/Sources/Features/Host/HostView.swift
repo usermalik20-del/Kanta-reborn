@@ -354,6 +354,7 @@ struct HostView: View {
                 activeEmbeddedStageSheet = stageSheet
             }
         )
+    }
 
     private func openFullscreenPlayer() {
         guard activeHostSheet != nil else {
