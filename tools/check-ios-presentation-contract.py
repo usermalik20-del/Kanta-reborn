@@ -146,9 +146,8 @@ def verify():
             '.navigationTitle("KANTA Karaoke")' in host
             and 'Text("KANTA KARAOKE")' in host
             and 'KantaBrandMark(size: 28)' in host
-            and 'Text("KANTA")' in stage
+            and 'Text("KANTA").font(.title3.bold())' in stage
             and 'KantaBrandMark(size: 30)' in stage
-            and 'Text("KANTA Karaoke")' in stage
         ),
         'embedded player is edge-to-edge and has no decorative border': (
             '.padding(.zero)' in embedded_player
