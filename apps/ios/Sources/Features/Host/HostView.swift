@@ -71,7 +71,6 @@ struct HostView: View {
         )
     }
 
-    @State private var showingDisplayStatus = false
 
     var body: some View {
         ZStack {
@@ -353,43 +352,8 @@ struct HostView: View {
             onExpand: openFullscreenPlayer,
             setEmbeddedStageSheet: { stageSheet in
                 activeEmbeddedStageSheet = stageSheet
-            },
-            onDisplay: {
-                showingDisplayStatus = true
             }
         )
-        .popover(isPresented: $showingDisplayStatus, arrowEdge: .bottom) {
-            displayStatusPopover
-                .presentationCompactAdaptation(.sheet)
-        }
-    }
-
-    private var displayStatusPopover: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Stage Display", systemImage: "display")
-                    .font(.headline)
-                Spacer()
-                Button("Done") { showingDisplayStatus = false }
-                    .labelStyle(.titleOnly)
-                    .accessibilityIdentifier("stage.display.done")
-            }
-            Text(externalStage.isPresenting
-                 ? "Extended stage is active."
-                 : externalStage.isConnected
-                    ? "A display is connected. Open the Host to start the extended stage."
-                    : "No extended display connected.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text("Connect a compatible HDMI/USB-C or AirPlay display. Mirroring may show this device’s controls.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(18)
-        .frame(minWidth: 260, maxWidth: 320)
-        .background(KantaColors.surface)
-        .accessibilityIdentifier("stage.display.popover")
-    }
 
     private func openFullscreenPlayer() {
         guard activeHostSheet != nil else {
