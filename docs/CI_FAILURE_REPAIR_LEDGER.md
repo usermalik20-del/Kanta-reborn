@@ -621,3 +621,16 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 **Validation:** Repair is **candidate / pending**. New reconstruction run [#40349679009](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349679009), focused smoke [#40349679083](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349679083), unsigned artifact build [#40349678963](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349678963), and iPhone/iPad walkthrough [#40349678973](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349678973) were queued for the newer candidate at the time of this entry. No green result is implied.
 
 **Recurrence rule:** When moving a stable UI action, preserve its accessibility identity and update the source-contract guard to validate the intended new owner/location. Do not weaken the assertion that More invokes the actual navigation callback, and do not treat static guard success as simulator acceptance.
+
+
+## iOS — Host embedded-stage scope compile failure (2026-10-26)
+
+**Fingerprint:** `apps/ios/Sources/Features/Host/HostView.swift`; `private can only be used in a non-local scope`; `expected '}' in struct`.
+
+**Observed:** Focused simulator smoke [#40350510737](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40350510737) and unsigned archive [#40350510930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40350510930) failed during compilation. The compiler reported the first structural error near the `embeddedStage` computed property, with cascading errors for later private members.
+
+**Root cause:** During the removal of the persistent utility cards, the `embeddedStage` property lost its closing brace after the `KantaMainPlayerView` initializer. Subsequent methods were parsed as local declarations, generating many secondary errors.
+
+**Fix:** Restored the property-closing brace immediately after the player initializer on candidate commit `ea2d44a193154e77eda79ab7cc7b674848fa5fdb`. No behavior or presentation contract was weakened.
+
+**Validation:** The two reported failures are from the preceding commit and do not test the brace fix. A new candidate-head CI run must compile the app and execute focused smoke, unsigned archive, and the iPhone/iPad walkthrough before this repair is considered verified.
