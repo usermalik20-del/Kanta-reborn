@@ -127,6 +127,8 @@ struct KantaMainPlayerView: View {
                         searchButton
                         cameraButton
                         queueButton
+                        stageButton("Settings", icon: "slider.horizontal.3") { camera.stop(); onControls() }
+                            .accessibilityIdentifier("stage.controls")
                         stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
                             .accessibilityIdentifier("stage.expand")
                         stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
@@ -223,6 +225,9 @@ struct KantaMainPlayerView: View {
                         searchButton
                         Spacer(minLength: 4)
                         cameraButton
+                        Spacer(minLength: 4)
+                        stageButton("Settings", icon: "slider.horizontal.3") { camera.stop(); onControls() }
+                            .accessibilityIdentifier("stage.controls")
                         Spacer(minLength: 4)
                         stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
                             .accessibilityIdentifier("stage.expand")
