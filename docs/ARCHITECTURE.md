@@ -29,6 +29,12 @@ Companion commands require explicit pairing, authorization, bounded replay prote
 
 The owner-approved [Companion Remote roadmap](COMPANION_REMOTE_ROADMAP.md) defines the supplied remote design as a built-in role in both native apps, with host-address browser access for guests without KANTA. Pairing and host authorization are mandatory; both interfaces project the existing host/source owners and never create a queue. Native iOS hosting, browser transport/trust bootstrap and expanded controls remain planned. The reference is preserved in docs/design-references/companion-remote-reference.jpeg. The owner moved this implementation into PR #51 on October 18. The initial planning-only status is superseded by the candidate described below.
 
+## Compact persistent Stage workspace — 2026-10-26
+
+The embedded iOS Host now follows a persistent-workspace layout: one visible Stage surface, one compact player strip, and contextual toolbar actions. The Stage and player remain in the Host tree while Search and Queue use the existing gate-owned accessory presenter; More continues to open the existing Host controls. Narrow layouts move Search, Camera, Expand, and More to a bottom action rail, while wider layouts keep them in the header. These are projections of the existing `HostViewModel` and controller; no playback clock, reservation queue, or duplicate player state is introduced.
+
+The workspace intentionally retains the established product contract: no Previous button or playback progress/scrub bar on the main player. The visual reference's transport strip is adapted to KANTA's approved Play/Pause + Next controls. Stage Visuals, Remote, Settings, and iCloud remain in the existing Host accessory flows until each receives its own reviewed implementation; do not label a placeholder as a working control. Exact-head reconstruction and iPhone/iPad walkthroughs are required before acceptance.
+
 ## iOS app navigation, Queue projection, and online-player retirement
 
 The app-level `KantaTabBar` is presentation-only: it emits a destination and owns no navigation or playback state. `RootView` owns selected-tab and route presentation state, and routes Library, Queue, and More through the existing `KantaPresentationGate`. The bottom bar uses `.safeAreaInset`, not an overlay, so it does not cover Host controls or become a competing interaction owner.
