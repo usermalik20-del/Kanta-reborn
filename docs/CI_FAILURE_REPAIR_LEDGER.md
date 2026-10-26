@@ -558,3 +558,12 @@ The failure did **not** reproduce on the synchronized PR candidate: Android reco
 **Preflight:** source-level check confirmed exactly six unique primary-navigation hrefs and exact set parity with the shared contract. This is not a substitute for the hosted website/security tests. Exact-head validation and the production deployment remain pending on the repair branch.
 
 **Next action:** require website validation and its security/deployment contract tests to pass on the PR head. Only then allow the existing gated Vercel deployment workflow to deploy, and verify the public homepage and canonical routes after deployment.
+
+
+## PR #91 follow-up — restore the homepage analytics entrypoint (2026-10-26)
+
+After the six-route navigation repair, website validation [run #40279129599](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40279129599) advanced to the next assertion and failed because `index.html` no longer loaded the same-origin `/analytics.js` entrypoint. Inspection confirmed the last accepted homepage at `abda7c2` included `<script defer src="/analytics.js">`; PR #90 had removed it while replacing the homepage markup. The validator correctly enforces this security/analytics contract, so the test was not weakened.
+
+**Repair:** [commit `4c72824`](https://github.com/usermalik20-del/Kanta-reborn/commit/4c72824c18ae28bfcc7c52a4c5d30c627cb346a7) restores exactly one deferred same-origin `/analytics.js` script immediately before `</body>`. The existing script uses the approved same-origin entrypoint and its CSP allowance for the documented analytics provider remains unchanged.
+
+**Preflight:** source inspection confirms one analytics script tag and the six unique canonical navigation hrefs. Hosted website/security/deployment-contract validation must pass on the new PR head before merge. The earlier PR #91 validation failure is retained as evidence, not reclassified as transient.
