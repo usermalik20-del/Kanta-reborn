@@ -127,6 +127,11 @@ struct KantaMainPlayerView: View {
                         .font(.caption2).foregroundStyle(KantaColors.textSecondary)
                 }
                 Spacer(minLength: 0)
+                Button(action: onMore) {
+                    Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("More")
+                .accessibilityIdentifier("stage.more")
                 Button(action: onControls) {
                     Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44)
                 }
@@ -240,8 +245,8 @@ struct KantaMainPlayerView: View {
             stageButton("Display", icon: "display", action: onDisplay)
                 .accessibilityIdentifier("stage.display")
             Spacer(minLength: 4)
-            stageButton("More", icon: "ellipsis", action: onMore)
-                .accessibilityIdentifier("stage.more")
+            stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
+                .accessibilityIdentifier("stage.expand")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
