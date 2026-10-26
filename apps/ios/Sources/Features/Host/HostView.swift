@@ -372,6 +372,7 @@ struct HostView: View {
                 Spacer()
                 Button("Done") { showingDisplayStatus = false }
                     .labelStyle(.titleOnly)
+                    .accessibilityIdentifier("stage.display.done")
             }
             Text(externalStage.isPresenting
                  ? "Extended stage is active."
@@ -387,6 +388,7 @@ struct HostView: View {
         .padding(18)
         .frame(minWidth: 260, maxWidth: 320)
         .background(KantaColors.surface)
+        .accessibilityIdentifier("stage.display.popover")
     }
 
     private func openFullscreenPlayer() {
