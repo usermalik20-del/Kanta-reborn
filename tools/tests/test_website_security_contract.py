@@ -157,5 +157,34 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         )
         self.assertNotRegex(source, r"(?m)^\s*ap:anywhere\}\s*$")
 
+    def test_download_pages_match_verified_artifact_provenance(self):
+        manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["android"]["source"], manifest["ios"]["source"])
+        for platform, filename in (("android", "android.html"), ("ios", "ios-download.html")):
+            build = manifest[platform]
+            page = (WEB / filename).read_text(encoding="utf-8")
+            artifact_url = (
+                "https://github.com/" + manifest["repository"] + "/actions/runs/"
+                + str(build["run"]) + "/artifacts/" + str(build["artifact"])
+            )
+            self.assertIn(artifact_url, page)
+            self.assertIn(build["source"][:8], page)
+            self.assertRegex(build["sha256"], r"^[0-9a-f]{64}$")
+            self.assertIn("Artifact ZIP SHA-256: <code>" + build["sha256"] + "</code>", page)
+
+        ios_page = (WEB / "ios-download.html").read_text(encoding="utf-8")
+        walkthrough_url = (
+            "https://github.com/" + manifest["repository"] + "/actions/runs/"
+            + str(manifest["ios"]["walkthroughRun"])
+        )
+        self.assertIn(walkthrough_url, ios_page)
+        self.assertIn("Both iPhone and iPad simulator walkthroughs passed", ios_page)
+        self.assertNotIn("later visual walkthrough attempt failed", ios_page.lower())
+        self.assertNotIn("coverage remains under investigation", ios_page.lower())
+
+        android_page = (WEB / "android.html").read_text(encoding="utf-8")
+        self.assertIn("no standalone <code>sha256.txt</code> is included", android_page.lower())
+        self.assertIn("instrumentation-test APK, lint report and runtime diagnostics", android_page)
+
 if __name__ == "__main__":
     unittest.main()
