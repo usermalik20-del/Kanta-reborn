@@ -143,7 +143,7 @@ private struct KantaExternalStageStandby: View {
                 KantaBrandMark(size: 96)
                 Text("KANTA Stage")
                     .font(.largeTitle.bold())
-                Text("Open Karaoke Host on the connected device.")
+                Text("Open KANTA Karaoke on the connected device.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
