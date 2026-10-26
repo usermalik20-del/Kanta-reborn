@@ -496,3 +496,21 @@ Main commit [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5
 **Recurrence rule:** when `stage.more` is missing, inspect identifier placement in `embeddedPlayer` versus `controls(wide:)`. Do not add sleeps or loosen assertions; give distinct accessible controls distinct stable identifiers and keep the source-contract guard aligned.
 
 **Status:** `candidate`.
+## Reconciled main acceptance and PR #83 Android JVM crash — 2026-10-26
+
+This section supersedes the earlier pending wording above for the post-merge PR #82 reconstruction/archive and the PR #80 device walkthrough.
+
+**Main acceptance confirmed:** main code-bearing commit [`bb42695`](https://github.com/usermalik20-del/Kanta-reborn/commit/bb42695401a952c479b4fd47a2bf317191a3ce86) passed reconstruction [#40243337754](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337754) with both Android and iOS jobs successful. The main unsigned archive [#40243337745](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337745) passed and produced artifact [#12617498284](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337745/artifacts/12617498284), 25,119,210 bytes, SHA-256 `f71d6affa7a572da95a9fd26f66e42addbea7a8199414c26bc11a3c9bdb071fb`, expiration 2026-11-01 23:12:45 UTC. Full iPhone/iPad walkthrough [#40242088004](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40242088004) passed both device jobs on `db53397`. No signed production release is implied.
+
+## PR #83 — Android Gradle daemon JVM crash on pre-sync merge ref (2026-10-26)
+
+**Fingerprint:** reconstruction Android job, step `Build, lint and domain regression tests`; Gradle reported `Gradle build daemon disappeared unexpectedly` after `coreRegression` and during lint analysis.
+
+**Affected old merge ref / run:** PR #83 reconstruction [#40243129249](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243129249), synthetic merge commit `61df370`, based on the older main parent `a6b69c6`. Source guards and the native SoundFont sanitizer passed before the Gradle step failed. The log says a JVM crash file `apps/android/hs_err_pid2233.log` was created, but that file was not included in the uploaded diagnostics artifact. The precise JVM failure signature (including any problematic native frame or memory exhaustion) is therefore unconfirmed; do not assert an application defect or prescribe a heap change without that evidence.
+
+**Context:** the post-merge main Android reconstruction [#40243337754](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337754) passed the same build/lint/domain step, real Chrome companion flow, browser interoperability and emulator runtime checks. This makes the old PR failure non-reproduced so far, not conclusively fixed.
+
+**Synchronization and fresh validation:** the PR branch was synchronized with current main by merge commit [`6941aec`](https://github.com/usermalik20-del/Kanta-reborn/commit/6941aec198ad07eb46c5f7d8093b9361d0821750); the compare now reports 3 commits ahead and 0 behind. New exact-head runs are reconstruction [#40244262616](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262616), focused iPhone smoke [#40244262594](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594), full iPhone/iPad walkthrough [#40244262620](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262620), and unsigned archive [#40244262618](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262618). At this checkpoint, the fresh Android run had passed build/lint/domain regression and real-Chrome/browser checks and was running emulator runtime checks; iOS package tests had passed and unsigned simulator compilation was still in progress. Final acceptance remains pending.
+
+**Next action if the JVM crash recurs:** extend the failure artifact path to retain `apps/android/hs_err_pid*.log`, then inspect the JVM fatal-error header, problematic frame, signal and resource state. Keep build/lint assertions enabled; do not mask the daemon exit or infer green from partial tests.
+
