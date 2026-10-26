@@ -153,13 +153,15 @@ def verify():
             and 'guard isValidPairingCode(code)' in companion_protocol
             and 'companionPairingInputRequiresPrivateAddressAndFullHexSecret' in companion_tests
         ),
-        'window tap probe uses supported, comparable geometry and removes its recognizer': (
-            'NSCoder.string(for: point)' in stage
-            and 'hitView.convert(hitView.bounds, to: view)' in stage
-            and 'static func dismantleUIView' in stage
-            and 'coordinator.detach()' in stage
-            and 'NSStringFromCGPoint' not in stage
-            and 'NSStringFromCGRect' not in stage
+        # The tap/gate probes were diagnosis-only instrumentation for the iPad
+        # dead-tap investigation. They must not return to shipping source: they
+        # attached a window-wide gesture recogniser and logged on every touch.
+        'no diagnostic tap or gate probes in shipping source': (
+            'KANTA_PROBE' not in stage
+            and 'KANTA_TAP' not in stage
+            and 'KantaWindowTapProbe' not in stage
+            and 'addGestureRecognizer' not in stage
+            and 'KANTA_GATE' not in root
         ),
     }
     for name, passed in checks.items():

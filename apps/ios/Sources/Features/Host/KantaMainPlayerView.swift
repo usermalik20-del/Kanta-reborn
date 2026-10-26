@@ -45,9 +45,6 @@ struct KantaMainPlayerView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { camera.stop() }
         }
-        .background {
-            KantaWindowTapProbe().frame(width: 0, height: 0)
-        }
         .onDisappear { camera.stop() }
         .alert("Camera BGV", isPresented: Binding(
             get: { camera.message != nil },
@@ -240,13 +237,6 @@ struct KantaMainPlayerView: View {
             stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
                 .accessibilityIdentifier("stage.expand")
         }
-        // Diagnostic only: fires alongside any button that consumes the tap, so
-        // it can distinguish "the touch never reaches this row" from "the touch
-        // arrives but the Button does not act". Remove once the iPad walkthrough
-        // reports a stage request.
-        .simultaneousGesture(TapGesture().onEnded {
-            NSLog("[KANTA_PROBE] actions-row tap received")
-        })
     }
 
     @ViewBuilder private var stageBackground: some View {
@@ -433,76 +423,5 @@ struct KantaMainPlayerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain).accessibilityLabel(title)
-    }
-}
-
-/// Diagnostic only: records where a tap in the window actually lands so a
-/// reported accessibility frame can be compared with the delivered touch.
-/// The recogniser never cancels touches, so behaviour is unchanged.
-@MainActor
-final class KantaWindowTapProbeCoordinator: NSObject, UIGestureRecognizerDelegate {
-    private weak var installedWindow: UIWindow?
-    private weak var tapRecognizer: UITapGestureRecognizer?
-
-    func install(on window: UIWindow) {
-        guard installedWindow !== window || tapRecognizer == nil else { return }
-        detach()
-        let recognizer = UITapGestureRecognizer(
-            target: self,
-            action: #selector(handleTap(_:))
-        )
-        recognizer.cancelsTouchesInView = false
-        recognizer.delegate = self
-        window.addGestureRecognizer(recognizer)
-        installedWindow = window
-        tapRecognizer = recognizer
-    }
-
-    func detach() {
-        if let tapRecognizer {
-            installedWindow?.removeGestureRecognizer(tapRecognizer)
-        }
-        tapRecognizer = nil
-        installedWindow = nil
-    }
-
-    @objc func handleTap(_ recogniser: UITapGestureRecognizer) {
-        guard let view = recogniser.view else { return }
-        let point = recogniser.location(in: view)
-        let hit = view.hitTest(point, with: nil)
-        let hitDescription = hit.map { hitView in
-            let frameInWindow = hitView.convert(hitView.bounds, to: view)
-            return "\(type(of: hitView)) \(NSCoder.string(for: frameInWindow))"
-        } ?? "nil"
-        NSLog("[KANTA_TAP] window-point=%@ hit=%@",
-              NSCoder.string(for: point),
-              hitDescription)
-    }
-
-    func gestureRecognizer(
-        _ gestureRecognizer: UIGestureRecognizer,
-        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
-    ) -> Bool { true }
-}
-
-struct KantaWindowTapProbe: UIViewRepresentable {
-    func makeCoordinator() -> KantaWindowTapProbeCoordinator {
-        KantaWindowTapProbeCoordinator()
-    }
-
-    func makeUIView(context: Context) -> UIView {
-        let probe = UIView(frame: .zero)
-        probe.isUserInteractionEnabled = false
-        DispatchQueue.main.async {
-            guard let window = probe.window else { return }
-            context.coordinator.install(on: window)
-        }
-        return probe
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {}
-
-    static func dismantleUIView(_ uiView: UIView, coordinator: KantaWindowTapProbeCoordinator) {
-        coordinator.detach()
     }
 }
