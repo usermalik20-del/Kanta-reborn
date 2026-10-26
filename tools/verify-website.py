@@ -302,11 +302,22 @@ def main():
     for platform, filename in (("android", "android.html"), ("ios", "ios-download.html")):
         build = manifest[platform]
         expected = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"]) + "/artifacts/" + str(build["artifact"])
-        assert expected in (WEB / filename).read_text(encoding="utf-8"), filename + " artifact differs from manifest"
+        page_source = (WEB / filename).read_text(encoding="utf-8")
+        assert expected in page_source, filename + " artifact differs from manifest"
+        assert build["source"][:8] in page_source, filename + " source revision differs from manifest"
+        assert re.fullmatch(r"[0-9a-f]{64}", build["sha256"]), filename + " artifact ZIP digest is malformed"
+        assert "Artifact ZIP SHA-256: <code>" + build["sha256"] + "</code>" in page_source, filename + " artifact ZIP digest differs from manifest"
+    assert manifest["android"]["source"] == manifest["ios"]["source"], "Platform downloads must describe the same accepted source revision"
     assert manifest["ios"]["signed"] is False and manifest["ios"]["personalSigningRequired"]
     assert not manifest["ios"]["icloudAvailable"]
-    assert manifest["android"]["source"][:8] in (WEB / "android.html").read_text(encoding="utf-8")
-    assert manifest["ios"]["source"][:8] in (WEB / "ios-download.html").read_text(encoding="utf-8")
+    ios_page = (WEB / "ios-download.html").read_text(encoding="utf-8")
+    walkthrough_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(manifest["ios"]["walkthroughRun"])
+    assert walkthrough_url in ios_page, "iOS download page must link to the recorded simulator walkthrough"
+    assert "Both iPhone and iPad simulator walkthroughs passed" in ios_page, "iOS page must state the verified device result"
+    assert "later visual walkthrough attempt failed" not in ios_page.lower(), "Stale failed-walkthrough claim must not be published"
+    assert "coverage remains under investigation" not in ios_page.lower(), "Stale walkthrough investigation claim must not be published"
+    android_page = (WEB / "android.html").read_text(encoding="utf-8")
+    assert "no standalone <code>sha256.txt</code> is included" in android_page.lower(), "Android artifact contents must be described accurately"
     print(
         "10 public pages, local routes/anchors, lowercase ads.txt, canonical sitemap, "
         "route-scoped CSP, immutable Songbook reader and verified download provenance passed"
