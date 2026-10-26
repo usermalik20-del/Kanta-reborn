@@ -127,9 +127,18 @@ def verify():
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,
         'Stage More accessibility identifier targets the embedded navigation button': (
-            'Button(action: onMore)' in embedded_player
-            and '.accessibilityLabel("More")' in embedded_player
-            and '.accessibilityIdentifier("stage.more")' in embedded_player
+            (
+                (
+                    'Button(action: onMore)' in embedded_player
+                    and '.accessibilityLabel("More")' in embedded_player
+                    and '.accessibilityIdentifier("stage.more")' in embedded_player
+                )
+                or (
+                    'private var workspaceToolbar: some View' in stage
+                    and 'stageButton("More", icon: "ellipsis", action: onMore)' in stage
+                    and '.accessibilityIdentifier("stage.more")' in stage
+                )
+            )
             and '.accessibilityIdentifier("stage.controls.more")' in controls_more
             and 'app.buttons["stage.more"]' in test
         ),
