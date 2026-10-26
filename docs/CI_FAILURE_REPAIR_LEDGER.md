@@ -604,3 +604,20 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 
 **Status:** candidate.
 
+
+
+## iOS — Compact workspace More-button contract mismatch (2026-10-26)
+
+**Fingerprint:** `tools/check-ios-presentation-contract.py`; `Stage More accessibility identifier targets the embedded navigation button`; PR #97 focused smoke and iPhone/iPad walkthrough setup.
+
+**Observed:** PR #97 initial candidate merge SHA `ad1fd273845f4faaa3be7491385f6d93623cef8f`; focused smoke run [#40349070451](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349070451) failed before simulator execution. The source-contract guard still required the More navigation button in the old header location after the design moved More into the persistent workspace toolbar. The first test batch also had a new assertion checking for a direct `onDisplay()` call instead of the intended action closure passed into the shared button builder.
+
+**Cause:** The UI contract and new source test encoded the previous presentation location, not the preserved navigation behavior. This was a deterministic source-contract mismatch; simulator acceptance had not yet started on that run.
+
+**Fix candidate:** Keep the stable `stage.more` accessibility identifier on the new toolbar button, update the presentation guard to accept that documented toolbar location, and assert the Display action is passed through the existing `stageButton` helper. Keep the advanced controls action and the single existing navigation callback. Candidate head: `766b44d5331b4df829182cea9eb67a3645916c9a`.
+
+**Regression coverage:** `CompactWorkspaceContractTests` in `test_design_system_adoption.py`; `Stage More accessibility identifier targets the embedded navigation button` in `tools/check-ios-presentation-contract.py`.
+
+**Validation:** Repair is **candidate / pending**. New reconstruction run [#40349679009](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349679009), focused smoke [#40349679083](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349679083), unsigned artifact build [#40349678963](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349678963), and iPhone/iPad walkthrough [#40349678973](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40349678973) were queued for the newer candidate at the time of this entry. No green result is implied.
+
+**Recurrence rule:** When moving a stable UI action, preserve its accessibility identity and update the source-contract guard to validate the intended new owner/location. Do not weaken the assertion that More invokes the actual navigation callback, and do not treat static guard success as simulator acceptance.
