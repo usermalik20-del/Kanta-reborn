@@ -603,4 +603,10 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 **Recurrence rule:** after any native-source merge, resolve successful reconstruction, unsigned iOS artifact and full iPhone/iPad walkthrough runs for one identical main SHA. Update the manifest, pages and pinned contract together only after all three pass. Do not update the website to a merely compiled or unsigned-only candidate.
 
 **Status:** candidate.
+## PR #96 compact workspace accessibility regression — 2026-10-27
 
+**Failure evidence:** focused smoke [run #40348703963](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348703963) and full iPhone/iPad walkthrough [run #40348710266](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266), candidate head `9c2e12a`. Diagnostic artifact [#12665410375](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266/artifacts/12665410375) contains the actual iPhone accessibility hierarchy.
+
+**Confirmed root cause:** the interactive transport `HStack` applied `stage.persistentPlayer` to its descendants. The captured hierarchy shows the Play/Pause, Next and Queue buttons all carrying that parent identifier instead of `stage.playPause`, `stage.next` and `stage.queue`. The toolbar's Host-controls button also used the visible label `Settings`, colliding with the real Settings navigation destination.
+
+**Candidate repair:** remove the identifier from the interactive parent, retain stable identifiers on each control, rename the toolbar label to `More controls`, and enforce these invariants in `tools/check-ios-presentation-contract.py`. The Search → keypad failure in `testDemoKeypadCancelAndRepeatedIntentionalReservations` is a separate observed failure; its exact runtime cause is not yet confirmed and this change must not be reported as fixing it. Reconstruction, focused smoke and both full device walkthroughs must pass on the exact new PR head before acceptance.

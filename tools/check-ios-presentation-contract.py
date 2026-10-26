@@ -134,13 +134,21 @@ def verify():
         ),
         'compact workspace keeps Stage and player persistently visible': (
             '.accessibilityIdentifier("stage.persistentSurface")' in embedded_player
-            and '.accessibilityIdentifier("stage.persistentPlayer")' in embedded_player
+            and '.accessibilityIdentifier("stage.persistentPlayer")' not in embedded_player
             and 'if compact {' in embedded_player
             and 'stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)' in embedded_player
         ),
         'compact workspace retains the Host controls entry': (
             '.accessibilityIdentifier("stage.controls")' in embedded_player
             and 'onControls()' in embedded_player
+        ),
+        'interactive transport keeps child identities and an unambiguous controls label': (
+            '.accessibilityIdentifier("stage.persistentPlayer")' not in embedded_player
+            and embedded_player.count('stageButton("More controls", icon: "slider.horizontal.3")') == 2
+            and 'stageButton("Settings", icon: "slider.horizontal.3")' not in embedded_player
+            and '.accessibilityIdentifier("stage.playPause")' in stage
+            and '.accessibilityIdentifier("stage.next")' in stage
+            and '.accessibilityIdentifier("stage.queue")' in stage
         ),
         'KANTA Host branding and logo are visible': (
             '.navigationTitle("KANTA Karaoke")' in host
@@ -154,7 +162,7 @@ def verify():
             and '.overlay {' not in embedded_player
             and '.stroke(KantaColors.hairline' not in embedded_player
             and '.accessibilityIdentifier("stage.persistentSurface")' in embedded_player
-            and '.accessibilityIdentifier("stage.persistentPlayer")' in embedded_player
+            and '.accessibilityIdentifier("stage.persistentPlayer")' not in embedded_player
         ),
         'host branding uses KANTA Karaoke for network and playback errors': (
             'displayName: String = "KANTA Karaoke"' in (APP / 'Infrastructure/LocalNetworkControl/BonjourHostAdvertiser.swift').read_text()

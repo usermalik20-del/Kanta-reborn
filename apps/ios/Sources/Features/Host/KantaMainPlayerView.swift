@@ -127,7 +127,7 @@ struct KantaMainPlayerView: View {
                         searchButton
                         cameraButton
                         queueButton
-                        stageButton("Settings", icon: "slider.horizontal.3") { camera.stop(); onControls() }
+                        stageButton("More controls", icon: "slider.horizontal.3") { camera.stop(); onControls() }
                             .accessibilityIdentifier("stage.controls")
                         stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
                             .accessibilityIdentifier("stage.expand")
@@ -209,7 +209,7 @@ struct KantaMainPlayerView: View {
                 .padding(.horizontal, compact ? 12 : 18)
                 .padding(.vertical, compact ? 8 : 12)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .accessibilityIdentifier("stage.persistentPlayer")
+                // Keep this interactive row ungrouped: its buttons own stable identifiers.
 
                 if compact {
                     HStack(spacing: 0) {
@@ -217,7 +217,7 @@ struct KantaMainPlayerView: View {
                         Spacer(minLength: 4)
                         cameraButton
                         Spacer(minLength: 4)
-                        stageButton("Settings", icon: "slider.horizontal.3") { camera.stop(); onControls() }
+                        stageButton("More controls", icon: "slider.horizontal.3") { camera.stop(); onControls() }
                             .accessibilityIdentifier("stage.controls")
                         Spacer(minLength: 4)
                         stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
