@@ -81,17 +81,31 @@ struct YouTubeEmbeddedPlayerView: UIViewRepresentable {
 
         func retire() {
             guard !retired else { return }
-            // Invalidate before WebKit can deliver cancellation or process callbacks.
+            // Make retirement terminal before WebKit can deliver cancellation or process callbacks.
             retired = true
             navigation = nil
             NotificationCenter.default.removeObserver(self)
             guard let view else { return }
             view.navigationDelegate = nil
-            view.stopLoading()
-            view.pauseAllMediaPlayback(completionHandler: nil)
-            view.setAllMediaPlaybackSuspended(true, completionHandler: nil)
-            view.loadHTMLString("", baseURL: nil)
             self.view = nil
+
+            // Detach synchronously. A live WKWebView can make the accessibility tree
+            // expensive to query on iPad while its remote content process is retiring.
+            // Do this before any further WebKit IPC so Stop/Done can return the sheet
+            // to link entry without leaving the native view attached.
+            view.isHidden = true
+            view.removeFromSuperview()
+            view.stopLoading()
+
+            // Media suspension and blanking are cleanup, not presentation state. Defer
+            // them one MainActor turn so they cannot hold up SwiftUI's state transition;
+            // the delegate is already nil and the coordinator is terminal.
+            Task { @MainActor in
+                await Task.yield()
+                view.pauseAllMediaPlayback(completionHandler: nil)
+                view.setAllMediaPlaybackSuspended(true, completionHandler: nil)
+                view.loadHTMLString("", baseURL: nil)
+            }
         }
 
         private func fail(_ webView: WKWebView, navigation: WKNavigation?) {

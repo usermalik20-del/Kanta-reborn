@@ -110,8 +110,11 @@ struct KantaYouTubePreviewSheet: View {
         if let pendingID { audioOwnership.releaseOnlineAudio(pendingID) }
         pendingID = nil
         if let id = lifecycle.active?.id { audioOwnership.releaseOnlineAudio(id) }
-        playerOwner.retire()
+
+        // Clear the selected presentation first; the owner then synchronously
+        // detaches the native view before scheduling WebKit cleanup.
         lifecycle.close()
+        playerOwner.retire()
     }
 
     private func openPreview(_ reference: YouTubeVideoReference) {

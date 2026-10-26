@@ -48,6 +48,26 @@ final class YouTubeEmbeddedPlayerLifecycleTests: XCTestCase {
     }
 
     @MainActor
+    func testRetirementDetachesNativeViewSynchronously() throws {
+        let owner = YouTubeEmbeddedPlayerOwner()
+        let session = try makeSession()
+        let coordinator = YouTubeEmbeddedPlayerView.Coordinator(session: session) { _ in
+            XCTFail("Retired view emitted a failure")
+        }
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: 320, height: 180))
+        let view = makeView()
+        container.addSubview(view)
+        owner.claim(coordinator)
+        coordinator.attach(view)
+        XCTAssertTrue(view.superview === container)
+
+        owner.retire()
+
+        XCTAssertNil(view.navigationDelegate, "Retirement must invalidate callbacks synchronously")
+        XCTAssertNil(view.superview, "Retirement must detach WKWebView before deferred WebKit cleanup")
+    }
+
+    @MainActor
     func testForegroundLossRetiresNativeViewAndDoesNotRestoreIt() throws {
         let owner = YouTubeEmbeddedPlayerOwner()
         var failures: [UUID] = []
