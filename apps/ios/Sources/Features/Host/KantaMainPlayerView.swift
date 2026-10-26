@@ -240,8 +240,8 @@ struct KantaMainPlayerView: View {
             stageButton("Display", icon: "display", action: onDisplay)
                 .accessibilityIdentifier("stage.display")
             Spacer(minLength: 4)
-            stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
-                .accessibilityIdentifier("stage.expand")
+            stageButton("More", icon: "ellipsis", action: onMore)
+                .accessibilityIdentifier("stage.more")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
