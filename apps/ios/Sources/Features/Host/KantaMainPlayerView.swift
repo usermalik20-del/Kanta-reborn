@@ -183,11 +183,6 @@ struct KantaMainPlayerView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: compact ? 250 : 340)
                 .clipShape(RoundedRectangle(cornerRadius: compact ? 22 : 30, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: compact ? 22 : 30, style: .continuous)
-                        .stroke(KantaColors.hairline, lineWidth: 1)
-                }
-                .shadow(color: KantaColors.violet.opacity(0.3), radius: 20, y: 10)
                 .accessibilityIdentifier("stage.persistentSurface")
 
                 HStack(spacing: compact ? 12 : 18) {
@@ -214,10 +209,6 @@ struct KantaMainPlayerView: View {
                 .padding(.horizontal, compact ? 12 : 18)
                 .padding(.vertical, compact ? 8 : 12)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(KantaColors.hairline, lineWidth: 1)
-                }
                 .accessibilityIdentifier("stage.persistentPlayer")
 
                 if compact {
@@ -262,7 +253,7 @@ struct KantaMainPlayerView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(compact ? 10 : 16)
+            .padding(.zero)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .foregroundStyle(.white)
             .background(GeloVisualStyle.pageBackground.ignoresSafeArea())
