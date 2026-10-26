@@ -4,7 +4,7 @@ Date: 2026-10-26. Destination: kanta-gelo/Kanta-reborn (canonical repository: [u
 
 ## Current checkpoint — 2026-10-26, 11:21 PHT
 
-The current main head is merge commit [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9), which merged PR [#83 — app-level tab bar, Queue destination, operator greeting, and artwork fixes](https://github.com/usermalik20-del/Kanta-reborn/pull/83). The merged source head tested before merge was [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
+The current code-bearing main baseline is merge commit [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9), which merged PR [#83 — app-level tab bar, Queue destination, operator greeting, and artwork fixes](https://github.com/usermalik20-del/Kanta-reborn/pull/83). The subsequent documentation-only reconciliation preserves this baseline without changing application or website source. The merged source head tested before merge was [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
 
 **PR #83 exact-head acceptance on `3aae9e8`:** all four required workflows passed:
 - Reconstruction (iOS + Android): [run #40254725851](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725851); both platform jobs passed.
