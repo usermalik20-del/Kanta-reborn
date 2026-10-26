@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script defer src="/analytics.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="KANTA Karaoke — a premium karaoke app built from scratch for iPhone, iPad and Android. Sing your own music with timed lyrics, singer queues and personal stages.">
@@ -15,16 +16,26 @@
 <a class="skip" href="#content">Skip to content</a>
 
 <header class="site-header">
-  <a class="brand" href="index.html" aria-label="KANTA home">
-    <span class="brand-mark" aria-hidden="true">✦</span>
-    KANTA
+  <a class="brand" href="/" aria-label="KANTA home">
+    <img src="/kanta-brand.png" alt="KANTA" width="32" height="32" loading="eager" decoding="async">
+    <span class="brand-mark">KANTA</span>
   </a>
-  <nav class="nav-links" aria-label="Main navigation">
-    <a href="#features">Features</a>
-    <a href="guide.html">How to Use</a>
-    <a href="features.html">Platforms</a>
-    <a href="#downloads">Download</a>
-    <a class="nav-cta" href="#downloads">Get KANTA</a>
+  <button class="nav-toggle" aria-expanded="false" aria-controls="site-drawer" aria-label="Open menu">☰</button>
+  <nav id="site-drawer" class="site-drawer" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a>
+    <a href="/android">Android</a>
+    <a href="/guide">How to Use</a>
+    <a href="/features">Features</a>
+    <a href="/songbook">My Songbook</a>
+    <a href="/support">Help</a>
+  </nav>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a>
+    <a href="/android">Android</a>
+    <a href="/guide">How to Use</a>
+    <a href="/features">Features</a>
+    <a href="/songbook">My Songbook</a>
+    <a href="/support">Help</a>
   </nav>
 </header>
 

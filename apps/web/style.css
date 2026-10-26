@@ -78,19 +78,9 @@ header.site-header, header {
   box-shadow: 0 4px 15px rgba(184, 102, 215, 0.4);
 }
 
-nav, .site-nav, .nav-links {
-  display: flex;
-  align-items: center;
-  gap: clamp(12px, 2.5vw, 28px);
-  flex-wrap: wrap;
-}
-nav a, .site-nav a, .nav-links a {
-  font-size: 0.92rem;
-  font-weight: 650;
-  text-decoration: none;
-  color: #c7d0ea;
-  padding: 6px 0;
-}
+nav{display:flex;gap:clamp(12px, 2.5vw, 28px);flex-wrap:wrap}
+.site-header .site-nav{display:flex}
+.site-header .site-nav{justify-content:flex-start}
 nav a:hover, .site-nav a:hover, .nav-links a:hover {
   color: #fff;
 }
