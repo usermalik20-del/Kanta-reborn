@@ -14,6 +14,7 @@ struct KantaMainPlayerView: View {
     var microphoneBusy = false
     var onControls: () -> Void = {}
     var onMore: () -> Void = {}
+    var onDisplay: () -> Void = {}
     var onSaveSession: () -> Void = {}
     var embedded = false
     var onExpand: () -> Void = {}
@@ -119,15 +120,17 @@ struct KantaMainPlayerView: View {
                 // The embedded stage reaches the menu through this chevron; the
                 // fullscreen player uses stageButton("More"). They are never on
                 // screen at the same time, so they share one identity.
-                Button(action: onMore) { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
-                    .accessibilityLabel("More")
-                    .accessibilityIdentifier("stage.more")
-                Text("Karaoke Host").font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
+                KantaBrandMark(size: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("KANTA").font(.title2.bold()).foregroundStyle(KantaColors.textPrimary)
+                    Text("More air. More focus. Always on stage.")
+                        .font(.caption2).foregroundStyle(KantaColors.textSecondary)
+                }
                 Spacer(minLength: 0)
                 Button(action: onControls) {
                     Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44)
                 }
-                .accessibilityLabel("CONTROL")
+                .accessibilityLabel("More controls")
                 .accessibilityIdentifier("stage.controls")
             }
             VStack(alignment: .leading, spacing: 14) {
@@ -137,12 +140,7 @@ struct KantaMainPlayerView: View {
                 // the horizontal branch while taps on `stage.search` never
                 // reached the button's action, so the controls are laid out
                 // once here and the title yields space instead.
-                HStack(alignment: .top, spacing: 12) {
-                    nowSinging
-                        .layoutPriority(1)
-                    Spacer(minLength: 8)
-                    stageActions
-                }
+                nowSinging
                 ZStack {
                     // With no stage visual or camera selected the tile shows real
                     // cover art instead of an empty placeholder. Selection still
@@ -186,6 +184,7 @@ struct KantaMainPlayerView: View {
                         .stroke(KantaColors.hairline, lineWidth: 1)
                 }
                 .shadow(color: KantaColors.violet.opacity(0.35), radius: 24, y: 12)
+                workspaceToolbar
                 HStack { playButton; Spacer(); nextButton; Spacer(); queueButton }
                 if let next = model.snapshot.queue.first {
                     Text("Up Next · " + next.song.title)
@@ -230,13 +229,25 @@ struct KantaMainPlayerView: View {
         }
     }
 
-    private var stageActions: some View {
-        HStack(spacing: 12) {
+    /// Compact, persistent utility controls sit beside the player instead of
+    /// expanding a separate CONTROL dashboard around the stage.
+    private var workspaceToolbar: some View {
+        HStack(spacing: 0) {
             searchButton
+            Spacer(minLength: 4)
             cameraButton
-            stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
-                .accessibilityIdentifier("stage.expand")
+            Spacer(minLength: 4)
+            stageButton("Display", icon: "display", action: onDisplay)
+                .accessibilityIdentifier("stage.display")
+            Spacer(minLength: 4)
+            stageButton("More", icon: "ellipsis", action: onMore)
+                .accessibilityIdentifier("stage.more")
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(KantaColors.hairline, lineWidth: 1))
+        .accessibilityIdentifier("stage.workspaceToolbar")
     }
 
     @ViewBuilder private var stageBackground: some View {
