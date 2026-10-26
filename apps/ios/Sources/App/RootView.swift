@@ -15,21 +15,17 @@ final class KantaPresentationGate: ObservableObject {
         if owner == .fullscreen, requested == .stage, !dismissing {
             owner = .stage
             fullscreenChildActive = true
-            NSLog("[KANTA_GATE] applied=fullscreen-child owner=%@ requested=%@", String(describing: owner), String(describing: requested))
             action()
             return
         }
         guard owner == nil && !dismissing else {
             guard !pendingRequests.contains(where: { $0.owner == requested }) else {
-                NSLog("[KANTA_GATE] dropped=duplicate owner=%@ requested=%@ dismissing=%d queued=%d", String(describing: owner), String(describing: requested), dismissing ? 1 : 0, pendingRequests.count)
                 return
             }
-            NSLog("[KANTA_GATE] queued owner=%@ requested=%@ dismissing=%d queued=%d", String(describing: owner), String(describing: requested), dismissing ? 1 : 0, pendingRequests.count)
             pendingRequests.append(PendingRequest(owner: requested, action: action))
             return
         }
         owner = requested
-        NSLog("[KANTA_GATE] applied owner=%@ requested=%@", String(describing: owner), String(describing: requested))
         action()
     }
 
