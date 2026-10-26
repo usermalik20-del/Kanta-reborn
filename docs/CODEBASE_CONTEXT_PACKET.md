@@ -2,7 +2,7 @@
 
 ## Current source and acceptance snapshot — October 26, 2026
 
-Canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn). Current main is merge commit [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9), merging PR [#83 — Stage v2 app-level navigation and Queue](https://github.com/usermalik20-del/Kanta-reborn/pull/83). The validated PR source head was [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
+Canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn). The current code-bearing main baseline is merge commit [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9), which merged PR [#83 — Stage v2 app-level navigation and Queue](https://github.com/usermalik20-del/Kanta-reborn/pull/83). Later documentation-only successors do not change that validated application source. The validated PR source head was [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
 
 ### Exact-head and post-merge acceptance
 
