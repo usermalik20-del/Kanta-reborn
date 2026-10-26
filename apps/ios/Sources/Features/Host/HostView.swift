@@ -279,6 +279,7 @@ struct HostView: View {
             VStack(alignment: .leading, spacing: 20) {
                 stageGreeting
                 embeddedStage
+                    .padding(.horizontal, -16)
                 inlineRemote
 
                 GeloSectionCard("External TV / Stage Display") {
