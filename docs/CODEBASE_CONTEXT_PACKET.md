@@ -1,18 +1,34 @@
 # Codebase Context Packet — KANTA Reborn
 
-## Current source and acceptance snapshot — October 25, 2026
+## Current source and acceptance snapshot — October 26, 2026
 
-Canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn). Main is [`d01504e`](https://github.com/usermalik20-del/Kanta-reborn/commit/d01504e42b3e00735bb429b05e9ec886149911fe).
+Canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn). Current main is merge commit [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9), merging PR [#83 — Stage v2 app-level navigation and Queue](https://github.com/usermalik20-del/Kanta-reborn/pull/83). The validated PR source head was [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
 
-Main reconstruction [#40136025964](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025964) and unsigned archive [#40136025858](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858) passed. Main walkthrough [#40136025937](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025937) failed because the iPad main-menu test did not record a clean pass; the Search/keypad cases passed. Main archive [artifact #12576634630](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40136025858/artifacts/12576634630) is unsigned and is not directly installable.
+### Exact-head and post-merge acceptance
 
-PR #71's previous candidate `dc60e513c4829226d8bf763c60d5e047e0beb5a4` passed reconstruction [#40146182458](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182458), focused smoke [#40146182470](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182470), and archive [#40146182453](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182453), but full walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40146182462) failed because the aggregate menu test exceeded its per-test allowance. The repair splits the six menu destinations into independent cases, keeps every assertion, updates the runtime manifest/source guard, and combines the separate per-device workflow from PR #72. The new candidate remains unvalidated until its exact-head runs finish.
+PR #83 exact-head validation on `3aae9e8` passed:
+- Reconstruction, iOS + Android: [#40254725851](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725851).
+- Focused iPhone simulator smoke: [#40254725871](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725871).
+- Full iPhone/iPad walkthrough, both jobs: [#40254725862](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725862).
+- Unsigned archive: [#40254725860](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725860), artifact [#12622475729](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725860/artifacts/12622475729), 25,139,930 bytes, SHA-256 `41fc1dc3f8de2e98438b9e19a6a1ca4e31cbe9df570dac1dffca795439701707`.
 
-## Current iOS walkthrough test boundary — October 25, 2026
+Post-merge main on `abda7c2` is also green:
+- Reconstruction [#40258066829](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066829): Android and iOS jobs passed.
+- Full device walkthrough [#40258066852](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066852): iPhone and iPad jobs both passed, with per-device runtime evidence and presentation diagnostics.
+- Unsigned archive [#40258066875](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066875), artifact [#12622974482](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066875/artifacts/12622974482), 25,139,693 bytes, SHA-256 `f17c0195c679270916febc2f0612ddb5d90d9f2c235097849615fcf26e7b00fb`, expires 2026-11-02 02:18:33 UTC.
+
+Website validation [#40220534010](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220534010) and production deployment [#40220534153](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40220534153) passed on `5ee1893`; no website source changed in the later native/UI merge. The [GitHub Releases page](https://github.com/usermalik20-del/Kanta-reborn/releases) remains empty. No signed production IPA or physical-device audio/camera acceptance is established. Branch protection remains an open governance follow-up.
+
+## Current iOS navigation, Queue, and YouTube preview lifecycle
+
+`KantaTabBar` is presentation-only; `RootView` owns selected-tab and route state and uses the shared presentation gate. `KantaQueueView` projects the authoritative controller snapshot and owns no queue mutations. Embedded and fullscreen More controls use distinct stable accessibility IDs. Online-player retirement synchronously invalidates callbacks and detaches the `WKWebView`, then defers media/blank-page cleanup. These ownership and lifecycle contracts are recorded in `docs/ARCHITECTURE.md`; current exact-SHA evidence is in `docs/RECONSTRUCTION.md`.
+
+
+## Current iOS walkthrough test boundary — October 26, 2026
 
 The visual runtime manifest requires 13 named UI cases. Song Library, KANTA Songbook, Settings, Companion Remote, iCloud Save, and Legal & Privacy each have a separate XCTest method so one destination cannot exhaust the aggregate menu test's 120-second default / 180-second maximum allowance. Each case still verifies the destination title, captures a screenshot, dismisses through `navigation.done`, and verifies Stage More returns.
 
-The visual workflow uses independent iPhone and iPad jobs, each compiling/running its own complete suite and preserving per-device diagnostics. The runtime runner treats a non-zero `xcodebuild` exit, XCTest restart, or missing required case as failure even if a later attempt lists passing tests. The candidate has not yet earned a full walkthrough pass. No signed IPA or published GitHub Release is verified.
+The visual workflow uses independent iPhone and iPad jobs, each compiling/running its own complete suite and preserving per-device diagnostics. The runtime runner treats a non-zero `xcodebuild` exit, XCTest restart, or missing required case as failure even if a later attempt lists passing tests. The exact PR #83 candidate and post-merge main walkthroughs both passed on the recorded SHAs above. No signed IPA or published GitHub Release is verified.
 
 ## Historical implementation context
 

@@ -514,3 +514,32 @@ This section supersedes the earlier pending wording above for the post-merge PR 
 
 **Next action if the JVM crash recurs:** extend the failure artifact path to retain `apps/android/hs_err_pid*.log`, then inspect the JVM fatal-error header, problematic frame, signal and resource state. Keep build/lint assertions enabled; do not mask the daemon exit or infer green from partial tests.
 
+
+
+## PR #83 Stage More accessibility repair — exact-head and post-merge closure (2026-10-26)
+
+This entry closes the earlier candidate record for the `stage.more` accessibility identity mismatch. The historical failed run and original diagnosis above remain unchanged.
+
+**Original failure:** focused smoke [#40244262594](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594), job [#121322606681](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594/job/121322606681), on the pre-repair PR head. The test queried `stage.more`, but only the fullscreen More control exposed that identifier; the embedded chevron was the actual menu entry point.
+
+**Fix:** [commit `1c2aeaa`](https://github.com/usermalik20-del/Kanta-reborn/commit/1c2aeaa56d864001e5894e546ba390185e57fedf) attached `stage.more` to the embedded button, assigned `stage.controls.more` to the fullscreen control, and added a source-contract regression check. The complete PR candidate was later tested at [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
+
+**First green exact-head validation:**
+- Focused iPhone smoke [#40254725871](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725871), job #121354013803 — passed.
+- Reconstruction [#40254725851](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725851): Android job #121354013913 and iOS job #121354014090 — both passed.
+- Full walkthrough [#40254725862](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725862): iPhone job #121354236767 and iPad job #121354237065 — both passed.
+- Unsigned archive [#40254725860](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725860), artifact [#12622475729](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725860/artifacts/12622475729), 25,139,930 bytes, SHA-256 `41fc1dc3f8de2e98438b9e19a6a1ca4e31cbe9df570dac1dffca795439701707`.
+
+**Post-merge confirmation:** PR #83 merged as [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9). Main reconstruction [#40258066829](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066829), full iPhone/iPad walkthrough [#40258066852](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066852), and unsigned archive [#40258066875](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066875) all passed. The main archive is artifact [#12622974482](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066875/artifacts/12622974482), 25,139,693 bytes, SHA-256 `f17c0195c679270916febc2f0612ddb5d90d9f2c235097849615fcf26e7b00fb`.
+
+**Status:** `verified` for the accessibility mismatch repair on the exact PR candidate and post-merge main. This verifies simulator/UI and source-contract behavior only; it does not establish physical-device audio/camera quality or signing.
+
+**Recurrence rule:** preserve the distinction between embedded `stage.more` and fullscreen `stage.controls.more`; keep the source-contract check and real device walkthroughs. Do not loosen the test to fall back to a generic label.
+
+## PR #83 Android Gradle daemon crash — non-reproduction follow-up (2026-10-26)
+
+The original crash remains documented at [run #40243129249](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243129249). The log reported `Gradle build daemon disappeared unexpectedly` during lint and mentioned `apps/android/hs_err_pid2233.log`, but that crash file was not preserved, so the fatal JVM signature and exact cause remain unknown.
+
+The failure did **not** reproduce on the synchronized PR candidate: Android reconstruction job #121354013913 passed in [run #40254725851](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40254725851). Post-merge Android reconstruction also passed in [run #40258066829](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40258066829), including build/lint/domain regression, real Chrome, browser interoperability and emulator runtime checks.
+
+**Status:** `non-reproduced; root cause unconfirmed`, not a proven JVM fix. If it recurs, retain `apps/android/hs_err_pid*.log` and inspect the fatal-error header, signal, problematic frame and resource state before changing heap settings or application code.
