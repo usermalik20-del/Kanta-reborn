@@ -1237,6 +1237,8 @@ The UIKit-owned embedded Stage Search/Queue presenter is mounted as a full-bound
 
 The embedded Host is a single persistent workspace rather than a destination screen: the stage visual remains present above a compact now-playing strip and the existing Search/Queue/More and Settings/CONTROL accessory flows. Width-aware layout places frequent actions in the header on iPad-sized layouts and in a bottom rail on compact layouts. Both layouts dispatch to the same `HostViewModel`, `KantaPresentationGate`, and `LocalKaraokeController`; no view-local playback owner or queue is permitted.
 
+The `LIVE` stage chip is a playback-state indicator, not a general Host status: render it only while `model.snapshot.transport == .playing`. It must be absent for idle, paused, and stopped transport states. Keep the visual-state condition explicit and covered by the iOS presentation source-contract guard.
+
 Keep the stage as the highest-priority visual surface and keep its background non-interactive so it cannot intercept control taps. Preserve the approved main-player transport invariant: one Play/Pause toggle plus Next, with no Previous or progress/scrub bar. Stage Visuals, Remote, Settings, and iCloud must continue to use their existing owners until implemented as separately validated accessories.
 
 
