@@ -127,11 +127,6 @@ struct KantaMainPlayerView: View {
                         .font(.caption2).foregroundStyle(KantaColors.textSecondary)
                 }
                 Spacer(minLength: 0)
-                Button(action: onMore) {
-                    Image(systemName: "ellipsis").frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("More")
-                .accessibilityIdentifier("stage.more")
                 Button(action: onControls) {
                     Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44)
                 }
