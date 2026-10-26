@@ -27,6 +27,17 @@ Companion commands require explicit pairing, authorization, bounded replay prote
 
 The owner-approved [Companion Remote roadmap](COMPANION_REMOTE_ROADMAP.md) defines the supplied remote design as a built-in role in both native apps, with host-address browser access for guests without KANTA. Pairing and host authorization are mandatory; both interfaces project the existing host/source owners and never create a queue. Native iOS hosting, browser transport/trust bootstrap and expanded controls remain planned. The reference is preserved in docs/design-references/companion-remote-reference.jpeg. The owner moved this implementation into PR #51 on October 18. The initial planning-only status is superseded by the candidate described below.
 
+## iOS app navigation, Queue projection, and online-player retirement
+
+The app-level `KantaTabBar` is presentation-only: it emits a destination and owns no navigation or playback state. `RootView` owns selected-tab and route presentation state, and routes Library, Queue, and More through the existing `KantaPresentationGate`. The bottom bar uses `.safeAreaInset`, not an overlay, so it does not cover Host controls or become a competing interaction owner.
+
+`KantaQueueView` is a read-only projection of `services.controller.snapshot()`. Its local queue and now-playing fields are view cache only; reservation identity, FIFO ordering, playback state, and every queue mutation remain owned by the existing controller. Keep this boundary when adding sorting, refresh, or queue actions; any mutation must be a typed intent to the controller, never a local authoritative edit.
+
+The embedded Stage navigation chevron uses `stage.more`; the fullscreen-only More control uses `stage.controls.more`. These identifiers are distinct because the controls belong to different, mutually exclusive presentations. Keep the stable IDs and their source-contract/XCTest coverage aligned.
+
+When closing an online YouTube preview, clear lifecycle presentation state and retire the player owner. Retirement must invalidate callbacks and detach/hide the native `WKWebView` synchronously before deferring media suspension and blank-page cleanup. WebKit cleanup must not hold the presentation transition, and retired coordinators must remain terminal. The native lifecycle regression asserts synchronous detachment; simulator walkthroughs separately verify the user-visible transition.
+
+
 ## Build isolation
 
 Root workflows validate relevant pull requests once and validate main after merge. `reconstruction-validation.yml` owns Swift package/source guards, unsigned iOS simulator compilation and Android build/tests. `ios-smoke.yml` adds focused iPhone simulator navigation acceptance on relevant iOS pull requests; it is not a replacement for the full device walkthrough. The smoke workflow is limited to KANTA-owned source guards, native lifecycle tests, named simulator tests, and evidence uploads; it must not install unrelated external CLIs or mislabel them as audio analysis. Audio-quality and latency acceptance require a separate KANTA-specific measurement contract. `website-validation.yml` and `verified-downloads.yml` run focused website and download-contract checks. Feature-branch push events do not duplicate PR validation.
