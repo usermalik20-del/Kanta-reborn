@@ -127,8 +127,8 @@ class CompactWorkspaceContractTests(unittest.TestCase):
     def test_display_status_is_contextual_and_uses_existing_coordinator(self):
         host = (HOST / "HostView.swift").read_text()
         player = (HOST / "KantaMainPlayerView.swift").read_text()
-        self.assertIn("displayStatusPopover", host)
-        self.assertIn("externalStage.isPresenting", host)
+        self.assertIn("displayStatusPopover", player)
+        self.assertIn("externalStage.isPresenting", player)
         self.assertIn('stageButton("Display", icon: "display")', player)
         self.assertIn('showingDisplayStatus = true', player)
         self.assertIn('stage.display.popover', player)
