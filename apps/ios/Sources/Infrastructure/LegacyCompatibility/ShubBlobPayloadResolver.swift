@@ -59,7 +59,7 @@ extension ShubBlobPayloadResolveError: LocalizedError {
         case let .unsupportedPayloadSignature(signature):
             return "This legacy song payload format is not supported (\(signature.rawValue))."
         case .cannotCreateTemporaryFile:
-            return "Gelo Karaoke could not create a temporary playback file."
+            return "KANTA Karaoke could not create a temporary playback file."
         case let .truncatedPayload(expected, actual):
             return "The legacy song payload is incomplete (expected \(expected) bytes, read \(actual))."
         }
