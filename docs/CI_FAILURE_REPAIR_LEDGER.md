@@ -604,3 +604,26 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 
 **Status:** candidate.
 
+
+
+## 2026-10-27 — Main iOS compile failure from unintegrated KantaWorkspace scaffold
+
+**Fingerprint:** `ios-unsigned-simulator-build / undefined workspace presentation types`.
+
+**Failing source SHA:** [`ea24b63`](https://github.com/usermalik20-del/Kanta-reborn/commit/ea24b63a68ded8bbe7a8f6deba9a396d454b4dc6).
+
+**Failure evidence:**
+- Main reconstruction [run #40365687028](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687028), iOS job [#121722620353](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687028/job/121722620353) failed at **Unsigned simulator build** (exit 65).
+- Main visual walkthrough [run #40365687013](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687013), iPhone job [#121722620227](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687013/job/121722620227) failed while compiling the app/UI-test bundle, so the actual iPhone walkthrough was skipped; the iPad job remained queued. Main unsigned archive run [#40365687280](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40365687280) was cancelled.
+
+**Confirmed cause:** commit `ea24b63` added `apps/ios/Sources/DesignSystem/KantaWorkspace.swift` to a directory compiled by the app target, but the file was an unintegrated scaffold. Xcode reported missing `PersistentStageView`, `AccessoryPresentationLayer`, `WorkspaceAccessory`, `NavigationSheet`, `.workspaceToolbar`, and `.workspaceVisualHierarchy`; it also reported that `WorkspacePresentationState` did not satisfy `ObservableObject` for `@ObservedObject` and that its `NSObject.init` override was missing `override`. `HostView` did not instantiate the scaffold. This is a source-completeness/architecture failure, not an SDK transient.
+
+**Repair candidate:** [PR #98](https://github.com/usermalik20-del/Kanta-reborn/pull/98), commit [`3e1eeb7`](https://github.com/usermalik20-del/Kanta-reborn/commit/3e1eeb7f81c36f0be4ed8759c7779c96905d91e6), removes the 54-line unused scaffold rather than adding placeholder types or changing the existing presentation owners.
+
+**Regression/validation evidence on the repair candidate:**
+- Reconstruction [run #40366928445](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366928445): iOS and Android jobs passed.
+- Unsigned iOS archive [run #40366928611](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366928611): passed.
+- Full walkthrough [run #40366929004](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366929004): iPad passed; iPhone job was queued at this ledger update.
+- Focused iOS smoke [run #40366928538](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366928538): still running at this ledger update.
+
+**Status:** candidate; partial validation green. Do not mark verified or merge until the focused iOS smoke and iPhone walkthrough complete successfully on the repair candidate. After the final gate, append the first green evidence and update the reconstruction checkpoint. Preserve the failed main runs as historical evidence.
