@@ -313,3 +313,8 @@ Source checkpoint `2e67879` compiles `LocalNetworkControl` as a Swift package de
 ## PR #51 iOS native Keychain acceptance boundary — October 18, 2026
 
 The Release test-module SPI repair compiles and passes Swift package tests at `215e02a` (reconstruction 39136036615). The unsigned simulator smoke job 39136036597 executed the new app-hosted identity test but `SecItemAdd` returned `errSecMissingEntitlement` (`-34018`). Five native WebKit and four UI smoke tests passed; the Keychain acceptance gate did not. `ios-smoke.yml` uses `CODE_SIGNING_ALLOWED=NO`; no team identity, provisioning profile, signed IPA or new release was created. An authorized entitled simulator test host and explicit entitlement inspection are required before claiming native Keychain support. Production runtime and FIFO ownership are unchanged.
+
+
+## Compact persistent workspace — 2026-10-26
+
+Implementation candidate on `feat/compact-persistent-workspace-20261026`: the iOS embedded Host now composes a persistent Stage surface, a persistent now-playing strip, and width-aware contextual actions. Existing Search/Queue presentation and Host More ownership remain authoritative. The candidate preserves the no-Previous/no-progress-bar contract. Static source guard coverage was extended for stable accessibility IDs and layout invariants; hosted compiler and iPhone/iPad walkthrough results must be recorded from this exact head before the feature is considered validated.
