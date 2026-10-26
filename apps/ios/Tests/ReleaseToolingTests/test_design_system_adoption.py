@@ -116,6 +116,19 @@ class CompactWorkspaceContractTests(unittest.TestCase):
         self.assertIn('stageButton("More"', player)
         self.assertIn("KantaTransportBar(", player) if "KantaTransportBar(" in player else self.assertIn("playButton; Spacer(); nextButton; Spacer(); queueButton", player)
 
+    def test_toolbar_container_does_not_shadow_child_accessibility_ids(self):
+        player = (HOST / "KantaMainPlayerView.swift").read_text()
+        toolbar = player.split("private var workspaceToolbar: some View {", 1)[1].split("private var displayStatusPopover:", 1)[0]
+        popover = player.split("private var displayStatusPopover: some View {", 1)[1].split("@ViewBuilder private var stageBackground:", 1)[0]
+        self.assertNotIn('.accessibilityIdentifier("stage.workspaceToolbar")', toolbar)
+        self.assertIn('.accessibilityIdentifier("stage.search")', player)
+        self.assertIn('.accessibilityIdentifier("stage.camera")', player)
+        self.assertIn('.accessibilityIdentifier("stage.display")', toolbar)
+        self.assertIn('.accessibilityIdentifier("stage.more")', toolbar)
+        self.assertIn('Label("Stage Display", systemImage: "display")\\n                    .font(.headline)\\n                    .accessibilityIdentifier("stage.display.popover")', popover)
+        self.assertIn('.accessibilityIdentifier("stage.display.done")', popover)
+        self.assertNotIn('.background(KantaColors.surface)\\n        .accessibilityIdentifier("stage.display.popover")', popover)
+
     def test_host_landing_surface_does_not_restore_utility_dashboard_cards(self):
         host = (HOST / "HostView.swift").read_text()
         content = host.split("private var hostContent: some View {", 1)[1].split("private var stageGreeting:", 1)[0]

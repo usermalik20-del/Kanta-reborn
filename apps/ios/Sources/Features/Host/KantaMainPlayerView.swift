@@ -232,6 +232,8 @@ struct KantaMainPlayerView: View {
 
     /// Compact, persistent utility controls sit beside the player instead of
     /// expanding a separate CONTROL dashboard around the stage.
+    /// Keep stable accessibility identities on each actionable child. A shared
+    /// container identifier masks the child identities in SwiftUI UI-test queries.
     private var workspaceToolbar: some View {
         HStack(spacing: 0) {
             searchButton
@@ -254,7 +256,6 @@ struct KantaMainPlayerView: View {
         .padding(.vertical, 8)
         .background(.ultraThinMaterial, in: Capsule())
         .overlay(Capsule().stroke(KantaColors.hairline, lineWidth: 1))
-        .accessibilityIdentifier("stage.workspaceToolbar")
     }
 
     private var displayStatusPopover: some View {
@@ -262,6 +263,7 @@ struct KantaMainPlayerView: View {
             HStack {
                 Label("Stage Display", systemImage: "display")
                     .font(.headline)
+                    .accessibilityIdentifier("stage.display.popover")
                 Spacer()
                 Button("Done") { showingDisplayStatus = false }
                     .labelStyle(.titleOnly)
@@ -281,7 +283,6 @@ struct KantaMainPlayerView: View {
         .padding(18)
         .frame(minWidth: 260, maxWidth: 320)
         .background(KantaColors.surface)
-        .accessibilityIdentifier("stage.display.popover")
     }
 
     @ViewBuilder private var stageBackground: some View {

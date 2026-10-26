@@ -15,6 +15,8 @@ def verify():
     stage_presentation = (APP / 'Features/Host/KantaStageSheetPresentation.swift').read_text()
     stage_background = stage.split('@ViewBuilder private var stageBackground: some View {', 1)[1].split('\n    private var header:', 1)[0]
     embedded_player = stage.split('private var embeddedPlayer: some View {', 1)[1].split('private var nowSinging: some View {', 1)[0]
+    workspace_toolbar = stage.split('private var workspaceToolbar: some View {', 1)[1].split('private var displayStatusPopover:', 1)[0]
+    display_popover = stage.split('private var displayStatusPopover: some View {', 1)[1].split('@ViewBuilder private var stageBackground:', 1)[0]
     controls_more = stage.split('private var moreButton: some View {', 1)[1].split('private var playButton: some View {', 1)[0]
     fullscreen = (APP / 'Features/Host/FullscreenKaraokePlayerView.swift').read_text()
     fullscreen_presenter = (APP / 'Features/Host/SingingFullscreenPresentation.swift').read_text()
@@ -126,6 +128,18 @@ def verify():
         'real playback walkthrough': 'func testStarterPlaybackAndControls()' in test,
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,
+        'workspace toolbar preserves independent child accessibility identities': (
+            '.accessibilityIdentifier("stage.workspaceToolbar")' not in workspace_toolbar
+            and '.accessibilityIdentifier("stage.search")' in stage
+            and '.accessibilityIdentifier("stage.camera")' in stage
+            and '.accessibilityIdentifier("stage.display")' in workspace_toolbar
+            and '.accessibilityIdentifier("stage.more")' in workspace_toolbar
+        ),
+        'display popover identity stays on its noninteractive title': (
+            'Label("Stage Display", systemImage: "display")\\n                    .font(.headline)\\n                    .accessibilityIdentifier("stage.display.popover")' in display_popover
+            and '.accessibilityIdentifier("stage.display.done")' in display_popover
+            and '.background(KantaColors.surface)\\n        .accessibilityIdentifier("stage.display.popover")' not in display_popover
+        ),
         'Stage More accessibility identifier targets the embedded navigation button': (
             (
                 (
