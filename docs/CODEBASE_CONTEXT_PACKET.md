@@ -28,7 +28,7 @@ Website validation [#40220534010](https://github.com/usermalik20-del/Kanta-rebor
 
 The visual runtime manifest requires 13 named UI cases. Song Library, KANTA Songbook, Settings, Companion Remote, iCloud Save, and Legal & Privacy each have a separate XCTest method so one destination cannot exhaust the aggregate menu test's 120-second default / 180-second maximum allowance. Each case still verifies the destination title, captures a screenshot, dismisses through `navigation.done`, and verifies Stage More returns.
 
-The visual workflow uses independent iPhone and iPad jobs, each compiling/running its own complete suite and preserving per-device diagnostics. The runtime runner treats a non-zero `xcodebuild` exit, XCTest restart, or missing required case as failure even if a later attempt lists passing tests. The candidate has not yet earned a full walkthrough pass. No signed IPA or published GitHub Release is verified.
+The visual workflow uses independent iPhone and iPad jobs, each compiling/running its own complete suite and preserving per-device diagnostics. The runtime runner treats a non-zero `xcodebuild` exit, XCTest restart, or missing required case as failure even if a later attempt lists passing tests. The exact PR #83 candidate and post-merge main walkthroughs both passed on the recorded SHAs above. No signed IPA or published GitHub Release is verified.
 
 ## Historical implementation context
 
