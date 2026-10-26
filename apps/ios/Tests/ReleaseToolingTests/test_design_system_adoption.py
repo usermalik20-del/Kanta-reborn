@@ -108,6 +108,31 @@ class DesignSystemMembershipTests(unittest.TestCase):
         self.assertNotIn("maxHeight: .infinity", text)
 
 
+class CompactWorkspaceContractTests(unittest.TestCase):
+    def test_embedded_player_owns_compact_utility_toolbar(self):
+        player = (HOST / "KantaMainPlayerView.swift").read_text()
+        self.assertIn("private var workspaceToolbar", player)
+        self.assertIn('stageButton("Display"', player)
+        self.assertIn('stageButton("More"', player)
+        self.assertIn("KantaTransportBar(", player) if "KantaTransportBar(" in player else self.assertIn("playButton; Spacer(); nextButton; Spacer(); queueButton", player)
+
+    def test_host_landing_surface_does_not_restore_utility_dashboard_cards(self):
+        host = (HOST / "HostView.swift").read_text()
+        content = host.split("private var hostContent: some View {", 1)[1].split("private var stageGreeting:", 1)[0]
+        self.assertIn("embeddedStage", content)
+        self.assertNotIn("inlineRemote", content)
+        self.assertNotIn('GeloSectionCard("External TV / Stage Display")', content)
+        self.assertNotIn("DisclosureGroup(isExpanded: $remoteExpanded)", content)
+
+    def test_display_status_is_contextual_and_uses_existing_coordinator(self):
+        host = (HOST / "HostView.swift").read_text()
+        player = (HOST / "KantaMainPlayerView.swift").read_text()
+        self.assertIn("displayStatusPopover", host)
+        self.assertIn("externalStage.isPresenting", host)
+        self.assertIn("onDisplay: {", host)
+        self.assertIn("onDisplay()", player)
+
+
 class TransportSingleSourceTests(unittest.TestCase):
     def test_bar_owns_no_transport_state(self):
         """The snapshot is the single source of truth; a private copy would
