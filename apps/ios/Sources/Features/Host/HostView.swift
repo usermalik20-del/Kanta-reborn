@@ -71,7 +71,7 @@ struct HostView: View {
         )
     }
 
-    @State private var remoteExpanded = false
+    @State private var showingDisplayStatus = false
 
     var body: some View {
         ZStack {
@@ -276,16 +276,8 @@ struct HostView: View {
 
     private var hostContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                stageGreeting
+            VStack(alignment: .leading, spacing: 12) {
                 embeddedStage
-                inlineRemote
-
-                GeloSectionCard("External TV / Stage Display") {
-                    Text(externalStage.isPresenting ? "Extended screen active" : "No independent display detected")
-                    Text("Connect HDMI/USB-C or an AirPlay display with extended-screen support. The TV shows lyrics and backgrounds; controls stay here. Mirroring also shows this device’s controls.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
             }
             .padding(16)
             .frame(maxWidth: 900)
@@ -361,28 +353,40 @@ struct HostView: View {
             onExpand: openFullscreenPlayer,
             setEmbeddedStageSheet: { stageSheet in
                 activeEmbeddedStageSheet = stageSheet
+            },
+            onDisplay: {
+                showingDisplayStatus = true
             }
         )
+        .popover(isPresented: $showingDisplayStatus, arrowEdge: .bottom) {
+            displayStatusPopover
+                .presentationCompactAdaptation(.sheet)
+        }
     }
 
-    private var inlineRemote: some View {
-        DisclosureGroup(isExpanded: $remoteExpanded) {
-            InAppControlCenterView(
-                model: model,
-                backgroundsEnabled: $settings.stageVisualsEnabled,
-                selectedPreset: $settings.selectedVisualPreset,
-                singerName: $singerName,
-                microphoneBusy: microphonePitchMonitor.status == .running
-                    || microphonePitchMonitor.status == .requestingPermission
-            )
-            .padding(.top, 16)
-        } label: {
-            Label("Remote Control", systemImage: "rectangle.and.hand.point.up.left")
-                .font(.headline)
-                .accessibilityIdentifier("host.remotePanel.toggle")
+    private var displayStatusPopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Stage Display", systemImage: "display")
+                    .font(.headline)
+                Spacer()
+                Button("Done") { showingDisplayStatus = false }
+                    .labelStyle(.titleOnly)
+            }
+            Text(externalStage.isPresenting
+                 ? "Extended stage is active."
+                 : externalStage.isConnected
+                    ? "A display is connected. Open the Host to start the extended stage."
+                    : "No extended display connected.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text("Connect a compatible HDMI/USB-C or AirPlay display. Mirroring may show this device’s controls.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .padding(18)
-        .background(KantaColors.surface, in: RoundedRectangle(cornerRadius: 20))
+        .frame(minWidth: 260, maxWidth: 320)
+        .background(KantaColors.surface)
     }
 
     private func openFullscreenPlayer() {
