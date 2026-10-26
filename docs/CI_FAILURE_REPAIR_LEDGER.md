@@ -627,3 +627,19 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 - Focused iOS smoke [run #40366928538](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40366928538): still running at this ledger update.
 
 **Status:** candidate; partial validation green. Do not mark verified or merge until the focused iOS smoke and iPhone walkthrough complete successfully on the repair candidate. After the final gate, append the first green evidence and update the reconstruction checkpoint. Preserve the failed main runs as historical evidence.
+
+
+## Recurrence — compact-workspace PR branch retains the same unbuildable scaffold (October 27, 2026)
+
+**Affected candidate:** [PR #97](https://github.com/usermalik20-del/Kanta-reborn/pull/97), branch `feat/compact-workspace-redesign-20261026`, source [`9b052b8`](https://github.com/usermalik20-del/Kanta-reborn/commit/9b052b8f5ae38229799f521fed69115216958f0d).
+
+**New failure evidence:**
+- Full visual walkthrough [run #40367142976](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367142976) failed during app/UI-test compilation on both iPhone and iPad; neither device walkthrough executed.
+- Unsigned archive [run #40367143404](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367143404) failed during archive compilation.
+- Reconstruction [run #40367143008](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367143008) and focused smoke [run #40367142939](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40367142939) were still running at this update.
+
+**Confirmed recurrence:** the archive compiler reports the same unresolved types/modifiers in `apps/ios/Sources/DesignSystem/KantaWorkspace.swift` as main's `ea24b63` failure. The PR #97 branch is not a clean descendant of current main: it diverged from main's merge base `fa10eed`, is 23 commits ahead and one behind, and carries the scaffold independently. Removing the file only in PR #98 therefore does not repair PR #97.
+
+**Required action:** do not merge PR #97 in this state. Reconcile its branch with the scaffold-removal repair (or remove the file there without disturbing the interactive Host implementation), then rerun reconstruction, focused smoke, unsigned archive, and both device walkthroughs on the reconciled code. Keep the accessibility-identifier repair intact and do not claim the compact workspace accepted until the full device suite passes.
+
+**Status:** recurrence confirmed; PR #97 remains an unaccepted candidate.
