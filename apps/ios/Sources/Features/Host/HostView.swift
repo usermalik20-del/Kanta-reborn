@@ -303,7 +303,9 @@ struct HostView: View {
                     .font(KantaTypography.caption)
                     .foregroundStyle(KantaColors.textSecondary)
 
-                Text(singerName.isEmpty ? "Karaoke Host" : singerName)
+                // The stage header below already names the screen, so this
+                // line must not repeat it.
+                Text(singerName.isEmpty ? "Ready when you are" : singerName)
                     .font(KantaTypography.title)
                     .foregroundStyle(KantaColors.textPrimary)
             }
