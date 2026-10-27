@@ -660,3 +660,23 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 **Synchronization repair:** current main's architecture and CI-ledger updates were merged with the candidate's branding/accessibility documentation, preserving the compact workspace source and child-identifier repair. This resolves the known branch-behind condition; GitHub's refreshed mergeability and new-head workflow runs must still be checked before acceptance.
 
 **Runtime gates remain open:** the Search-to-keypad interaction and starter-playback state transition are not declared fixed by this documentation/branch-sync repair. Reconstruction, focused smoke, unsigned archive, and both iPhone/iPad walkthrough jobs must pass on the synchronized code SHA. If no workflow is emitted for that head, treat it as an Actions-trigger blocker rather than success.
+
+
+## Verified download packaging — rejected manual inputs and recovered artifact listing (October 27, 2026)
+
+**Fingerprint:** `.github/workflows/verified-downloads.yml`, job `package`, step `Package exact-SHA accepted builds`; source is the accepted native SHA `41c8dddeebe7d096322994e8af09c8c48a76308a`. These were manual packaging attempts, not application runtime failures.
+
+**Attempt 1 — abbreviated source SHA rejected:** [run #40432412427](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432412427), package job `121953078778`. The dispatch input was `SOURCE_SHA=41c8ddde`; the script stopped with `SOURCE_SHA must be a full 40-character Git commit SHA`. This is the intended fail-closed input contract, not a regression. For a manual dispatch, supply the full 40-character SHA or leave the optional input blank to use the dispatch ref's SHA.
+
+**Attempt 2 — ambiguous artifact listing rejected:** [run #40432687096](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432687096), package job `121953963441`. The contract tests passed, but packaging stopped with `Expected exactly one android-reconstruction-checks artifact from run 40424817074; found 2`. The script correctly refused to choose an ambiguous artifact. A later GitHub artifact query returned one matching artifact, [#12701709708](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424817074/artifacts/12701709708), for the same source run. The exact reason the earlier API response exposed two matches is **unconfirmed**; treat it as a transient listing inconsistency rather than weakening the uniqueness guard.
+
+**Successful recovery:** [run #40432983408](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408) passed both the contract and packaging jobs for the full SHA `41c8dddeebe7d096322994e8af09c8c48a76308a`. It verified the original Android bytes from reconstruction run #40424817074 and the original iOS bytes from unsigned archive run #40424816823, then produced:
+- Android preview download [artifact #12703290582](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408/artifacts/12703290582), 25,572,381 bytes, ZIP SHA-256 `cd94ef8d3f6a20d0b6633a8c86002eb2bf384b7ce704c89a84fe3aac282dc95e`.
+- iOS unsigned download [artifact #12703260649](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408/artifacts/12703260649), 25,137,519 bytes, ZIP SHA-256 `b8f2c4fc5a969d631289706f6ee813c96d8305d92d706d0fa8ea83972fd805d1`.
+- Verified download manifest [artifact #12702981944](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408/artifacts/12702981944), 544 bytes, ZIP SHA-256 `f56cc1f9a1b06a96b26fd355e5594430ef292aeb945d73783452cdf628e8ffcf`.
+
+These artifacts are retained through November 26, 2026 UTC. They are workflow artifacts, not a new release; the published release still contains the two accepted `41c8ddd` binaries. No source-code repair was required: the short-SHA rejection was correct, and retrying after the artifact listing stabilized passed without relaxing exact-source or unique-artifact checks.
+
+**Recurrence rule:** preserve full-SHA validation and fail-closed artifact uniqueness. If the artifact endpoint reports multiple matches for a completed source run, inspect the exact run/artifact metadata and retry the packaging workflow once; if ambiguity persists, stop and diagnose the API listing instead of selecting an arbitrary artifact.
+
+**Status:** verified operational recovery; no application or release-gate source change.
