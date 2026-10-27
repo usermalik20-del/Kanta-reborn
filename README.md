@@ -44,20 +44,9 @@ Download pages under `apps/web/` (`ios-download.html`, `android.html`, `download
 
 ## CI status
 
-All eight workflows on `main` (`2b5e078`) are green:
+CI and device acceptance are commit-specific. See [the reconstruction checkpoint](docs/RECONSTRUCTION.md) and [CI repair ledger](docs/CI_FAILURE_REPAIR_LEDGER.md) for current run IDs, failures, candidate fixes and exact-SHA acceptance. Do not infer native release acceptance from a website deployment or from checks on an older commit.
 
-| Workflow | Result |
-| --- | --- |
-| iOS unsigned artifacts | Green |
-| iOS visual walkthrough (iPhone) | Green |
-| iOS visual walkthrough (iPad) | Green |
-| Reconstruction validation (iOS) | Green |
-| Reconstruction validation (Android) | Green |
-| Verified-downloads packaging | Green |
-| Website validation | Green |
-| Vercel deploy | Green |
-
-The Android reconstruction job's private-network assertion is environmental flakiness on the emulator; it was confirmed green on re-run.
+The public download manifest remains pinned to native source `41c8ddd` until reconstruction, unsigned iOS archive and both iPhone/iPad walkthroughs pass on the same exact SHA. Actions artifacts are temporary; the published GitHub Release assets are durable. The iOS IPA is unsigned and the Android APK is a debug preview, not a production-signed distribution.
 
 ## Open release gates
 

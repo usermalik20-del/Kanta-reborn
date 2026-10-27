@@ -1,5 +1,9 @@
 # KANTA Android reconstruction preview
 
+## Compact Workspace back-navigation contract
+
+The persistent stage stays attached while Search, Queue, Visuals or Controls is open. Android system/predictive back dismisses that active accessory first through the lifecycle-bound AndroidX `OnBackPressedDispatcher` callback; the callback is disabled when the workspace is stage-only so normal navigation remains available. Keep this behavior covered by `RuntimeChecks.workspaceBackNavigationChecks` and `tools/check-android-workspace-contract.py`.
+
 ## Companion Remote candidate in PR #51 — October 18, 2026
 
 Owner-approved requirement: the supplied KANTA remote design opens inside this same app when Companion Remote is selected, with no separate remote app. Both iOS and Android must support it, plus paired browser guests entering the host's LAN address. Host/source queue ownership, authentication and explicit sensor permissions remain authoritative. The owner moved implementation into PR #51. HTTPS hosting and a shared locally served browser/built-in remote are now candidate source; native/browser/device acceptance is pending and this is not released. Expanded unsupported controls remain explicitly unavailable. See the [shared roadmap and original design reference](../../docs/COMPANION_REMOTE_ROADMAP.md).

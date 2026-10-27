@@ -1,5 +1,12 @@
 # Recovery import handover — 2026-10-15
 
+## Current engineering handover — 2026-10-27
+
+The latest main commit `b8e2822` adds Android Compact Workspace, but its reconstruction run [#40485807248](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807248) failed Android lint at `MainActivity.java:177`: API 36 predictive-back lint rejects the legacy `Activity.onBackPressed()` override. iOS reconstruction passed. Website validation [#40485807191](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807191), Vercel deployment [#40485807267](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807267) and unsigned iOS archive [#40485807103](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807103) passed. The full iPhone/iPad walkthrough [#40485807099](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807099) was still running at inspection.
+
+Candidate branch `fix/android-predictive-back-workspace-20261027` replaces the deprecated override with an accessory-scoped AndroidX dispatcher callback and adds source/runtime regression coverage. The candidate is not yet validated or merged. Next: complete the targeted edit, verify Android lint/domain and emulator runtime, then confirm iOS archive and both walkthroughs on the exact candidate SHA. Keep public download provenance pinned to `41c8ddd` until all exact-SHA gates pass.
+
+
 Prepared platform separation, original iOS baseline, separate snapshots, captured website evidence, provenance manifest and reconstruction ledger. No original source file was edited and no snapshot was blindly overlaid. Android source remains absent. Imported-file SHA-256 comparisons passed; no runtime/build claim. The kanta-gelo connection now has verified admin/write access. Next: publish recovery branch, audit iOS missing references, and build native Android foundation.
 
 
