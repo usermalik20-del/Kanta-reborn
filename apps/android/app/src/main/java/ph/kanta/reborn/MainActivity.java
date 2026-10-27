@@ -1,5 +1,6 @@
 package ph.kanta.reborn;
 
+import androidx.activity.OnBackPressedCallback;
 import android.app.*;
 import android.content.*;
 import android.content.res.ColorStateList;
@@ -33,6 +34,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private LinearLayout root, body, results;
   private StageSurface stage, fullscreenStage, externalStage;
   private KantaWorkspace workspace;
+  private OnBackPressedCallback workspaceBackCallback;
   private TextView nowPlaying, microphoneReading, monitorReading, scoreReading;
   private Button playButton, nextButton;
   private final Map<String, Button> navigationButtons = new HashMap<>();
@@ -86,6 +88,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   @Override
   public void onCreate(Bundle saved) {
     super.onCreate(saved);
+    workspaceBackCallback =
+        new OnBackPressedCallback(false) {
+          @Override
+          public void handleOnBackPressed() {
+            // Enabled only while a transient workspace accessory is visible.
+            dismissAccessory();
+          }
+        };
+    getOnBackPressedDispatcher().addCallback(this, workspaceBackCallback);
     session = ((KantaApplication) getApplication()).session;
     camera = new CameraStage(this, session);
     if (saved != null) {
@@ -171,18 +182,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     searchWorker.shutdownNow();
     if (fullscreen != null) fullscreen.dismiss();
     super.onDestroy();
-  }
-
-  @Override
-  public void onBackPressed() {
-    // A presented workspace accessory is dismissed first; the persistent stage
-    // is never left behind. Only an already stage-only workspace falls through
-    // to normal back navigation.
-    if (workspace != null && !workspace.isStageOnly()) {
-      dismissAccessory();
-      return;
-    }
-    super.onBackPressed();
   }
 
   @Override
@@ -299,6 +298,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // Compact Workspace: the stage is the persistent base layer. Utilities are
     // transient accessories presented above it, so the player is never lost.
     workspace = new KantaWorkspace(this, null);
+    workspace.setListener(
+        new KantaWorkspace.Listener() {
+          @Override
+          public void onAccessoryActivated(String accessoryId) {
+            if (workspaceBackCallback != null) workspaceBackCallback.setEnabled(true);
+          }
+
+          @Override
+          public void onAccessoryDeactivated(String accessoryId) {
+            if (workspaceBackCallback != null) workspaceBackCallback.setEnabled(false);
+          }
+        });
     stage = new StageSurface(this, session);
     stage.setTag("kanta.stage.primary");
     stage.setOnClickListener(v -> fullscreen());

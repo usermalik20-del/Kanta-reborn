@@ -679,3 +679,10 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 
 **Repair:** the fixture now has two title records and two repeated offsets. Cardinality and stride are valid, leaving the non-increasing transition as the isolated reason for rejection. The production parser and its fail-closed behavior are unchanged. Validation on the updated PR head is pending.
 
+## PR #103 predictive-back regression prevented — 2026-10-28
+
+**Review finding:** the feature branch's ancestor [`e57508d`](https://github.com/usermalik20-del/Kanta-reborn/commit/e57508d1869b32ee0c923c0d2b2ad58633b734ee) still used the deprecated `Activity.onBackPressed()` override and did not carry the callback lifecycle wiring already present on main after [PR #101](https://github.com/usermalik20-del/Kanta-reborn/pull/101). Merging that stale implementation would risk reintroducing the previously observed `GestureBackNavigation` lint failure.
+
+**Repair:** the candidate now registers an AndroidX `OnBackPressedCallback` in `onCreate`, enables it only while a workspace accessory is active, disables it on deactivation, and removes the deprecated override. The callback dismisses the accessory while leaving the persistent stage attached. This is a preventive code-review fix; fresh hosted validation is still required.
+
+**Branch status:** PR #103 is 20 commits behind main and GitHub reports it as not mergeable. Reconcile the branch with current main and rerun reconstruction, archive, and iPhone/iPad walkthrough gates before considering merge.
