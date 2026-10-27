@@ -4,19 +4,21 @@ Native Android and iOS karaoke applications built around the **Compact Workspace
 
 **Current release:** `v0.1.0-workspace-redesign` at SHA `41c8ddde`.
 
-## What shipped
+## Compact Workspace implementation status
 
-The Compact Workspace redesign implements an **"Always on Stage"** architecture: the karaoke player stays visible and live as the base layer, while utility panels appear and disappear as transient overlays above it.
+The iOS Compact Workspace is included in public release `v0.1.0-workspace-redesign` at source `41c8ddde`. The matching native Android workspace was added to `main` in [`b8e2822`](https://github.com/usermalik20-del/Kanta-reborn/commit/b8e2822ad34c3841183cf79b91a8de30d70d178e); that later Android implementation is not yet included in the published APK. The Android candidate must pass reconstruction/emulator and exact-SHA release gates before public download provenance advances.
+
+Both implementations follow an **"Always on Stage"** architecture: the karaoke player stays visible and live as the base layer, while utility panels appear and disappear as transient overlays above it.
 
 | Capability | iOS | Android |
 | --- | --- | --- |
-| Persistent stage / player | Yes | Yes |
-| Transient accessory panels (Search, Queue, Visuals, More) | Yes | Yes |
-| Single-active accessory (no stacking) | Yes | Yes |
-| Device-specific presentation (iPhone sheet / iPad popover; handset sheet / tablet popover) | Yes | Yes |
-| Workspace toolbar (Search, Queue, Visuals, More) | Yes | Yes |
-| Accessibility identity containment fix (RC1) | Yes | Yes |
-| Toolbar label collision fix (RC2) | Yes | Yes |
+| Persistent stage / player | Released | Mainline source; release pending |
+| Transient accessory panels (Search, Queue, Visuals, More) | Released | Mainline source; release pending |
+| Single-active accessory (no stacking) | Released | Mainline source; release pending |
+| Device-specific presentation (iPhone sheet / iPad popover; handset sheet / tablet popover) | Released | Mainline source; release pending |
+| Workspace toolbar (Search, Queue, Visuals, More) | Released | Mainline source; release pending |
+| Accessibility identity containment fix (RC1) | Released | Mainline source; release pending |
+| Toolbar label collision fix (RC2) | Released | Mainline source; release pending |
 
 **Release artifacts** (`v0.1.0-workspace-redesign`):
 
