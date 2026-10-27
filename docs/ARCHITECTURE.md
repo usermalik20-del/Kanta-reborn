@@ -25,6 +25,8 @@ Scoring is default off and observes dry microphone input without storing audio. 
 
 Companion commands require explicit pairing, authorization, bounded replay protection and revocation. Website descriptions conflict between older plaintext PIN control and newer encrypted Android pairing; do not implement or advertise cross-platform transport compatibility without an explicit reviewed protocol and tests.
 
+Android companion host discovery considers active non-loopback interfaces, including virtual interfaces exposed by emulators or network adapters. Every candidate still passes the strict RFC1918 IPv4 validator, and host startup confirms the selected address belongs to a local interface before binding to that exact address; never broaden this to a wildcard bind.
+
 ## Planned built-in and browser Companion Remote
 
 The owner-approved [Companion Remote roadmap](COMPANION_REMOTE_ROADMAP.md) defines the supplied remote design as a built-in role in both native apps, with host-address browser access for guests without KANTA. Pairing and host authorization are mandatory; both interfaces project the existing host/source owners and never create a queue. Native iOS hosting, browser transport/trust bootstrap and expanded controls remain planned. The reference is preserved in docs/design-references/companion-remote-reference.jpeg. The owner moved this implementation into PR #51 on October 18. The initial planning-only status is superseded by the candidate described below.
