@@ -186,9 +186,13 @@ public final class ShubCompatibilityRegressionTests {
   }
 
   private static void spanIndexRejectsUnusableOffsetTables() {
+    // Keep one trailing offset per title so the correlator reaches the ordering
+    // check instead of rejecting a malformed stride before this regression runs.
     ByteArrayOutputStream out = header(28);
     append(out, 0x01, 0x0d, 0x01, 0x00, 1, 0, 0, 0, 2, 0, 0, 0);
     appendText(out, "A");
+    append(out, 0x01, 0x0d, 0x01, 0x00, 3, 0, 0, 0, 4, 0, 0, 0);
+    appendText(out, "B");
     append(out, 16, 0, 0, 0);
     append(out, 16, 0, 0, 0);
     boolean rejected = false;
@@ -199,7 +203,7 @@ public final class ShubCompatibilityRegressionTests {
           expected.failure
               == ShubBlobSpanIndex.Failure.OFFSET_CORRELATION_REJECTED;
     }
-    check(rejected, "Non increasing offset table accepted");
+    check(rejected, "Non increasing offset table was not rejected by correlation");
   }
 
   private static void payloadProbeClassifiesKnownSignatures() {
