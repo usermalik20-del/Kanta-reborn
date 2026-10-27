@@ -78,7 +78,7 @@ struct HostView: View {
             hostContent
         }
         .sheet(item: $activeHostSheet, onDismiss: handleHostSheetDismissal, content: hostSheetContent)
-        .navigationTitle("Karaoke Host")
+        .navigationTitle("KANTA Karaoke")
         .navigationBarTitleDisplayMode(.large)
         .background { hostPresentationAnchors }
         .background { KantaBackground().allowsHitTesting(false) }
@@ -279,6 +279,7 @@ struct HostView: View {
             VStack(alignment: .leading, spacing: 20) {
                 stageGreeting
                 embeddedStage
+                    .padding(.horizontal, -16)
                 inlineRemote
 
                 GeloSectionCard("External TV / Stage Display") {
@@ -299,6 +300,13 @@ struct HostView: View {
     private var stageGreeting: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    KantaBrandMark(size: 28)
+                    Text("KANTA KARAOKE")
+                        .font(KantaTypography.badge)
+                        .tracking(1.2)
+                        .foregroundStyle(KantaColors.cyan)
+                }
                 Text(greetingText)
                     .font(KantaTypography.caption)
                     .foregroundStyle(KantaColors.textSecondary)

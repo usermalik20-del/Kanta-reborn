@@ -38,7 +38,7 @@ public final class BonjourHostAdvertiser: ObservableObject {
         controller: (any KaraokeController)? = nil,
         catalogSearch:
             (@Sendable (String, Int, Int) async -> [LibrarySong])? = nil,
-        displayName: String = "Gelo Karaoke",
+        displayName: String = "KANTA Karaoke",
         pairingCode: PairingCode = .generate()
     ) {
         self.controller = controller

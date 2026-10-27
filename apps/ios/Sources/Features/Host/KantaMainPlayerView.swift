@@ -114,39 +114,30 @@ struct KantaMainPlayerView: View {
     }
 
     private var embeddedPlayer: some View {
-        VStack(spacing: 18) {
-            HStack {
-                // The embedded stage reaches the menu through this chevron; the
-                // fullscreen player uses stageButton("More"). They are never on
-                // screen at the same time, so they share one identity.
-                Button(action: onMore) { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
-                    .accessibilityLabel("More")
-                    .accessibilityIdentifier("stage.more")
-                Text("Karaoke Host").font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                Button(action: onControls) {
-                    Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("CONTROL")
-                .accessibilityIdentifier("stage.controls")
-            }
-            VStack(alignment: .leading, spacing: 14) {
-                // A single deterministic layout keeps exactly one interactive
-                // instance of the stage action buttons. `ViewThatFits` builds
-                // both candidates and the iPad walkthrough showed it selecting
-                // the horizontal branch while taps on `stage.search` never
-                // reached the button's action, so the controls are laid out
-                // once here and the title yields space instead.
-                HStack(alignment: .top, spacing: 12) {
-                    nowSinging
-                        .layoutPriority(1)
+        GeometryReader { geometry in
+            let compact = geometry.size.width < 600
+            VStack(spacing: compact ? 10 : 16) {
+                HStack(spacing: 10) {
+                    KantaBrandMark(size: compact ? 26 : 30)
+                    Text("KANTA")
+                        .font(.title3.bold())
+                        .foregroundStyle(GeloVisualStyle.gold)
                     Spacer(minLength: 8)
-                    stageActions
+                    if !compact {
+                        searchButton
+                        cameraButton
+                        queueButton
+                        stageButton("More controls", icon: "slider.horizontal.3") { camera.stop(); onControls() }
+                            .accessibilityIdentifier("stage.controls")
+                        stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
+                            .accessibilityIdentifier("stage.expand")
+                        stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
+                            .accessibilityIdentifier("stage.more")
+                    }
                 }
+                .padding(.horizontal, compact ? 4 : 8)
+
                 ZStack {
-                    // With no stage visual or camera selected the tile shows real
-                    // cover art instead of an empty placeholder. Selection still
-                    // wins when the operator has chosen a background.
                     if camera.isEnabled || backgroundsEnabled {
                         stageBackground.accessibilityHidden(true)
                     } else {
@@ -154,67 +145,121 @@ struct KantaMainPlayerView: View {
                             .accessibilityHidden(true)
                             .allowsHitTesting(false)
                     }
-                    LinearGradient(colors: [.clear, .black.opacity(0.72)], startPoint: .top, endPoint: .bottom)
-                        .allowsHitTesting(false)
-                    if model.snapshot.transport == .playing {
-                        VStack {
+                    LinearGradient(
+                        colors: [.black.opacity(0.12), .clear, .black.opacity(0.74)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .allowsHitTesting(false)
+                    VStack {
+                        if model.snapshot.transport == .playing {
                             HStack {
                                 stageLiveChip
-                                Spacer(minLength: 0)
+                                Spacer()
                             }
-                            Spacer(minLength: 0)
                         }
-                        .padding(14)
-                        .allowsHitTesting(false)
-                    }
-                    Group {
-                        if model.hasLyrics {
-                            KaraokeLyricBlock(page: model.lyricPage)
-                        } else {
-                            Text("Search a song, reserve it, then tap Play.")
-                                .font(.title3.bold()).multilineTextAlignment(.center)
+                        Spacer(minLength: 0)
+                        Group {
+                            if model.hasLyrics {
+                                KaraokeLyricBlock(page: model.lyricPage)
+                            } else {
+                                VStack(spacing: 8) {
+                                    Text(model.snapshot.nowPlaying?.title ?? "Your stage is ready")
+                                        .font(.system(size: compact ? 25 : 34, weight: .black, design: .rounded))
+                                        .multilineTextAlignment(.center)
+                                    Text(model.snapshot.nowPlaying?.artist ?? "Search a song, reserve it, then tap Play.")
+                                        .font(compact ? .subheadline : .headline)
+                                        .foregroundStyle(.white.opacity(0.86))
+                                        .multilineTextAlignment(.center)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, compact ? 14 : 28)
+                        Spacer(minLength: 0)
+                        HStack {
+                            Spacer()
+                            KantaStageWatermark()
                         }
                     }
-                    .padding(20)
-                    VStack { Spacer(); HStack { Spacer(); KantaStageWatermark() }.padding(12) }
-                        .allowsHitTesting(false)
+                    .padding(compact ? 12 : 18)
                 }
-                .frame(minHeight: 280)
-                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .stroke(KantaColors.hairline, lineWidth: 1)
+                .frame(maxWidth: .infinity, minHeight: compact ? 250 : 340)
+                .clipShape(RoundedRectangle(cornerRadius: compact ? 22 : 30, style: .continuous))
+                .accessibilityIdentifier("stage.persistentSurface")
+
+                HStack(spacing: compact ? 12 : 18) {
+                    KantaCoverArt(seed: stageArtSeed, cornerRadius: 12)
+                        .frame(width: compact ? 48 : 58, height: compact ? 48 : 58)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(model.snapshot.nowPlaying?.title ?? "Nothing playing")
+                            .font(.subheadline.bold())
+                            .lineLimit(1)
+                            .accessibilityIdentifier("stage.currentSong")
+                        Text(model.snapshot.nowPlaying?.artist ?? "Choose a song to begin")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 4)
+                    playButton
+                    nextButton
+                    if compact {
+                        queueButton
+                    }
                 }
-                .shadow(color: KantaColors.violet.opacity(0.35), radius: 24, y: 12)
-                HStack { playButton; Spacer(); nextButton; Spacer(); queueButton }
-                if let next = model.snapshot.queue.first {
-                    Text("Up Next · " + next.song.title)
-                        .font(.subheadline).foregroundStyle(.secondary)
-                } else {
-                    Text("Up Next · No reservations").font(.subheadline).foregroundStyle(.secondary)
+                .padding(.horizontal, compact ? 12 : 18)
+                .padding(.vertical, compact ? 8 : 12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                // Keep this interactive row ungrouped: its buttons own stable identifiers.
+
+                if compact {
+                    HStack(spacing: 0) {
+                        searchButton
+                        Spacer(minLength: 4)
+                        cameraButton
+                        Spacer(minLength: 4)
+                        stageButton("More controls", icon: "slider.horizontal.3") { camera.stop(); onControls() }
+                            .accessibilityIdentifier("stage.controls")
+                        Spacer(minLength: 4)
+                        stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)
+                            .accessibilityIdentifier("stage.expand")
+                        Spacer(minLength: 4)
+                        stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }
+                            .accessibilityIdentifier("stage.more")
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.top, 2)
+                } else if let next = model.snapshot.queue.first {
+                    HStack(spacing: 6) {
+                        Image(systemName: "text.line.first.and.arrowtriangle.forward")
+                            .foregroundStyle(KantaColors.cyan)
+                        Text("Up Next · " + next.song.title)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        if model.showingSessionSavePrompt {
+                            Button("Save session", action: onSaveSession)
+                                .font(.caption.weight(.semibold))
+                        }
+                    }
+                    .padding(.horizontal, 8)
                 }
-            }
-            .padding(16)
-            .background(
-                KantaColors.surface.opacity(0.55),
-                in: RoundedRectangle(cornerRadius: 28, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(KantaColors.hairline, lineWidth: 1)
-            }
-            HStack {
+
                 if let notice = model.sessionNotice {
-                    Text(notice).font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                if model.showingSessionSavePrompt {
-                    Button("Save session", action: onSaveSession)
-                        .accessibilityIdentifier("stage.saveSession")
+                    Text(notice)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .padding(.zero)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .foregroundStyle(.white)
+            .background(GeloVisualStyle.pageBackground.ignoresSafeArea())
         }
-        .foregroundStyle(.white)
     }
 
     private var nowSinging: some View {

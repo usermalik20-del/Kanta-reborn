@@ -1231,3 +1231,18 @@ This is a candidate, not accepted runtime behavior. Require source-contract chec
 ## Embedded Stage presentation readiness (2026-10-24)
 
 The UIKit-owned embedded Stage Search/Queue presenter is mounted as a full-bounds, non-interactive Host background anchor. A 1×1 anchor is not the presentation surface. The presenter must re-evaluate requests after both appearance and layout, recover an orphaned controller, and emit a deduplicated `KANTA_STAGE_PRESENTATION` diagnostic when the view is not in a window or another controller is already presented. These checks are lifecycle safeguards, not proof of iPad runtime acceptance; both device walkthroughs on the exact candidate SHA remain required.
+
+
+## Compact persistent workspace — 2026-10-26
+
+The embedded Host is a single persistent workspace rather than a destination screen: the stage visual remains present above a compact now-playing strip and the existing Search/Queue/More and Settings/CONTROL accessory flows. Width-aware layout places frequent actions in the header on iPad-sized layouts and in a bottom rail on compact layouts. Both layouts dispatch to the same `HostViewModel`, `KantaPresentationGate`, and `LocalKaraokeController`; no view-local playback owner or queue is permitted.
+
+The `LIVE` stage chip is a playback-state indicator, not a general Host status: render it only while `model.snapshot.transport == .playing`. It must be absent for idle, paused, and stopped transport states. Keep the visual-state condition explicit and covered by the iOS presentation source-contract guard.
+
+Keep the stage as the highest-priority visual surface and keep its background non-interactive so it cannot intercept control taps. Preserve the approved main-player transport invariant: one Play/Pause toggle plus Next, with no Previous or progress/scrub bar. Stage Visuals, Remote, Settings, and iCloud must continue to use their existing owners until implemented as separately validated accessories.
+
+
+
+## KANTA Host branding and borderless stage — 2026-10-26
+
+Visible Host branding is KANTA Karaoke, with the KANTA brand mark rendered on the Host greeting and the player header. External-stage standby and Bonjour discovery use the same product name. The embedded stage/player is full-bleed horizontally on compact devices, with no decorative border on the stage or persistent player. Preserve the existing single HostViewModel, presentation gate and LocalKaraokeController owners; module names are not product-facing copy and remain unchanged.

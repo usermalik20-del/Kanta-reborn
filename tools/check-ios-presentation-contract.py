@@ -126,12 +126,57 @@ def verify():
         'real playback walkthrough': 'func testStarterPlaybackAndControls()' in test,
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,
-        'Stage More accessibility identifier targets the embedded navigation button': (
-            'Button(action: onMore)' in embedded_player
-            and '.accessibilityLabel("More")' in embedded_player
+        'compact workspace keeps stable More identity and existing Host ownership': (
+            'stageButton("More", icon: "ellipsis") { camera.stop(); onMore() }' in embedded_player
             and '.accessibilityIdentifier("stage.more")' in embedded_player
             and '.accessibilityIdentifier("stage.controls.more")' in controls_more
             and 'app.buttons["stage.more"]' in test
+        ),
+        'compact workspace keeps Stage and player persistently visible': (
+            '.accessibilityIdentifier("stage.persistentSurface")' in embedded_player
+            and '.accessibilityIdentifier("stage.persistentPlayer")' not in embedded_player
+            and 'if compact {' in embedded_player
+            and 'stageButton("Expand", icon: "arrow.up.left.and.arrow.down.right", action: onExpand)' in embedded_player
+        ),
+        'compact workspace shows LIVE only during active playback': (
+            'if model.snapshot.transport == .playing {\n                            HStack {\n                                stageLiveChip' in embedded_player
+        ),
+        'compact workspace retains the Host controls entry': (
+            '.accessibilityIdentifier("stage.controls")' in embedded_player
+            and 'onControls()' in embedded_player
+        ),
+        'interactive transport keeps child identities and an unambiguous controls label': (
+            '.accessibilityIdentifier("stage.persistentPlayer")' not in embedded_player
+            and embedded_player.count('stageButton("More controls", icon: "slider.horizontal.3")') == 2
+            and 'stageButton("Settings", icon: "slider.horizontal.3")' not in embedded_player
+            and '.accessibilityIdentifier("stage.playPause")' in stage
+            and '.accessibilityIdentifier("stage.next")' in stage
+            and '.accessibilityIdentifier("stage.queue")' in stage
+        ),
+        'KANTA Host branding and logo are visible': (
+            '.navigationTitle("KANTA Karaoke")' in host
+            and 'Text("KANTA KARAOKE")' in host
+            and 'KantaBrandMark(size: 28)' in host
+            and 'Text("KANTA").font(.title3.bold())' in stage
+            and 'KantaBrandMark(size: 30)' in stage
+        ),
+        'embedded player is edge-to-edge and has no decorative border': (
+            '.padding(.zero)' in embedded_player
+            and '.overlay {' not in embedded_player
+            and '.stroke(KantaColors.hairline' not in embedded_player
+            and '.accessibilityIdentifier("stage.persistentSurface")' in embedded_player
+            and '.accessibilityIdentifier("stage.persistentPlayer")' not in embedded_player
+        ),
+        'host branding uses KANTA Karaoke for network and playback errors': (
+            'displayName: String = "KANTA Karaoke"' in (APP / 'Infrastructure/LocalNetworkControl/BonjourHostAdvertiser.swift').read_text()
+            and 'KANTA Karaoke could not create a temporary playback file.' in (APP / 'Infrastructure/LegacyCompatibility/ShubBlobPayloadResolver.swift').read_text()
+            and 'Open KANTA Karaoke on the connected device.' in (APP / 'Features/Host/KantaExternalStageScene.swift').read_text()
+        ),
+        'compact workspace preserves approved transport controls': (
+            'private var playButton: some View' in stage
+            and 'private var nextButton: some View' in stage
+            and 'Previous' not in embedded_player
+            and 'ProgressView' not in embedded_player
         ),
         'library dismissal leaves session save opt-in': (
             'onSaveSession: {' in host

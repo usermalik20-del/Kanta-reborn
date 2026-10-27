@@ -643,3 +643,20 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 **Required action:** do not merge PR #97 in this state. Reconcile its branch with the scaffold-removal repair (or remove the file there without disturbing the interactive Host implementation), then rerun reconstruction, focused smoke, unsigned archive, and both device walkthroughs on the reconciled code. Keep the accessibility-identifier repair intact and do not claim the compact workspace accepted until the full device suite passes.
 
 **Status:** recurrence confirmed; PR #97 remains an unaccepted candidate.
+
+## PR #96 compact workspace accessibility regression — 2026-10-27
+
+**Failure evidence:** focused smoke [run #40348703963](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348703963) and full iPhone/iPad walkthrough [run #40348710266](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266), candidate head `9c2e12a`. Diagnostic artifact [#12665410375](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266/artifacts/12665410375) contains the actual iPhone accessibility hierarchy.
+
+**Confirmed root cause:** the interactive transport `HStack` applied `stage.persistentPlayer` to its descendants. The captured hierarchy shows the Play/Pause, Next and Queue buttons all carrying that parent identifier instead of `stage.playPause`, `stage.next` and `stage.queue`. The toolbar's Host-controls button also used the visible label `Settings`, colliding with the real Settings navigation destination.
+
+**Candidate repair:** remove the identifier from the interactive parent, retain stable identifiers on each control, rename the toolbar label to `More controls`, and enforce these invariants in `tools/check-ios-presentation-contract.py`. The Search → keypad failure in `testDemoKeypadCancelAndRepeatedIntentionalReservations` is a separate observed failure; its exact runtime cause is not yet confirmed and this change must not be reported as fixing it. Reconstruction, focused smoke and both full device walkthroughs must pass on the exact new PR head before acceptance.
+
+
+## PR #96 branch synchronization and missing-head validation — 2026-10-27
+
+**Observed before synchronization:** candidate [`ee1a5e7`](https://github.com/usermalik20-del/Kanta-reborn/commit/ee1a5e7ccf692256df23eedbcd8162cb61f77bf9) was based on an older main history; current main was [`c23b88d`](https://github.com/usermalik20-del/Kanta-reborn/commit/c23b88d870fdf9c6fa685a840f3e9125bdc7e422). GitHub reported PR #96 as `mergeable_state=dirty`; compare showed 23 candidate commits ahead and 6 main commits behind merge base `fa10eed`. No checks or Actions runs were attached to exact head `ee1a5e7`; latest completed smoke [#40348703963](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348703963) and device walkthrough [#40348710266](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40348710266) were on older head `9c2e12a`.
+
+**Synchronization repair:** current main's architecture and CI-ledger updates were merged with the candidate's branding/accessibility documentation, preserving the compact workspace source and child-identifier repair. This resolves the known branch-behind condition; GitHub's refreshed mergeability and new-head workflow runs must still be checked before acceptance.
+
+**Runtime gates remain open:** the Search-to-keypad interaction and starter-playback state transition are not declared fixed by this documentation/branch-sync repair. Reconstruction, focused smoke, unsigned archive, and both iPhone/iPad walkthrough jobs must pass on the synchronized code SHA. If no workflow is emitted for that head, treat it as an Actions-trigger blocker rather than success.
