@@ -22,6 +22,8 @@ These are workflow artifacts, not a new GitHub release. The preceding failed man
 
 **Published release:** [`v0.1.0-workspace-redesign`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.1.0-workspace-redesign) remains published from native source `41c8ddd` with a debug Android preview APK and an unsigned iOS IPA. No signed production IPA is available. Physical-device audio, microphone, camera, HDMI and AirPlay acceptance remain separate.
 
+**Exact-SHA trigger gap under repair:** the latest full iPhone/iPad walkthrough remains on `41c8ddd` because the iOS walkthrough/archive path filters did not include Android-only source changes. Candidate branch `fix/exact-sha-release-gate-android-triggers-20261027` adds Android source and companion-guard triggers plus regression coverage. Keep the public download manifest pinned to `41c8ddd` until the exact candidate SHA passes reconstruction, unsigned archive and both device walkthroughs.
+
 ## Historical checkpoint — 2026-10-26 (main `9ad68d4`; accepted native source `0867134`)
 
 Main is at merge commit [`9ad68d4`](https://github.com/usermalik20-del/Kanta-reborn/commit/9ad68d4f690aefcc5fcae91075475b8ff9eaec15), which merged PR [#94 — refresh public downloads to the accepted native baseline](https://github.com/usermalik20-del/Kanta-reborn/pull/94). The merge updates website download provenance, regression coverage and documentation; it does not change native app source. The accepted native source remains merge commit [`0867134`](https://github.com/usermalik20-del/Kanta-reborn/commit/086713405002f75ab5c7fc49cd815cf2a3469041), which removed temporary iOS diagnostic tap/window probes and updated the presentation-contract source guard.

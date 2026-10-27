@@ -5,12 +5,14 @@ on:
     branches: [main]
     paths:
       - 'apps/ios/**'
+      - 'apps/android/**'
       - 'tools/**'
       - '.github/workflows/ios-runtime-artifacts.yml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'apps/ios/**'
+      - 'apps/android/**'
       - 'tools/**'
       - '.github/workflows/ios-runtime-artifacts.yml'
 permissions:
