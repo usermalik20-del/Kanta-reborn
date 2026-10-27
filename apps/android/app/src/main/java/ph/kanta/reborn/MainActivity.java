@@ -32,6 +32,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private SessionController session;
   private LinearLayout root, body, results;
   private StageSurface stage, fullscreenStage, externalStage;
+  private KantaWorkspace workspace;
   private TextView nowPlaying, microphoneReading, monitorReading, scoreReading;
   private Button playButton, nextButton;
   private final Map<String, Button> navigationButtons = new HashMap<>();
@@ -51,6 +52,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private final Handler handler = new Handler(Looper.getMainLooper());
   private final ExecutorService searchWorker = Executors.newSingleThreadExecutor();
   private int searchGeneration = 0;
+  private int workspaceSearchGeneration = 0;
   private boolean preparingExport = false;
   private byte[] exportBytes;
   private String exportCode;
@@ -172,6 +174,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   @Override
+  public void onBackPressed() {
+    // A presented workspace accessory is dismissed first; the persistent stage
+    // is never left behind. Only an already stage-only workspace falls through
+    // to normal back navigation.
+    if (workspace != null && !workspace.isStageOnly()) {
+      dismissAccessory();
+      return;
+    }
+    super.onBackPressed();
+  }
+
+  @Override
+  public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    // Handset/tablet changes re-lay out the presented accessory so it stays a
+    // bottom sheet on a handset and an anchored panel on a large screen.
+    if (workspace != null) workspace.requestLayout();
+  }
+
+  @Override
   protected void onSaveInstanceState(Bundle out) {
     super.onSaveInstanceState(out);
     out.putString("tab", tab);
@@ -274,11 +296,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     main.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
     root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout stagePane = column();
+    // Compact Workspace: the stage is the persistent base layer. Utilities are
+    // transient accessories presented above it, so the player is never lost.
+    workspace = new KantaWorkspace(this, null);
     stage = new StageSurface(this, session);
     stage.setTag("kanta.stage.primary");
     stage.setOnClickListener(v -> fullscreen());
     stage.setContentDescription("Karaoke stage. Double tap to open fullscreen.");
-    stagePane.addView(stage, new LinearLayout.LayoutParams(-1, 0, 1));
+    workspace.addPersistentLayer(stage);
+    stagePane.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
     nowPlaying =
         text(
             session.current == null
@@ -294,6 +320,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     addWeighted(transport, nextButton);
     addWeighted(transport, button("Fullscreen", this::fullscreen));
     stagePane.addView(transport);
+    stagePane.addView(workspaceToolbar());
     if (wide) main.addView(stagePane, new LinearLayout.LayoutParams(0, -1, 1.2f));
     else
       main.addView(
@@ -329,6 +356,220 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     root.addView(tabs);
     stage.refresh();
+  }
+
+  /**
+   * Compact Workspace toolbar (Search | Queue | Visuals | Controls).
+   *
+   * Mirrors the iOS compact workspace action row: each entry presents a
+   * transient accessory above the persistent stage instead of navigating away
+   * from it. RC1: every button owns its own identity, so no container
+   * identifier can be inherited by a child. RC2: the control-opening entry is
+   * labelled "Controls", never "Settings", because Settings is a separate
+   * navigation destination and the duplicate label made assistive queries
+   * ambiguous.
+   */
+  private LinearLayout workspaceToolbar() {
+    LinearLayout bar = row();
+    bar.setBackgroundColor(PANEL);
+    bar.setPadding(dp(4), dp(4), dp(4), dp(4));
+
+    Button search = workspaceButton("Search", KantaWorkspace.ACCESSORY_SEARCH);
+    Button queue = workspaceButton("Queue", KantaWorkspace.ACCESSORY_QUEUE);
+    Button visuals = workspaceButton("Visuals", KantaWorkspace.ACCESSORY_VISUALS);
+    Button controls = workspaceButton("Controls", KantaWorkspace.ACCESSORY_MORE);
+    addWeighted(bar, search);
+    addWeighted(bar, queue);
+    addWeighted(bar, visuals);
+    addWeighted(bar, controls);
+    return bar;
+  }
+
+  /** One workspace action. Its own identity lives on the button itself. */
+  private Button workspaceButton(String label, String accessoryId) {
+    Button b = button(label, () -> presentAccessory(accessoryId));
+    b.setTag("kanta.workspace." + accessoryId);
+    b.setContentDescription("KANTA " + label);
+    b.setMinWidth(0);
+    b.setMinimumWidth(0);
+    b.setPadding(dp(3), dp(4), dp(3), dp(4));
+    b.setTextSize(12);
+    b.setMaxLines(1);
+    return b;
+  }
+
+  /**
+   * Presents one transient accessory above the persistent stage. The stage is
+   * never rebuilt, so playback, lyrics and camera are preserved.
+   */
+  private void presentAccessory(String accessoryId) {
+    if (workspace == null) return;
+    workspaceSearchGeneration++;
+    workspace.activateAccessory(accessoryId);
+    LinearLayout target = workspace.accessoryContent();
+    target.removeAllViews();
+    switch (accessoryId) {
+      case KantaWorkspace.ACCESSORY_SEARCH:
+        workspace.addAccessoryHeader("Search");
+        searchAccessory(target);
+        break;
+      case KantaWorkspace.ACCESSORY_QUEUE:
+        workspace.addAccessoryHeader("Queue");
+        queueAccessory(target);
+        break;
+      case KantaWorkspace.ACCESSORY_VISUALS:
+        workspace.addAccessoryHeader("Stage Visuals");
+        visualsAccessory(target);
+        break;
+      default:
+        workspace.addAccessoryHeader("Controls");
+        controlsAccessory(target);
+        break;
+    }
+  }
+
+  /** Dismisses the active accessory, leaving the stage untouched. */
+  private void dismissAccessory() {
+    workspaceSearchGeneration++;
+    if (workspace != null) workspace.deactivateAccessory();
+  }
+
+  /** Search accessory: a compact read of the library with reservation. */
+  private void searchAccessory(LinearLayout target) {
+    EditText input = new EditText(this);
+    input.setSingleLine(true);
+    input.setTextColor(Color.WHITE);
+    input.setTextSize(16);
+    input.setHintTextColor(0xFFAFB8D0);
+    input.setHint("Song code, title or artist");
+    input.setText(query);
+    input.setContentDescription("KANTA workspace search input");
+    target.addView(input);
+    final LinearLayout list = new LinearLayout(this);
+    list.setOrientation(LinearLayout.VERTICAL);
+    target.addView(list);
+    input.addTextChangedListener(
+        new TextWatcher() {
+          public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+
+          public void onTextChanged(CharSequence s, int a, int b, int c) {
+            query = s.toString();
+            renderWorkspaceSearch(list);
+          }
+
+          public void afterTextChanged(Editable e) {}
+        });
+    renderWorkspaceSearch(list);
+  }
+
+  /** Fills the workspace search list from the current query. */
+  private void renderWorkspaceSearch(LinearLayout list) {
+    list.removeAllViews();
+    final int token = ++workspaceSearchGeneration;
+    final String requested = query;
+    final int limit = 50;
+    final List<Song> catalog = session.songs;
+    searchWorker.execute(
+        () -> {
+          ArrayList<Song> found = new ArrayList<>();
+          for (Song s : catalog) {
+            if (Thread.currentThread().isInterrupted()) return;
+            if (s.matchesTerms(Song.searchTerms(requested))) found.add(s);
+            if (found.size() >= limit) break;
+          }
+          handler.post(
+              () -> {
+                if (token != searchGeneration || isDestroyed()) return;
+                list.removeAllViews();
+                if (found.isEmpty()) {
+                  list.addView(text("No matching songs", 14, 0xFFAFB8D0));
+                  return;
+                }
+                for (Song s : found) {
+                  LinearLayout item = row();
+                  item.addView(
+                      text(
+                          (s.code.isEmpty() ? "" : s.code + " \u00b7 ")
+                              + s.title
+                              + (s.artist.isEmpty() ? "" : "\n" + s.artist),
+                          15,
+                          Color.WHITE),
+                      new LinearLayout.LayoutParams(0, -2, 1));
+                  item.addView(button("Reserve", () -> session.reserve(s, singer)));
+                  list.addView(item);
+                }
+              });
+        });
+  }
+
+  /** Queue accessory: a read-only projection of the current queue. */
+  private void queueAccessory(LinearLayout target) {
+    target.addView(text("Up Next \u00b7 " + session.queue.snapshot().size(), 18, GOLD));
+    List<ReservationQueue.Entry> entries = session.queue.snapshot();
+    if (entries.isEmpty()) {
+      target.addView(text("Reserve a song, then choose Play to begin.", 14, 0xFFAFB8D0));
+      return;
+    }
+    int n = 0;
+    for (ReservationQueue.Entry e : entries) {
+      if (n >= queueLimit) break;
+      final int position = n++;
+      LinearLayout item = row();
+      item.addView(
+          text(
+              (position + 1) + ". " + e.song.title + (e.singer.isEmpty() ? "" : " \u00b7 " + e.singer),
+              15,
+              Color.WHITE),
+          new LinearLayout.LayoutParams(0, -2, 1));
+      if (position > 0) item.addView(button("\u2191", () -> session.move(e.id, position - 1)));
+      item.addView(button("Remove", () -> session.remove(e.id)));
+      target.addView(item);
+    }
+  }
+
+  /** Visuals accessory: camera and stage background controls. */
+  private void visualsAccessory(LinearLayout target) {
+    target.addView(
+        button(
+            camera.enabled() ? "Turn off front camera" : "Turn on front camera",
+            this::toggleCamera));
+    target.addView(
+        button(
+            "Choose your photo",
+            () ->
+                startActivityForResult(
+                    new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                        .setType("image/*")
+                        .addCategory(Intent.CATEGORY_OPENABLE),
+                    PHOTO)));
+    target.addView(
+        button(
+            "Choose your silent background video",
+            () ->
+                startActivityForResult(
+                    new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                        .setType("video/*")
+                        .addCategory(Intent.CATEGORY_OPENABLE),
+                    VIDEO)));
+  }
+
+  /** Controls accessory: the host controls that open a real Settings destination. */
+  private void controlsAccessory(LinearLayout target) {
+    target.addView(button("Settings", () -> {
+      dismissAccessory();
+      tab = "Control";
+      render();
+    }));
+    target.addView(
+        button("Companion control", () -> {
+          dismissAccessory();
+          companionDialog = CompanionDialog.show(this, session);
+        }));
+    target.addView(
+        button("Fullscreen stage", () -> {
+          dismissAccessory();
+          fullscreen();
+        }));
   }
 
   private void renderPanel() {

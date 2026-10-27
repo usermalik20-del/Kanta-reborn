@@ -357,7 +357,7 @@ Every Swift file under `apps/ios/Sources` is part of the generated application t
 
 A workspace redesign must therefore be implemented at the real composition boundary before its new view is added to the app target. All referenced views, presentation models, modifiers, and enums must exist and compile; the integrated view must preserve the current single playback owner and the existing Host/presentation coordinator. Do not land an unintegrated scaffold or add placeholder types simply to silence compilation. If a planned workspace is not ready, keep it out of the compiled source target and document it as planned.
 
-The October 27 regression in `KantaWorkspace.swift` violated this gate: the file was not instantiated by `HostView` and referenced undefined workspace types/modifiers. PR #98 removes that unused scaffold while the complete compact workspace remains a separate, unaccepted feature candidate. See `docs/CI_FAILURE_REPAIR_LEDGER.md` for the failing run IDs, compiler diagnostics, repair commit, and pending smoke/iPhone acceptance.
+The October 27 regression in `KantaWorkspace.swift` violated this gate: the file was not instantiated by `HostView` and referenced undefined workspace types/modifiers. PR #98 removed that unused scaffold, and PR #96 shipped the compact workspace at the real composition boundary instead. The scaffold file does not exist in the shipped source tree and must not be reintroduced. See `docs/CI_FAILURE_REPAIR_LEDGER.md` for the failing run IDs, compiler diagnostics and repair commit.
 
 ## KANTA Host branding and edge-to-edge player — 2026-10-26
 
@@ -366,7 +366,27 @@ The iOS Host's public-facing name is **KANTA Karaoke**. The visible KANTA brand 
 The embedded stage/player intentionally bleeds to the device's horizontal edges on compact devices and no longer draws a decorative hairline border around either the stage surface or persistent player strip. The existing fullscreen stage background already ignores safe areas. Keep the stage background non-interactive and preserve existing presentation/controller ownership. Static source guards cover the visible logo/title, network label, playback error wording, and borderless stage/player composition; simulator walkthroughs remain the acceptance gate.
 ## Compact workspace accessibility identity invariant — 2026-10-27
 
-The persistent transport row is interactive, so its parent `HStack` must not carry an accessibility identifier. On the compact-workspace candidate, the parent identifier `stage.persistentPlayer` was propagated to its descendants. The captured iPhone hierarchy shows the Play/Pause, Next and Queue buttons carrying that parent identifier instead of `stage.playPause`, `stage.next` and `stage.queue`, hiding the controls' own stable identifiers from XCTest and assistive-technology queries. Keep the visual row ungrouped and put identifiers on each actionable child. The toolbar action that opens Host controls must be labelled **More controls**, not **Settings**, because Settings is also a real navigation destination. The presentation-contract guard protects both rules. The separate Search/keypad presentation failure remains unaccepted until runtime evidence proves its cause and the exact candidate passes both device walkthroughs.
+The persistent transport row is interactive, so its parent `HStack` must not carry an accessibility identifier. On the compact-workspace candidate, the parent identifier `stage.persistentPlayer` was propagated to its descendants. The captured iPhone hierarchy shows the Play/Pause, Next and Queue buttons carrying that parent identifier instead of `stage.playPause`, `stage.next` and `stage.queue`, hiding the controls' own stable identifiers from XCTest and assistive-technology queries. Keep the visual row ungrouped and put identifiers on each actionable child. The toolbar action that opens Host controls must be labelled **More controls**, not **Settings**, because Settings is also a real navigation destination. The presentation-contract guard protects both rules.
+
+Both rules are now shipped on iOS in `KantaMainPlayerView.swift` and mirrored on Android in `KantaWorkspace.java` and `MainActivity.java`. On Android the equivalent of the iOS propagation failure is a container `contentDescription` that collapses its children into a single accessibility node, so the workspace container is `IMPORTANT_FOR_ACCESSIBILITY_NO` and each actionable child carries its own `contentDescription`. The Android toolbar's control-opening entry is labelled **Controls**, never **Settings**, matching the iOS rule.
+
+## Compact Workspace architecture — 2026-10-27 (shipped)
+
+The Compact Workspace is the shipped composition on both platforms. It implements the **Always on Stage** principle: the karaoke stage is the persistent base layer and utilities are transient accessories presented above it, so the player is never lost and playback, lyrics and camera survive every accessory transition.
+
+| Concern | iOS | Android |
+| --- | --- | --- |
+| Persistent base layer | `KantaMainPlayerView.embeddedPlayer` stage surface (`stage.persistentSurface`) | `KantaWorkspace.addPersistentLayer` hosting `StageSurface` |
+| Transient accessories | `requestStageSheet(.search)` / `requestStageSheet(.queue)` | `KantaWorkspace.activateAccessory(id)` over `accessoryContent()` |
+| Single-active enforcement | One stage sheet at a time | `activateAccessory` replaces the active accessory; re-activating closes it |
+| Workspace toolbar | Search, Camera, More controls, Expand, More | Search, Queue, Visuals, Controls |
+| Device-specific presentation | iPhone partial-height sheet, iPad anchored popover | Handset bottom sheet, large-screen anchored side panel |
+| Identity containment | `.accessibilityElement(children: .contain)` on container surfaces | Container `IMPORTANT_FOR_ACCESSIBILITY_NO`; children keep their own `contentDescription` |
+| Control-entry label | **More controls** | **Controls** |
+
+Android owns its workspace container in `apps/android/app/src/main/java/ph/kanta/reborn/KantaWorkspace.java` and mounts it from `MainActivity.buildWindow()`. The stage is added as the persistent layer first, so every accessory is drawn above it and the stage subtree is never detached. The Android implementation is additive: the existing tab navigation, panels, YouTube entry, camera, companion, voice, scenic, loop, realm and export paths are unchanged.
+
+A workspace redesign must be implemented at the real composition boundary before its new view is added to the app target. All referenced views, presentation models, modifiers, and enums must exist and compile; the integrated view must preserve the current single playback owner and the existing Host/presentation coordinator. Do not land an unintegrated scaffold or add placeholder types simply to silence compilation. If a planned workspace is not ready, keep it out of the compiled source target and document it as planned.
 
 
 ## PR branch freshness and exact-SHA acceptance — 2026-10-27

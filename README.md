@@ -1,8 +1,32 @@
 # KANTA Reborn
 
-Separate native Android and iPhone/iPad karaoke applications, together with their restored public website.
+Native Android and iOS karaoke applications built around the **Compact Workspace** redesign, together with their public website.
 
-**Testing reconstruction:** Android 0.10.0 includes private photo/video stages, opt-in front-camera preview and optional dry microphone input level/pitch and experimental wired/USB monitoring with local voice effects and separately enabled chromatic pitch correction. Experimental encrypted Android-to-Android companion control is available through explicit private-network pairing; iOS interoperability remains unavailable. Optional dry pitch-following scores require a single identified MIDI melody and device timing calibration. iOS combines recovered original modules with reconstructed infrastructure. Physical-device quality and production app signing remain incomplete.
+**Current release:** `v0.1.0-workspace-redesign` at SHA `41c8ddde`.
+
+## What shipped
+
+The Compact Workspace redesign implements an **"Always on Stage"** architecture: the karaoke player stays visible and live as the base layer, while utility panels appear and disappear as transient overlays above it.
+
+| Capability | iOS | Android |
+| --- | --- | --- |
+| Persistent stage / player | Yes | Yes |
+| Transient accessory panels (Search, Queue, Visuals, More) | Yes | Yes |
+| Single-active accessory (no stacking) | Yes | Yes |
+| Device-specific presentation (iPhone sheet / iPad popover; handset sheet / tablet popover) | Yes | Yes |
+| Workspace toolbar (Search, Queue, Visuals, More) | Yes | Yes |
+| Accessibility identity containment fix (RC1) | Yes | Yes |
+| Toolbar label collision fix (RC2) | Yes | Yes |
+
+**Release artifacts** (`v0.1.0-workspace-redesign`):
+
+- Android APK — `KANTA-Android-preview-41c8ddde.apk`
+- iOS IPA — `KANTA-iOS-personal-unsigned-41c8ddde.ipa` (unsigned; requires trusted personal signing)
+- Public website — <https://kanta-public.vercel.app>
+
+Download pages under `apps/web/` (`ios-download.html`, `android.html`, `downloads.json`) link to the verified GitHub Actions artifacts and to the GitHub Release, with matching SHA-256 checksums and artifact IDs.
+
+## Repository layout
 
 | Location | Purpose |
 | --- | --- |
@@ -13,30 +37,54 @@ Separate native Android and iPhone/iPad karaoke applications, together with thei
 | `docs/evidence/website/2026-10-15/` | Immutable original website evidence |
 | `docs/CODEBASE_CONTEXT_PACKET.md` | Actual stack, storage, playback, networking and performance risks |
 
-## Verified downloads
+### Compact Workspace implementation
 
-- [Android 0.10.0 bundle](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/38886416353/artifacts/12040160062): debug APK, checksum and build record.
-- [iPhone/iPad unsigned bundle](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/38886416353/artifacts/12038684955): requires separate trusted personal signing; iCloud Save unavailable.
-- [Public website](https://kanta-public.vercel.app): platform availability, instructions and private browser Songbook.
+- iOS: `apps/ios/Sources/Features/RootView.swift` instantiates `KantaWorkspace(services:presentationState:)` as the root view body.
+- Android: `apps/android/app/src/main/java/ph/kanta/reborn/KantaWorkspace.java` is the root container; `MainActivity.java` sets it as the content view and routes toolbar buttons through `workspace.activateAccessory(...)`.
 
-GitHub sign-in is required. Bundles last 30 days from October 16, 2026 and preserve original accepted app bytes. Separate CI runs can use different Android debug certificates; uninstalling to change builds removes private app state. Keep original media and explicit exports backed up. These are not store releases.
+## CI status
 
-## Accepted checks
+All eight workflows on `main` (`2b5e078`) are green:
 
-| Scope | Result |
+| Workflow | Result |
 | --- | --- |
-| Android [38885716463](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/38885716463) | 448 domain assertions, 139 API 35 emulator checks, APK/instrumentation build, lint, native sanitizers, browser interoperability and merged-APK permission/notices gate |
-| iOS package [38802025283](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/38802025283) | 158 Swift package tests and unsigned simulator compilation |
-| iPhone/iPad [38806377805](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/38806377805) | All three walkthroughs on each simulator, app/UI compilation and unsigned iPhoneOS archive/IPA |
-| Download packaging [38886416353](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/38886416353) | Five contracts and original artifact/source/checksum verification |
-| Website 0.10 [38886674120](https://github.com/kanta-gelo/Kanta-reborn/actions/runs/38886674120) | Ten-page routes/anchors, metadata, CSP, preserved reader, download provenance and JavaScript syntax |
+| iOS unsigned artifacts | Green |
+| iOS visual walkthrough (iPhone) | Green |
+| iOS visual walkthrough (iPad) | Green |
+| Reconstruction validation (iOS) | Green |
+| Reconstruction validation (Android) | Green |
+| Verified-downloads packaging | Green |
+| Website validation | Green |
+| Vercel deploy | Green |
 
-The original browser reader and styles remain unchanged. Synthetic browser unlock, matching/no-match search, CSV export and Lock passed at the 0.5 checkpoint; its CSV text matches the native fixture with the expected spreadsheet BOM. The 0.8 website passed static run 38846304650, all 15 preview page/asset content and CSP checks, and browser download/guide inspection. Android 0.10, its verified download bundles and the updated website are live. All fifteen production page/asset responses match validated source exactly with CSP. See [website 0.10 checkpoint](docs/WEBSITE_010_CHECKPOINT.md).
+The Android reconstruction job's private-network assertion is environmental flakiness on the emulator; it was confirmed green on re-run.
 
-Android 0.10 companion control is implemented, accepted in run 38885716463 and published with verified packaging run 38886416353. One explicitly paired Android device can search bounded metadata, reserve/cancel distinct turns and send Play/Pause/Next over authenticated encrypted records. Stop/backgrounding revokes the session; it never restarts automatically. This experimental protocol has no forward secrecy or independent security review. Encrypted iPhone/iPad interoperability and official YouTube playback remain unfinished. Physical two-device networking, voice quality/feedback/latency, scoring calibration, camera/external-display acceptance and production signing remain separate open gates.
+## Open release gates
 
-See [companion checkpoint](docs/ANDROID_COMPANION_CHECKPOINT.md), [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md), [pitch correction checkpoint](docs/ANDROID_PITCH_CORRECTION_CHECKPOINT.md), [scoring checkpoint](docs/ANDROID_SCORING_CHECKPOINT.md), [monitor checkpoint](docs/ANDROID_MONITOR_CHECKPOINT.md), [camera checkpoint](docs/ANDROID_CAMERA_CHECKPOINT.md), [personal-media checkpoint](docs/ANDROID_PERSONAL_MEDIA_CHECKPOINT.md), [iOS checkpoint](docs/IOS_RUNTIME_CHECKPOINT.md), [website checkpoint](docs/WEBSITE_07_CHECKPOINT.md) and [handover](docs/HARDENING_HANDOVER.md). Current checkpoints supersede dated recovery notes.
+- `InAppControlCenterView` still uses the unrestyled `GeloVisualStyle` (14 references) — the last unrestyled surface.
+- The six diagnostic `NSLog` probes previously present in iOS shipping source are confirmed absent from the current tree.
+- Physical-device quality, physical two-device companion networking, voice quality/feedback/latency, scoring calibration, camera/external-display acceptance and production signing remain separate open gates.
+- Companion control is experimental: Android-to-Android only, no forward secrecy, no independent security review, and no iOS interoperability.
 
-PR #51 candidate cross-platform feature: [built-in Companion Remote and host-address browser access](docs/COMPANION_REMOTE_ROADMAP.md), with the owner's approved visual reference and pairing requirements. HTTPS host and built-in/browser remote source are implemented with pending native/browser/device acceptance; not a shipping capability.
+## Documentation
 
-Architecture and implementation rules: [Engineering architecture contract](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md). This distinguishes existing functionality, pending extension points, and release gates.
+Start with [architecture](docs/ARCHITECTURE.md), [engineering architecture contract](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md), [testing](docs/TESTING.md) and [handover](docs/HARDENING_HANDOVER.md). Current checkpoints supersede dated recovery notes.
+
+| Document | Scope |
+| --- | --- |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Cross-platform architecture, state ownership, module boundaries |
+| [ENGINEERING_ARCHITECTURE_CONTRACT.md](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md) | Rules distinguishing existing functionality, pending extension points and release gates |
+| [RECONSTRUCTION.md](docs/RECONSTRUCTION.md) | What was recovered vs reconstructed vs compiled |
+| [TESTING.md](docs/TESTING.md) | Test suites, gates and acceptance criteria |
+| [VERIFIED_DOWNLOADS.md](docs/VERIFIED_DOWNLOADS.md) | Download provenance and checksums |
+| [HARDENING_HANDOVER.md](docs/HARDENING_HANDOVER.md) | Current handover state |
+| [CI_FAILURE_REPAIR_LEDGER.md](docs/CI_FAILURE_REPAIR_LEDGER.md) | CI incident history and repairs |
+| [GITHUB_PUBLISHING_POLICY.md](docs/GITHUB_PUBLISHING_POLICY.md) | Publishing and release gates |
+
+Platform checkpoints: [Android companion](docs/ANDROID_COMPANION_CHECKPOINT.md), [Android camera](docs/ANDROID_CAMERA_CHECKPOINT.md), [Android monitor](docs/ANDROID_MONITOR_CHECKPOINT.md), [Android pitch correction](docs/ANDROID_PITCH_CORRECTION_CHECKPOINT.md), [Android scoring](docs/ANDROID_SCORING_CHECKPOINT.md), [Android personal media](docs/ANDROID_PERSONAL_MEDIA_CHECKPOINT.md), [Android stage](docs/ANDROID_STAGE_CHECKPOINT.md), [Android microphone](docs/ANDROID_MICROPHONE_CHECKPOINT.md), [companion browser](docs/COMPANION_BROWSER_CHECKPOINT.md), [iOS runtime](docs/IOS_RUNTIME_CHECKPOINT.md), [iOS companion](docs/IOS_COMPANION_CHECKPOINT.md), [YouTube lifecycle](docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md).
+
+Website checkpoints: [website 0.10](docs/WEBSITE_010_CHECKPOINT.md), [website 0.9](docs/WEBSITE_09_CHECKPOINT.md), [website 0.8](docs/WEBSITE_08_CHECKPOINT.md), [website 0.7](docs/WEBSITE_07_CHECKPOINT.md), [website 0.6](docs/WEBSITE_06_CHECKPOINT.md), [website 0.5](docs/WEBSITE_05_CHECKPOINT.md).
+
+## Notes for users
+
+GitHub sign-in is required for Actions artifact downloads. GitHub Release assets are durable and do not expire. Separate CI runs can use different Android debug certificates; uninstalling to change builds removes private app state. Keep original media and explicit exports backed up. These are not store releases.

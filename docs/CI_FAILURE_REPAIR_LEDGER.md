@@ -661,7 +661,6 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 
 **Runtime gates remain open:** the Search-to-keypad interaction and starter-playback state transition are not declared fixed by this documentation/branch-sync repair. Reconstruction, focused smoke, unsigned archive, and both iPhone/iPad walkthrough jobs must pass on the synchronized code SHA. If no workflow is emitted for that head, treat it as an Actions-trigger blocker rather than success.
 
-
 ## Verified download packaging — rejected manual inputs and recovered artifact listing (October 27, 2026)
 
 **Fingerprint:** `.github/workflows/verified-downloads.yml`, job `package`, step `Package exact-SHA accepted builds`; source is the accepted native SHA `41c8dddeebe7d096322994e8af09c8c48a76308a`. These were manual packaging attempts, not application runtime failures.
@@ -695,3 +694,12 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Recurrence rule:** whenever an Android-only or release-gate-tool change lands, inspect the head SHA of reconstruction, archive and walkthrough runs before advancing public download provenance. A workflow that did not trigger is not a pass.
 
 **Status:** candidate; hosted validation pending.
+## PR #96 and PR #98 resolution — 2026-10-27 (compact workspace accepted and released)
+
+**Resolution:** PR #98 removed the unintegrated `apps/ios/Sources/DesignSystem/KantaWorkspace.swift` scaffold, repairing the source-target completeness failure. PR #96 was synchronized onto current main and merged as [`41c8ddde`](https://github.com/usermalik20-del/Kanta-reborn/commit/41c8dddeebe7d096322994e8af09c8c48a76308a) with the accessibility-identifier repair intact: the interactive transport parent no longer carries `stage.persistentPlayer`, each actionable child keeps its own stable identifier, and the Host-controls toolbar entry is labelled `More controls` rather than `Settings`. The `tools/check-ios-presentation-contract.py` guard enforces all three rules.
+
+**Accepted evidence on the merged source:** reconstruction, focused iOS smoke, unsigned archive and both independent iPhone and iPad walkthrough jobs passed on the validated head. The released artifacts are Android run [#40424817074](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424817074) artifact [#12701709708](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424817074/artifacts/12701709708), iOS run [#40424816823](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816823) artifact [#12698769982](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816823/artifacts/12698769982), and walkthrough run [#40424816930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816930). GitHub Release `v0.1.0-workspace-redesign` carries the APK and the unsigned IPA.
+
+**Resolved state of the earlier gates:** PR #97 was closed rather than merged because it independently carried the rejected scaffold; PR #93 was closed as superseded by the main website fixes. The compact workspace is no longer an unaccepted candidate. The scaffold file does not exist in the shipped source tree and must not be reintroduced: the compact workspace ships at the real composition boundary.
+
+**Still open after this resolution:** the six diagnostic `NSLog` probes previously present in iOS shipping source (`[KANTA_PROBE]` and `[KANTA_TAP]` in `KantaMainPlayerView.swift`, `[KANTA_GATE]` in `RootView.swift`, four occurrences) are confirmed absent from the current source tree; they were removed at the accepted native baseline `0867134` and the released baseline is `41c8ddde`. `InAppControlCenterView` still uses the unrestyled `GeloVisualStyle` (14 references) and remains the last unrestyled surface. Physical-device quality, physical two-device companion networking, voice quality/feedback/latency, scoring calibration, camera/external-display acceptance and production signing remain separate open gates. The Android reconstruction job's private-network assertion is environmental emulator flakiness, confirmed green on re-run.
