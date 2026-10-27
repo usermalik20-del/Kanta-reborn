@@ -3,6 +3,7 @@ import importlib.util
 import io
 import pathlib
 import plistlib
+import re
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -205,6 +206,37 @@ class DownloadContracts(unittest.TestCase):
             module.validate_ipa(app, dict(info, source_sha="b" * 40), checksum, expected)
         with self.assertRaisesRegex(ValueError, "source identity"):
             module.validate_ipa(app, dict(info, signed=True), checksum, expected)
+
+def workflow_event_section(source, event):
+    triggers = source.split("\njobs:", 1)[0]
+    match = re.search(
+        rf"(?ms)^  {re.escape(event)}:\n(.*?)(?=^  [A-Za-z0-9_-]+:\n|^permissions:|\Z)",
+        triggers,
+    )
+    if match is None:
+        raise AssertionError(f"Missing {event} trigger in workflow")
+    return match.group(1)
+
+
+class ExactShaWorkflowTriggerContracts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        cls.walkthrough = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
+        cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+
+    def test_android_source_changes_trigger_both_ios_release_gates(self):
+        for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive)):
+            for event in ("push", "pull_request"):
+                with self.subTest(workflow=workflow_name, event=event):
+                    section = workflow_event_section(source, event)
+                    self.assertIn("'apps/android/**'", section)
+
+    def test_android_companion_guard_changes_trigger_both_device_walkthroughs(self):
+        for event in ("push", "pull_request"):
+            with self.subTest(event=event):
+                section = workflow_event_section(self.walkthrough, event)
+                self.assertIn("'tools/verify-android-companion-interface.py'", section)
 
 
 if __name__ == "__main__":

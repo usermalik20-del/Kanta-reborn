@@ -680,3 +680,18 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Recurrence rule:** preserve full-SHA validation and fail-closed artifact uniqueness. If the artifact endpoint reports multiple matches for a completed source run, inspect the exact run/artifact metadata and retry the packaging workflow once; if ambiguity persists, stop and diagnose the API listing instead of selecting an arbitrary artifact.
 
 **Status:** verified operational recovery; no application or release-gate source change.
+
+
+## Exact-SHA release gate omitted Android-only changes — October 27, 2026
+
+**Fingerprint:** `.github/workflows/ios-visual-walkthrough.yml` and `.github/workflows/ios-runtime-artifacts.yml` path filters; Android-only source changes could leave the latest full iPhone/iPad walkthrough and unsigned iOS archive on an older SHA even when reconstruction passed on the newer SHA.
+
+**Observed state:** code-bearing main merge [`8d742da`](https://github.com/usermalik20-del/Kanta-reborn/commit/8d742da4fbc1dfa984466351e0f8dea68859120a) passed reconstruction [run #40440909666](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40440909666) and unsigned archive [run #40440909660](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40440909660), while the latest full iPhone/iPad walkthrough remained [run #40424816930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816930) on native source `41c8ddd`. Inspection confirmed that the iOS workflow push/PR path filters excluded `apps/android/**`. This conflicts with the exact-SHA acceptance rule in `docs/ARCHITECTURE.md` and `apps/web/downloads.json`.
+
+**Repair candidate:** add `apps/android/**` to push and pull-request path filters for both iOS workflows, add `tools/verify-android-companion-interface.py` to the full walkthrough filter, and add regression tests in `tools/tests/test_verified_downloads.py` to keep those paths present. Update architecture and testing documentation. This changes CI trigger coverage only; it does not change application runtime or advance the public download manifest.
+
+**Acceptance:** on the exact PR head, verify reconstruction, unsigned archive and both iPhone/iPad walkthrough jobs actually start and pass. After merge, verify the same workflows start on the exact main commit. Keep `apps/web/downloads.json` and published release assets pinned to `41c8ddd` until all required gates pass for one SHA.
+
+**Recurrence rule:** whenever an Android-only or release-gate-tool change lands, inspect the head SHA of reconstruction, archive and walkthrough runs before advancing public download provenance. A workflow that did not trigger is not a pass.
+
+**Status:** candidate; hosted validation pending.
