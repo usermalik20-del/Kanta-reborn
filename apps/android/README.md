@@ -61,3 +61,7 @@ The online preview uses a distinct transient UUID per selection and idempotent t
 ### Online and local audio coordination candidate
 
 Opening an online video requires paused local karaoke and disabled microphone/monitoring. It stops effects and between-song music. Starting local audio, an effect, microphone input or between-song music closes the online video; closing it does not restart those sounds automatically. The local song and queue are preserved. This PR #51 candidate requires fresh Android build/runtime validation and physical-device interruption/YouTube acceptance; see ../../docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md.
+
+### Read-only legacy indexed-container research
+
+The `core/songbook` probe classes inspect synthetic legacy index/payload metadata without changing source files or decoding protected media. They validate offset-table shape/order/bounds, derive safe payload spans and classify leading bytes. This is a diagnostic compatibility layer only; it is not yet wired into the live song library, playback or queue, and no legacy catalogue is bundled. Malformed and unsupported inputs must be rejected. See `replica/meg-format.md` and `docs/ARCHITECTURE.md` for the boundary and open acceptance requirements.

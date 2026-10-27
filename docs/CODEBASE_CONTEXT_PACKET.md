@@ -340,3 +340,9 @@ The compact workspace now uses KANTA Karaoke branding in Host navigation/header,
 The compact persistent workspace's accessibility repair removes the identifier from the interactive transport parent and labels the Host-controls action “More controls” to avoid collision with Settings. The branch was synchronized with main while preserving the workspace implementation and its repair documentation, then merged as `41c8ddde`. Reconstruction, focused smoke, unsigned archive and both independent device walkthroughs passed on the merged source SHA, and the result shipped in GitHub Release `v0.1.0-workspace-redesign`.
 
 The Android implementation mirrors the same architecture and the same two accessibility rules: `KantaWorkspace.java` owns the persistent stage layer and the single-active transient accessories, and each actionable child keeps its own `contentDescription` while the container does not override it. The Android toolbar's control-opening entry is labelled “Controls”, never “Settings”.
+
+## Android legacy indexed-container probe boundary — 2026-10-28
+
+Candidate-only files under `apps/android/app/src/main/java/ph/kanta/reborn/core/songbook/` implement bounded, read-only structure inspection of legacy index/payload metadata. Synthetic regression coverage lives in `ShubCompatibilityRegressionTests.java` and is wired into `CoreRegressionTests`. This layer is not connected to library ingestion, protected-payload decoding, audio playback or the authoritative FIFO owner. It contains no bundled commercial songbook.
+
+The prior stale PR head `25c3222` passed reconstruction [run #40595389798](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40595389798), but that evidence does not transfer to a branch based on current main. The new mainline candidate still requires exact-SHA reconstruction, focused iOS smoke, unsigned archive and independent iPhone/iPad walkthrough evidence.

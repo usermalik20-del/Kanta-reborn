@@ -394,3 +394,11 @@ A workspace redesign must be implemented at the real composition boundary before
 ## PR branch freshness and exact-SHA acceptance — 2026-10-27
 
 A pull request is not eligible for acceptance while GitHub reports a dirty/unmergeable state or its latest head has no validation runs. First reconcile the branch with current main while preserving candidate-only implementation and documentation. Then require reconstruction, focused iOS smoke, unsigned archive, and independent iPhone/iPad walkthrough results for the same resulting code SHA. A prior green run on an older head is historical evidence only; never infer validation from a commit that has no attached run or from a branch that cannot merge cleanly.
+
+## Android legacy indexed-container compatibility boundary — 2026-10-28
+
+The Android `core/songbook` compatibility classes are read-only structural probes for legacy indexed-container metadata. `ShubIndexProbe` parses bounded index records; `ShubBlobOffsetCorrelator` checks offset-table cardinality, ordering and payload bounds; `ShubBlobSpanIndex` derives validated spans; `ShubBlobPayloadProbe` classifies leading-byte families; and `IndexedContainerCompatibility` exposes neutral results.
+
+These probes do not decrypt or decompress protected media, modify imported files, ship a catalogue, or own song-library/playback/FIFO state. They are research and diagnostics only—not completed legacy songbook import or playback. Unsupported or malformed structures must fail closed. Any future real-media integration requires separate BYOL provenance/licensing review, fixture validation and explicit integration tests.
+
+The exact-SHA release gate includes Android/iOS reconstruction, focused iOS simulator smoke, unsigned iOS archive and independent iPhone/iPad walkthroughs. Each gate must run on the same candidate SHA. Android source or companion-guard changes must trigger the focused smoke, archive and device walkthrough workflows on pull requests and on main.

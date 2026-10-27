@@ -106,29 +106,30 @@ class DownloadContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "found 2"):
                 module.find_artifact(run, "android-reconstruction-checks")
 
-    def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
+    def test_resolver_requires_walkthrough_smoke_and_both_builds_for_same_sha(self):
         walkthrough = run_record(61, "KANTA iOS visual walkthrough")
         reconstruction = run_record(62, "KANTA reconstruction validation")
         ios = run_record(63, "KANTA iOS unsigned artifacts")
+        smoke = run_record(64, "KANTA iOS focused simulator smoke")
         android_artifact = artifact_record(82, 62, "android-reconstruction-checks")
         ios_artifact = artifact_record(83, 63, "KANTA-personal-unsigned")
         with patch.object(
             module, "find_source_run",
-            side_effect=[walkthrough, reconstruction, ios],
+            side_effect=[walkthrough, reconstruction, ios, smoke],
         ) as find_run, patch.object(
             module, "find_artifact",
             side_effect=[android_artifact, ios_artifact],
         ):
-            found_walkthrough, android, device = module.resolve_source(SOURCE)
+            found_walkthrough, found_smoke, android, device = module.resolve_source(SOURCE)
         self.assertEqual(found_walkthrough["id"], 61)
+        self.assertEqual(found_smoke["id"], 64)
         self.assertEqual(android["expected"], {
             "run": 62, "artifact": 82, "source": SOURCE
         })
         self.assertEqual(device["expected"], {
             "run": 63, "artifact": 83, "source": SOURCE
         })
-        self.assertEqual(find_run.call_count, 3)
-
+        self.assertEqual(find_run.call_count, 4)
     def test_invalid_source_sha_is_rejected_before_api_access(self):
         with patch.object(module, "api") as api_call:
             with self.assertRaisesRegex(ValueError, "full 40-character"):
@@ -224,19 +225,27 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
         root = pathlib.Path(__file__).resolve().parents[2]
         cls.walkthrough = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+        cls.smoke = (root / ".github/workflows/ios-smoke.yml").read_text(encoding="utf-8")
 
-    def test_android_source_changes_trigger_both_ios_release_gates(self):
-        for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive)):
+    def test_android_source_changes_trigger_all_ios_acceptance_gates(self):
+        for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive), ("focused smoke", self.smoke)):
             for event in ("push", "pull_request"):
                 with self.subTest(workflow=workflow_name, event=event):
                     section = workflow_event_section(source, event)
                     self.assertIn("'apps/android/**'", section)
 
-    def test_android_companion_guard_changes_trigger_both_device_walkthroughs(self):
+    def test_android_companion_guard_changes_trigger_ios_smoke_and_walkthrough(self):
+        for workflow_name, source in (("focused smoke", self.smoke), ("walkthrough", self.walkthrough)):
+            for event in ("push", "pull_request"):
+                with self.subTest(workflow=workflow_name, event=event):
+                    section = workflow_event_section(source, event)
+                    self.assertIn("'tools/verify-android-companion-interface.py'", section)
+
+    def test_android_companion_guard_changes_trigger_ios_archive(self):
         for event in ("push", "pull_request"):
             with self.subTest(event=event):
-                section = workflow_event_section(self.walkthrough, event)
-                self.assertIn("'tools/verify-android-companion-interface.py'", section)
+                section = workflow_event_section(self.archive, event)
+                self.assertIn("'tools/**'", section)
 
 
 if __name__ == "__main__":

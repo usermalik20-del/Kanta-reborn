@@ -24,6 +24,7 @@ REQUIRED_RUNS = {
     "reconstruction": "KANTA reconstruction validation",
     "ios_unsigned": "KANTA iOS unsigned artifacts",
     "walkthrough": "KANTA iOS visual walkthrough",
+    "ios_smoke": "KANTA iOS focused simulator smoke",
 }
 ARTIFACT_NAMES = {
     "android": "android-reconstruction-checks",
@@ -146,7 +147,7 @@ def accepted(run: dict, artifact: dict, expected: dict):
         raise ValueError("Artifact expired or belongs to another source run")
 
 
-def resolve_source(source_sha: str) -> tuple[dict, dict, dict]:
+def resolve_source(source_sha: str) -> tuple[dict, dict, dict, dict]:
     if not re.fullmatch(r"[0-9a-f]{40}", source_sha):
         raise ValueError("SOURCE_SHA must be a full 40-character Git commit SHA")
 
@@ -155,6 +156,7 @@ def resolve_source(source_sha: str) -> tuple[dict, dict, dict]:
     walkthrough = find_source_run(source_sha, REQUIRED_RUNS["walkthrough"])
     reconstruction = find_source_run(source_sha, REQUIRED_RUNS["reconstruction"])
     ios_run = find_source_run(source_sha, REQUIRED_RUNS["ios_unsigned"])
+    ios_smoke = find_source_run(source_sha, REQUIRED_RUNS["ios_smoke"])
 
     android_artifact = find_artifact(reconstruction, ARTIFACT_NAMES["android"])
     ios_artifact = find_artifact(ios_run, ARTIFACT_NAMES["ios"])
@@ -171,7 +173,7 @@ def resolve_source(source_sha: str) -> tuple[dict, dict, dict]:
     }
     accepted(reconstruction, android_artifact, android)
     accepted(ios_run, ios_artifact, ios)
-    return walkthrough, {"run": reconstruction, "artifact": android_artifact, "expected": android}, {
+    return walkthrough, ios_smoke, {"run": reconstruction, "artifact": android_artifact, "expected": android}, {
         "run": ios_run, "artifact": ios_artifact, "expected": ios
     }
 
@@ -244,13 +246,14 @@ def application_bytes(platform: str, source: dict) -> bytes:
 
 def main():
     source_sha = (os.environ.get("SOURCE_SHA") or os.environ.get("GITHUB_SHA") or "").lower()
-    walkthrough, android, ios = resolve_source(source_sha)
+    walkthrough, ios_smoke, android, ios = resolve_source(source_sha)
     output = Path("verified-downloads")
     manifest = {
         "repository": REPO,
         "source_sha": source_sha,
         "packaging_run": os.environ.get("GITHUB_RUN_ID"),
         "walkthrough_run": walkthrough["id"],
+        "ios_smoke_run": ios_smoke["id"],
         "builds": {},
     }
     for platform, source in (("android", android), ("ios", ios)):
@@ -270,6 +273,7 @@ def main():
         (destination / "README.txt").write_text(
             note + "Source: " + source_sha
             + "\nValidated build run: " + str(expected["run"])
+            + "\niOS focused simulator smoke run: " + str(ios_smoke["id"])
             + "\niPhone/iPad walkthrough run: " + str(walkthrough["id"]) + "\n"
         )
         details = dict(

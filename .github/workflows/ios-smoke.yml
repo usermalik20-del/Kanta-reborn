@@ -1,13 +1,25 @@
 name: KANTA iOS focused simulator smoke
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ios/**'
+      - 'apps/android/**'
+      - 'tools/check-ios-presentation-contract.py'
+      - 'tools/verify-ios-smoke-results.py'
+      - 'tools/verify-test-layout.py'
+      - 'tools/verify-android-companion-interface.py'
+      - '.github/workflows/ios-smoke.yml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'apps/ios/**'
+      - 'apps/android/**'
       - 'tools/check-ios-presentation-contract.py'
       - 'tools/verify-ios-smoke-results.py'
       - 'tools/verify-test-layout.py'
+      - 'tools/verify-android-companion-interface.py'
       - '.github/workflows/ios-smoke.yml'
 permissions:
   contents: read
