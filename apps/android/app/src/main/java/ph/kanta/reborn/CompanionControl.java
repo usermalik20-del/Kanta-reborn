@@ -209,7 +209,7 @@ final class CompanionControl {
       Enumeration<NetworkInterface> interfaces=NetworkInterface.getNetworkInterfaces();
       while(interfaces.hasMoreElements()){
         NetworkInterface network=interfaces.nextElement();
-        if(!network.isUp()||network.isLoopback()||network.isVirtual())continue;
+        if(!network.isUp()||network.isLoopback())continue;
         for(InetAddress address:Collections.list(network.getInetAddresses())){
           try{CompanionProtocol.privateAddress(address.getHostAddress());result.add(address.getHostAddress());}
           catch(IOException ignored){}
