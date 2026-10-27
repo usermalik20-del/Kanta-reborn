@@ -207,12 +207,10 @@ class DownloadContracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source identity"):
             module.validate_ipa(app, dict(info, signed=True), checksum, expected)
 
-
-
 def workflow_event_section(source, event):
-    triggers = source.split("\\njobs:", 1)[0]
+    triggers = source.split("\njobs:", 1)[0]
     match = re.search(
-        rf"(?ms)^  {re.escape(event)}:\\n(.*?)(?=^  [A-Za-z0-9_-]+:\\n|^permissions:|\\Z)",
+        rf"(?ms)^  {re.escape(event)}:\n(.*?)(?=^  [A-Za-z0-9_-]+:\n|^permissions:|\Z)",
         triggers,
     )
     if match is None:
