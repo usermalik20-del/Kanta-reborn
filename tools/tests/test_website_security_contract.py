@@ -191,16 +191,17 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         # Advance this baseline only after reconstruction, unsigned iOS packaging,
         # and the full iPhone/iPad walkthrough all pass on the same native SHA.
         manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
-        source = "086713405002f75ab5c7fc49cd815cf2a3469041"
+        source = "41c8dddeebe7d096322994e8af09c8c48a76308a"
         self.assertEqual(manifest["android"]["source"], source)
         self.assertEqual(manifest["ios"]["source"], source)
-        self.assertEqual(manifest["android"]["run"], 40320555135)
-        self.assertEqual(manifest["android"]["artifact"], 12648928676)
-        self.assertEqual(manifest["android"]["sha256"], "928cbc8603b918a81257ef54327bf90238d27cab791ecb02ace3dea9eca4b2dc")
-        self.assertEqual(manifest["ios"]["run"], 40320554747)
-        self.assertEqual(manifest["ios"]["artifact"], 12649740030)
-        self.assertEqual(manifest["ios"]["sha256"], "6a53aa37227ebd0561d064a18918aeeb6da9ffce8c14818135cb6e21144a734b")
-        self.assertEqual(manifest["ios"]["walkthroughRun"], 40320554824)
+        self.assertEqual(manifest["android"]["run"], 40424817074)
+        self.assertEqual(manifest["android"]["artifact"], 12701709708)
+        self.assertEqual(manifest["android"]["sha256"], "dbf10ac1479f7feb300abd191d32662a6df137fa90629a5b83e9a6c2fab836b4")
+        self.assertEqual(manifest["ios"]["run"], 40424816823)
+        self.assertEqual(manifest["ios"]["artifact"], 12698769982)
+        self.assertEqual(manifest["ios"]["sha256"], "531f89467c24dcd6206307d48d075302b7428739c1361b481c971a3ceb7bec8a")
+        self.assertEqual(manifest["ios"]["walkthroughRun"], 40424816930)
+
 
 if __name__ == "__main__":
     unittest.main()
