@@ -1,6 +1,10 @@
 # Codebase Context Packet — KANTA Reborn
 
-## Current source and acceptance snapshot — October 26, 2026
+## Current source and acceptance snapshot — October 27, 2026
+
+Main is at [`41c8ddd`](https://github.com/usermalik20-del/Kanta-reborn/commit/41c8dddeebe7d096322994e8af09c8c48a76308a). The merged compact workspace candidate passed reconstruction, focused iOS smoke, unsigned archive and both simulator walkthroughs before merge. Fresh post-merge iOS reconstruction and unsigned archiving passed; Android build/lint/domain/browser checks passed but emulator runtime failed because Java companion discovery excluded a virtual interface that exposed the private IPv4 detected by runner preflight. A focused repair branch removes only that exclusion, keeps RFC1918 validation and exact-interface binding, and adds a source-contract guard plus documentation. The repair is not accepted until its fresh reconstruction runtime job and iPhone/iPad walkthrough finish. Current evidence: [reconstruction #40424817074](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424817074), [walkthrough #40424816930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816930), [archive #40424816823](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816823). No signed production IPA or published GitHub Release is verified.
+
+## Historical source and acceptance snapshot — October 26, 2026
 
 Canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn). The current code-bearing main baseline is merge commit [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9), which merged PR [#83 — Stage v2 app-level navigation and Queue](https://github.com/usermalik20-del/Kanta-reborn/pull/83). Later documentation-only successors do not change that validated application source. The validated PR source head was [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
 
