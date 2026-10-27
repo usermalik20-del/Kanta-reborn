@@ -17,6 +17,20 @@ Every failed CI job with an engineering fix must receive a record containing:
 
 After a relevant CI run becomes green, update this ledger **in a separate docs-only commit** recording the actual run ID and SHA, then confirm the documentation commit did not alter production behavior. If a docs-only commit triggers a new workflow, don't imply the prior green result validated the new SHA's source; state the distinction. If validation fails, retain the candidate record and continue the repair. Never rewrite a historical failure as though it never occurred.
 
+## Android — predictive-back lint regression (2026-10-27)
+
+**Fingerprint:** reconstruction [run #40485807248](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807248), Android job `android`, step `Build, lint and domain regression tests`; `GestureBackNavigation` at `apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java:177`.
+
+**Cause (confirmed):** the Compact Workspace commit added an `Activity.onBackPressed()` override to dismiss transient accessories. The app targets API 36, where predictive-back gestures bypass the deprecated activity override. Android lint correctly fails the build; browser and emulator checks were skipped after that failure. The iOS job, website validation, deployment and unsigned iOS archive passed on the same source.
+
+**Candidate fix:** branch [`fix/android-predictive-back-workspace-20261027`](https://github.com/usermalik20-del/Kanta-reborn/tree/fix/android-predictive-back-workspace-20261027) registers a lifecycle-bound AndroidX `OnBackPressedCallback` and enables it only while an accessory is active. The workspace listener disables it when the accessory closes, allowing default dispatcher navigation when stage-only. No lint suppression or baseline change is used.
+
+**Regression coverage:** `RuntimeChecks.workspaceBackNavigationChecks` opens the Search accessory, dispatches back through `OnBackPressedDispatcher`, and asserts that Search closes, the persistent stage remains attached, and the callback is disabled. `tools/check-android-workspace-contract.py` rejects the legacy override and requires both dispatcher registration and runtime coverage.
+
+**Validation:** `candidate`. The fix commit and first green run are pending. Do not mark verified until the same candidate passes Android lint/domain tests, Android emulator runtime, iOS reconstruction/archive and iPhone/iPad walkthroughs.
+
+**Recurrence rule:** keep predictive back in AndroidX's dispatcher; never restore `Activity.onBackPressed()` or suppress `GestureBackNavigation`. Verify the callback follows accessory activation/dismissal so stage-only back still falls through to normal navigation.
+
 ## iOS — Search inaccessible after leaving Library
 
 **Fingerprint:** `KantaVisualWalkthroughUITests.testStarterPlaybackAndControls`; `Search is blocked after leaving the library`; iPhone/iPad simulator runtime walkthrough.

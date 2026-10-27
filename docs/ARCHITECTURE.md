@@ -386,6 +386,8 @@ The Compact Workspace is the shipped composition on both platforms. It implement
 
 Android owns its workspace container in `apps/android/app/src/main/java/ph/kanta/reborn/KantaWorkspace.java` and mounts it from `MainActivity.buildWindow()`. The stage is added as the persistent layer first, so every accessory is drawn above it and the stage subtree is never detached. The Android implementation is additive: the existing tab navigation, panels, YouTube entry, camera, companion, voice, scenic, loop, realm and export paths are unchanged.
 
+**Back navigation is accessory-scoped.** `MainActivity` registers an AndroidX `OnBackPressedCallback` with the activity lifecycle and enables it only while `KantaWorkspace` has an active accessory. A system/predictive-back gesture therefore dismisses Search, Queue, Visuals or Controls first while preserving the persistent stage; when the workspace is stage-only, the callback is disabled and normal activity navigation proceeds through the dispatcher. Do not restore an `Activity.onBackPressed()` override or suppress `GestureBackNavigation` lint: API 36 predictive-back gestures do not invoke that legacy handler.
+
 A workspace redesign must be implemented at the real composition boundary before its new view is added to the app target. All referenced views, presentation models, modifiers, and enums must exist and compile; the integrated view must preserve the current single playback owner and the existing Host/presentation coordinator. Do not land an unintegrated scaffold or add placeholder types simply to silence compilation. If a planned workspace is not ready, keep it out of the compiled source target and document it as planned.
 
 

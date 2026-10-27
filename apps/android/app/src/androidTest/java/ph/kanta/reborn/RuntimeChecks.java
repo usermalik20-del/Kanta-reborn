@@ -222,6 +222,7 @@ public final class RuntimeChecks extends Instrumentation {
                           .findViewWithTag("kanta.stage.primary")),
           "Controller update detached the stage subtree");
       await(() -> stableStage.get().getWidth() > 0, "Stage layout never became visible");
+      workspaceBackNavigationChecks();
       check(
           state(
               () -> {
@@ -720,6 +721,32 @@ public final class RuntimeChecks extends Instrumentation {
       result.putString("stream", android.util.Log.getStackTraceString(failure));
       finish(Activity.RESULT_CANCELED, result);
     }
+  }
+
+  private void workspaceBackNavigationChecks() {
+    KantaWorkspace workspace = (KantaWorkspace) field(activity, "workspace");
+    runOnMainSync(
+        () -> {
+          View search =
+              activity.getWindow().getDecorView().findViewWithTag("kanta.workspace.search");
+          check(search != null, "Workspace Search action missing");
+          search.performClick();
+        });
+    await(
+        () -> workspace.activeAccessory() != null && !workspace.isStageOnly(),
+        "Workspace Search did not open an accessory");
+    runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+    await(workspace::isStageOnly, "Predictive back did not dismiss the workspace accessory");
+    check(
+        state(
+            () -> {
+              View stage =
+                  activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
+              androidx.activity.OnBackPressedCallback callback =
+                  (androidx.activity.OnBackPressedCallback) field(activity, "workspaceBackCallback");
+              return stage != null && !callback.isEnabled();
+            }),
+        "Back dismissal detached the persistent stage or left the callback enabled");
   }
 
   private Object field(Object target, String name) {

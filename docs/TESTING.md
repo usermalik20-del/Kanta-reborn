@@ -17,7 +17,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 | ReleaseToolingTests / starter generator | Release contracts, privacy/source guards and deterministic first-party resources | Python locally and in CI |
 | Android core regression | FIFO retry identity, Unicode search, bounded MIDI timing and encrypted exports | Gradle JavaExec |
 | Android native SoundFont | Validated SF2 references, bounded allocations, audible pitch, truncation and mutation handling | C11 ASan/UBSan host harness |
-| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare and activity rendering | Clean API 35 emulator install; custom Instrumentation, no external test library |
+| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, persistent-stage rendering and dispatcher-based workspace back dismissal | Clean API 35 emulator install; custom Instrumentation, no external test library |
 | Browser interoperability | Fresh Android export through the captured browser decrypt function | Node after Android regression fixture generation |
 
 ## Website route and responsive navigation contract
