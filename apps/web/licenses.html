@@ -21,103 +21,18 @@
 </header>
 <main id="content" class="prose legal-prose">
 <nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
-<p class="eyebrow">OPEN-SOURCE SOFTWARE</p><h1>Third-party audio licenses</h1><p class="lead">KANTA's experimental SoundpipeAudioKit vocal tuning integrates permissively licensed software. This page reproduces copyright, permission and warranty statements. Its public availability does not mean the experimental DSP has completed physical-device acceptance or public app release.</p><p><a href="/guide">How to connect your iPhone/iPad Soundcard →</a> · <a href="/legal">KANTA content-use legal notice →</a></p><pre class="license-text">KANTA THIRD-PARTY AUDIO SOFTWARE NOTICES
-These attributions apply to the SoundpipeAudioKit pitch-correction
-backend. They do not license or authorize redistribution of songs,
-SoundFonts, sampled audio, lyrics, or the Auto-Tune trademark.
+<p class="eyebrow">OPEN-SOURCE SOFTWARE</p><h1>Third-party audio & component licenses</h1><p class="lead">KANTA integrates permissively licensed software, sound banks, and font families. This page reproduces copyright, permission, and warranty statements for all third-party components.</p><p><a href="/guide">How to connect your iPhone/iPad Soundcard →</a> · <a href="/legal">KANTA content-use legal notice →</a></p><pre class="license-text">KANTA & SONGHUB COMPONENT NOTICES
+These attributions apply to all software components, sound banks, fonts, and external libraries utilized across KANTA Karaoke and SongHub integrations.
 
-Software releases in this branch:
-- SoundpipeAudioKit: 5.7.4 (MIT)
-- AudioKit: 5.7.2 (MIT)
-- AudioKitEX: transitive via SoundpipeAudioKit (MIT)
-- Tonic: transitive via SoundpipeAudioKit (MIT)
-- KissFFT: transitive via SoundpipeAudioKit (BSD 3-Clause)
-Resolved versions of transitive packages must be recorded in Package.resolved
-and reviewed in the final signed release build.
+- FluidSynth (https://github.com/FluidSynth/fluidsynth), the software synthesizer, under the GNU LGPL 2.1: version 2.4.6 on Android (from the fluidsynth-android build), version 2.6.1 on PC, each linked dynamically.
+- GeneralUser GS (https://github.com/mrbumpy409/GeneralUser-GS) by S. Christian Collins, the basic sound bank under the others, under the GeneralUser GS License v2.0.
+- The Platinum Major and Dreamsam sound banks are custom-made by JC of the Filipino karaoke community.
+- Inter (https://github.com/rsms/inter), Oswald (https://github.com/googlefonts/OswaldFont) and Arimo (https://github.com/googlefonts/arimo) fonts, under the SIL Open Font License 1.1, and the lyric fonts Atkinson Hyperlegible, Poppins, Barlow Semi Condensed, Archivo Black, Sniglet, Lilita One, Arvo, Comic Neue and Pacifico (SIL Open Font License 1.1) and Permanent Marker (Apache License 2.0).
+- Jetpack Compose, AndroidX (CameraX included), Media3 and WorkManager (https://developer.android.com/jetpack), under the Apache License 2.0.
+- On PC also: FFmpeg (https://ffmpeg.org) (GNU LGPL 3, as separate DLLs), miniaudio (https://miniaud.io), Signalsmith Stretch (https://signalsmith-audio.co.uk), Freeverb, Eclipse Temurin (https://adoptium.net) (OpenJDK, GPL 2 with the Classpath Exception), Kotlin and Compose Multiplatform (https://www.jetbrains.com/compose-multiplatform/), JmDNS, SQLite JDBC, Apache PDFBox and the QR Code generator library by Project Nayuki.
 
-========================================
-AudioKit/SoundpipeAudioKit — MIT
-Source: https://github.com/AudioKit/SoundpipeAudioKit
-========================================
-MIT License
-
-Copyright (c) 2021 AudioKit
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
-========================================
-AudioKit/AudioKit — MIT
-Source: https://github.com/AudioKit/AudioKit
-========================================
-The MIT License (MIT)
-
-Copyright (c) 2016 Aurelius Prochazka
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-
-========================================
-AudioKit/AudioKitEX — MIT
-Source: https://github.com/AudioKit/AudioKitEX
-========================================
-MIT License
-
-Copyright (c) 2021 AudioKit
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
-========================================
-AudioKit/Tonic — MIT
+Lyrics found online for your own MP3s come from LRCLIB (https://lrclib.net), a free, open lyrics library, and only when you ask. Song titles and artist names belong to their respective owners.
+</pre>
 Source: https://github.com/AudioKit/Tonic
 ========================================
 MIT License
