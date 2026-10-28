@@ -267,6 +267,11 @@ green `d3e34f95`/`24e091b1` builds. The original `testMenuSongLibrary` iPhone fa
 **intermittent** (iPad passed in the same run); the candidate converted it into a
 deterministic two-device failure, so the revert is the strictly better state.
 
+**Verified after the revert:** iOS visual walkthrough
+[run #40787766952](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40787766952)
+passed both device jobs on `b7d69f2`; Android validation, iOS validation and the unsigned
+iOS archive passed on the same SHA.
+
 Carry forward: the intermittent Song Library transition remains unproven-good and needs a
 repair validated by focused smoke plus both device walkthroughs on one exact SHA before it
 is accepted. Merging an iOS repair requires that walkthrough evidence, not merely a

@@ -790,6 +790,12 @@ both-device walkthrough evidence on one exact SHA. A mergeable branch is not acc
 and a repair that turns an intermittent single-case failure into a deterministic
 two-device failure must be reverted, not kept.
 
+**Verified after the revert.** iOS visual walkthrough
+[run #40787766952](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40787766952)
+passed **both** device jobs on `b7d69f2`, and Android validation, iOS validation and the
+unsigned iOS archive were green on the same SHA. This closes the loop: the same tree shape
+that was green before `80ae286` is green again.
+
 **Website AdSense vs strict CSP (PR #112).** Merged after reconciling this ledger and
 `docs/ARCHITECTURE.md` with the dim-3 catalog-ownership section. The AdSense loader is
 absent from every public page, the homepage CSP no longer lists the AdSense origin, and

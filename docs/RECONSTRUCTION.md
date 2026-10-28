@@ -38,7 +38,10 @@ was merged and then **reverted**: the iOS visual walkthrough was green on `d3e34
 `24e091b1` and `37f7ace1`, and failed on both devices on the `80ae286` merge and on
 `2a01654f`. The revert restores a `RootView.swift` byte-identical to the green builds;
 the original Song Library transition failure was intermittent, and the candidate made it
-deterministic. #104, #111, #114 and #115 are closed as superseded: their diagnoses were
+deterministic. After the revert, the iOS visual walkthrough
+[run #40787766952](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40787766952)
+passed both device jobs on `b7d69f2`, with Android validation, iOS validation and the
+unsigned iOS archive also green on that SHA. #104, #111, #114 and #115 are closed as superseded: their diagnoses were
 accurate for the commits they were raised against, but every listed defect is fixed and
 validated on main, and #114/#115 would have reverted validated work. The CI hardening they
 described was adopted directly rather than through those branches.
