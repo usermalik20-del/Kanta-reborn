@@ -5,13 +5,11 @@ on:
     branches: ['*']
     paths:
       - 'apps/ios/**'
-      - 'tools/**'
       - '.github/workflows/ios-validation.yml'
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/ios/**'
-      - 'tools/**'
       - '.github/workflows/ios-validation.yml'
 permissions:
   contents: read
