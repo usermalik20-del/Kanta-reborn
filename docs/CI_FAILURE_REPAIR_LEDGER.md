@@ -735,3 +735,17 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Repair:** the candidate now registers an AndroidX `OnBackPressedCallback` in `onCreate`, enables it only while a workspace accessory is active, disables it on deactivation, and removes the deprecated override. The callback dismisses the accessory while leaving the persistent stage attached. This is a preventive code-review fix; fresh hosted validation is still required.
 
 **Branch status:** PR #103 is 20 commits behind main and GitHub reports it as not mergeable. Reconcile the branch with current main and rerun reconstruction, archive, and iPhone/iPad walkthrough gates before considering merge.
+
+## Website — AdSense loader conflicts with strict CSP and private Songbook boundary (2026-10-28)
+
+**Fingerprint:** merged PR #109, [main commit `56e02e0`](https://github.com/usermalik20-del/Kanta-reborn/commit/56e02e0d50cebf41792f57cdbb280ff4f03130bd), followed by SEO commit `4fd3d24`.
+
+**Cause (confirmed by source contract):** the AdSense loader was added to eight static HTML pages, including Help (`support.html`), open-source legal notices (`licenses.html`) and the client-side private Songbook (`songbook.html`). The route-specific CSP allows external scripts only on the homepage; other routes retain `script-src 'self'`, and `default-src 'none'` blocks unlisted frames. Therefore the ad loader is blocked on most routes and cannot reliably render on the homepage. The private Songbook also must not execute third-party JavaScript while decrypted user data is in the DOM.
+
+Google's [official AdSense CSP guidance](https://support.google.com/adsense/answer/16283098) specifies nonce-based strict CSP and a nonce on every script tag. This static Vercel deployment currently has no per-response nonce mechanism. A fixed nonce or broad allowlist would weaken the security boundary and is not an acceptable workaround.
+
+**Candidate fix:** remove the loader from all public pages and remove the unused AdSense origin from the homepage CSP. Add a regression test that rejects the loader until a nonce-capable response path is implemented. Keep the route-specific CSP unchanged otherwise. Candidate branch: `fix/adsense-strict-csp-privacy-20261028`.
+
+**Validation:** candidate; website validation and Vercel pre-deploy checks must pass on the PR head. This does not claim ads are operational. Re-enable only after a reviewed nonce-capable architecture and privacy-policy update.
+
+**Recurrence rule:** do not load external advertising code on the private Songbook or excluded Help/Legal/Privacy pages. Do not weaken CSP merely to make an unreviewed script run.
