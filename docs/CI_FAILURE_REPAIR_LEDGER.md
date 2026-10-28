@@ -767,3 +767,17 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Validation:** `candidate`; the updated website and Android workflows must pass on the final PR head before this record is marked verified.
 
 **Recurrence rule:** never solve a branding-check failure by excluding SEO metadata or weakening the checker. Website-only copy changes must run the public-surface branding guard before deployment.
+
+## Exact-SHA download packaging drifted from the current native workflow split (2026-10-28)
+
+**Fingerprint:** `tools/prepare-verified-downloads.py` `REQUIRED_RUNS["reconstruction"] = "KANTA reconstruction validation"`; no active workflow with that name exists after CI split. The packager also omitted `KANTA iOS validation` and `KANTA iOS focused simulator smoke` from its required gate set, while `.github/workflows/ios-smoke.yml` had no `push: branches: [main]` trigger and excluded Android source/workflow-definition changes.
+
+**Cause (confirmed by source inspection):** the packager contract and workflow triggers were not updated when reconstruction validation was split into `android-validation.yml` and `ios-validation.yml`. Consequently the manual packager would wait for a nonexistent reconstruction run and could not prove the focused smoke gate on the exact main SHA.
+
+**Candidate fix:** align the packager with five live workflows (Android validation, iOS validation, focused iOS smoke, unsigned iOS archive, full iPhone/iPad walkthrough); require every latest exact-main-SHA run to pass; record all gate IDs in the generated manifest and per-platform build metadata; trigger focused smoke on relevant main pushes including Android source and workflow changes; run download-contract tests whenever native gate workflows change. Candidate implementation is on PR #111.
+
+**Regression coverage:** `test_verified_downloads.py` asserts that each required workflow name matches its live YAML `name:`, Android changes trigger all native release gates, focused smoke triggers on main/workflow changes, and download-contract tests trigger when any native gate workflow changes.
+
+**Validation:** candidate; contract and native acceptance runs must pass on the final PR head. No packaging was dispatched and no public download manifest was changed.
+
+**Recurrence rule:** when a workflow is renamed or split, update `REQUIRED_RUNS`, trigger tests and documentation in the same change. Never retain a stale workflow display name in release tooling, and never reuse evidence from another SHA to make packaging pass.
