@@ -123,6 +123,12 @@ def verify():
             ))
             and '"testMainMenuButtonsAndScreens"' not in runner
         ),
+        'More menu retries only after an absent presentation and preserves diagnostics': (
+            'for attempt in 0..<2' in test
+            and 'let menuTitle = app.navigationBars["More"]' in test
+            and 'if menuTitle.exists || !more.exists || !more.isHittable || attempt == 1' in test
+            and 'menu-did-not-present-hierarchy' in test
+        ),
         'real playback walkthrough': 'func testStarterPlaybackAndControls()' in test,
         'library dismissal then search coverage': 'Search did not present the keypad after library dismissal' in test,
         'stage search accessibility identifier': 'stage.search' in stage,

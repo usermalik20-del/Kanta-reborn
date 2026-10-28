@@ -749,3 +749,11 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Repair:** Add `.github/workflows/**` to push and pull-request paths for focused smoke, unsigned archive, full device walkthrough, and verified-download contract tests. Add a regression test that checks all four workflows react to workflow-definition changes. Keep the packager fail-closed; do not borrow acceptance results from a parent SHA.
 
 **Acceptance:** Require reconstruction, focused smoke, unsigned archive, and both device walkthrough jobs to complete on the same post-repair SHA. Then rerun verified-download contract tests and confirm the package job still requires an explicit owner dispatch. Public download provenance stays pinned until exact-SHA packaging and deployment validation pass.
+
+## Focused iOS smoke missed the More menu on first presentation — 2026-10-28
+
+**Evidence:** Focused smoke [run #40665286993](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40665286993), PR #108 candidate `4516bdb`, failed in `KantaVisualWalkthroughUITests.testBrowserCompanionRoleAndInputRejection` because the requested `Companion Remote` menu item did not appear after one tap and a 10-second wait. The full iPhone/iPad walkthrough [run #40665286866](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40665286866) passed both devices on the same candidate merge SHA and exported the browser-companion input-rejection and menu-destination screenshots. This is evidence of an intermittent menu-presentation miss, not a deterministic Companion Remote content failure.
+
+**Repair:** The shared `openMenu` XCTest helper now retries the idempotent More action once only when the menu title and requested item are both absent and More remains hittable. It does not retry through an already-presented menu. On final failure it preserves the screenshot and an accessibility-hierarchy attachment. `tools/check-ios-presentation-contract.py` enforces the retry guard and diagnostic attachment so the intended behavior cannot silently regress.
+
+**Acceptance:** Re-run focused iOS smoke plus reconstruction, unsigned archive, and both device walkthroughs on the final PR head. A prior green walkthrough does not override the failed focused smoke, and verified-download packaging remains blocked until every required gate passes on the same exact SHA.

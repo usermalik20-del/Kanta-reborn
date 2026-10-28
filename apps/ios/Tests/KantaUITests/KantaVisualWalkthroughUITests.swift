@@ -512,12 +512,27 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
         let more = app.buttons["stage.more"].firstMatch
         waitForRendered(more, in: app)
         let item = app.buttons[destination].firstMatch
-        XCTAssertTrue(more.isHittable, "More is obstructed before opening: " + destination)
-        more.tap()
-        if !item.waitForExistence(timeout: 10) {
-            capture("menu-did-not-present", app)
-            XCTFail("More did not present the requested menu item: " + destination)
+        let menuTitle = app.navigationBars["More"]
+
+        // UIKit/SwiftUI presentation can occasionally drop the first tap while
+        // the Host and navigation presentation owners settle. Retry only when
+        // neither the menu nor its destination appeared and More is still
+        // hittable; never tap through an already-presented menu.
+        for attempt in 0..<2 {
+            XCTAssertTrue(more.isHittable, "More is obstructed before opening: " + destination)
+            more.tap()
+            if item.waitForExistence(timeout: 10) { return }
+            if menuTitle.exists || !more.exists || !more.isHittable || attempt == 1 {
+                break
+            }
         }
+
+        capture("menu-did-not-present", app)
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "menu-did-not-present-hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        XCTFail("More did not present the requested menu item: " + destination)
     }
 
     @MainActor
