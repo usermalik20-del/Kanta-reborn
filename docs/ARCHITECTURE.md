@@ -419,3 +419,7 @@ id changes. Evidence, open items and the rejected alternatives are recorded in
 The `:app:coreRegression` task is a framework-free JVM test harness for pure-Java core contracts and the synthetic HTTPS Companion Remote host. It must not compile Android SDK implementations. Keep `core/catalog/SqliteSongCatalog.java` in the normal Android source set, where Gradle supplies `android.jar`, but exclude that implementation from the host-JVM source set. Do not weaken or remove the catalog from the app build to make host tests pass.
 
 The Android validation workflow must enable Bash `pipefail` when piping Gradle output through `tee build.log`; otherwise a failed Gradle compilation can be reported as a successful workflow step and surface later as a misleading missing-browser-host error. The workspace contract checker guards both the source-set boundary and failure propagation. When the browser host cannot load, inspect the preceding `compileCoreRegression` result before changing browser or TLS behavior.
+
+## Public website branding validation
+
+The product-branding guard scans all shipped app surfaces, including public HTML and SEO metadata. Website validation and production-deploy validation must run `tools/check-product-branding.py` whenever `apps/web/**` or that checker changes. Search metadata must describe KANTA's own capabilities and may use generic legacy-format terminology; it must not reintroduce the retired product brand as a search keyword. Do not weaken the guard to accommodate SEO copy.
