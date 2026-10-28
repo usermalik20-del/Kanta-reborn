@@ -11,6 +11,8 @@ import ph.kanta.reborn.core.Song;
 import ph.kanta.reborn.content.ContentRoot;
 import ph.kanta.reborn.content.ContentScanner;
 import ph.kanta.reborn.core.songbook.*;
+import ph.kanta.reborn.core.import.MegContainerImporter;
+import ph.kanta.reborn.core.import.MkmdDecoder;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -283,6 +285,79 @@ public final class SqliteSongCatalog implements SongCatalog {
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  /**
+   * User-initiated import from the legacy Meg container (kantidx/kantablob).
+   *
+   * <p>This is a separate flow from {@code rebuild()} (dim-3, Option 3b). Folder scan
+   * remains the single authoritative catalog; this method optionally materializes decoded
+   * .mid/.mp3/.wav files from the Meg container into the KANTA library.
+   *
+   * <p>Key material is supplied at runtime via {@code keyProvider} and never committed to
+   * repo/CI. The decoder never touches {@code ReservationQueue} or {@code
+   * RenderedPlaybackClock} owners.
+   *
+   * @param indexBytes the kantidx index bytes (may be null to skip)
+   * @param blobBytes the kantablob payload container bytes (may be null to skip)
+   * @param keyProvider runtime key material; decoded records are skipped when null
+   * @return the import result with decoded songs and any errors
+   * @throws IOException if the container cannot be read or files cannot be written
+   */
+  public MegContainerImporter.ImportResult importFromLegacyContainer(
+      byte[] indexBytes, byte[] blobBytes, MegContainerImporter.KeyProvider keyProvider)
+      throws IOException {
+
+    if (indexBytes == null && blobBytes == null) {
+      return new MegContainerImporter.ImportResult(0, 0, 0, java.util.List.of(), java.util.List.of());
+    }
+
+    File importDir = new File(context.getFilesDir(), "legacy-import");
+    if (!importDir.exists() && !importDir.mkdirs()) {
+      throw new IOException("Cannot create legacy import directory: " + importDir);
+    }
+
+    MegContainerImporter.ImportResult result =
+        MegContainerImporter.importContainer(indexBytes, blobBytes, keyProvider, importDir);
+
+    // Insert decoded songs into the catalog
+    if (!result.songs.isEmpty()) {
+      SQLiteDatabase db = dbHelper.getWritableDatabase();
+      db.beginTransaction();
+      try {
+        long volumeId = insertVolume(db, ContentRoot.ROOT_FOLDER + " (Legacy)");
+        int codeCounter = 200000;
+        java.util.Set<String> usedCodes = new java.util.HashSet<>();
+        // Collect existing codes to avoid collisions
+        try (Cursor c = db.rawQuery("SELECT code FROM songs", null)) {
+          while (c.moveToNext()) usedCodes.add(c.getString(0));
+        }
+
+        for (MegContainerImporter.DecodedSong song : result.songs) {
+          String code = String.valueOf(codeCounter++);
+          while (usedCodes.contains(code)) code = String.valueOf(codeCounter++);
+          usedCodes.add(code);
+
+          insertSong(
+              db, volumeId, song.title, "", code, song.fileName, false, -1);
+        }
+
+        updateVolumeSongCount(db, volumeId);
+        insertMeta(db, "legacy_imported", String.valueOf(result.decodedCount));
+        insertMeta(db, "legacy_import_time", String.valueOf(System.currentTimeMillis()));
+
+        db.setTransactionSuccessful();
+      } finally {
+        db.endTransaction();
+      }
+    }
+
+    Log.i(
+        TAG,
+        "Legacy container import complete: " + result.decodedCount + " decoded, "
+            + result.skippedCount + " skipped out of " + result.totalSpans + " spans");
+
+    return result;
   }
 
   private void indexFiles(SQLiteDatabase db, ContentScanner.ScanResult scan, boolean isLegacy) {

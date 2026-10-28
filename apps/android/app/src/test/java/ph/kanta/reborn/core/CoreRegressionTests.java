@@ -1103,6 +1103,7 @@ public final class CoreRegressionTests {
     checks += ph.kanta.reborn.core.songbook.ShubCompatibilityRegressionTests.run();
     checks += CompanionRegressionTests.run();
     checks += BrowserRemoteRegressionTests.run();
+    checks += MkmdDecoderRegressionTests.run();
     System.out.println("KANTA Android core: " + checks + " regression checks passed");
   }
 }
