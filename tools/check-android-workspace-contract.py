@@ -54,6 +54,19 @@ if not os.path.exists(WORKSPACE):
 workspace = read(WORKSPACE)
 activity = read(ACTIVITY)
 runtime = read(RUNTIME_CHECKS)
+build_gradle = read(os.path.join(ROOT, "apps", "android", "app", "build.gradle"))
+android_workflow = read(os.path.join(ROOT, ".github", "workflows", "android-validation.yml"))
+
+# --- Host-JVM regression isolation and truthful CI exit status ----------------
+
+check(
+    "exclude 'ph/kanta/reborn/core/catalog/SqliteSongCatalog.java'" in build_gradle,
+    "framework-free host regression compile excludes the Android-backed SQLite catalog",
+)
+check(
+    "set -o pipefail" in android_workflow,
+    "Android Gradle output capture does not mask a failed build behind tee",
+)
 
 # --- Architecture: the persistent stage and transient accessories ------------
 

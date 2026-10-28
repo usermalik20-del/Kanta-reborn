@@ -735,3 +735,19 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Repair:** the candidate now registers an AndroidX `OnBackPressedCallback` in `onCreate`, enables it only while a workspace accessory is active, disables it on deactivation, and removes the deprecated override. The callback dismisses the accessory while leaving the persistent stage attached. This is a preventive code-review fix; fresh hosted validation is still required.
 
 **Branch status:** PR #103 is 20 commits behind main and GitHub reports it as not mergeable. Reconcile the branch with current main and rerun reconstruction, archive, and iPhone/iPad walkthrough gates before considering merge.
+
+## Android — host-JVM regression source boundary and masked Gradle failure (2026-10-28)
+
+**Fingerprint:** main reconstruction / Android validation, job `android`, task `:app:compileCoreRegression`; compiler phrase `package android.content does not exist`; subsequent browser smoke error `Could not find or load main class ph.kanta.reborn.core.BrowserRemoteBrowserHost`.
+
+**Affected SHA / first observed run:** `fa37794840109aed80c0c482273805fbaec2056c`, [Android validation run #40686852171](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686852171). The run's Gradle build log is preserved in [artifact #12815507463](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686852171/artifacts/12815507463).
+
+**Cause (confirmed):** Milestone 1 added Android SDK-backed `core/catalog/SqliteSongCatalog.java`, but the framework-free `compileCoreRegression` task still compiled every Java file under `ph/kanta/reborn/core/**/*.java` with an empty classpath. It therefore tried to compile Android imports without `android.jar`. Separately, the workflow piped Gradle through `tee build.log` without Bash `pipefail`, so the failing Gradle process was masked as a successful step; the later browser smoke then reported the missing test-host class, a secondary symptom.
+
+**Candidate fix:** branch `fix/android-framework-free-regression-ci-20261028`; exclude only the Android-backed SQLite implementation from the host-JVM source set while retaining it in the regular Android app build; enable `set -o pipefail`; run the Android workspace contract checker in validation; assert both invariants in that checker. Initial fix commits: `90b7274`, `cfaf790`, `ea9f1d6`. Architecture and testing guidance were updated in `4a6e4e6` and `daf0e7e`. PR and validation run are pending.
+
+**Regression coverage:** `tools/check-android-workspace-contract.py` verifies that the host-JVM task excludes `SqliteSongCatalog.java` and that Android CI enables `pipefail`. The `:app:coreRegression` and real-Chrome browser smoke must both complete successfully after the source-set boundary is repaired.
+
+**Validation:** `candidate`; fresh CI on the fix branch is pending. Do not mark verified until Gradle compilation, the browser interoperability step, and the remaining Android runtime checks pass on the same candidate SHA.
+
+**Recurrence rule:** when adding an Android SDK-backed implementation under `ph/kanta/reborn/core`, explicitly decide whether it belongs in the host-JVM test source set. Never remove it from the app source set to satisfy pure-JVM tests. Keep `pipefail` enabled for any build command whose output is piped through `tee`; treat a missing test-host class as a secondary symptom until the preceding compile result is known.

@@ -226,3 +226,9 @@ Walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actio
 The candidate now uses six test methods and updates the runtime's required-test manifest and source-contract guard together. PR #72's per-device workflow topology is included, with same-branch concurrency retained to cancel stale duplicate runs. No assertion, destination, or required case was removed; no global timeout was raised.
 
 **Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.
+
+## Android host-JVM regression harness
+
+Run `cd apps/android && ./gradlew --no-daemon :app:coreRegression` for framework-free core/browser protocol tests. The host-JVM source set deliberately excludes `core/catalog/SqliteSongCatalog.java`, because that implementation uses Android SDK classes; the normal `:app:assembleDebug` task compiles it against the Android SDK. Keep the exclusion and its static contract check in sync when adding new Android-backed core implementations.
+
+The Android CI build step uses `set -o pipefail` before piping Gradle output to `tee build.log`. A failing Gradle task must stop the workflow immediately rather than being masked by the successful exit code from `tee`. If the browser host later reports `ClassNotFoundException`, verify that `:app:compileCoreRegression` completed successfully first.
