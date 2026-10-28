@@ -112,16 +112,16 @@ The presentation contract guard checks that the UIKit fullscreen presenter acqui
 
 ## Automatic workflow triggers and release boundary
 
-Reconstruction validation runs for relevant app, tool and workflow changes on feature/main pushes and pull requests. The unsigned iOS archive and full iPhone/iPad walkthrough also trigger on `apps/android/**` changes, so Android-only commits receive same-SHA iOS release-gate evidence. The walkthrough additionally triggers on `tools/verify-android-companion-interface.py`; both iOS workflows retain manual dispatch. Website validation runs for relevant website changes. Verified-download contract tests run automatically; packaging fixed, previously accepted IPA/APK artifacts still requires owner dispatch. No workflow signs, merges, deploys or publishes production downloads automatically.
+The current workflow names and trigger contracts are:
 
-## CI separation: fast validation, unsigned artifacts and visual acceptance
+- `android-validation.yml`: Android source/build/runtime and Chrome Companion Remote checks.
+- `ios-validation.yml`: Swift package tests, source guards, companion interoperability and unsigned simulator compilation.
+- `ios-smoke.yml`: focused iPhone navigation/lifecycle acceptance on relevant same-repository PRs and `main` pushes. It includes `apps/android/**`, relevant release tooling, and `.github/workflows/**` so Android-only and workflow-only changes cannot bypass the exact-SHA smoke gate.
+- `ios-runtime-artifacts.yml`: unsigned iPhoneOS personal-signing archive; no signing or publishing.
+- `ios-visual-walkthrough.yml`: complete named iPhone and iPad UI walkthroughs in separate jobs.
+- `verified-downloads.yml`: contract tests run automatically on packaging/tool/workflow changes. The package job is owner-dispatched and refuses to run unless all five current workflow names above (Android validation, iOS validation, focused iOS smoke, unsigned archive, and full walkthrough) have the latest successful `main` run on the requested exact SHA.
 
-- `reconstruction-validation.yml` remains the PR source, Swift package, simulator-build, and Android validation gate. It does not replace simulator UI acceptance.
-- `ios-visual-walkthrough.yml` runs on relevant iOS and Android source pushes and same-repository pull requests, the Android companion-interface guard, its capture/release-gate tools and workflow edits, plus manual dispatch, the existing weekly schedule and `ios-rc-*` tags. Its independent iPhone and iPad jobs each build and execute the complete named UI suite, retain screenshots/recordings/logs, and publish compact per-device diagnostics. A pass on one device does not mask a failure on the other.
-- The unsigned iOS archive workflow proves packaging only. It does not prove interactive behavior, signing, or installability.
-- `ios-smoke.yml` remains a focused iPhone test for navigation/Search recovery and native lifecycle behavior; it is not the full release walkthrough.
-- A release candidate requires the reconstruction gate and a successful full iPhone **and** iPad walkthrough on the exact candidate SHA. Weekly, unrelated-commit, candidate-only, build-only, or one-device evidence cannot substitute.
-- CI does not sign, publish, or deploy the app. The current archive remains an unsigned personal-signing input until the authorized signing and release gates are completed.
+The packaging manifest, README and per-platform build-info must record the source SHA and all five acceptance run IDs. A successful run from a prior commit, a PR branch, one device only, or a build-only workflow cannot satisfy the gate. Website validation and Vercel pre-deploy validation also run `tools/check-product-branding.py`; SEO metadata is part of the public surface. No workflow signs, merges, deploys, or publishes production downloads automatically.
 
 ## GitHub Actions cost controls (October 2026)
 
