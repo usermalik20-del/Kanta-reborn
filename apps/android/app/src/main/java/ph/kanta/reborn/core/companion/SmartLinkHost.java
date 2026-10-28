@@ -215,24 +215,25 @@ public final class SmartLinkHost {
     }
 
     void run() {
+      java.io.DataInputStream in = null;
       try {
-        java.io.BufferedReader reader =
-            new java.io.BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
+        in = new java.io.DataInputStream(
+            new java.io.BufferedInputStream(socket.getInputStream()));
         java.io.OutputStream out = socket.getOutputStream();
 
-        String requestLine = reader.readLine();
+        // Read the HTTP request line and headers byte-by-byte so no WebSocket
+        // frame bytes are consumed by an over-reading text reader.
+        String requestLine = readHttpLine(in);
         if (requestLine == null || !requestLine.startsWith("GET")) {
           sendHttpResponse(out, 400, "text/plain", "Expected WebSocket upgrade");
           return;
         }
 
         String upgradeHeader = null;
-        String connectionHeader = null;
         String secKey = null;
         String line;
-        while ((line = reader.readLine()) != null && !line.isEmpty()) {
+        while ((line = readHttpLine(in)) != null && !line.isEmpty()) {
           if (line.startsWith("Upgrade:")) upgradeHeader = line.substring(8).trim();
-          else if (line.startsWith("Connection:")) connectionHeader = line.substring(11).trim();
           else if (line.startsWith("Sec-WebSocket-Key:")) secKey = line.substring(19).trim();
         }
 
@@ -251,7 +252,7 @@ public final class SmartLinkHost {
         out.write(response.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
         out.flush();
 
-        readFrames(socket.getInputStream(), out);
+        readFrames(in, out);
       } catch (IOException e) {
         if (!closed) Log.d(TAG, "Client " + clientId + " disconnected: " + e.getMessage());
       } finally {
@@ -259,76 +260,65 @@ public final class SmartLinkHost {
       }
     }
 
-    private void readFrames(java.io.InputStream in, java.io.OutputStream out) throws IOException {
+    /** Reads one CRLF/LF terminated HTTP header line, or null at end of stream. */
+    private String readHttpLine(java.io.DataInputStream in) throws IOException {
+      StringBuilder sb = new StringBuilder();
+      while (true) {
+        int b = in.read();
+        if (b == -1) return sb.length() == 0 ? null : sb.toString();
+        if (b == '\n') {
+          int len = sb.length();
+          if (len > 0 && sb.charAt(len - 1) == '\r') sb.setLength(len - 1);
+          return sb.toString();
+        }
+        sb.append((char) b);
+        if (sb.length() > 8192) throw new IOException("HTTP header too long");
+      }
+    }
+
+    private void readFrames(java.io.DataInputStream in, java.io.OutputStream out)
+        throws IOException {
       while (!closed) {
         int b1 = in.read();
         if (b1 == -1) break;
         int b2 = in.read();
         if (b2 == -1) break;
 
-        boolean fin = (b1 & 0x80) != 0;
         int opcode = b1 & 0x0F;
         boolean masked = (b2 & 0x80) != 0;
-        int length = b2 & 0x7F;
+        long length = b2 & 0x7F;
 
-        if (opcode == 0x8) {
+        if (opcode == 0x8) { // close
           break;
         }
-        if (opcode != 0x1) {
+        if (opcode == 0x9) { // ping -> pong (unmasked, empty)
+          out.write(new byte[] {(byte) 0x8A, 0x00});
+          out.flush();
+          continue;
+        }
+        if (opcode != 0x1) { // only text frames are dispatched
           continue;
         }
 
+        if (length == 126) {
+          length = in.readUnsignedShort();
+        } else if (length == 127) {
+          length = in.readLong();
+        }
+        if (length < 0 || length > 65536) throw new IOException("Frame too large");
+
         byte[] mask = new byte[4];
-        if (masked) {
-          in.readFully(mask);
-        }
+        if (masked) in.readFully(mask);
 
-        byte[] payload = new byte[length];
-        int offset = 0;
-        while (offset < length) {
-          int read = in.read(payload, offset, length - offset);
-          if (read < 0) break;
-          offset += read;
-        }
+        byte[] payload = new byte[(int) length];
+        in.readFully(payload);
 
         if (masked) {
-          for (int i = 0; i < payload.length; i++) {
-            payload[i] ^= mask[i % 4];
-          }
+          for (int i = 0; i < payload.length; i++) payload[i] ^= mask[i % 4];
         }
 
         String message = new String(payload, java.nio.charset.StandardCharsets.UTF_8);
-
-        String responseJson = dispatchRequest(message);
-
-        sendTextFrame(out, responseJson);
-
-        if (!fin) {
-          while (!closed) {
-            int cb1 = in.read();
-            if (cb1 == -1) break;
-            int cb2 = in.read();
-            if (cb2 == -1) break;
-            int contLength = cb2 & 0x7F;
-            boolean contMasked = (cb2 & 0x80) != 0;
-            byte[] contMask = new byte[4];
-            if (contMasked) in.readFully(contMask);
-            byte[] contPayload = new byte[contLength];
-            int co = 0;
-            while (co < contLength) {
-              int r = in.read(contPayload, co, contLength - co);
-              if (r < 0) break;
-              co += r;
-            }
-            if (contMasked) {
-              for (int i = 0; i < contPayload.length; i++) {
-                contPayload[i] ^= contMask[i % 4];
-              }
-            }
-            if ((cb1 & 0x80) != 0) break;
-          }
-          break;
-        }
+        sendTextFrame(out, dispatchRequest(message));
       }
     }
 

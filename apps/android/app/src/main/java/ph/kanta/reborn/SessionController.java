@@ -1083,86 +1083,145 @@ public final class SessionController {
         case "next":
           return nextJson();
         default:
-          return "{\"status\":\"error\",\"error\":\"Unknown action: \" + action}";
+          return smartError("Unknown action: " + action);
       }
     } catch (Exception e) {
-      return "{\"status\":\"error\",\"error\":\"" + e.getMessage().replace("\\"", "\\\\\\"") + \"\"}";
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String smartError(String message) {
+    try {
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "error");
+      response.put("error", message == null ? "" : message);
+      return response.toString();
+    } catch (Exception nested) {
+      return "{}";
+    }
+  }
+
+  private String smartOk() {
+    try {
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      return response.toString();
+    } catch (Exception e) {
+      return "{}";
     }
   }
 
   private String snapshotJson() {
-    java.util.List<ReservationQueue.Entry> entries = queue.snapshot();
-    StringBuilder sb = new StringBuilder();
-    sb.append("{\\"status\\":\\"ok\\",\\"queue\\":[");
-    for (int i = 0; i < entries.size(); i++) {
-      if (i > 0) sb.append(",");
-      ReservationQueue.Entry e = entries.get(i);
-      sb.append("\\"id\\":\\"").append(e.id).append("\\",\\");
-      sb.append("\\"title\\":\\"").append(e.song.title.replace("\\"", "\\\\\\"")).append("\\",\\");
-      sb.append("\\"artist\\":\\"").append(e.song.artist.replace("\\"", "\\\\\\"")).append("\\",\\");
-      sb.append("\\"singer\\":\\"").append(e.singer.replace("\\"", "\\\\\\"")).append("\\"}");
+    try {
+      org.json.JSONArray array = new org.json.JSONArray();
+      for (ReservationQueue.Entry e : queue.snapshot()) {
+        org.json.JSONObject item = new org.json.JSONObject();
+        item.put("id", String.valueOf(e.id));
+        item.put("title", e.song.title == null ? "" : e.song.title);
+        item.put("artist", e.song.artist == null ? "" : e.song.artist);
+        item.put("singer", e.singer == null ? "" : e.singer);
+        array.put(item);
+      }
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("queue", array);
+      response.put("current", current == null ? "" : current.title);
+      response.put("playing", playing);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
     }
-    sb.append("],\\"current\\":\\"").append(current != null ? current.title : "").append("\\",\\");
-    sb.append("\\"playing\\":").append(playing).append("}");
-    return sb.toString();
   }
 
   private String searchJson(String query) {
-    java.util.List<Song> found = new java.util.ArrayList<>();
-    for (Song s : songs) {
-      if (s.matches(query)) found.add(s);
-      if (found.size() >= 50) break;
+    try {
+      java.util.List<Song> found = new java.util.ArrayList<>();
+      for (Song s : songs) {
+        if (s.matches(query)) found.add(s);
+        if (found.size() >= 50) break;
+      }
+      org.json.JSONArray array = new org.json.JSONArray();
+      for (Song s : found) {
+        org.json.JSONObject item = new org.json.JSONObject();
+        item.put("id", s.id);
+        item.put("title", s.title == null ? "" : s.title);
+        item.put("artist", s.artist == null ? "" : s.artist);
+        item.put("code", s.code == null ? "" : s.code);
+        array.put(item);
+      }
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("songs", array);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
     }
-    StringBuilder sb = new StringBuilder();
-    sb.append("{\\"status\\":\\"ok\\",\\"songs\\":[");
-    for (int i = 0; i < found.size(); i++) {
-      if (i > 0) sb.append(",");
-      Song s = found.get(i);
-      sb.append("\\"id\\":\\"").append(s.id).append("\\",\\");
-      sb.append("\\"title\\":\\"").append(s.title.replace("\\"", "\\\\\\"")).append("\\",\\");
-      sb.append("\\"artist\\":\\"").append(s.artist.replace("\\"", "\\\\\\"")).append("\\",\\");
-      sb.append("\\"code\\":\\"").append(s.code.replace("\\"", "\\\\\\"")).append("\\"}");
-    }
-    sb.append("]}");
-    return sb.toString();
   }
 
   private String reserveJson(String argument, String singer) {
-    // argument is song id
-    for (Song s : songs) {
-      if (s.id.equals(argument)) {
-        reserve(s, singer);
-        return "{\\"status\\":\\"ok\\",\\"reserved\\":\\"" + s.title.replace("\\"", "\\\\\\"") + \\"\\"}";
+    try {
+      for (Song s : songs) {
+        if (s.id.equals(argument)) {
+          reserve(s, singer);
+          org.json.JSONObject response = new org.json.JSONObject();
+          response.put("status", "ok");
+          response.put("reserved", s.title == null ? "" : s.title);
+          return response.toString();
+        }
       }
+      return smartError("Song not found");
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
     }
-    return "{\\"status\\":\\"error\\",\\"error\\":\\"Song not found\\"}";
   }
 
   private String cancelJson(String argument) {
-    queue.remove(java.util.UUID.fromString(argument));
-    return "{\\"status\\":\\"ok\\",\\"cancelled\\":\\"" + argument + \\"\\"}";
+    try {
+      queue.remove(java.util.UUID.fromString(argument));
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("cancelled", argument);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
   }
 
   private String playJson() {
-    if (player == null) {
-      next();
-    } else if (playing) {
-      pause();
-    } else {
-      // Resume via toggle
-      toggle();
+    try {
+      if (player == null) {
+        next();
+      } else if (!playing) {
+        toggle();
+      }
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("playing", playing);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
     }
-    return "{\\"status\\":\\"ok\\",\\"playing\\":\\"" + playing + \\"\\"}";
   }
 
   private String pauseJson() {
-    if (playing) pause();
-    return "{\\"status\\":\\"ok\\",\\"playing\\":\\"" + playing + \\"\\"}";
+    try {
+      if (playing) pause();
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("playing", playing);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
   }
 
   private String nextJson() {
-    next();
-    return "{\\"status\\":\\"ok\\"}";
+    try {
+      next();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+    return smartOk();
   }
 
   private void releaseCurrent() {
