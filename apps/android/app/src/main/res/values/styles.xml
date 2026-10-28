@@ -162,7 +162,9 @@
         <item name="android:padding">@dimen/kanta_spacing_6</item>
     </style>
 
-    <style name="Widget.Karaoke.Card.Glow" parent="Widget.Karaoke.Card">
+    <style name="Widget.Karaoke.Card.Glow">
+        <item name="android:background">@color/kanta_surface</item>
+        <item name="android:padding">@dimen/kanta_spacing_6</item>
         <!-- Glow handled via custom drawable -->
     </style>
 
