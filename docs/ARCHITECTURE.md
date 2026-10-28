@@ -413,3 +413,9 @@ does not copy proprietary APK libraries or bundled media. `tools/check-product-b
 fails CI when legacy product branding reappears under `apps/` or the Android application
 id changes. Evidence, open items and the rejected alternatives are recorded in
 `replica/meg-format.md`.
+
+## AdSense and the static-site CSP boundary
+
+Keep the route-specific Content Security Policy strict. Google's [AdSense CSP guidance](https://support.google.com/adsense/answer/16283098) requires a nonce-based strict policy and a nonce on every script tag; a static HTML page and fixed `vercel.json` header cannot safely mint a fresh per-response nonce. Do not add the AdSense loader or widen the policy with `unsafe-inline`, `unsafe-eval`, broad third-party source lists, or a fixed nonce as a workaround.
+
+AdSense remains disabled until a nonce-capable response architecture is implemented and reviewed. In particular, never run third-party advertising JavaScript on the client-side private Songbook, where the decrypted song list is present in the page. Any future ad integration must preserve the explicit Help, Legal, Privacy, and private-Songbook exclusions, update the privacy notice, and pass route-specific CSP tests.
