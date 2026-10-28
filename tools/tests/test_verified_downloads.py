@@ -246,9 +246,15 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
         self.assertIn("branches: [main]", push)
         self.assertIn("'apps/android/**'", push)
         self.assertIn("'apps/ios/**'", push)
+        self.assertIn("'tools/prepare-verified-downloads.py'", push)
+        self.assertIn("'tools/tests/test_verified_downloads.py'", push)
+        self.assertIn("'.github/workflows/verified-downloads.yml'", push)
         pull_request = workflow_event_section(self.smoke, "pull_request")
         self.assertIn("'apps/android/**'", pull_request)
         self.assertIn("'apps/ios/**'", pull_request)
+        self.assertIn("'tools/prepare-verified-downloads.py'", pull_request)
+        self.assertIn("'tools/tests/test_verified_downloads.py'", pull_request)
+        self.assertIn("'.github/workflows/verified-downloads.yml'", pull_request)
 
     def test_packager_names_focused_smoke_as_a_required_exact_sha_gate(self):
         self.assertEqual(
