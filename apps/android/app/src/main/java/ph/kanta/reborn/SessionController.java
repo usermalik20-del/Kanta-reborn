@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
 import ph.kanta.reborn.score.ScoreSink;
-import ph.kanta.reborn.score.ScoreSink.CompletedScore as ScoreSinkCompletedScore;
+import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 
 /** One app-lifetime state owner. All MediaPlayer access stays on the main Looper. */
@@ -491,7 +491,7 @@ public final class SessionController {
       lastScore =
           new CompletedScore(completed.playbackId, current.title, singer, completed.estimate);
       if (scoreSink != null) {
-        ScoreSinkCompletedScore sinkScore = new ScoreSinkCompletedScore(
+        ph.kanta.reborn.score.ScoreSink.CompletedScore sinkScore = new ph.kanta.reborn.score.ScoreSink.CompletedScore(
             lastScore.playbackIdentity, lastScore.title, lastScore.singer, lastScore.estimate);
         scoreSink.onScoreCompleted(sinkScore);
       }
