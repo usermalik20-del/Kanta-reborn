@@ -751,3 +751,52 @@ Google's [official AdSense CSP guidance](https://support.google.com/adsense/answ
 **Recurrence rule:** do not load external advertising code on the private Songbook or excluded Help/Legal/Privacy pages. Do not weaken CSP merely to make an unreviewed script run.
 
 **Follow-up validation finding:** first PR #112 website validation run [#40689648844](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40689648844) failed because `tools/verify-website.py` still expected the now-removed AdSense origin in the homepage CSP. The production deployment job was correctly skipped after validation failed. Candidate commit `1f80afe` updates the verifier to match the intended strict policy. Re-run website validation before merging; the initial failure was a stale test expectation, not a runtime CSP regression.
+
+## iOS — Song Library menu tap left the More root visible (2026-10-28)
+
+**Failure:** [main walkthrough #40686820501](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686820501) passed the iPad job but failed iPhone case `testMenuSongLibrary` at `KantaVisualWalkthroughUITests.swift:378`. The test tapped the visible Song Library row, then waited 25 seconds for the Library navigation bar. The preserved accessibility hierarchy still contained the More navigation bar and Song Library row, while the Library destination was absent. Other menu cases and the starter-playback walkthrough passed in that run, so the failure is intermittent rather than proof that every Library route is broken.
+
+**Root-cause direction:** `RootView` was switching `sheetRoute` to replace the root view inside an already-presented sheet. The failure evidence shows that this root replacement did not take effect on the failing iPhone attempt. The architecture already uses a NavigationStack; menu selection should use its typed path rather than depend on replacing the presented root.
+
+**Repair candidate:** More-menu buttons append typed `Route` values to `navigationPath`; direct tab/screenshot entry continues to select `sheetRoute`. The Song Library XCTest now asserts the actual `library.content` marker in addition to the navigation title, and the source-contract guard requires path-based menu pushes. This keeps the test diagnostic and avoids a retry/sleep that would mask a lifecycle defect.
+
+**Status:** candidate branch `fix/ios-library-menu-navigation-20261028`; hosted exact-head validation pending. Do not mark this failure resolved until focused smoke and both device walkthroughs pass on the candidate SHA.
+
+
+## iOS — More-menu pushed destinations missing on iPad (2026-10-28)
+
+**Fingerprint:** PR #113 walkthrough [run #40693553013](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40693553013), iPad job; `testMenuCompanionRemote`, `testMenuICloudSave`, `testMenuLegalPrivacy`, `testMenuSettings`, and `testMenuSongbook` reported missing destination titles or missing `navigation.done`. `testMenuSongLibrary` also failed the Done-toolbar assertion.
+
+**Observed cause:** the candidate appended route values to a bound path, but the failing iPad hierarchy did not expose the pushed destination and the Done control was absent. The precise SwiftUI propagation mechanism is not yet proven; the first candidate attached `navigationDestination` and the toolbar to the conditional `destination(sheetRoute)` view.
+
+**Repair candidate:** attach both modifiers to a stable ZStack root inside the NavigationStack, and add a static contract check for that placement. Keep the actual destination-title and Done-button XCTest assertions; no retries, sleeps, or weakened assertions were added.
+
+**Validation:** candidate. Fresh focused smoke and both iPhone/iPad walkthroughs must pass on the updated PR head before this is marked verified. The main walkthrough on `0556fbb` also had its real device-execution steps cancelled, so it does not supply replacement acceptance evidence.
+
+## Resolution log — 2026-10-29 (main `c784fe5`+)
+
+**iOS More-menu / Song Library navigation (PR #113).** Merged to `main` (`80ae286`).
+More-menu selections now append typed `Route` values to the `NavigationStack` path;
+the XCTest asserts the real destination title/content and `navigation.done`, and
+`tools/check-ios-presentation-contract.py` enforces the path-based placement. Final
+exact-SHA device acceptance is read from the walkthrough run on the resulting main SHA.
+
+**Website AdSense vs strict CSP (PR #112).** Merged after reconciling this ledger and
+`docs/ARCHITECTURE.md` with the dim-3 catalog-ownership section. The AdSense loader is
+absent from every public page, the homepage CSP no longer lists the AdSense origin, and
+`tools/tests/test_website_security_contract.py` rejects any re-introduction until a
+nonce-capable response architecture exists.
+
+**Android build fail-open defect (fixed on main).** `android-validation.yml` piped
+Gradle through `tee` without `set -o pipefail`, so a failed build returned `tee`'s exit
+status and the job could report success on a broken build. The build step now sets
+`pipefail`; `branches: ['*']` was corrected to `['**']` so slash-containing branches are
+validated at all; concurrency groups are keyed by `github.run_attempt` so re-running an
+older SHA cannot cancel the current acceptance run.
+
+**Android stage composition (PR #114 / PR #115 revert proposals).** Both proposals
+correctly diagnosed the compile failures on `5d7d157` and the visibility patch. Every
+one of those defects has since been fixed on main and the full Android acceptance suite
+(lint, framework-free `coreRegression`, instrumentation runtime checks, camera checks,
+workspace contract guard) passes on `1dfecd7`. The reverts would discard validated work,
+so they are closed as superseded rather than merged.

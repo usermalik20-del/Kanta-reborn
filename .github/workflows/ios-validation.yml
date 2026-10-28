@@ -2,21 +2,19 @@ name: KANTA iOS validation
 on:
   workflow_dispatch:
   push:
-    branches: ['*']
+    branches: ['**']
     paths:
       - 'apps/ios/**'
-      - 'tools/**'
       - '.github/workflows/ios-validation.yml'
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/ios/**'
-      - 'tools/**'
       - '.github/workflows/ios-validation.yml'
 permissions:
   contents: read
 concurrency:
-  group: ios-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: ios-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
   cancel-in-progress: true
 jobs:
   ios:

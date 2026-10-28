@@ -1,5 +1,7 @@
 package ph.kanta.reborn;
 
+import ph.kanta.reborn.core.RenderedPlaybackClock;
+
 interface PlaybackBackend {
   interface Callback {
     void ready(PlaybackBackend player);
@@ -21,6 +23,11 @@ interface PlaybackBackend {
 
   default boolean controlsSettled() {
     return true;
+  }
+
+  /** Returns the audible clock for lyric synchronization. */
+  default RenderedPlaybackClock getClock() {
+    return null;
   }
 
   void controls(float volume, float tempo, int pitch);

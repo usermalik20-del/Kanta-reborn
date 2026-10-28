@@ -1,16 +1,16 @@
 # Reconstruction evidence and work ledger
 
-## Current checkpoint — 2026-10-27 (main `2b5e078`; released source `41c8ddde`)
+## Current checkpoint — 2026-10-28 (main `5d7d157`; public release source `41c8ddde`)
 
-Main is at [`2b5e078`](https://github.com/usermalik20-del/Kanta-reborn/commit/2b5e078d7911c2b6fe42df359be663eb26fdda2f). The released native source is [`41c8ddde`](https://github.com/usermalik20-del/Kanta-reborn/commit/41c8dddeebe7d096322994e8af09c8c48a76308a), which merged PR [#96 — Implement compact persistent KANTA workspace](https://github.com/usermalik20-del/Kanta-reborn/pull/96). PR #98 removed the unintegrated `KantaWorkspace.swift` scaffold that violated the source-target completeness gate; the compact workspace ships through the real composition boundary instead.
+Main head is [`5d7d157`](https://github.com/usermalik20-del/Kanta-reborn/commit/5d7d157d952e2e158645223871408b926133dbda), adding Android StagePresenter composition and rendered-clock/score bindings. Android validation [#40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569) and the unsigned iOS archive [#40692799169](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692799169) were running at the last check. The full walkthrough [#40692799396](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692799396) had started iPad and queued iPhone. Web validation [#40688354662](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40688354662) and Vercel deployment [#40688354694](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40688354694) remain green on the web-equivalent tree.
 
-**Compact Workspace — "Always on Stage" (released on both platforms):** the karaoke stage is the persistent base layer and utilities are transient accessories presented above it, so the player is never lost. iOS implements this in `KantaMainPlayerView.swift` (`stage.persistentSurface`, `requestStageSheet`, single-active accessory, `More controls` label); Android implements it in `KantaWorkspace.java` mounted from `MainActivity.buildWindow()` (persistent `StageSurface` layer, `activateAccessory` single-active enforcement, handset bottom sheet / large-screen anchored panel, `Controls` label). Both platforms carry the two accessibility identity fixes: no container identifier that overrides its actionable children, and an unambiguous control-entry label that is not `Settings`.
+**Observed failures on the preceding app source `fa377948`:**
+- Android validation [#40686852171](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686852171) failed because the framework-free regression source set compiled Android-backed `SqliteSongCatalog` without Android SDK classes. The `tee` pipeline masked the compile failure; the Chrome host ClassNotFoundException was secondary.
+- iPhone walkthrough in [#40686820501](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686820501) failed `testMenuSongLibrary` while iPad passed. The post-tap accessibility hierarchy still showed More, not the Library destination. Diagnostics and runtime artifacts are linked in the context packet above.
 
-**Release:** GitHub Release [`v0.1.0-workspace-redesign`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.1.0-workspace-redesign) at source `41c8ddde`, carrying the Android APK `KANTA-Android-preview-41c8ddde.apk` and the unsigned iOS IPA `KANTA-iOS-personal-unsigned-41c8ddde.ipa`. The iOS IPA is unsigned and still requires trusted personal signing.
+[PR #111](https://github.com/usermalik20-del/Kanta-reborn/pull/111) contains the Android source-set/pipefail repair, SEO branding cleanup and exact-SHA release-gate repair. Android validation [#40691415623](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40691415623) passed; focused smoke and both-device walkthrough were still running at the last inspection. [PR #113](https://github.com/usermalik20-del/Kanta-reborn/pull/113) is the path-based iOS menu navigation repair; it requires fresh exact-head acceptance after synchronizing with current main.
 
-**All eight workflows on main `2b5e078` are green:** iOS unsigned artifacts, iPhone visual walkthrough, iPad visual walkthrough, reconstruction validation (iOS), reconstruction validation (Android), verified-downloads packaging, website validation and Vercel deploy. The public manifest at [`/downloads.json`](https://kanta-public.vercel.app/downloads.json) and the [iOS](https://kanta-public.vercel.app/ios-download) and [Android](https://kanta-public.vercel.app/android) pages agree on source `41c8ddde`, the Android artifact `#12701709708`, the iOS artifact `#12698769982` and the passing walkthrough run `#40424816930`. The website security-contract baseline was advanced to `41c8ddde` to match.
-
-**Open gates:** physical-device quality, physical two-device companion networking, voice quality/feedback/latency, scoring calibration, camera/external-display acceptance and production signing remain separate. Companion control is experimental: Android-to-Android only, no forward secrecy, no independent security review, no iOS interoperability. `InAppControlCenterView` still uses the unrestyled `GeloVisualStyle`.
+The durable [KANTA v0.1.0 release](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.1.0-workspace-redesign) and [public download manifest](https://github.com/usermalik20-del/Kanta-reborn/blob/main/apps/web/downloads.json) remain pinned to source `41c8ddde`. No new release, signed production IPA or physical-device acceptance is established.
 
 ## Superseded checkpoint — 2026-10-26 (main `9ad68d4`; accepted native source `0867134`)
 
@@ -38,4 +38,9 @@ The predictive-back regression is resolved and the required native acceptance ga
 
 All Android build, lint, domain regression and instrumentation tests pass on main (`3a81dd6`). CI workflows split into separate `android-validation.yml` and `ios-validation.yml` with independent concurrency groups.
 
-**Next: Milestone 2** — StagePresenter binding to SessionController, ScoreOverlay integration, IntroCard countdown flow, SearchOverlay SongCatalog wiring, SettingsStore persistence.
+**Next: Milestone 3** — Should-haves (Beta 2):
+- BGV video backgrounds (Media3), background photos, camera background via existing CameraStage
+- Adjustment overlay: key / melody / tempo / volume, applied as intents to SessionController, with clock re-anchoring
+- Settings groups: lyric, audio, mic, score, behavior, bgv (kanta_settings)
+- Score result overlay + score settings (difficulty/mode from SongHub's ScoreSettings)
+- Smart Link host side (NSD + beacon + WebSocket) with explicit pairing, replay protection and revocation

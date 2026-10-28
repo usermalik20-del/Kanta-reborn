@@ -8,15 +8,21 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
+import ph.kanta.reborn.core.companion.SmartLinkHost;
+import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.settings.SettingsStore;
+import ph.kanta.reborn.score.ScoreSink.CompletedScore;
+import ph.kanta.reborn.core.RenderedPlaybackClock;
 
 /** One app-lifetime state owner. All MediaPlayer access stays on the main Looper. */
-final class SessionController {
+public final class SessionController {
   interface Listener {
     void changed();
   }
 
   final CompanionControl companion;
   final BrowserCompanion browserCompanion;
+  public final SmartLinkHost smartLinkHost;
   final ReservationQueue queue = new ReservationQueue();
   final ExecutorService io = Executors.newSingleThreadExecutor();
   final ExecutorService preparation = Executors.newSingleThreadExecutor();
@@ -39,9 +45,9 @@ final class SessionController {
   long visualGeneration;
   private long stageRequest;
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
-  List<Song> songs = Collections.emptyList();
+  public List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
-  List<MidiLyrics.Cue> lyrics = Collections.emptyList();
+  public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
   Song current;
   UUID playbackIdentity;
@@ -54,7 +60,7 @@ final class SessionController {
   private long scoreFrameFloor, lastScoreReading = -1;
   private boolean scoreWaitingForControls = true;
 
-  static final class CompletedScore {
+  public static final class CompletedScore {
     final UUID playbackIdentity;
     final String title, singer;
     final MelodyScoreSession.Estimate estimate;
@@ -70,18 +76,21 @@ final class SessionController {
 
   CompletedScore lastScore;
 
-  String singer = "", message = "Opening your library…";
+  public String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
   private Listener listener;
-  private PlaybackBackend player, pending;
+  private ScoreSink scoreSink;
+  public PlaybackBackend player, pending;
+  public RenderedPlaybackClock currentClock;
   float volume = 1, tempo = 1;
   int pitch;
   float lyricScale = 1;
+  private final SettingsStore settings;
   boolean realm;
   final PartyAudio party;
   final MicrophoneInput microphone;
   final MicrophoneMonitor monitor;
-  private final android.content.SharedPreferences options;
+  public final android.content.SharedPreferences options;
   boolean foreground, loopEnabled, auxiliaryInterrupted, assigningPad;
   String loopSongId = "";
   final String[] customPads = new String[8];
@@ -97,12 +106,24 @@ final class SessionController {
     this.context = context;
     companion = new CompanionControl(this);
     browserCompanion = new BrowserCompanion(this);
+    smartLinkHost = new SmartLinkHost(context, new SmartLinkHost.SessionControllerAdapter() {
+      @Override public String handleRequest(String action, String argument, String singer) {
+        return handleSmartLinkRequest(action, argument, singer);
+      }
+      @Override public boolean isReady() {
+        return ready && !loading && !importing;
+      }
+    });
     monitor =
         new MicrophoneMonitor(
             context, this::publish, notice -> message = notice, this::inputReading);
     microphone =
         new MicrophoneInput(context, this::publish, notice -> message = notice, monitor::offer);
     options = context.getSharedPreferences("stage-options-v1", Context.MODE_PRIVATE);
+    settings = new SettingsStore(context);
+    volume = Math.min(1f, Math.max(0f, settings.getMasterVolume()));
+    tempo = Math.min(2f, Math.max(0.5f, settings.getTempo()));
+    pitch = Math.min(12, Math.max(-12, settings.getPitch()));
     lyricScale = Math.max(.75f, Math.min(1.5f, options.getFloat("lyricScale", 1)));
     loopSongId = options.getString("loopSong", "");
     party =
@@ -191,6 +212,10 @@ final class SessionController {
   void listen(Listener l) {
     listener = l;
     if (l != null) l.changed();
+  }
+
+  void setScoreSink(ScoreSink sink) {
+    scoreSink = sink;
   }
 
   void publish() {
@@ -478,9 +503,15 @@ final class SessionController {
     if (!scoringEnabled || score == null || current == null || playbackIdentity == null) return;
     observeMicrophone();
     MelodyScoreSession.Completion completed = score.finish(playbackIdentity);
-    if (completed != null)
+    if (completed != null) {
       lastScore =
           new CompletedScore(completed.playbackId, current.title, singer, completed.estimate);
+      if (scoreSink != null) {
+        ph.kanta.reborn.score.ScoreSink.CompletedScore sinkScore = new ph.kanta.reborn.score.ScoreSink.CompletedScore(
+            lastScore.playbackIdentity, lastScore.title, lastScore.singer, lastScore.estimate);
+        scoreSink.onScoreCompleted(sinkScore);
+      }
+    }
   }
 
   boolean onlineAudioAllowed() {
@@ -757,7 +788,7 @@ final class SessionController {
     publish();
   }
 
-  private void saveQueue() {
+  public void saveQueue() {
     if (repository == null) return;
     List<ReservationQueue.Entry> saved = queue.snapshot();
     io.execute(
@@ -914,10 +945,12 @@ final class SessionController {
                         }
                       };
                   try {
-                    pending =
+                    PlaybackBackend created =
                         midi == null
                             ? new FileAudioPlayback(file, callbacks)
                             : new SoundFontPlayback(bank, midi, callbacks);
+                    pending = created;
+                    currentClock = created.getClock();
                   } catch (Exception | LinkageError e) {
                     loading = false;
                     message = "Could not prepare this song. Your reservation remains in Up Next.";
@@ -959,7 +992,22 @@ final class SessionController {
     } catch (Exception e) {
       message = "This audio decoder cannot apply that playback setting.";
     }
+    try {
+      settings.setMasterVolume(this.volume);
+      settings.setTempo(this.tempo);
+      settings.setPitch(this.pitch);
+    } catch (Exception ignored) {
+      // Settings persistence is best effort and must never block playback.
+    }
     publish();
+  }
+
+  public void setPitch(int pitch) {
+    controls(volume, tempo, Math.min(12, Math.max(-12, pitch)));
+  }
+
+  public void setTempo(float tempo) {
+    controls(volume, Math.min(2, Math.max(0.5f, tempo)), pitch);
   }
 
   private void nextIfReserved() {
@@ -1022,6 +1070,173 @@ final class SessionController {
     publish();
   }
 
+  void startSmartLinkHost() {
+    smartLinkHost.start();
+  }
+
+  void stopSmartLinkHost() {
+    smartLinkHost.stop();
+  }
+
+  String handleSmartLinkRequest(String action, String argument, String singer) {
+    try {
+      switch (action) {
+        case "snapshot":
+          return snapshotJson();
+        case "search":
+          return searchJson(argument);
+        case "reserve":
+          return reserveJson(argument, singer);
+        case "cancel":
+          return cancelJson(argument);
+        case "play":
+          return playJson();
+        case "pause":
+          return pauseJson();
+        case "next":
+          return nextJson();
+        default:
+          return smartError("Unknown action: " + action);
+      }
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String smartError(String message) {
+    try {
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "error");
+      response.put("error", message == null ? "" : message);
+      return response.toString();
+    } catch (Exception nested) {
+      return "{}";
+    }
+  }
+
+  private String smartOk() {
+    try {
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      return response.toString();
+    } catch (Exception e) {
+      return "{}";
+    }
+  }
+
+  private String snapshotJson() {
+    try {
+      org.json.JSONArray array = new org.json.JSONArray();
+      for (ReservationQueue.Entry e : queue.snapshot()) {
+        org.json.JSONObject item = new org.json.JSONObject();
+        item.put("id", String.valueOf(e.id));
+        item.put("title", e.song.title == null ? "" : e.song.title);
+        item.put("artist", e.song.artist == null ? "" : e.song.artist);
+        item.put("singer", e.singer == null ? "" : e.singer);
+        array.put(item);
+      }
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("queue", array);
+      response.put("current", current == null ? "" : current.title);
+      response.put("playing", playing);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String searchJson(String query) {
+    try {
+      java.util.List<Song> found = new java.util.ArrayList<>();
+      for (Song s : songs) {
+        if (s.matches(query)) found.add(s);
+        if (found.size() >= 50) break;
+      }
+      org.json.JSONArray array = new org.json.JSONArray();
+      for (Song s : found) {
+        org.json.JSONObject item = new org.json.JSONObject();
+        item.put("id", s.id);
+        item.put("title", s.title == null ? "" : s.title);
+        item.put("artist", s.artist == null ? "" : s.artist);
+        item.put("code", s.code == null ? "" : s.code);
+        array.put(item);
+      }
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("songs", array);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String reserveJson(String argument, String singer) {
+    try {
+      for (Song s : songs) {
+        if (s.id.equals(argument)) {
+          reserve(s, singer);
+          org.json.JSONObject response = new org.json.JSONObject();
+          response.put("status", "ok");
+          response.put("reserved", s.title == null ? "" : s.title);
+          return response.toString();
+        }
+      }
+      return smartError("Song not found");
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String cancelJson(String argument) {
+    try {
+      queue.remove(java.util.UUID.fromString(argument));
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("cancelled", argument);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String playJson() {
+    try {
+      if (player == null) {
+        next();
+      } else if (!playing) {
+        toggle();
+      }
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("playing", playing);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String pauseJson() {
+    try {
+      if (playing) pause();
+      org.json.JSONObject response = new org.json.JSONObject();
+      response.put("status", "ok");
+      response.put("playing", playing);
+      return response.toString();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+  }
+
+  private String nextJson() {
+    try {
+      next();
+    } catch (Exception e) {
+      return smartError(String.valueOf(e.getMessage()));
+    }
+    return smartOk();
+  }
+
   private void releaseCurrent() {
     ++scoreRequest;
     if (score != null) score.cancel();
@@ -1030,6 +1245,7 @@ final class SessionController {
     currentTarget = null;
     currentDuration = 0;
     lastScoreReading = -1;
+    currentClock = null;
 
     if (player != null) {
       player.release();
@@ -1038,12 +1254,17 @@ final class SessionController {
     playing = false;
   }
 
-  long position() {
+  public long position() {
     try {
       return player == null ? 0 : player.position();
     } catch (IllegalStateException e) {
       return 0;
     }
+  }
+
+  public RenderedPlaybackClock getClock() {
+    if (player != null) return player.getClock();
+    return currentClock;
   }
 
   void importSongs(List<Uri> files) {

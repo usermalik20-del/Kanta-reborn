@@ -2,7 +2,7 @@ name: KANTA Android validation
 on:
   workflow_dispatch:
   push:
-    branches: ['*']
+    branches: ['**']
     paths:
       - 'apps/android/**'
       - 'tools/**'
@@ -16,7 +16,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: android-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: android-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
   cancel-in-progress: true
 jobs:
   android:
@@ -40,6 +40,7 @@ jobs:
         id: build
         working-directory: apps/android
         run: |
+          set -o pipefail
           ./gradlew --no-daemon :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
       - name: Upload build log on failure
         if: failure()

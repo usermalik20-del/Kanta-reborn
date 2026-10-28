@@ -28,11 +28,14 @@ def main() -> int:
             "-k", "system-images;android-35;google_apis;x86_64", "--device", "pixel_6",
             env=env, input="no\n", text=True, timeout=60)
         run("sudo", "chmod", "666", "/dev/kvm", timeout=10)
+        # Ensure clean adb state
+        run(adb, "kill-server", timeout=10)
+        run(adb, "start-server", timeout=10)
         with (ROOT / "emulator.log").open("wb") as log:
             emulator = subprocess.Popen([str(sdk / "emulator/emulator"), "-avd", "kanta-test", "-no-window",
                 "-no-audio", "-no-snapshot", "-no-boot-anim", "-gpu", "swiftshader", "-accel", "on",
                 "-cores", "2", "-memory", "2048", "-camera-front", "emulated"], env=env, stdout=log, stderr=subprocess.STDOUT)
-            deadline = time.monotonic() + 420
+            deadline = time.monotonic() + 600  # 10 minutes for emulator boot
             booted = False
             while time.monotonic() < deadline:
                 if emulator.poll() is not None: raise RuntimeError(f"Emulator exited before boot ({emulator.returncode})")
@@ -42,21 +45,37 @@ def main() -> int:
                     if state.returncode == 0 and state.stdout.strip() == "1": booted = True; break
                 except subprocess.TimeoutExpired: pass
                 time.sleep(2)
-            if not booted: raise RuntimeError("Emulator did not boot within seven minutes")
-            run(adb, "shell", "svc", "wifi", "enable", timeout=15)
-            network_deadline = time.monotonic() + 90
-            private_ranges = tuple(map(ipaddress.ip_network, ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")))
+            if not booted: raise RuntimeError("Emulator did not boot within ten minutes")
+        # Wait a bit more for system to settle
+        time.sleep(10)
+        run(adb, "shell", "svc", "wifi", "enable", timeout=15)
+
+        private_ranges = tuple(map(ipaddress.ip_network, ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")))
+        network_ok = False
+        for attempt in range(3):
+            network_deadline = time.monotonic() + 180
             while time.monotonic() < network_deadline:
-                addresses = subprocess.run([str(adb), "shell", "ip", "-4", "-o", "addr", "show"],
-                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=8)
+                try:
+                    addresses = subprocess.run([str(adb), "shell", "ip", "-4", "-o", "addr", "show"],
+                        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=8)
+                except subprocess.TimeoutExpired:
+                    time.sleep(2)
+                    continue
                 if any(ipaddress.ip_interface(token).ip in private_ranges[0]
                        or any(ipaddress.ip_interface(token).ip in network for network in private_ranges[1:])
                        for token in addresses.stdout.split()
                        if "/" in token):
+                    network_ok = True
                     break
                 time.sleep(2)
-            else:
-                raise RuntimeError(f"Emulator has no private IPv4 after Wi-Fi enable: {addresses.stdout.strip()}")
+            if network_ok:
+                break
+            print(f"Network not ready, attempt {attempt+1}/3", flush=True)
+            run(adb, "shell", "svc", "wifi", "disable", timeout=10)
+            time.sleep(2)
+            run(adb, "shell", "svc", "wifi", "enable", timeout=15)
+        if not network_ok:
+            raise RuntimeError(f"Emulator has no private IPv4 after Wi-Fi enable after retries")
             run(adb, "shell", "input", "keyevent", "82", timeout=15)
             run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/debug/app-debug.apk", timeout=60)
             run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk", timeout=60)

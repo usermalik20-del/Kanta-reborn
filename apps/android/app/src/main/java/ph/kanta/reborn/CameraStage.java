@@ -11,6 +11,7 @@ import androidx.camera.core.CameraState;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
+import ph.kanta.reborn.StageSurface;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 
@@ -22,7 +23,7 @@ final class CameraStage {
   private ProcessCameraProvider provider;
   private Preview preview;
   private PreviewView view;
-  private StageSurface surface;
+  private android.view.View surface;
   private LiveData<CameraState> cameraStates;
   private Observer<CameraState> cameraObserver;
   private Observer<PreviewView.StreamState> streamObserver;
@@ -42,7 +43,7 @@ final class CameraStage {
     return streaming;
   }
 
-  void start(StageSurface target) {
+  void start(android.view.View target) {
     stop();
     if (!session.foreground
         || target == null
@@ -56,16 +57,24 @@ final class CameraStage {
     session.cameraPreviewEnabled = true;
     surface = target;
     long token = generation;
-    view = new PreviewView(owner);
-    view.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
-    view.setScaleType(PreviewView.ScaleType.FILL_CENTER);
-    view.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-    target.mountCamera(view);
+    // target is a PreviewView from BackgroundStage or StageSurface
+    if (target instanceof PreviewView) {
+      view = (PreviewView) target;
+    } else if (target instanceof StageSurface) {
+      // For StageSurface, create a new PreviewView and mount it
+      view = new PreviewView(owner);
+      view.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
+      view.setScaleType(PreviewView.ScaleType.FILL_CENTER);
+      view.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      ((StageSurface) target).mountCamera(view);
+    } else {
+      return;
+    }
     streamObserver =
         state -> {
           if (token != generation || !enabled) return;
           streaming = state == PreviewView.StreamState.STREAMING;
-          surface.cameraFrame(streaming);
+          // surface.cameraFrame(streaming) - handled by BackgroundStage
           if (streaming) handler.removeCallbacksAndMessages(null);
         };
     view.getPreviewStreamState().observe(owner, streamObserver);
@@ -111,7 +120,7 @@ final class CameraStage {
     }
   }
 
-  void moveTo(StageSurface target) {
+  void moveTo(android.view.View target) {
     if (enabled && target != surface) start(target);
   }
 
@@ -125,7 +134,7 @@ final class CameraStage {
     if (view != null && streamObserver != null)
       view.getPreviewStreamState().removeObserver(streamObserver);
     if (provider != null && preview != null) provider.unbind(preview);
-    if (surface != null && view != null) surface.unmountCamera(view);
+    // surface.unmountCamera(view) - handled by BackgroundStage
     if (preview != null) preview.setSurfaceProvider(null);
     cameraStates = null;
     cameraObserver = null;

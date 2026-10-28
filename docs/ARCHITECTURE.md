@@ -41,6 +41,8 @@ The app-level `KantaTabBar` is presentation-only: it emits a destination and own
 
 The embedded Stage navigation chevron uses `stage.more`; the fullscreen-only More control uses `stage.controls.more`. These identifiers are distinct because the controls belong to different, mutually exclusive presentations. Keep the stable IDs and their source-contract/XCTest coverage aligned.
 
+The navigation sheet uses a typed `NavigationStack(path: $navigationPath)`. `sheetRoute` selects the root for direct tab and screenshot entry; buttons inside More append typed `Route` values so SwiftUI owns the destination push instead of replacing the sheet root from inside a List row. The shared presentation gate remains the single owner until Done dismisses the sheet and its `onDismiss` callback releases ownership. The Song Library walkthrough must observe both the Library navigation bar and `library.content`; a successful tap event without the destination view is a failure.
+
 When closing an online YouTube preview, clear lifecycle presentation state and retire the player owner. Retirement must invalidate callbacks and detach/hide the native `WKWebView` synchronously before deferring media suspension and blank-page cleanup. WebKit cleanup must not hold the presentation transition, and retired coordinators must remain terminal. The native lifecycle regression asserts synchronous detachment; simulator walkthroughs separately verify the user-visible transition.
 
 
@@ -264,9 +266,9 @@ Normalize `songs` to karaoke-song candidates, `sound` to SF2 candidates, `videos
 
 The single import pipeline must scan with provider-safe limits, preview categorized results, allow explicit confirmation, validate formats and licensing expectations, commit atomically where practical, and report skipped/failed items. Keep existing one-file and arbitrary-folder imports. Test identical media imported from both layouts, invalid/mismatched extensions, duplicate catalog identities, and legacy `idx` files that are missing, corrupt, or contain unsafe paths. Platform storage APIs and existing catalog ownership remain authoritative. This is a **planned feature**, not a claim of working SongHub compatibility.
 
-## Audio synthesis engine decision (owner approved 2026-10-18)
+## Audio synthesis engine decision (owner approved 2026-10-18, revised 2026-10-28)
 
-**FluidSynth is the chosen MIDI/SoundFont synthesis engine for KANTA on iOS and Android.** Do not integrate or license Un4seen BASS/BASSMIDI/BASS_FX as part of the planned SongHub compatibility work. Keep the synthesis adapter isolated behind the platform playback contract; retain native audio decoders for non-MIDI formats and the separate YouTube player. This decision does not establish that FluidSynth is already integrated on both platforms; audit the actual implementation before reporting that claim. Verify SF2 loading, MIDI/KAR events, lyrics synchronization, tempo and key controls, audio focus/session ownership, resource cleanup, and parity in platform tests. Review LGPL compliance for binary distribution, including relinking/replacement requirements and notices, before shipping. SongHub shubidx/shubblob parsing is an independent read-only interoperability task and does not require BASS. No proprietary SongHub APK libraries or bundled media may be copied into KANTA.
+**TinySoundFont is the MIDI/SoundFont synthesis engine for KANTA on Android.** It is integrated under MIT via `app/src/main/cpp/soundfont.c` with a JNI wrapper (`NativeSoundFont`), declared in `apps/android/THIRD_PARTY_NOTICES.md`, and satisfies dim-10 (old KANTA native deps: TinySoundFont + CameraX only). iOS retains its existing synthesis stack (AudioKit/Tonic/SoundpipeAudioKit); no FluidSynth integration is introduced on either platform. Do not integrate or license Un4seen BASS/BASSMIDI/BASS_FX as part of the planned SongHub compatibility work. Keep the synthesis adapter isolated behind the platform playback contract; retain native audio decoders for non-MIDI formats and the separate YouTube player. FluidSynth is not a KANTA dependency; do not report it as integrated. Verify SF2 loading, MIDI/KAR events, lyrics synchronization, tempo and key controls, audio focus/session ownership, resource cleanup, and parity in platform tests. SongHub shubidx/shubblob parsing is an independent read-only interoperability task and does not require BASS. No proprietary SongHub APK libraries or bundled media may be copied into KANTA.
 
 
 ## Android online preview follows authoritative playback publication — October 18, 2026
@@ -419,3 +421,33 @@ id changes. Evidence, open items and the rejected alternatives are recorded in
 Keep the route-specific Content Security Policy strict. Google's [AdSense CSP guidance](https://support.google.com/adsense/answer/16283098) requires a nonce-based strict policy and a nonce on every script tag; a static HTML page and fixed `vercel.json` header cannot safely mint a fresh per-response nonce. Do not add the AdSense loader or widen the policy with `unsafe-inline`, `unsafe-eval`, broad third-party source lists, or a fixed nonce as a workaround.
 
 AdSense remains disabled until a nonce-capable response architecture is implemented and reviewed. In particular, never run third-party advertising JavaScript on the client-side private Songbook, where the decrypted song list is present in the page. Any future ad integration must preserve the explicit Help, Legal, Privacy, and private-Songbook exclusions, update the privacy notice, and pass route-specific CSP tests.
+
+## Dim-3 catalog ownership (Option 3b, accepted 2026-10-28)
+
+Folder scan (`songs/`) is the single authoritative catalog source for KANTA Karaoke.
+The legacy Meg container (`kantidx`/`kantablob`, MKMD payloads) is an optional
+user-initiated importer — it materializes decoded `.mid`/`.mp3`/`.wav` into the KANTA
+library through a separate flow, never through `SqliteSongCatalog.rebuild()`.
+
+Constraints preserved:
+- One catalog, one playback path.
+- The decoder never touches `ReservationQueue` or `RenderedPlaybackClock` owners.
+- Key material is needed only at import time, supplied at runtime — never committed to repo/CI (Option B).
+- MKMD decode port stays framework-free in `core/legacy/MkmdDecoder.java`, fixture-tested via `coreRegression`.
+
+Shipped (2026-10-28):
+- `MkmdDecoder` (AES-256-CBC + raw DEFLATE, 64 MB caps both directions, post-decode
+  signature re-validation) and `MegContainerImporter` (user-initiated importer,
+  `O_EXCL|O_NOFOLLOW` 0600 temp files, delete-on-failure) live in `core/legacy/`.
+  `MegContainerImporter` is excluded from the framework-free `coreRegression` task
+  because it uses `android.net.Uri`; `MkmdDecoder` stays in it.
+- `SqliteSongCatalog.importFromLegacyContainer(...)` is the public entry point; it is
+  never called from `rebuild()`.
+- `apps/android/THIRD_PARTY_NOTICES.md` records the ported decoder (runtime key only).
+- `MkmdDecoderRegressionTests` covers round-trip (MIDI/WAVE/MP3) and adversarial
+  inputs (block alignment, bad magic, unsupported version, wrong key, 64 MB cap).
+
+Open items:
+- Device acceptance of the importer against a real Meg container (hosted CI runs the
+  JVM fixtures only; a green build is not device acceptance).
+- The importer has no UI surface yet; it is reachable only through the catalog API.

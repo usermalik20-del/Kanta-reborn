@@ -7,6 +7,7 @@ import java.security.*;
 import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
+import ph.kanta.reborn.core.legacy.MkmdDecoderRegressionTests;
 
 /** No framework/JUnit dependency: run on a server JVM before allocating cloud CI. */
 public final class CoreRegressionTests {
@@ -1103,6 +1104,7 @@ public final class CoreRegressionTests {
     checks += ph.kanta.reborn.core.songbook.ShubCompatibilityRegressionTests.run();
     checks += CompanionRegressionTests.run();
     checks += BrowserRemoteRegressionTests.run();
+    checks += MkmdDecoderRegressionTests.run();
     System.out.println("KANTA Android core: " + checks + " regression checks passed");
   }
 }

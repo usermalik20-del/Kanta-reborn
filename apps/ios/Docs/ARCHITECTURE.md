@@ -1246,3 +1246,8 @@ Keep the stage as the highest-priority visual surface and keep its background no
 ## KANTA Host branding and borderless stage — 2026-10-26
 
 Visible Host branding is KANTA Karaoke, with the KANTA brand mark rendered on the Host greeting and the player header. External-stage standby and Bonjour discovery use the same product name. The embedded stage/player is full-bleed horizontally on compact devices, with no decorative border on the stage or persistent player. Preserve the existing single HostViewModel, presentation gate and LocalKaraokeController owners; module names are not product-facing copy and remain unchanged.
+
+
+## More-menu destination navigation — 2026-10-28
+
+RootView keeps direct tab/screenshot entry in `sheetRoute`, while More-menu destinations are pushed through the sheet's typed `NavigationStack` path. This avoids replacing the root of an already-presented sheet from a nested List button. Done dismisses the complete sheet; only its dismissal callback releases the shared presentation gate. The Song Library acceptance case requires both the `Library` navigation bar and the `library.content` accessibility marker. The iPhone failure observed on main `fa377948` is not accepted as a pass; the path-based repair is a candidate until the exact-head focused smoke and both device walkthroughs pass.
