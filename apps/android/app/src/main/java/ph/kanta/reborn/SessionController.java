@@ -979,6 +979,14 @@ public final class SessionController {
     publish();
   }
 
+  public void setPitch(int pitch) {
+    controls(volume, tempo, Math.min(12, Math.max(-12, pitch)));
+  }
+
+  public void setTempo(float tempo) {
+    controls(volume, Math.min(2, Math.max(0.5f, tempo)), pitch);
+  }
+
   private void nextIfReserved() {
     if (queue.peek() != null) next();
     else {
