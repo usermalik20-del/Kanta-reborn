@@ -1,5 +1,7 @@
 package ph.kanta.reborn.stage;
 
+import ph.kanta.reborn.stage.StagePresenter.CountdownListener;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;

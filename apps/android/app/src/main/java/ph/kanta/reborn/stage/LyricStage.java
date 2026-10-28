@@ -1,5 +1,9 @@
 package ph.kanta.reborn.stage;
 
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;

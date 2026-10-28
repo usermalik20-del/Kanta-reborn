@@ -123,8 +123,10 @@ public final class AdjustmentOverlay extends FrameLayout {
           callback.onProgressChanged(seekBar, progress, fromUser);
         }
       }
-      @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-      @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+              @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {}
+              @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {}
     });
 
     // Customize seekbar appearance

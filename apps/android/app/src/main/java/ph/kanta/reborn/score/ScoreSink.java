@@ -37,22 +37,22 @@ public interface ScoreSink {
 
     /** Overall score 0-100. */
     public int overall() {
-      return estimate != null ? estimate.overall : 0;
+      return estimate != null ? (int) estimate.overall : 0;
     }
 
     /** Pitch accuracy 0-100. */
     public int pitch() {
-      return estimate != null ? estimate.pitch : 0;
+      return estimate != null ? (int) estimate.pitch : 0;
     }
 
     /** Timing accuracy 0-100. */
     public int timing() {
-      return estimate != null ? estimate.timing : 0;
+      return estimate != null ? (int) estimate.timing : 0;
     }
 
     /** Bonus score. */
     public int bonus() {
-      return estimate != null ? estimate.bonus : 0;
+      return estimate != null ? (int) estimate.bonus : 0;
     }
 
     /** Tier label. */
