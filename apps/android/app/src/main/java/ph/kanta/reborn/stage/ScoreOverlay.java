@@ -101,9 +101,9 @@ public final class ScoreOverlay extends FrameLayout {
     LinearLayout container = new LinearLayout(context);
     container.setOrientation(LinearLayout.VERTICAL);
     container.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
-    container.setGravity(CENTER_HORIZONTAL);
-    LayoutParams containerParams = new LayoutParams(
-        LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    container.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+    FrameLayout.LayoutParams containerParams = new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
     containerParams.gravity = android.view.Gravity.CENTER;
     addView(container, containerParams);
 
@@ -118,7 +118,7 @@ public final class ScoreOverlay extends FrameLayout {
     // Tier label
     tierLabelView = new TextView(context);
     tierLabelView.setTextSize(14);
-    scoreValueView.setTypeface(null, android.graphics.Typeface.BOLD);
+    tierLabelView.setTypeface(null, android.graphics.Typeface.BOLD);
     tierLabelView.setGravity(android.view.Gravity.CENTER);
     tierLabelView.setPadding(0, (int)(4 * context.getResources().getDisplayMetrics().density), 0, 0);
     container.addView(tierLabelView);

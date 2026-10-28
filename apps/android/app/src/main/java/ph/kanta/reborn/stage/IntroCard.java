@@ -71,9 +71,9 @@ public final class IntroCard extends FrameLayout {
     container.setOrientation(LinearLayout.VERTICAL);
     container.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
     container.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
-    LayoutParams params = new LayoutParams(
+    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
         (int)(context.getResources().getDisplayMetrics().widthPixels * 0.8f),
-        LayoutParams.WRAP_CONTENT);
+        FrameLayout.LayoutParams.WRAP_CONTENT);
     params.gravity = android.view.Gravity.CENTER;
     addView(container, params);
 

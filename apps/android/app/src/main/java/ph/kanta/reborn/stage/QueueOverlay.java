@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.core.Song;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -55,7 +56,7 @@ public final class QueueOverlay extends FrameLayout {
     container.setOrientation(LinearLayout.VERTICAL);
     container.setBackgroundColor(0xFF1B1030); // surface
     container.setPadding((int)(20 * density), (int)(20 * density), (int)(20 * density), (int)(20 * density));
-    LayoutParams params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
     params.gravity = android.view.Gravity.BOTTOM;
     addView(container, params);
 
@@ -134,10 +135,10 @@ public final class QueueOverlay extends FrameLayout {
   }
 
   private final class QueueAdapter extends RecyclerView.Adapter<QueueViewHolder> {
-    private List<ReservationQueue.Entry> entries = new java.util.ArrayList<>();
+    private List<ReservationQueue.Entry> entries = new ArrayList<>();
 
     void setEntries(List<ReservationQueue.Entry> entries) {
-      this.entries = entries != null ? entries : new java.util.ArrayList<>();
+      this.entries = entries != null ? entries : new ArrayList<>();
       notifyDataSetChanged();
     }
 
