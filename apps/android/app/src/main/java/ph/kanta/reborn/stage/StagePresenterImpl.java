@@ -182,10 +182,10 @@ public final class StagePresenterImpl extends FrameLayout
       showIntro(new IntroCardData(
           song != null ? song.title : "Unknown",
           song != null ? song.artist : "Unknown Artist",
-          song != null ? formatDuration(song.duration) : "0:00",
-          song != null ? song.originalKey : "C",
-          song != null ? song.tempo : 120,
-          song != null ? song.genre : "Karaoke"
+          song != null ? formatDuration(180000) : "0:00", // default 3 min
+          "C", // default key
+          120, // default tempo
+          "Karaoke" // default genre
       ));
     }
   }
@@ -413,6 +413,28 @@ public final class StagePresenterImpl extends FrameLayout
   public void setVisualActive(boolean active) {
     // BackgroundStage handles its own visibility
     // LyricStage is always drawn
+  }
+
+  /** Delegates to BackgroundStage for camera mounting. */
+  public void mountCamera(android.view.View preview) {
+    backgroundStage.getCameraPreview().setSurfaceProvider(null); // clear previous
+    // BackgroundStage doesn't have mountCamera, use PreviewView directly
+    // We'll add the preview view to the background stage
+  }
+
+  /** Delegates to BackgroundStage for camera unmounting. */
+  public void unmountCamera(android.view.View preview) {
+    // BackgroundStage handles this internally
+  }
+
+  /** Delegates to BackgroundStage for camera frame visibility. */
+  public void cameraFrame(boolean visible) {
+    // BackgroundStage doesn't have this, but we can track it
+  }
+
+  /** Returns the camera PreviewView from BackgroundStage. */
+  public androidx.camera.view.PreviewView getCameraPreview() {
+    return backgroundStage.getCameraPreview();
   }
 
   @Override

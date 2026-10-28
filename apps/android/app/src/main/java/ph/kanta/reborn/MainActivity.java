@@ -267,7 +267,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     body.removeAllViews();
     renderPanel();
-    stage.refresh();
+    if (stagePresenter != null) stagePresenter.refresh();
   }
 
   private void buildWindow() {
@@ -1527,10 +1527,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     fullscreen.setOnDismissListener(
         d -> {
           fullscreenStage = null;
-          stage.setVisualActive(true);
-          camera.moveTo(stage);
+          if (stagePresenter != null) stagePresenter.setVisualActive(true);
+          camera.moveTo(stagePresenter.getCameraPreview());
         });
-    stage.setVisualActive(false);
+    if (stagePresenter != null) stagePresenter.setVisualActive(false);
     fullscreen.show();
     camera.moveTo(fullscreenStage);
   }

@@ -7,7 +7,7 @@ import ph.kanta.reborn.core.RenderedPlaybackClock;
 import java.io.File;
 
 /** All calls and MediaPlayer callbacks belong to the main Looper. */
-final class FileAudioPlayback implements PlaybackBackend {
+public final class FileAudioPlayback implements PlaybackBackend {
   private final MediaPlayer player = new MediaPlayer();
   private boolean released;
   private final Callback callback;
