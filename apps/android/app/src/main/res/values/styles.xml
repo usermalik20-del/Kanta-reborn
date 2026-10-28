@@ -156,8 +156,11 @@
         <item name="android:textColor">@color/kanta_text_tertiary</item>
     </style>
 
-    <!-- Widget Styles - no Widget.Karaoke base style to avoid resource linking issues -->
-    <style name="KaraokeWidget.Card">
+    <!-- Widget Styles - use KaraokeWidget base style -->
+    <style name="KaraokeWidget">
+    </style>
+
+    <style name="KaraokeWidget.Card" parent="KaraokeWidget">
         <item name="android:background">@color/kanta_surface</item>
         <item name="android:padding">@dimen/kanta_spacing_6</item>
     </style>
@@ -166,7 +169,7 @@
         <!-- Glow handled via custom drawable -->
     </style>
 
-    <style name="KaraokeWidget.CountdownRing">
+    <style name="KaraokeWidget.CountdownRing" parent="KaraokeWidget">
         <item name="android:strokeWidth">@dimen/karaoke_countdown_ring_stroke</item>
     </style>
 
