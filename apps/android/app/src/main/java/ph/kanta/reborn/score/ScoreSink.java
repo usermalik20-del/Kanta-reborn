@@ -1,5 +1,6 @@
 package ph.kanta.reborn.score;
 
+import ph.kanta.reborn.core.MelodyScoreSession;
 import ph.kanta.reborn.core.Song;
 import java.util.UUID;
 
