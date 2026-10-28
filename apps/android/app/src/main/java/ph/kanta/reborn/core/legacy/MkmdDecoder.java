@@ -7,7 +7,10 @@ import java.util.zip.Inflater;
 
 public final class MkmdDecoder {
 
-  private static final int MKMD_MAGIC = 0x444B4D4D;
+  // Little-endian u32 of the ASCII bytes 'M','K','M','D' (0x4D,0x4B,0x4D,0x44).
+  // Derived, not hand-written: MkmdDecoderRegressionTests asserts this value,
+  // so a transposed nibble can never silently reject every real payload again.
+  static final int MKMD_MAGIC = 'M' | ('K' << 8) | ('M' << 16) | ('D' << 24);
   private static final int VERSION_V1 = 0x01;
   private static final int AES_BLOCK = 16;
   private static final int MAX_COMPRESSED_BYTES = 64 * 1024 * 1024;

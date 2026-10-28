@@ -227,6 +227,11 @@ public final class MkmdDecoderRegressionTests {
 
   public static int run() throws Exception {
     checks = 0;
+    // Guard the wire constant itself: a transposed nibble here rejects every
+    // real payload while every other assertion still looks plausible.
+    check(
+        MkmdDecoder.MKMD_MAGIC == ('M' | ('K' << 8) | ('M' << 16) | ('D' << 24)),
+        "MKMD magic constant is the little-endian 'MKMD' value");
     decodeRoundTripMidi();
     decodeRoundTripWave();
     decodeRoundTripMp3();
