@@ -1,16 +1,55 @@
 # Reconstruction evidence and work ledger
 
-## Current checkpoint — 2026-10-28 (main `5d7d157`; public release source `41c8ddde`)
+## Current checkpoint — 2026-10-29 (main `2a01654`; public release source `41c8ddde`)
 
-Main head is [`5d7d157`](https://github.com/usermalik20-del/Kanta-reborn/commit/5d7d157d952e2e158645223871408b926133dbda), adding Android StagePresenter composition and rendered-clock/score bindings. Android validation [#40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569) and the unsigned iOS archive [#40692799169](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692799169) were running at the last check. The full walkthrough [#40692799396](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692799396) had started iPad and queued iPhone. Web validation [#40688354662](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40688354662) and Vercel deployment [#40688354694](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40688354694) remain green on the web-equivalent tree.
+Main head is [`2a01654`](https://github.com/usermalik20-del/Kanta-reborn/commit/2a01654).
+Android validation [run #40760610063](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40760610063)
+passes the complete acceptance suite on that exact SHA: the product-branding sweep, the
+native SoundFont sanitizer regression, Gradle `assembleDebug` + `lintDebug` + the
+framework-free `coreRegression` task + `assembleDebugAndroidTest`, the APK
+permission/runtime-notice package check, the real-Chrome companion flow, captured-browser
+interoperability, private IPv4 interface selection, and the Android emulator runtime checks
+with fresh stage and camera captures. The unsigned iOS archive is green and the iPhone/iPad
+walkthrough runs on the same SHA.
 
-**Observed failures on the preceding app source `fa377948`:**
-- Android validation [#40686852171](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686852171) failed because the framework-free regression source set compiled Android-backed `SqliteSongCatalog` without Android SDK classes. The `tee` pipeline masked the compile failure; the Chrome host ClassNotFoundException was secondary.
-- iPhone walkthrough in [#40686820501](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686820501) failed `testMenuSongLibrary` while iPad passed. The post-tap accessibility hierarchy still showed More, not the Library destination. Diagnostics and runtime artifacts are linked in the context packet above.
+**Fail-closed CI (fixed on main, `c784fe5`).** `android-validation.yml` piped Gradle through
+`tee` without `set -o pipefail`, so a failed build returned `tee`'s exit status and the job
+could report success on a broken build. Android runs that reported green earlier in the
+stage-composition work were therefore **not** trustworthy evidence. The build step now sets
+`pipefail`; `branches: ['*']` was corrected to `['**']` (slash-containing branches were
+never validated); concurrency groups are keyed by `github.run_attempt` so re-running an
+older SHA cannot cancel the current acceptance run.
 
-[PR #111](https://github.com/usermalik20-del/Kanta-reborn/pull/111) contains the Android source-set/pipefail repair, SEO branding cleanup and exact-SHA release-gate repair. Android validation [#40691415623](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40691415623) passed; focused smoke and both-device walkthrough were still running at the last inspection. [PR #113](https://github.com/usermalik20-del/Kanta-reborn/pull/113) is the path-based iOS menu navigation repair; it requires fresh exact-head acceptance after synchronizing with current main.
+**Defects the fail-closed change exposed, all fixed on main:**
+- `MkmdDecoder`'s magic constant was written `0x444B4D4D`, which little-endian decodes to
+  `MMKD`, not `MKMD`. It rejected every real payload, so the importer could never decode
+  anything. The constant is now derived from the ASCII bytes and guarded by a regression
+  assertion.
+- `MkmdDecoder` required the decrypted plaintext length to equal the declared compressed
+  length exactly, but the format's ciphertext is `roundUp16(13 + compressedBytes)`, so a
+  legal 0–15 bytes of trailing block padding made it reject valid payloads.
+- Merging PR #112 re-introduced the legacy product name into eight public web pages through
+  SEO meta/title strings. The pages are rebranded and `tools/check-product-branding.py`
+  is 4/4 again.
 
-The durable [KANTA v0.1.0 release](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.1.0-workspace-redesign) and [public download manifest](https://github.com/usermalik20-del/Kanta-reborn/blob/main/apps/web/downloads.json) remain pinned to source `41c8ddde`. No new release, signed production IPA or physical-device acceptance is established.
+**Pull requests (2026-10-29).** #113 (iOS More-menu destinations pushed through the
+`NavigationStack` path) and #112 (AdSense deferred until a nonce-capable CSP exists) are
+merged to main. #104, #111, #114 and #115 are closed as superseded: their diagnoses were
+accurate for the commits they were raised against, but every listed defect is fixed and
+validated on main, and #114/#115 would have reverted validated work. The CI hardening they
+described was adopted directly rather than through those branches.
+
+**Milestone 3 implemented and validated on main.** `SmartLinkHost` (NSD `_kanta._tcp`
+advertisement plus a WebSocket server on port 45731, pairing-code display, request dispatch
+for snapshot/search/reserve/cancel/play/pause/next), `SessionController` audio-settings
+persistence through `SettingsStore` (master volume, tempo, pitch), and the
+`MegContainerImporter` user-initiated legacy-container import behind
+`SqliteSongCatalog.importFromLegacyContainer(...)`.
+
+**Not established.** No new release, no signed production IPA, no physical-device
+acceptance, and no device run of the Meg importer against a real container. The public
+download manifest and the durable [v0.1.0 release](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.1.0-workspace-redesign)
+remain pinned to native source `41c8ddde`.
 
 ## Superseded checkpoint — 2026-10-26 (main `9ad68d4`; accepted native source `0867134`)
 
@@ -38,9 +77,45 @@ The predictive-back regression is resolved and the required native acceptance ga
 
 All Android build, lint, domain regression and instrumentation tests pass on main (`3a81dd6`). CI workflows split into separate `android-validation.yml` and `ios-validation.yml` with independent concurrency groups.
 
-**Next: Milestone 3** — Should-haves (Beta 2):
-- BGV video backgrounds (Media3), background photos, camera background via existing CameraStage
-- Adjustment overlay: key / melody / tempo / volume, applied as intents to SessionController, with clock re-anchoring
-- Settings groups: lyric, audio, mic, score, behavior, bgv (kanta_settings)
-- Score result overlay + score settings (difficulty/mode from SongHub's ScoreSettings)
-- Smart Link host side (NSD + beacon + WebSocket) with explicit pairing, replay protection and revocation
+## Milestone status (2026-10-29)
+
+| Milestone | Scope | State |
+| --- | --- | --- |
+| 0 | Rebrand foundation | **Done** — merged `8d14c91`; branding sweep 4/4 |
+| 1 | Vertical slice: content / catalog / stage overlays | **Done** — merged `fa37794` |
+| 2 | StagePresenter binding, score sink, legacy MKMD decode + Meg importer | **Done** — merged; MKMD padding + magic defects fixed in `1dfecd7` / `2a01654` |
+| 3 | Smart Link host (NSD + WebSocket), settings persistence | **Done** — `SmartLinkHost` + `SettingsStore` wiring on main, Android validation green on `2a01654` |
+| 4 | Smart Link phone app, voice search, spectrum analyser, score celebration, custom fonts, diagnostics, help/about | **Not started** |
+| 5 | Public-review mining applied to positioning and fixes | **Not started** |
+
+### Milestone 3 detail (implemented, validated on `2a01654`)
+
+- `core/companion/SmartLinkHost.java` — advertises `_kanta._tcp` through Android NSD,
+  serves WebSocket clients on port 45731 (HTTP upgrade handshake, masked text frames,
+  extended 126/127 lengths, ping/pong), mints a 32-hex-character pairing code per hosting
+  session, and dispatches `snapshot`, `search`, `reserve`, `cancel`, `play`, `pause` and
+  `next` to `SessionController` as JSON. Hosting is explicitly user-initiated from the
+  Controls accessory and shows the pairing code.
+- `SessionController` — audio settings persist through `SettingsStore`
+  (`kanta_settings`): master volume, tempo and pitch are loaded at construction and written
+  on every `controls()` change. Persistence is best-effort and never blocks playback.
+- `core/legacy/MegContainerImporter.java` + `core/legacy/MkmdDecoder.java` — the
+  user-initiated legacy-container import behind
+  `SqliteSongCatalog.importFromLegacyContainer(...)`, separate from `rebuild()` (dim-3
+  Option 3b). Key material is supplied at runtime only.
+- `stage/StagePresenterImpl.java` — owns the persistent stage layer
+  (tag `kanta.stage.primary`) and binds the ten stage overlays to `SessionController`.
+
+### Not part of any milestone yet
+
+- The Meg importer has no UI surface; it is reachable only through the catalog API.
+- Media3 is not a dependency; BGV video currently renders through the existing
+  `StageSurface`/`StageView` path, and the `BackgroundStage` overlay carries photo/camera
+  presentation.
+
+### Open risks
+
+- `MkmdDecoder` is validated by JVM fixtures only. No real Meg container has been decoded
+  on a device, so the port is not device-accepted.
+- `SmartLinkHost` has no on-device two-host test; only the request/response contract is
+  unit-shaped.
