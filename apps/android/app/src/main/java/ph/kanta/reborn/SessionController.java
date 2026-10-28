@@ -1083,27 +1083,27 @@ public final class SessionController {
         case "next":
           return nextJson();
         default:
-          return "{"status":"error","error":"Unknown action: " + action}";
+          return "{\"status\":\"error\",\"error\":\"Unknown action: \" + action}";
       }
     } catch (Exception e) {
-      return "{"status":"error","error":"" + e.getMessage().replace(""", "\"") + ""}";
+      return "{\"status\":\"error\",\"error\":\"" + e.getMessage().replace("\\"", "\\\\\\"") + \"\"}";
     }
   }
 
   private String snapshotJson() {
     java.util.List<ReservationQueue.Entry> entries = queue.snapshot();
     StringBuilder sb = new StringBuilder();
-    sb.append("{"status":"ok","queue":[");
+    sb.append("{\\"status\\":\\"ok\\",\\"queue\\":[");
     for (int i = 0; i < entries.size(); i++) {
       if (i > 0) sb.append(",");
       ReservationQueue.Entry e = entries.get(i);
-      sb.append("{"id":"").append(e.id).append("",");
-      sb.append(""title":"").append(e.song.title.replace(""", "\"")).append("",");
-      sb.append(""artist":"").append(e.song.artist.replace(""", "\"")).append("",");
-      sb.append(""singer":"").append(e.singer.replace(""", "\"")).append(""}");
+      sb.append("\\"id\\":\\"").append(e.id).append("\\",\\");
+      sb.append("\\"title\\":\\"").append(e.song.title.replace("\\"", "\\\\\\"")).append("\\",\\");
+      sb.append("\\"artist\\":\\"").append(e.song.artist.replace("\\"", "\\\\\\"")).append("\\",\\");
+      sb.append("\\"singer\\":\\"").append(e.singer.replace("\\"", "\\\\\\"")).append("\\"}");
     }
-    sb.append("],"current":"").append(current != null ? current.title : "").append("",");
-    sb.append(""playing":").append(playing).append("}");
+    sb.append("],\\"current\\":\\"").append(current != null ? current.title : "").append("\\",\\");
+    sb.append("\\"playing\\":").append(playing).append("}");
     return sb.toString();
   }
 
@@ -1114,14 +1114,14 @@ public final class SessionController {
       if (found.size() >= 50) break;
     }
     StringBuilder sb = new StringBuilder();
-    sb.append("{"status":"ok","songs":[");
+    sb.append("{\\"status\\":\\"ok\\",\\"songs\\":[");
     for (int i = 0; i < found.size(); i++) {
       if (i > 0) sb.append(",");
       Song s = found.get(i);
-      sb.append("{"id":"").append(s.id).append("",");
-      sb.append(""title":"").append(s.title.replace(""", "\"")).append("",");
-      sb.append(""artist":"").append(s.artist.replace(""", "\"")).append("",");
-      sb.append(""code":"").append(s.code.replace(""", "\"")).append(""}");
+      sb.append("\\"id\\":\\"").append(s.id).append("\\",\\");
+      sb.append("\\"title\\":\\"").append(s.title.replace("\\"", "\\\\\\"")).append("\\",\\");
+      sb.append("\\"artist\\":\\"").append(s.artist.replace("\\"", "\\\\\\"")).append("\\",\\");
+      sb.append("\\"code\\":\\"").append(s.code.replace("\\"", "\\\\\\"")).append("\\"}");
     }
     sb.append("]}");
     return sb.toString();
@@ -1132,15 +1132,15 @@ public final class SessionController {
     for (Song s : songs) {
       if (s.id.equals(argument)) {
         reserve(s, singer);
-        return "{"status":"ok","reserved":"" + s.title.replace(""", "\"") + ""}";
+        return "{\\"status\\":\\"ok\\",\\"reserved\\":\\"" + s.title.replace("\\"", "\\\\\\"") + \\"\\"}";
       }
     }
-    return "{"status":"error","error":"Song not found"}";
+    return "{\\"status\\":\\"error\\",\\"error\\":\\"Song not found\\"}";
   }
 
   private String cancelJson(String argument) {
     queue.remove(java.util.UUID.fromString(argument));
-    return "{"status":"ok","cancelled":"" + argument + ""}";
+    return "{\\"status\\":\\"ok\\",\\"cancelled\\":\\"" + argument + \\"\\"}";
   }
 
   private String playJson() {
@@ -1152,17 +1152,17 @@ public final class SessionController {
       // Resume via toggle
       toggle();
     }
-    return "{"status":"ok","playing":"" + playing + ""}";
+    return "{\\"status\\":\\"ok\\",\\"playing\\":\\"" + playing + \\"\\"}";
   }
 
   private String pauseJson() {
     if (playing) pause();
-    return "{"status":"ok","playing":"" + playing + ""}";
+    return "{\\"status\\":\\"ok\\",\\"playing\\":\\"" + playing + \\"\\"}";
   }
 
   private String nextJson() {
     next();
-    return "{"status":"ok"}";
+    return "{\\"status\\":\\"ok\\"}";
   }
 
   private void releaseCurrent() {
