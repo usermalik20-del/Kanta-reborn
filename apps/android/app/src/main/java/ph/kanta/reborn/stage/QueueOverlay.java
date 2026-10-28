@@ -1,11 +1,5 @@
 package ph.kanta.reborn.stage;
 
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
@@ -140,10 +134,10 @@ public final class QueueOverlay extends FrameLayout {
   }
 
   private final class QueueAdapter extends RecyclerView.Adapter<QueueViewHolder> {
-    private List<ReservationQueue.Entry> entries = new ArrayList<>();
+    private List<ReservationQueue.Entry> entries = new java.util.ArrayList<>();
 
     void setEntries(List<ReservationQueue.Entry> entries) {
-      this.entries = entries != null ? entries : new ArrayList<>();
+      this.entries = entries != null ? entries : new java.util.ArrayList<>();
       notifyDataSetChanged();
     }
 
@@ -239,7 +233,7 @@ public final class QueueOverlay extends FrameLayout {
       addView(removeButton);
     }
 
-    void bind(ReservationQueue.Entry entry, boolean isCurrent, OnClickListener removeListener) {
+    void bind(ReservationQueue.Entry entry, boolean isCurrent, android.view.View.OnClickListener removeListener) {
       positionBadge.setText(String.valueOf(getAdapterPosition() + 1));
       titleView.setText(entry.song.title);
       reserverView.setText(entry.singer.isEmpty() ? "You" : entry.singer);

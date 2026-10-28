@@ -1,8 +1,5 @@
 package ph.kanta.reborn.content;
 
-import android.provider.DocumentsContract;
-import java.util.Locale;
-
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.net.Uri;
@@ -82,7 +79,15 @@ public final class ContentScanner {
       List<Uri> assetFiles = new ArrayList<>();
       boolean isLegacyFallback = false;
       boolean cancelled = false;
-    public Builder cancelled(boolean v) { this.cancelled = v; return this; }
+
+      public Builder cancelled(boolean v) {
+        this.cancelled = v;
+        return this;
+      }
+
+      public ScanResult build() {
+        return new ScanResult(this);
+      }
     }
   }
 
