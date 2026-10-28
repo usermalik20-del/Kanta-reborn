@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from replica/design/tokens.json -->
+<resources>
+    <!-- Spacing scale (4dp base) -->
+    <dimen name="kanta_spacing_0">0dp</dimen>
+    <dimen name="kanta_spacing_1">4dp</dimen>
+    <dimen name="kanta_spacing_2">8dp</dimen>
+    <dimen name="kanta_spacing_3">12dp</dimen>
+    <dimen name="kanta_spacing_4">16dp</dimen>
+    <dimen name="kanta_spacing_5">20dp</dimen>
+    <dimen name="kanta_spacing_6">24dp</dimen>
+    <dimen name="kanta_spacing_7">32dp</dimen>
+    <dimen name="kanta_spacing_8">40dp</dimen>
+    <dimen name="kanta_spacing_9">48dp</dimen>
+    <dimen name="kanta_spacing_10">56dp</dimen>
+    <dimen name="kanta_spacing_11">64dp</dimen>
+    <dimen name="kanta_spacing_12">80dp</dimen>
+    <dimen name="kanta_spacing_13">96dp</dimen>
+    <dimen name="kanta_spacing_14">112dp</dimen>
+    <dimen name="kanta_spacing_15">128dp</dimen>
+
+    <!-- Radius -->
+    <dimen name="kanta_radius_none">0dp</dimen>
+    <dimen name="kanta_radius_sm">8dp</dimen>
+    <dimen name="kanta_radius_md">12dp</dimen>
+    <dimen name="kanta_radius_lg">16dp</dimen>
+    <dimen name="kanta_radius_xl">24dp</dimen>
+    <dimen name="kanta_radius_full">9999dp</dimen>
+
+    <!-- Karaoke-specific -->
+    <dimen name="karaoke_lyric_line_spacing">16dp</dimen>
+    <dimen name="karaoke_countdown_ring_stroke">8dp</dimen>
+    <dimen name="karaoke_knob_thumb_size">24dp</dimen>
+    <dimen name="karaoke_knob_track_height">4dp</dimen>
+    <dimen name="karaoke_keypad_key_min">64dp</dimen>
+    <dimen name="karaoke_queue_row_height">56dp</dimen>
+    <dimen name="karaoke_intro_card_width_percent">80%</dimen>
+    <dimen name="karaoke_search_sheet_height_percent">70%</dimen>
+    <dimen name="karaoke_queue_sheet_height_percent">60%</dimen>
+    <dimen name="karaoke_adjustment_sheet_height_percent">40%</dimen>
+</resources>

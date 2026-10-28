@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KANTA Karaoke</string>
+    <string name="content_root_folder">KANTA</string>
+    <string name="index_file_idx">kantidx</string>
+    <string name="index_file_blob">kantablob</string>
+    <string name="prefs_settings">kanta_settings</string>
+    <string name="prefs_prefs">kanta_prefs</string>
+    <string name="nsd_service_type">_kanta._tcp</string>
+    <string name="lock_multicast">KANTA:MulticastLock</string>
+    <string name="lock_wifi">KANTA:WifiLock</string>
+    <string name="log_tag_server">KANTA_SERVER:</string>
+    <string name="legacy_folder_not_found">No \'KANTA\' folder found.</string>
+    <string name="legacy_folder_not_found_alt">KANTA folder not found</string>
+    <string name="scanning_idx">Scanning storage for KANTA/idx...</string>
+    <string name="soundfont_scan_hint">Tap to scan KANTA/sound/ for new .sf2 files</string>
+    <string name="no_soundfont_found">No soundfont found in KANTA/sound/ or selected in Settings.</string>
+    <string name="no_sf2_files">No .sf2 files found in any KANTA/sound/ folder</string>
+    <string name="custom_font_hint">Custom (.ttf) from KANTA/font/</string>
+    <string name="about_title">About KANTA Karaoke</string>
+    <string name="app_version_banner">KANTA Karaoke %s</string>
+</resources>
