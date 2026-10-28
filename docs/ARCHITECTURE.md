@@ -413,3 +413,9 @@ does not copy proprietary APK libraries or bundled media. `tools/check-product-b
 fails CI when legacy product branding reappears under `apps/` or the Android application
 id changes. Evidence, open items and the rejected alternatives are recorded in
 `replica/meg-format.md`.
+
+## Android host-JVM regression source boundary
+
+The `:app:coreRegression` task is a framework-free JVM test harness for pure-Java core contracts and the synthetic HTTPS Companion Remote host. It must not compile Android SDK implementations. Keep `core/catalog/SqliteSongCatalog.java` in the normal Android source set, where Gradle supplies `android.jar`, but exclude that implementation from the host-JVM source set. Do not weaken or remove the catalog from the app build to make host tests pass.
+
+The Android validation workflow must enable Bash `pipefail` when piping Gradle output through `tee build.log`; otherwise a failed Gradle compilation can be reported as a successful workflow step and surface later as a misleading missing-browser-host error. The workspace contract checker guards both the source-set boundary and failure propagation. When the browser host cannot load, inspect the preceding `compileCoreRegression` result before changing browser or TLS behavior.
