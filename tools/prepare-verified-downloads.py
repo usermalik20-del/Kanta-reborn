@@ -21,7 +21,9 @@ SOURCE_WAIT_SECONDS = 120
 POLL_INTERVAL_SECONDS = 5
 
 REQUIRED_RUNS = {
-    "reconstruction": "KANTA reconstruction validation",
+    "android": "KANTA Android validation",
+    "ios_validation": "KANTA iOS validation",
+    "ios_smoke": "KANTA iOS focused simulator smoke",
     "ios_unsigned": "KANTA iOS unsigned artifacts",
     "walkthrough": "KANTA iOS visual walkthrough",
 }
@@ -146,21 +148,24 @@ def accepted(run: dict, artifact: dict, expected: dict):
         raise ValueError("Artifact expired or belongs to another source run")
 
 
-def resolve_source(source_sha: str) -> tuple[dict, dict, dict]:
+def resolve_source(source_sha: str) -> dict:
     if not re.fullmatch(r"[0-9a-f]{40}", source_sha):
         raise ValueError("SOURCE_SHA must be a full 40-character Git commit SHA")
 
-    # A release bundle is not accepted until both device walkthroughs have passed
-    # on this exact revision, alongside the native reconstruction and unsigned IPA.
-    walkthrough = find_source_run(source_sha, REQUIRED_RUNS["walkthrough"])
-    reconstruction = find_source_run(source_sha, REQUIRED_RUNS["reconstruction"])
-    ios_run = find_source_run(source_sha, REQUIRED_RUNS["ios_unsigned"])
+    # Every gate must be a successful main-branch run on the same exact SHA.
+    # The native workflow split replaced the former reconstruction workflow.
+    gates = {
+        name: find_source_run(source_sha, workflow_name)
+        for name, workflow_name in REQUIRED_RUNS.items()
+    }
 
-    android_artifact = find_artifact(reconstruction, ARTIFACT_NAMES["android"])
+    android_run = gates["android"]
+    ios_run = gates["ios_unsigned"]
+    android_artifact = find_artifact(android_run, ARTIFACT_NAMES["android"])
     ios_artifact = find_artifact(ios_run, ARTIFACT_NAMES["ios"])
 
     android = {
-        "run": reconstruction["id"],
+        "run": android_run["id"],
         "artifact": android_artifact["id"],
         "source": source_sha,
     }
@@ -169,10 +174,12 @@ def resolve_source(source_sha: str) -> tuple[dict, dict, dict]:
         "artifact": ios_artifact["id"],
         "source": source_sha,
     }
-    accepted(reconstruction, android_artifact, android)
+    accepted(android_run, android_artifact, android)
     accepted(ios_run, ios_artifact, ios)
-    return walkthrough, {"run": reconstruction, "artifact": android_artifact, "expected": android}, {
-        "run": ios_run, "artifact": ios_artifact, "expected": ios
+    return {
+        "gates": gates,
+        "android": {"run": android_run, "artifact": android_artifact, "expected": android},
+        "ios": {"run": ios_run, "artifact": ios_artifact, "expected": ios},
     }
 
 
@@ -244,46 +251,57 @@ def application_bytes(platform: str, source: dict) -> bytes:
 
 def main():
     source_sha = (os.environ.get("SOURCE_SHA") or os.environ.get("GITHUB_SHA") or "").lower()
-    walkthrough, android, ios = resolve_source(source_sha)
+    resolved = resolve_source(source_sha)
+    gates = resolved["gates"]
+    acceptance_runs = {
+        key: {"workflow": REQUIRED_RUNS[key], "run": run["id"], "source_sha": source_sha}
+        for key, run in gates.items()
+    }
     output = Path("verified-downloads")
     manifest = {
         "repository": REPO,
         "source_sha": source_sha,
         "packaging_run": os.environ.get("GITHUB_RUN_ID"),
-        "walkthrough_run": walkthrough["id"],
+        "acceptance_gates": acceptance_runs,
+        "walkthrough_run": gates["walkthrough"]["id"],
         "builds": {},
     }
-    for platform, source in (("android", android), ("ios", ios)):
+    for platform in ("android", "ios"):
+        source = resolved[platform]
         expected = source["expected"]
         application = application_bytes(platform, source)
         if platform == "android":
             name = "KANTA-Android-preview-" + source_sha[:8] + ".apk"
-            note = "Android testing preview. The APK is byte-identical to the accepted build. The automated test APK is not included.\n"
+            note = "Android testing preview. The APK is byte-identical to the accepted build. The automated test APK is not included.\\n"
         else:
             name = "KANTA-iOS-personal-unsigned-" + source_sha[:8] + ".ipa"
-            note = "Unsigned iPhoneOS personal-signing input. Separate trusted personal signing is required before installation. iCloud Save is unavailable in this build.\n"
+            note = "Unsigned iPhoneOS personal-signing input. Separate trusted personal signing is required before installation. iCloud Save is unavailable in this build.\\n"
         destination = output / platform
         destination.mkdir(parents=True, exist_ok=True)
         (destination / name).write_bytes(application)
         checksum = hashlib.sha256(application).hexdigest()
-        (destination / "SHA256.txt").write_text(checksum + "  " + name + "\n")
+        (destination / "SHA256.txt").write_text(checksum + "  " + name + "\\n")
         (destination / "README.txt").write_text(
             note + "Source: " + source_sha
-            + "\nValidated build run: " + str(expected["run"])
-            + "\niPhone/iPad walkthrough run: " + str(walkthrough["id"]) + "\n"
+            + "\\nValidated build run: " + str(expected["run"])
+            + "\\nAcceptance gate runs: " + ", ".join(
+                key + "=" + str(gates[key]["id"]) for key in REQUIRED_RUNS
+            )
+            + "\\n"
         )
         details = dict(
             expected, file=name, sha256=checksum, bytes=len(application),
             signed=False if platform == "ios" else "debug",
+            acceptance_runs={key: run["id"] for key, run in gates.items()},
         )
-        (destination / "build-info.json").write_text(json.dumps(details, indent=2) + "\n")
+        (destination / "build-info.json").write_text(json.dumps(details, indent=2) + "\\n")
         manifest["builds"][platform] = details
         print(
             platform + ": verified original application bytes from run "
             + str(expected["run"]) + ", " + str(len(application)) + " bytes",
             flush=True,
         )
-    (output / "downloads.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (output / "downloads.json").write_text(json.dumps(manifest, indent=2) + "\\n")
     return 0
 
 
