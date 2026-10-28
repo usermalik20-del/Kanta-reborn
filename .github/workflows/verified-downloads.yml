@@ -12,12 +12,22 @@ on:
       - 'tools/prepare-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/ios-smoke.yml'
+      - '.github/workflows/ios-validation.yml'
+      - '.github/workflows/android-validation.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'tools/prepare-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/ios-smoke.yml'
+      - '.github/workflows/ios-validation.yml'
+      - '.github/workflows/android-validation.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
 permissions:
   contents: read
   actions: read
