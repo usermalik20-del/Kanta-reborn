@@ -79,6 +79,7 @@ public final class ContentScanner {
       List<Uri> assetFiles = new ArrayList<>();
       boolean isLegacyFallback = false;
       boolean cancelled = false;
+    public Builder cancelled(boolean v) { this.cancelled = v; return this; }
     }
   }
 
