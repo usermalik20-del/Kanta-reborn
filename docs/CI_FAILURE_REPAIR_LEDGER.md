@@ -749,3 +749,5 @@ Google's [official AdSense CSP guidance](https://support.google.com/adsense/answ
 **Validation:** candidate; website validation and Vercel pre-deploy checks must pass on the PR head. This does not claim ads are operational. Re-enable only after a reviewed nonce-capable architecture and privacy-policy update.
 
 **Recurrence rule:** do not load external advertising code on the private Songbook or excluded Help/Legal/Privacy pages. Do not weaken CSP merely to make an unreviewed script run.
+
+**Follow-up validation finding:** first PR #112 website validation run [#40689648844](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40689648844) failed because `tools/verify-website.py` still expected the now-removed AdSense origin in the homepage CSP. The production deployment job was correctly skipped after validation failed. Candidate commit `1f80afe` updates the verifier to match the intended strict policy. Re-run website validation before merging; the initial failure was a stale test expectation, not a runtime CSP regression.
