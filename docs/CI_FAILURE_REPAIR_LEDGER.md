@@ -17,6 +17,20 @@ Every failed CI job with an engineering fix must receive a record containing:
 
 After a relevant CI run becomes green, update this ledger **in a separate docs-only commit** recording the actual run ID and SHA, then confirm the documentation commit did not alter production behavior. If a docs-only commit triggers a new workflow, don't imply the prior green result validated the new SHA's source; state the distinction. If validation fails, retain the candidate record and continue the repair. Never rewrite a historical failure as though it never occurred.
 
+## Release packaging — focused iOS smoke omitted from main exact-SHA gate (2026-10-28)
+
+**Fingerprint:** Android-source main push on `86dde8e5dbf079bf4815e1b8dc460ff13936e5a3`; reconstruction [run #40614166494](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166494) and unsigned archive [run #40614166497](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166497) passed, while the focused iOS smoke workflow had no run for that SHA. Full iPhone/iPad walkthrough [#40614166372](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166372) was still executing its device cases at initial inspection.
+
+**Cause (confirmed):** `.github/workflows/ios-smoke.yml` had only `workflow_dispatch` and `pull_request` triggers and no main `push` trigger. `tools/prepare-verified-downloads.py` listed only reconstruction, unsigned archive and full walkthrough in `REQUIRED_RUNS`; it did not require the focused smoke despite the architecture's exact-SHA release expectation. A source SHA could therefore be packaged without the focused iPhone lifecycle/navigation result.
+
+**Fix candidate:** [PR #106](https://github.com/usermalik20-del/Kanta-reborn/pull/106), branch `fix/exact-sha-ios-smoke-gate-20261028`. Adds relevant main-push and PR path filters for iOS/Android sources and release guards, requires the focused smoke for the exact main SHA, records its run ID in generated provenance, and adds trigger/resolver regression tests. Architecture, testing, verified-download checkpoint and codebase context are updated in the same candidate.
+
+**Regression coverage:** `test_focused_smoke_triggers_on_main_push_and_android_pull_requests`, `test_packager_names_focused_smoke_as_a_required_exact_sha_gate`, and `test_resolver_requires_smoke_walkthrough_and_both_builds_for_same_sha`. These fail if Android main changes stop triggering smoke or packaging no longer resolves all four gates.
+
+**Validation:** `candidate`; fresh PR #106 CI pending on the final head. Do not mark verified from the green main reconstruction/archive runs alone; they predate the trigger/packager repair. The public manifest and release assets remain unchanged.
+
+**Recurrence rule:** when an Android source/guard change lands on main, confirm a focused iOS smoke run exists for the exact resulting SHA. Before packaging, require successful main-branch runs for focused smoke, reconstruction, unsigned iOS archive and both-device walkthrough on the same SHA. Missing evidence is a hard failure, not an optional warning.
+
 ## Android — predictive-back lint regression (2026-10-27)
 
 **Fingerprint:** reconstruction [run #40485807248](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807248), Android job `android`, step `Build, lint and domain regression tests`; `GestureBackNavigation` at `apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java:177`.

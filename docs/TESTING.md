@@ -35,6 +35,19 @@ The website validation job runs `tools/verify-website.py` and `tools/tests/test_
 
 All package suites remain enabled. Build failures stay failures, including when later diagnostic steps succeed. UI automation, signing, physical audio/camera, LAN confidentiality and device performance require separate acceptance; no static audit can guarantee that future mismatches will never occur.
 
+## Exact-SHA release acceptance
+
+The verified-download packager fails closed unless four successful main-branch workflows exist for the exact requested 40-character source SHA:
+
+1. `KANTA iOS focused simulator smoke` — focused iPhone navigation/lifecycle coverage.
+2. `KANTA reconstruction validation` — Android lint/domain, browser interoperability and emulator runtime plus iOS package/source validation.
+3. `KANTA iOS unsigned artifacts` — unsigned iPhoneOS archive.
+4. `KANTA iOS visual walkthrough` — independent passing iPhone and iPad walkthrough jobs.
+
+The focused smoke workflow must trigger on relevant pushes to `main` and on same-repository pull requests for both `apps/ios/**` and `apps/android/**`, plus its named source guards and workflow file. This is intentional: an Android-only change still requires exact-SHA iOS smoke evidence before packaging. The packager records both the smoke and full walkthrough run IDs in the generated provenance. A missing run, non-success conclusion, stale source SHA, wrong branch, expired artifact or ambiguous artifact identity is a hard failure. Contract tests exercise the resolver and workflow trigger so this requirement cannot silently regress.
+
+The public manifest is not updated by CI automatically. After all four gates pass, the owner-approved packaging workflow copies the already-accepted APK/IPA bytes, validates archive identity and checksums, and produces a candidate manifest. Update the public manifest and website security-contract baseline together only after reviewing exact artifact IDs/digests, then pass website validation and production deployment. This workflow does not sign, publish a GitHub Release, or claim physical-device acceptance.
+
 ## Reconciled contracts
 
 - Completed room scores include the entire target timeline; live scores include elapsed targets. Changing latency clears prior observations.
@@ -119,8 +132,8 @@ Reconstruction validation runs for relevant app, tool and workflow changes on fe
 - `reconstruction-validation.yml` remains the PR source, Swift package, simulator-build, and Android validation gate. It does not replace simulator UI acceptance.
 - `ios-visual-walkthrough.yml` runs on relevant iOS and Android source pushes and same-repository pull requests, the Android companion-interface guard, its capture/release-gate tools and workflow edits, plus manual dispatch, the existing weekly schedule and `ios-rc-*` tags. Its independent iPhone and iPad jobs each build and execute the complete named UI suite, retain screenshots/recordings/logs, and publish compact per-device diagnostics. A pass on one device does not mask a failure on the other.
 - The unsigned iOS archive workflow proves packaging only. It does not prove interactive behavior, signing, or installability.
-- `ios-smoke.yml` remains a focused iPhone test for navigation/Search recovery and native lifecycle behavior; it is not the full release walkthrough.
-- A release candidate requires the reconstruction gate and a successful full iPhone **and** iPad walkthrough on the exact candidate SHA. Weekly, unrelated-commit, candidate-only, build-only, or one-device evidence cannot substitute.
+- `ios-smoke.yml` remains a focused iPhone test for navigation/Search recovery and native lifecycle behavior; it is not the full release walkthrough. It must run on relevant main pushes and same-repository pull requests touching iOS or Android source and release-relevant guards.
+- A release candidate requires focused iOS smoke, the reconstruction gate, unsigned archive, and a successful full iPhone **and** iPad walkthrough on the exact candidate SHA. Weekly, unrelated-commit, candidate-only, build-only, or one-device evidence cannot substitute.
 - CI does not sign, publish, or deploy the app. The current archive remains an unsigned personal-signing input until the authorized signing and release gates are completed.
 
 ## GitHub Actions cost controls (October 2026)

@@ -1,6 +1,19 @@
 # Verified preview downloads
 
 
+## Current mainline checkpoint — 2026-10-28
+
+Main head is [`86dde8e`](https://github.com/usermalik20-del/Kanta-reborn/commit/86dde8e5dbf079bf4815e1b8dc460ff13936e5a3), which merged [PR #105](https://github.com/usermalik20-del/Kanta-reborn/pull/105) for read-only Android legacy songbook probes and the product-branding guard.
+
+- Reconstruction [run #40614166494](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166494) passed Android and iOS jobs on `86dde8e`; Android bundle [artifact #12784457872](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166494/artifacts/12784457872), 28,594,997 bytes, ZIP SHA-256 `94954892e95547a5b5b2a354578ce782319eb425dd88bcefb0e51bb284a85dc7`.
+- Unsigned iOS archive [run #40614166497](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166497) passed; artifact [#12783878073](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166497/artifacts/12783878073), 25,137,222 bytes, ZIP SHA-256 `2cc2dd797081a33a88a2f61955a99700ae75216ddbbe9daf807596ef2f1a7992`.
+- Website validation [run #40614166398](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166398) and production Vercel deployment [run #40614166370](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166370) passed.
+- Full iPhone/iPad walkthrough [run #40614166372](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40614166372) had both simulator jobs compiling and running the actual walkthroughs at the time of this checkpoint. No final device result is claimed by this entry.
+
+**Release blocker discovered:** the focused iOS smoke workflow did not trigger on the `86dde8e` main push because `.github/workflows/ios-smoke.yml` had only manual and pull-request events. The download packager also required only reconstruction, unsigned archive and full walkthrough, so it could accept a source SHA without focused smoke evidence. [PR #106](https://github.com/usermalik20-del/Kanta-reborn/pull/106), branch `fix/exact-sha-ios-smoke-gate-20261028`, adds a main-push trigger for relevant iOS/Android source changes, requires the focused smoke run on the same SHA, records that run ID in the generated manifest/build notes, and adds regression tests. This repair is a candidate until its fresh CI passes and the fix is merged.
+
+The public manifest and durable release remain pinned to `41c8ddde`. Do not update public links until all four exact-SHA gates pass, the owner-approved packaging workflow validates actual artifact identities/digests, website validation passes, and the production deployment is verified. The current Android bundle is not a standalone production APK; the iOS archive is unsigned. No signed production IPA or physical-device acceptance is established.
+
 ## Current accepted preview baseline — 2026-10-27
 
 Main head is merge commit [`9a2a0fc`](https://github.com/usermalik20-del/Kanta-reborn/commit/9a2a0fca3778ff10eb549c319d7f400f33661b28), which merged [PR #101 — Fix Android predictive-back dispatch](https://github.com/usermalik20-del/Kanta-reborn/pull/101). The Android Compact Workspace now dismisses active accessories through a lifecycle-bound AndroidX `OnBackPressedCallback`; the deprecated `Activity.onBackPressed()` override and API 36 `GestureBackNavigation` lint failure are removed.
