@@ -719,3 +719,12 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Resolved state of the earlier gates:** PR #97 was closed rather than merged because it independently carried the rejected scaffold; PR #93 was closed as superseded by the main website fixes. The compact workspace is no longer an unaccepted candidate. The scaffold file does not exist in the shipped source tree and must not be reintroduced: the compact workspace ships at the real composition boundary.
 
 **Still open after this resolution:** the six diagnostic `NSLog` probes previously present in iOS shipping source (`[KANTA_PROBE]` and `[KANTA_TAP]` in `KantaMainPlayerView.swift`, `[KANTA_GATE]` in `RootView.swift`, four occurrences) are confirmed absent from the current source tree; they were removed at the accepted native baseline `0867134` and the released baseline is `41c8ddde`. `InAppControlCenterView` still uses the unrestyled `GeloVisualStyle` (14 references) and remains the last unrestyled surface. Physical-device quality, physical two-device companion networking, voice quality/feedback/latency, scoring calibration, camera/external-display acceptance and production signing remain separate open gates. The Android reconstruction job's private-network assertion is environmental emulator flakiness, confirmed green on re-run.
+
+## PR #103 songbook offset-table regression fixture — 2026-10-28
+
+**Failure:** reconstruction run [#40593831903](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40593831903) failed in `ShubCompatibilityRegressionTests.spanIndexRejectsUnusableOffsetTables` with `Non increasing offset table accepted`.
+
+**Root cause:** the synthetic fixture contained one title record but two trailing offsets. That produced eight trailing bytes for one title, so the span index correctly rejected the malformed stride as `MALFORMED_TITLE_INDEX` before the correlator's non-increasing-offset rule could run. The assertion only accepted `OFFSET_CORRELATION_REJECTED`, so the fixture did not test the behavior it claimed to test.
+
+**Repair:** the fixture now has two title records and two repeated offsets. Cardinality and stride are valid, leaving the non-increasing transition as the isolated reason for rejection. The production parser and its fail-closed behavior are unchanged. Validation on the updated PR head is pending.
+

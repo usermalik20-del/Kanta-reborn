@@ -61,3 +61,32 @@ The online preview uses a distinct transient UUID per selection and idempotent t
 ### Online and local audio coordination candidate
 
 Opening an online video requires paused local karaoke and disabled microphone/monitoring. It stops effects and between-song music. Starting local audio, an effect, microphone input or between-song music closes the online video; closing it does not restart those sounds automatically. The local song and queue are preserved. This PR #51 candidate requires fresh Android build/runtime validation and physical-device interruption/YouTube acceptance; see ../../docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md.
+
+## KANTA Karaoke candidate — legacy songbook interoperability
+
+KANTA Karaoke is the working name for bringing the karaoke loop the owner built as a
+separate karaoke app into KANTA. The Android side starts with the part that can be done cleanly:
+read-only interoperability with the legacy indexed songbook container.
+
+Added in this candidate:
+
+* `ph.kanta.reborn.core.songbook` — a framework-free mirror of the existing iOS
+  `LegacyCompatibility` layer (`ShubIndexProbe`, `ShubBlobOffsetCorrelator`,
+  `ShubBlobSpanIndex`, `ShubBlobPayloadProbe`, `IndexedContainerCompatibility`). It
+  describes the legacy index structure, the trailing offset table and the payload
+  spans, and classifies payload prefixes. It never decodes or executes a payload and
+  never becomes a second source of truth for playback or the queue.
+* `ShubCompatibilityRegressionTests` — synthetic-fixture domain checks that run in the
+  existing `coreRegression` task on a server JVM. No song catalogue is committed.
+* `tools/check-product-branding.py` — a static guard wired into
+  `reconstruction-validation.yml`: the legacy product name may not reappear anywhere
+  under `apps/`, the legacy container name may not reach the public website or an
+  Android type outside the compatibility package, and the Android application id stays
+  `ph.kanta.reborn`.
+
+Not implemented and not claimed: legacy payload decoding, the proprietary native
+audio/scoring component, the legacy bundled media, the legacy Smart Link transport, the
+legacy phone remote application, and the legacy screens themselves. The engine
+decision in `docs/ARCHITECTURE.md` stands: KANTA keeps its own synthesis and scoring
+path and does not integrate BASS. Evidence and open items are recorded in
+`replica/meg-format.md` and `replica/architecture.md`.

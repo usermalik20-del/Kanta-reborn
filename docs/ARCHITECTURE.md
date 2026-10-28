@@ -394,3 +394,20 @@ A workspace redesign must be implemented at the real composition boundary before
 ## PR branch freshness and exact-SHA acceptance — 2026-10-27
 
 A pull request is not eligible for acceptance while GitHub reports a dirty/unmergeable state or its latest head has no validation runs. First reconcile the branch with current main while preserving candidate-only implementation and documentation. Then require reconstruction, focused iOS smoke, unsigned archive, and independent iPhone/iPad walkthrough results for the same resulting code SHA. A prior green run on an older head is historical evidence only; never infer validation from a commit that has no attached run or from a branch that cannot merge cleanly.
+
+## Android legacy songbook interoperability
+
+The Android app now carries the read-only counterpart of the iOS `LegacyCompatibility`
+layer in `ph.kanta.reborn.core.songbook`. The classes mirror the iOS interpretation
+one-for-one — index probe, offset correlator, span index, payload prefix probe and a
+neutral `IndexedContainerCompatibility` facade — so both platforms describe the legacy
+indexed container identically and the format details stay confined to one package per
+platform. The layer is framework-free so the existing `coreRegression` task exercises it
+on a server JVM, it is covered by synthetic fixtures only, and no song catalogue is
+committed. It never decodes or executes a protected payload, never becomes a second
+playback or queue owner, and it does not change the `docs/ARCHITECTURE.md` engine
+decision: KANTA keeps its own synthesis and scoring path, does not integrate BASS, and
+does not copy proprietary APK libraries or bundled media. `tools/check-product-branding.py`
+fails CI when legacy product branding reappears under `apps/` or the Android application
+id changes. Evidence, open items and the rejected alternatives are recorded in
+`replica/meg-format.md`.
