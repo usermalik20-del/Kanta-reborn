@@ -8,6 +8,8 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
+import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.core.RenderedPlaybackClock;
 
 /** One app-lifetime state owner. All MediaPlayer access stays on the main Looper. */
 final class SessionController {
@@ -73,7 +75,9 @@ final class SessionController {
   String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
   private Listener listener;
+  private ScoreSink scoreSink;
   private PlaybackBackend player, pending;
+  private RenderedPlaybackClock currentClock;
   float volume = 1, tempo = 1;
   int pitch;
   float lyricScale = 1;
@@ -191,6 +195,10 @@ final class SessionController {
   void listen(Listener l) {
     listener = l;
     if (l != null) l.changed();
+  }
+
+  void setScoreSink(ScoreSink sink) {
+    scoreSink = sink;
   }
 
   void publish() {
@@ -478,9 +486,13 @@ final class SessionController {
     if (!scoringEnabled || score == null || current == null || playbackIdentity == null) return;
     observeMicrophone();
     MelodyScoreSession.Completion completed = score.finish(playbackIdentity);
-    if (completed != null)
+    if (completed != null) {
       lastScore =
           new CompletedScore(completed.playbackId, current.title, singer, completed.estimate);
+      if (scoreSink != null) {
+        scoreSink.onScoreCompleted(lastScore);
+      }
+    }
   }
 
   boolean onlineAudioAllowed() {
@@ -914,10 +926,12 @@ final class SessionController {
                         }
                       };
                   try {
-                    pending =
+                    PlaybackBackend created =
                         midi == null
                             ? new FileAudioPlayback(file, callbacks)
                             : new SoundFontPlayback(bank, midi, callbacks);
+                    pending = created;
+                    currentClock = created.getClock();
                   } catch (Exception | LinkageError e) {
                     loading = false;
                     message = "Could not prepare this song. Your reservation remains in Up Next.";
@@ -1030,6 +1044,7 @@ final class SessionController {
     currentTarget = null;
     currentDuration = 0;
     lastScoreReading = -1;
+    currentClock = null;
 
     if (player != null) {
       player.release();
@@ -1044,6 +1059,11 @@ final class SessionController {
     } catch (IllegalStateException e) {
       return 0;
     }
+  }
+
+  RenderedPlaybackClock getClock() {
+    if (player != null) return player.getClock();
+    return currentClock;
   }
 
   void importSongs(List<Uri> files) {

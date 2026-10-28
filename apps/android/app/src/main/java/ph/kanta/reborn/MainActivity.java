@@ -16,6 +16,10 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
+import ph.kanta.reborn.core.catalog.SongCatalog;
+import ph.kanta.reborn.core.ReservationQueue;
+import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.stage.StagePresenterImpl;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
@@ -32,7 +36,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       GOLD = 0xFFF6CE77;
   private SessionController session;
   private LinearLayout root, body, results;
-  private StageSurface stage, fullscreenStage, externalStage;
+  private StagePresenterImpl stagePresenter;
+  private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
   private OnBackPressedCallback workspaceBackCallback;
   private TextView nowPlaying, microphoneReading, monitorReading, scoreReading;
@@ -64,7 +69,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           session.observeMicrophone();
           refreshScoreReading();
           refreshMicrophoneReading();
-          if (stage != null) stage.refresh();
+          if (stagePresenter != null) stagePresenter.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
           if (externalStage != null) externalStage.refresh();
           handler.postDelayed(this, 100);
@@ -114,7 +119,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     super.onStart();
     youtubeForeground = true;
     session.hostVisible(true);
-    if (stage != null) stage.setVisualActive(fullscreen == null || !fullscreen.isShowing());
+    if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
     if (fullscreenStage != null) fullscreenStage.setVisualActive(true);
     session.listen(this::render);
     handler.post(tick);
@@ -167,7 +172,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     camera.stop();
     session.listen(null);
     session.hostVisible(false);
-    if (stage != null) stage.setVisualActive(false);
+    if (stagePresenter != null) stagePresenter.setVisualActive(false);
     if (fullscreenStage != null) fullscreenStage.setVisualActive(false);
     if (!isChangingConfigurations()) session.pause();
     if (presentation != null) presentation.dismiss();
@@ -308,13 +313,27 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           @Override
           public void onAccessoryDeactivated(String accessoryId) {
             if (workspaceBackCallback != null) workspaceBackCallback.setEnabled(false);
+            // Hide stage presenter accessories when workspace dismisses them
+            if (stagePresenter != null) {
+              if (KantaWorkspace.ACCESSORY_SEARCH.equals(accessoryId)) {
+                stagePresenter.hideSearch();
+              } else if (KantaWorkspace.ACCESSORY_QUEUE.equals(accessoryId)) {
+                stagePresenter.hideQueue();
+              }
+            }
           }
         });
-    stage = new StageSurface(this, session);
-    stage.setTag("kanta.stage.primary");
-    stage.setOnClickListener(v -> fullscreen());
-    stage.setContentDescription("Karaoke stage. Double tap to open fullscreen.");
-    workspace.addPersistentLayer(stage);
+    // Create StagePresenterImpl with all stage overlays
+    ContentRoot contentRoot = new ContentRoot(this);
+    ContentScanner scanner = new ContentScanner(getContentResolver(), contentRoot);
+    SongCatalog catalog = new ph.kanta.reborn.core.catalog.SqliteSongCatalog(this, contentRoot, scanner);
+    stagePresenter = new StagePresenterImpl(this, session, catalog, session.queue);
+    stagePresenter.setTag("kanta.stage.primary");
+    stagePresenter.setOnClickListener(v -> fullscreen());
+    stagePresenter.setContentDescription("Karaoke stage. Double tap to open fullscreen.");
+    workspace.addPersistentLayer(stagePresenter);
+    // Register as ScoreSink
+    session.setScoreSink(stagePresenter);
     stagePane.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
     nowPlaying =
         text(
@@ -422,11 +441,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     switch (accessoryId) {
       case KantaWorkspace.ACCESSORY_SEARCH:
         workspace.addAccessoryHeader("Search");
-        searchAccessory(target);
+        // Use the StagePresenterImpl's SearchOverlay
+        if (stagePresenter != null) stagePresenter.showSearch();
         break;
       case KantaWorkspace.ACCESSORY_QUEUE:
         workspace.addAccessoryHeader("Queue");
-        queueAccessory(target);
+        // Use the StagePresenterImpl's QueueOverlay
+        if (stagePresenter != null) stagePresenter.showQueue();
         break;
       case KantaWorkspace.ACCESSORY_VISUALS:
         workspace.addAccessoryHeader("Stage Visuals");
