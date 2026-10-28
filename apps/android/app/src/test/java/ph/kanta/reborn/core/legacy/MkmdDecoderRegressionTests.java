@@ -63,8 +63,14 @@ public final class MkmdDecoderRegressionTests {
 
   private static void decodeRoundTripMidi() throws Exception {
     byte[] midi = new byte[] {
-      0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01,
-      0x01, 0xE0, 0x4D, 0x54, 0x72, 0x6B, 0x00, 0x00, 0x00, 0x04, 0x00, 0x90, 0x3C, 0x40
+      (byte) 0x4D, (byte) 0x54, (byte) 0x68, (byte) 0x64,
+      (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x06,
+      (byte) 0x00, (byte) 0x00,
+      (byte) 0x00, (byte) 0x01,
+      (byte) 0x01, (byte) 0xE0,
+      (byte) 0x4D, (byte) 0x54, (byte) 0x72, (byte) 0x6B,
+      (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x04,
+      (byte) 0x00, (byte) 0x90, (byte) 0x3C, (byte) 0x40
     };
     byte[] ciphertext = buildMkmd(midi);
     MkmdDecoder.DecodedPayload decoded = MkmdDecoder.decode(ciphertext, aesKey, aesIv);
@@ -74,10 +80,13 @@ public final class MkmdDecoderRegressionTests {
 
   private static void decodeRoundTripWave() throws Exception {
     byte[] wave = new byte[] {
-      'R', 'I', 'F', 'F', 0x24, 0x00, 0x00, 0x00, 'W', 'A', 'V', 'E',
-      0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-      0x44, 0xAC, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00, 0x02, 0x00, 0x10, 0x00,
-      0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00
+      (byte) 'R', (byte) 'I', (byte) 'F', (byte) 'F', (byte) 0x24, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+      (byte) 'W', (byte) 'A', (byte) 'V', (byte) 'E',
+      (byte) 0x66, (byte) 0x6D, (byte) 0x74, (byte) 0x20, (byte) 0x10, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+      (byte) 0x01, (byte) 0x00, (byte) 0x01, (byte) 0x00,
+      (byte) 0x44, (byte) 0xAC, (byte) 0x00, (byte) 0x00, (byte) 0x88, (byte) 0x58, (byte) 0x01, (byte) 0x00,
+      (byte) 0x02, (byte) 0x00, (byte) 0x10, (byte) 0x00,
+      (byte) 0x64, (byte) 0x61, (byte) 0x74, (byte) 0x61, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00
     };
     byte[] ciphertext = buildMkmd(wave);
     MkmdDecoder.DecodedPayload decoded = MkmdDecoder.decode(ciphertext, aesKey, aesIv);
@@ -86,8 +95,11 @@ public final class MkmdDecoderRegressionTests {
   }
 
   private static void decodeRoundTripMp3() throws Exception {
-    byte[] mp3 = new byte[] {'I', 'D', '3', 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0xFF, 0xFB, 0x90, 0x44};
+    byte[] mp3 = new byte[] {
+      (byte) 'I', (byte) 'D', (byte) '3', (byte) 0x04, (byte) 0x00, (byte) 0x00,
+      (byte) 0x00, (byte) 0x00, (byte) 0x00,
+      (byte) 0xFF, (byte) 0xFB, (byte) 0x90, (byte) 0x44
+    };
     byte[] ciphertext = buildMkmd(mp3);
     MkmdDecoder.DecodedPayload decoded = MkmdDecoder.decode(ciphertext, aesKey, aesIv);
     check(Arrays.equals(decoded.payload, mp3), "MP3 round-trip preserves bytes");
@@ -156,7 +168,8 @@ public final class MkmdDecoderRegressionTests {
   }
 
   private static void rejectsWrongKey() throws Exception {
-    byte[] midi = new byte[] {0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06};
+    byte[] midi = new byte[] {(byte) 0x4D, (byte) 0x54, (byte) 0x68, (byte) 0x64,
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x06};
     byte[] ciphertext = buildMkmd(midi);
     byte[] wrongKey = new byte[32];
     Arrays.fill(wrongKey, (byte) 0x99);
@@ -189,14 +202,15 @@ public final class MkmdDecoderRegressionTests {
   }
 
   private static void classifiesKnownSignatures() {
-    check(MkmdDecoder.classifyPayloadForTest(new byte[] {'M', 'T', 'h', 'd'})
+    check(MkmdDecoder.classifyPayloadForTest(new byte[] {(byte) 'M', (byte) 'T', (byte) 'h', (byte) 'd'})
         == MkmdDecoder.Signature.STANDARD_MIDI, "MIDI signature");
     check(MkmdDecoder.classifyPayloadForTest(
-        new byte[] {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E'})
+        new byte[] {(byte) 'R', (byte) 'I', (byte) 'F', (byte) 'F', (byte) 0, (byte) 0, (byte) 0, (byte) 0,
+            (byte) 'W', (byte) 'A', (byte) 'V', (byte) 'E'})
         == MkmdDecoder.Signature.WAVE, "WAVE signature");
-    check(MkmdDecoder.classifyPayloadForTest(new byte[] {'I', 'D', '3'})
+    check(MkmdDecoder.classifyPayloadForTest(new byte[] {(byte) 'I', (byte) 'D', (byte) '3'})
         == MkmdDecoder.Signature.MP3_ID3, "MP3 signature");
-    check(MkmdDecoder.classifyPayloadForTest(new byte[] {9, 9, 9})
+    check(MkmdDecoder.classifyPayloadForTest(new byte[] {(byte) 9, (byte) 9, (byte) 9})
         == MkmdDecoder.Signature.UNKNOWN, "Unknown signature");
   }
 
