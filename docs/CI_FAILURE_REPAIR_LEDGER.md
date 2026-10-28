@@ -735,3 +735,14 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Repair:** the candidate now registers an AndroidX `OnBackPressedCallback` in `onCreate`, enables it only while a workspace accessory is active, disables it on deactivation, and removes the deprecated override. The callback dismisses the accessory while leaving the persistent stage attached. This is a preventive code-review fix; fresh hosted validation is still required.
 
 **Branch status:** PR #103 is 20 commits behind main and GitHub reports it as not mergeable. Reconcile the branch with current main and rerun reconstruction, archive, and iPhone/iPad walkthrough gates before considering merge.
+
+
+## Android — StagePresenter integration failed compilation (2026-10-28)
+
+**Failure:** [main validation #40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569) failed after main commit `5d7d157`. The compile errors show that `StagePresenterImpl` in a subpackage cannot access package-private `SessionController`/`FileAudioPlayback`; it assumes `Song` has `duration`, `originalKey`, `tempo`, and `genre`; the `ScoreSink.CompletedScore` type differs from `SessionController.CompletedScore`; and `MainActivity` still references the removed `stage` field. The presenter also bypasses the existing StageSurface photo/video/camera owner and is not wired to session playback transitions.
+
+**Decision:** do not mask this with visibility widening or fabricated metadata. The integration is not ready for acceptance because it breaks the established media/background lifecycle as well as compilation.
+
+**Repair candidate:** [PR #114](https://github.com/usermalik20-del/Kanta-reborn/pull/114) restores the five Android files to the pre-integration implementation and removes the new `StagePresenterImpl` wiring, while preserving the rest of main's tree and documenting the deferred architecture work. The overlay components remain isolated for a later implementation with a narrow session adapter, real rendered-frame clock, background parity and lifecycle tests.
+
+**Status:** rollback candidate awaits hosted Android validation. Main remains unaccepted until the candidate is merged and the Android build/runtime gates pass. Separately, [PR #111](https://github.com/usermalik20-del/Kanta-reborn/pull/111) repairs the framework-free source set and exact-SHA gates; its Android validation passed, but focused iOS smoke failed on the menu destination and is being addressed by [PR #113](https://github.com/usermalik20-del/Kanta-reborn/pull/113).

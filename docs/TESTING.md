@@ -226,3 +226,8 @@ Walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actio
 The candidate now uses six test methods and updates the runtime's required-test manifest and source-contract guard together. PR #72's per-device workflow topology is included, with same-branch concurrency retained to cancel stale duplicate runs. No assertion, destination, or required case was removed; no global timeout was raised.
 
 **Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.
+
+
+## Android StagePresenter compile regression — 2026-10-28
+
+Main [run #40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569) failed Android compilation after commit `5d7d157`. Root causes include package-boundary violations between `ph.kanta.reborn` and `ph.kanta.reborn.stage`, references to nonexistent `Song.duration/originalKey/tempo/genre` fields, a duplicate score-result contract, stale `stage` references in MainActivity, and an unpreserved camera/background lifecycle. The candidate rollback in [PR #114](https://github.com/usermalik20-del/Kanta-reborn/pull/114) restores the established StageSurface integration while the presenter contract is redesigned. Acceptance requires a fresh Android build/runtime pass; a green source-only check is insufficient.

@@ -3,7 +3,6 @@ package ph.kanta.reborn;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.PlaybackParams;
-import ph.kanta.reborn.core.RenderedPlaybackClock;
 import java.io.File;
 
 /** All calls and MediaPlayer callbacks belong to the main Looper. */
@@ -11,9 +10,6 @@ final class FileAudioPlayback implements PlaybackBackend {
   private final MediaPlayer player = new MediaPlayer();
   private boolean released;
   private final Callback callback;
-  private final RenderedPlaybackClock clock = new RenderedPlaybackClock(44100);
-  private long lastPosition = 0;
-  private long framesRendered = 0;
 
   FileAudioPlayback(File file, Callback callback) throws Exception {
     this.callback = callback;
@@ -65,24 +61,6 @@ final class FileAudioPlayback implements PlaybackBackend {
       return released ? 0 : player.getCurrentPosition();
     } catch (IllegalStateException e) {
       return 0;
-    }
-  }
-
-  /** Returns the audible clock for lyric synchronization. */
-  public RenderedPlaybackClock getClock() {
-    return clock;
-  }
-
-  /** Updates the clock with current playback position. Call periodically. */
-  public void updateClock() {
-    if (released) return;
-    long pos = position();
-    if (pos > lastPosition) {
-      // Approximate frames: 44100 samples/sec * position(ms) / 1000
-      long frames = pos * 44100L / 1000L;
-      clock.append(framesRendered, pos, 1.0); // tempo=1 for MediaPlayer
-      framesRendered = frames;
-      lastPosition = pos;
     }
   }
 

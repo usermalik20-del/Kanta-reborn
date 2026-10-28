@@ -90,3 +90,8 @@ legacy phone remote application, and the legacy screens themselves. The engine
 decision in `docs/ARCHITECTURE.md` stands: KANTA keeps its own synthesis and scoring
 path and does not integrate BASS. Evidence and open items are recorded in
 `replica/meg-format.md` and `replica/architecture.md`.
+
+
+## StagePresenter composition status — 2026-10-28
+
+The first StagePresenter integration attempt on main `5d7d157` failed Android compilation in [run #40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569). The presenter accessed private/package-scoped session internals, assumed song metadata fields that do not exist in `core.Song`, and replaced the established `StageSurface` without preserving its photo/video/camera lifecycle. The integration wiring is being rolled back in [PR #114](https://github.com/usermalik20-del/Kanta-reborn/pull/114) to restore the last working stage owner. The overlay source remains unaccepted until a proper session adapter and emulator coverage are delivered. This rollback does not remove or change the published Android APK.

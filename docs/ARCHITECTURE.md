@@ -413,3 +413,10 @@ does not copy proprietary APK libraries or bundled media. `tools/check-product-b
 fails CI when legacy product branding reappears under `apps/` or the Android application
 id changes. Evidence, open items and the rejected alternatives are recorded in
 `replica/meg-format.md`.
+
+
+## Android StagePresenter integration status — 2026-10-28
+
+Main commit [`5d7d157`](https://github.com/usermalik20-del/Kanta-reborn/commit/5d7d157d952e2e158645223871408b926133dbda) attempted to replace the established `StageSurface` with `StagePresenterImpl`. The first full Android validation [#40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569) failed with compile errors: the presenter reached package-private/private SessionController state, used fields not present on `core.Song`, mismatched the score sink's result type, and left MainActivity references to the removed `stage` field. The new presenter also did not preserve the established photo/video/camera stage lifecycle or receive playback start/pause/stop events.
+
+The hotfix candidate restores `StageSurface` as the single authoritative media/stage owner and removes only the unvalidated integration wiring. Keep the new overlay components as isolated source until a narrow public stage-session contract, actual rendered-frame clock, background/camera parity and lifecycle wiring are implemented with Android emulator acceptance. Do not reintroduce the integration based on compilation alone.
