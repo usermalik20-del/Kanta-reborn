@@ -116,12 +116,12 @@ The current workflow names and trigger contracts are:
 
 - `android-validation.yml`: Android source/build/runtime and Chrome Companion Remote checks.
 - `ios-validation.yml`: Swift package tests, source guards, companion interoperability and unsigned simulator compilation.
-- `ios-smoke.yml`: focused iPhone navigation/lifecycle acceptance on relevant same-repository PRs and `main` pushes. It includes `apps/android/**`, relevant release tooling, and `.github/workflows/**` so Android-only and workflow-only changes cannot bypass the exact-SHA smoke gate.
+- `ios-smoke.yml`: focused iPhone navigation/lifecycle acceptance on relevant same-repository PRs and `main` pushes. It includes both `apps/ios/**` and `apps/android/**`, relevant release tooling, and `.github/workflows/**` so either platform's changes and workflow-only changes cannot bypass the exact-SHA smoke gate.
 - `ios-runtime-artifacts.yml`: unsigned iPhoneOS personal-signing archive; no signing or publishing.
 - `ios-visual-walkthrough.yml`: complete named iPhone and iPad UI walkthroughs in separate jobs.
 - `verified-downloads.yml`: contract tests run automatically on packaging/tool/workflow changes. The package job is owner-dispatched and refuses to run unless all five current workflow names above (Android validation, iOS validation, focused iOS smoke, unsigned archive, and full walkthrough) have the latest successful `main` run on the requested exact SHA.
 
-The packaging manifest, README and per-platform build-info must record the source SHA and all five acceptance run IDs. A successful run from a prior commit, a PR branch, one device only, or a build-only workflow cannot satisfy the gate. Website validation and Vercel pre-deploy validation also run `tools/check-product-branding.py`; SEO metadata is part of the public surface. No workflow signs, merges, deploys, or publishes production downloads automatically.
+Both platform validation workflows, focused smoke, unsigned archive and full walkthrough trigger on changes to either native app and on workflow-definition changes. The packaging manifest, README and per-platform build-info must record the source SHA and all five acceptance run IDs. A successful run from a prior commit, a PR branch, one device only, or a build-only workflow cannot satisfy the gate. Website validation and Vercel pre-deploy validation also run `tools/check-product-branding.py`; SEO metadata is part of the public surface. No workflow signs, merges, deploys, or publishes production downloads automatically.
 
 ## GitHub Actions cost controls (October 2026)
 
