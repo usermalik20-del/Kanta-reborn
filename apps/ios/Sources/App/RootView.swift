@@ -140,21 +140,23 @@ struct RootView: View {
                 }) {
                     _ in
                     NavigationStack(path: $navigationPath) {
-                        destination(sheetRoute)
-                            .navigationDestination(for: Route.self) { route in
-                                destination(route)
-                            }
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") {
-                                        guard !navigationDismissing else { return }
-                                        navigationDismissing = true
-                                        presentationGate.beginDismissal(.navigation)
-                                        activeNavigation = nil
-                                    }
-                                    .accessibilityIdentifier("navigation.done")
+                        ZStack {
+                            destination(sheetRoute)
+                        }
+                        .navigationDestination(for: Route.self) { route in
+                            destination(route)
+                        }
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    guard !navigationDismissing else { return }
+                                    navigationDismissing = true
+                                    presentationGate.beginDismissal(.navigation)
+                                    activeNavigation = nil
                                 }
+                                .accessibilityIdentifier("navigation.done")
                             }
+                        }
                     }
                 }
         }
