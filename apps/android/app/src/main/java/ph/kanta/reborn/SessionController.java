@@ -10,6 +10,7 @@ import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
 import ph.kanta.reborn.core.companion.SmartLinkHost;
 import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 
@@ -84,6 +85,7 @@ public final class SessionController {
   float volume = 1, tempo = 1;
   int pitch;
   float lyricScale = 1;
+  private final SettingsStore settings;
   boolean realm;
   final PartyAudio party;
   final MicrophoneInput microphone;
@@ -118,6 +120,10 @@ public final class SessionController {
     microphone =
         new MicrophoneInput(context, this::publish, notice -> message = notice, monitor::offer);
     options = context.getSharedPreferences("stage-options-v1", Context.MODE_PRIVATE);
+    settings = new SettingsStore(context);
+    volume = Math.min(1f, Math.max(0f, settings.getMasterVolume()));
+    tempo = Math.min(2f, Math.max(0.5f, settings.getTempo()));
+    pitch = Math.min(12, Math.max(-12, settings.getPitch()));
     lyricScale = Math.max(.75f, Math.min(1.5f, options.getFloat("lyricScale", 1)));
     loopSongId = options.getString("loopSong", "");
     party =
@@ -985,6 +991,13 @@ public final class SessionController {
       if (player != null) player.controls(this.volume, this.tempo, this.pitch);
     } catch (Exception e) {
       message = "This audio decoder cannot apply that playback setting.";
+    }
+    try {
+      settings.setMasterVolume(this.volume);
+      settings.setTempo(this.tempo);
+      settings.setPitch(this.pitch);
+    } catch (Exception ignored) {
+      // Settings persistence is best effort and must never block playback.
     }
     publish();
   }

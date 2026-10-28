@@ -342,12 +342,16 @@ public final class SmartLinkHost {
     }
 
     private String jsonResponse(String id, String status, String error, String result) {
-      org.json.JSONObject obj = new org.json.JSONObject();
-      obj.put("id", id);
-      obj.put("status", status);
-      if (error != null) obj.put("error", error);
-      if (result != null) obj.put("result", result);
-      return obj.toString();
+      try {
+        org.json.JSONObject obj = new org.json.JSONObject();
+        obj.put("id", id);
+        obj.put("status", status);
+        if (error != null) obj.put("error", error);
+        if (result != null) obj.put("result", result);
+        return obj.toString();
+      } catch (Exception e) {
+        return "{}";
+      }
     }
 
     private void sendTextFrame(java.io.OutputStream out, String text) throws IOException {
