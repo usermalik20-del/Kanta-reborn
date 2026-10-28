@@ -106,28 +106,30 @@ class DownloadContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "found 2"):
                 module.find_artifact(run, "android-reconstruction-checks")
 
-    def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
+    def test_resolver_requires_smoke_walkthrough_and_both_builds_for_same_sha(self):
         walkthrough = run_record(61, "KANTA iOS visual walkthrough")
+        smoke = run_record(64, "KANTA iOS focused simulator smoke")
         reconstruction = run_record(62, "KANTA reconstruction validation")
         ios = run_record(63, "KANTA iOS unsigned artifacts")
         android_artifact = artifact_record(82, 62, "android-reconstruction-checks")
         ios_artifact = artifact_record(83, 63, "KANTA-personal-unsigned")
         with patch.object(
             module, "find_source_run",
-            side_effect=[walkthrough, reconstruction, ios],
+            side_effect=[walkthrough, smoke, reconstruction, ios],
         ) as find_run, patch.object(
             module, "find_artifact",
             side_effect=[android_artifact, ios_artifact],
         ):
-            found_walkthrough, android, device = module.resolve_source(SOURCE)
+            found_walkthrough, found_smoke, android, device = module.resolve_source(SOURCE)
         self.assertEqual(found_walkthrough["id"], 61)
+        self.assertEqual(found_smoke["id"], 64)
         self.assertEqual(android["expected"], {
             "run": 62, "artifact": 82, "source": SOURCE
         })
         self.assertEqual(device["expected"], {
             "run": 63, "artifact": 83, "source": SOURCE
         })
-        self.assertEqual(find_run.call_count, 3)
+        self.assertEqual(find_run.call_count, 4)
 
     def test_invalid_source_sha_is_rejected_before_api_access(self):
         with patch.object(module, "api") as api_call:
@@ -224,6 +226,7 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
         root = pathlib.Path(__file__).resolve().parents[2]
         cls.walkthrough = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+        cls.smoke = (root / ".github/workflows/ios-smoke.yml").read_text(encoding="utf-8")
 
     def test_android_source_changes_trigger_both_ios_release_gates(self):
         for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive)):
@@ -237,6 +240,21 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
             with self.subTest(event=event):
                 section = workflow_event_section(self.walkthrough, event)
                 self.assertIn("'tools/verify-android-companion-interface.py'", section)
+
+    def test_focused_smoke_triggers_on_main_push_and_android_pull_requests(self):
+        push = workflow_event_section(self.smoke, "push")
+        self.assertIn("branches: [main]", push)
+        self.assertIn("'apps/android/**'", push)
+        self.assertIn("'apps/ios/**'", push)
+        pull_request = workflow_event_section(self.smoke, "pull_request")
+        self.assertIn("'apps/android/**'", pull_request)
+        self.assertIn("'apps/ios/**'", pull_request)
+
+    def test_packager_names_focused_smoke_as_a_required_exact_sha_gate(self):
+        self.assertEqual(
+            module.REQUIRED_RUNS["ios_smoke"],
+            "KANTA iOS focused simulator smoke",
+        )
 
 
 if __name__ == "__main__":
