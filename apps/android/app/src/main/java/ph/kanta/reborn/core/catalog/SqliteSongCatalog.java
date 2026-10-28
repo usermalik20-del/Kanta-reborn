@@ -27,7 +27,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *   song_search (FTS4 virtual table on title, artist, code, content=songs)
  *   index_meta(key, value) — stores index version, last scan timestamp, container size
  *
- * <p>Supports both plain file scan and legacy Meg container (shubidx/shubblob) interoperability.
+ * <p>Catalog ownership (dim-3, Option 3b): folder scan (songs/) is the single
+ * authoritative catalog source. The legacy Meg container (kantidx/kantablob) is an
+ * optional user-initiated importer — it materializes decoded .mid/.mp3/.wav
+ * into the KANTA library through a separate flow, never through rebuild().
+ * One catalog, one playback path.
  */
 public final class SqliteSongCatalog implements SongCatalog {
 
@@ -264,20 +268,13 @@ public final class SqliteSongCatalog implements SongCatalog {
           return;
         }
 
-        // Scan for media files
+        // Scan for media files — folder scan is the single authoritative catalog.
+        // The legacy Meg container (kantidx/kantablob) is an optional user-initiated
+        // importer and is not part of catalog rebuild (dim-3, Option 3b).
         ContentScanner.ScanResult scan = scanner.scan(rootUri, () -> false);
 
-        // Check for legacy index container
-        File baseDir = new File(context.getFilesDir(), "content"); // virtual, we scan via SAF
-        boolean isLegacy = scan.isLegacyFallback;
-
-        // Index files
-        indexFiles(db, scan, isLegacy);
-
-        // If legacy container exists, also index from it
-        if (isLegacy) {
-          indexFromLegacyContainer(db, rootUri);
-        }
+        // Index files from the scanned folder tree only.
+        indexFiles(db, scan, false);
 
         db.setTransactionSuccessful();
       } finally {
@@ -319,11 +316,22 @@ public final class SqliteSongCatalog implements SongCatalog {
     insertMeta(db, "scan_time", String.valueOf(System.currentTimeMillis()));
   }
 
+  /**
+   * Future importer hook for the legacy Meg container (kantidx/kantablob).
+   *
+   * <p>Not called from rebuild() — folder scan is the single authoritative catalog
+   * (dim-3, Option 3b). The Meg container becomes an optional user-initiated importer
+   * that materializes decoded .mid/.mp3/.wav into the KANTA library through
+   * a separate flow. Key material is supplied at runtime only, never committed to repo/CI.
+   * The decoder never touches ReservationQueue or RenderedPlaybackClock owners.
+   *
+   * <p>Currently a placeholder — full implementation would read the index via SAF,
+   * classify payloads, and materialize decoded files into library-private storage.
+   */
   private void indexFromLegacyContainer(SQLiteDatabase db, Uri rootUri) {
-    // Read the legacy index file via SAF
-    // This is a placeholder - full implementation would read shubidx/shubblob via DocumentsContract
-    // and populate songs from the title records, linking to blob spans.
-    Log.i(TAG, "Legacy container indexing not yet implemented");
+    // Placeholder: legacy container importer not yet implemented.
+    // dim-3 Option 3b: this is a separate user-initiated importer flow, not catalog rebuild.
+    Log.i(TAG, "Legacy container importer not yet implemented (dim-3 Option 3b)");
   }
 
   private long insertVolume(SQLiteDatabase db, String name) {

@@ -264,9 +264,9 @@ Normalize `songs` to karaoke-song candidates, `sound` to SF2 candidates, `videos
 
 The single import pipeline must scan with provider-safe limits, preview categorized results, allow explicit confirmation, validate formats and licensing expectations, commit atomically where practical, and report skipped/failed items. Keep existing one-file and arbitrary-folder imports. Test identical media imported from both layouts, invalid/mismatched extensions, duplicate catalog identities, and legacy `idx` files that are missing, corrupt, or contain unsafe paths. Platform storage APIs and existing catalog ownership remain authoritative. This is a **planned feature**, not a claim of working SongHub compatibility.
 
-## Audio synthesis engine decision (owner approved 2026-10-18)
+## Audio synthesis engine decision (owner approved 2026-10-18, revised 2026-10-28)
 
-**FluidSynth is the chosen MIDI/SoundFont synthesis engine for KANTA on iOS and Android.** Do not integrate or license Un4seen BASS/BASSMIDI/BASS_FX as part of the planned SongHub compatibility work. Keep the synthesis adapter isolated behind the platform playback contract; retain native audio decoders for non-MIDI formats and the separate YouTube player. This decision does not establish that FluidSynth is already integrated on both platforms; audit the actual implementation before reporting that claim. Verify SF2 loading, MIDI/KAR events, lyrics synchronization, tempo and key controls, audio focus/session ownership, resource cleanup, and parity in platform tests. Review LGPL compliance for binary distribution, including relinking/replacement requirements and notices, before shipping. SongHub shubidx/shubblob parsing is an independent read-only interoperability task and does not require BASS. No proprietary SongHub APK libraries or bundled media may be copied into KANTA.
+**TinySoundFont is the MIDI/SoundFont synthesis engine for KANTA on Android.** It is integrated under MIT via `app/src/main/cpp/soundfont.c` with a JNI wrapper (`NativeSoundFont`), declared in `apps/android/THIRD_PARTY_NOTICES.md`, and satisfies dim-10 (old KANTA native deps: TinySoundFont + CameraX only). iOS retains its existing synthesis stack (AudioKit/Tonic/SoundpipeAudioKit); no FluidSynth integration is introduced on either platform. Do not integrate or license Un4seen BASS/BASSMIDI/BASS_FX as part of the planned SongHub compatibility work. Keep the synthesis adapter isolated behind the platform playback contract; retain native audio decoders for non-MIDI formats and the separate YouTube player. FluidSynth is not a KANTA dependency; do not report it as integrated. Verify SF2 loading, MIDI/KAR events, lyrics synchronization, tempo and key controls, audio focus/session ownership, resource cleanup, and parity in platform tests. SongHub shubidx/shubblob parsing is an independent read-only interoperability task and does not require BASS. No proprietary SongHub APK libraries or bundled media may be copied into KANTA.
 
 
 ## Android online preview follows authoritative playback publication — October 18, 2026
@@ -413,3 +413,22 @@ does not copy proprietary APK libraries or bundled media. `tools/check-product-b
 fails CI when legacy product branding reappears under `apps/` or the Android application
 id changes. Evidence, open items and the rejected alternatives are recorded in
 `replica/meg-format.md`.
+
+## Dim-3 catalog ownership (Option 3b, accepted 2026-10-28)
+
+Folder scan (`songs/`) is the single authoritative catalog source for KANTA Karaoke.
+The legacy Meg container (`kantidx`/`kantablob`, MKMD payloads) is an optional
+user-initiated importer — it materializes decoded `.mid`/`.mp3`/`.wav` into the KANTA
+library through a separate flow, never through `SqliteSongCatalog.rebuild()`.
+
+Constraints preserved:
+- One catalog, one playback path.
+- The decoder never touches `ReservationQueue` or `RenderedPlaybackClock` owners.
+- Key material is needed only at import time, supplied at runtime — never committed to repo/CI (Option B).
+- MKMD decode port stays framework-free in `core/songbook/`, fixture-tested via `coreRegression`.
+
+Open items:
+- Add `THIRD_PARTY_NOTICES.md` entry for the ported decoder if kept open-source.
+- Verify `ShubCompatibilityRegressionTests` + new JVM fixtures cover MKMD round-trip
+  and adversarial inputs before any device acceptance.
+- Implement the user-initiated importer flow (separate from catalog rebuild).
