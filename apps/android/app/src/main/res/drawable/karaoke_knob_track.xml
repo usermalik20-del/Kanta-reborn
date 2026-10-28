@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/kanta_radius_full" />
+            <solid android:color="@color/karaoke_adjustment_track" />
+            <size android:height="@dimen/karaoke_knob_track_height" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="@dimen/kanta_radius_full" />
+                <solid android:color="@color/karaoke_adjustment_knob" />
+                <size android:height="@dimen/karaoke_knob_track_height" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>
