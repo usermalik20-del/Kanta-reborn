@@ -157,7 +157,7 @@
     </style>
 
     <!-- Widget Styles -->
-    <style name="Widget.Karaoke.Card" parent="android:Widget.CardView">
+    <style name="Widget.Karaoke.Card" parent="Widget.CardView">
         <item name="cardBackgroundColor">@color/kanta_surface</item>
         <item name="cardCornerRadius">@dimen/kanta_radius_xl</item>
         <item name="cardElevation">0dp</item>
