@@ -728,3 +728,12 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 
 **Repair:** the fixture now has two title records and two repeated offsets. Cardinality and stride are valid, leaving the non-increasing transition as the isolated reason for rejection. The production parser and its fail-closed behavior are unchanged. Validation on the updated PR head is pending.
 
+
+
+## 2026-10-28 — Branch-scoped Android validation exposed stale stage API usage
+
+- **Observed:** Android validation failed on `feature/kanta-karaoke-songbook-interop-clean` at `852d9b63d79c7619cc66bc30ce8159a3fd9e6b38` during `:app:compileDebugJavaWithJavac`. The errors were API mismatches in unmerged stage components: overlay payload types were declared inside `StagePresenter`, `MidiLyrics.Cue` exposes `line`/`milliseconds`, `RenderedPlaybackClock` accepts rendered frame counts and returns milliseconds, and RecyclerView adapter position was called from a View rather than its holder.
+- **Repair:** commit `c45f10914fcca4996e747e32716294e5260066e8` aligns the overlay signatures, queue position binding, lyric fields and rendered-frame timing; the architecture and component contract now document that the stage host supplies monotonic rendered-frame counts.
+- **Trigger root cause:** the branch used `branches: ['*']`, which does not match branch names containing slash separators. That prevented the source repair push from automatically starting the branch validation workflow.
+- **Follow-up:** use `branches: ['**']` for intentional all-branch validation and retain workflow-file paths in the path filters. Re-run Android validation on the repaired branch head before treating this feature branch as buildable.
+- **Status:** source repair committed; validation pending. The failure is isolated to this non-main feature branch and did not affect main-branch acceptance runs.

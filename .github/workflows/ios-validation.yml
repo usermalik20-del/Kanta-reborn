@@ -2,7 +2,7 @@ name: KANTA iOS validation
 on:
   workflow_dispatch:
   push:
-    branches: ['*']
+    branches: ['**']
     paths:
       - 'apps/ios/**'
       - 'tools/**'
