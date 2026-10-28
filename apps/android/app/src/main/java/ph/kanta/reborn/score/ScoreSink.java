@@ -42,17 +42,17 @@ public interface ScoreSink {
 
     /** Pitch accuracy 0-100. */
     public int pitch() {
-      return estimate != null ? (int) estimate.pitch : 0;
+      return estimate != null ? (int) (estimate.pitchAccuracy * 100) : 0;
     }
 
-    /** Timing accuracy 0-100. */
+    /** Timing accuracy 0-100 (using coverage as proxy). */
     public int timing() {
-      return estimate != null ? (int) estimate.timing : 0;
+      return estimate != null ? (int) (estimate.coverage * 100) : 0;
     }
 
-    /** Bonus score. */
+    /** Bonus score (using matchedSlots as proxy). */
     public int bonus() {
-      return estimate != null ? (int) estimate.bonus : 0;
+      return estimate != null ? estimate.matchedSlots : 0;
     }
 
     /** Tier label. */

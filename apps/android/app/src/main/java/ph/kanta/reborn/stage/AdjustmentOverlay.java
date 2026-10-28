@@ -64,19 +64,43 @@ public final class AdjustmentOverlay extends FrameLayout {
 
     // Key adjustment
     addAdjustmentRow(container, "Key", "semitones", -12, 12, 0,
-        (value) -> { if (listener != null) listener.onKeyChange(value); });
+        new SeekBar.OnSeekBarChangeListener() {
+          @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser && listener != null) listener.onKeyChange(-12 + progress);
+          }
+          @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+          @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
 
     // Melody volume
     addAdjustmentRow(container, "Melody", "volume", 0, 100, 80,
-        (value) -> { if (listener != null) listener.onMelodyVolumeChange(value / 100f); });
+        new SeekBar.OnSeekBarChangeListener() {
+          @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser && listener != null) listener.onMelodyVolumeChange(progress / 100f);
+          }
+          @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+          @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
 
     // Tempo
     addAdjustmentRow(container, "Tempo", "factor", 50, 150, 100,
-        (value) -> { if (listener != null) listener.onTempoChange(value / 100f); });
+        new SeekBar.OnSeekBarChangeListener() {
+          @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser && listener != null) listener.onTempoChange((50 + progress) / 100f);
+          }
+          @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+          @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
 
     // Guide volume
     addAdjustmentRow(container, "Guide", "volume", 0, 100, 60,
-        (value) -> { if (listener != null) listener.onGuideVolumeChange(value / 100f); });
+        new SeekBar.OnSeekBarChangeListener() {
+          @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser && listener != null) listener.onGuideVolumeChange(progress / 100f);
+          }
+          @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+          @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
   }
 
   private void addAdjustmentRow(LinearLayout container, String label, String unit,
@@ -123,10 +147,10 @@ public final class AdjustmentOverlay extends FrameLayout {
           callback.onProgressChanged(seekBar, progress, fromUser);
         }
       }
-              @Override
-        public void onStartTrackingTouch(SeekBar seekBar) {}
-              @Override
-        public void onStopTrackingTouch(SeekBar seekBar) {}
+      @Override
+      public void onStartTrackingTouch(SeekBar seekBar) {}
+      @Override
+      public void onStopTrackingTouch(SeekBar seekBar) {}
     });
 
     // Customize seekbar appearance
