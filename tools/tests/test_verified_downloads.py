@@ -246,7 +246,7 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
                 declared = source.splitlines()[0].removeprefix("name: ").strip()
                 self.assertEqual(module.REQUIRED_RUNS[key], declared)
 
-    def test_android_source_changes_trigger_all_native_release_gates(self):
+    def test_native_source_changes_trigger_all_release_gates(self):
         workflows = {
             "android": self.android,
             "ios_validation": self.ios_validation,
@@ -259,6 +259,7 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
                 with self.subTest(workflow=workflow_name, event=event):
                     section = workflow_event_section(source, event)
                     self.assertIn("'apps/android/**'", section)
+                    self.assertIn("'apps/ios/**'", section)
 
     def test_focused_smoke_runs_on_main_and_workflow_changes(self):
         for event in ("push", "pull_request"):
@@ -267,6 +268,7 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
                 self.assertIn("'.github/workflows/**'", section)
                 self.assertIn("'tools/prepare-verified-downloads.py'", section)
                 self.assertIn("'apps/android/**'", section)
+                self.assertIn("'apps/ios/**'", section)
         self.assertIn("branches: [main]", workflow_event_section(self.smoke, "push"))
 
     def test_download_contracts_run_when_native_gate_workflows_change(self):
