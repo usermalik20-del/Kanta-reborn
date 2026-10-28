@@ -16,6 +16,7 @@ on:
       - 'tools/prepare-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/**'
       - '.github/workflows/ios-smoke.yml'
   pull_request:
     types: [opened, synchronize, reopened]
@@ -32,6 +33,7 @@ on:
       - 'tools/prepare-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/**'
       - '.github/workflows/ios-smoke.yml'
 permissions:
   contents: read

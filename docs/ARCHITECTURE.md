@@ -397,6 +397,8 @@ A pull request is not eligible for acceptance while GitHub reports a dirty/unmer
 
 The focused smoke is a required release gate, not merely optional PR feedback. Its workflow must trigger on relevant pushes to `main` and on same-repository pull requests for iOS and Android source changes. The verified-download packager must fail closed if that run is absent, failed, belongs to another SHA, or did not run on `main`. See `docs/TESTING.md` and the repair ledger for the regression contract.
 
+Workflow-definition changes are acceptance inputs too. The focused smoke, unsigned archive, independent device walkthrough, reconstruction validation, and download-contract suite must include `.github/workflows/**` in both push and pull-request path filters. Otherwise a workflow-only commit can advance `main` without the exact-SHA evidence required for packaging; prior-parent runs must not be reused.
+
 ## Android legacy songbook interoperability
 
 The Android app now carries the read-only counterpart of the iOS `LegacyCompatibility`

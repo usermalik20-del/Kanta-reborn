@@ -227,6 +227,7 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
         cls.walkthrough = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
         cls.smoke = (root / ".github/workflows/ios-smoke.yml").read_text(encoding="utf-8")
+        cls.downloads = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
 
     def test_android_source_changes_trigger_both_ios_release_gates(self):
         for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive)):
@@ -255,6 +256,19 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
         self.assertIn("'tools/prepare-verified-downloads.py'", pull_request)
         self.assertIn("'tools/tests/test_verified_downloads.py'", pull_request)
         self.assertIn("'.github/workflows/verified-downloads.yml'", pull_request)
+
+    def test_workflow_config_changes_retrigger_every_exact_sha_gate(self):
+        gates = (
+            ("walkthrough", self.walkthrough),
+            ("archive", self.archive),
+            ("focused smoke", self.smoke),
+            ("download contracts", self.downloads),
+        )
+        for gate_name, source in gates:
+            for event in ("push", "pull_request"):
+                with self.subTest(gate=gate_name, event=event):
+                    section = workflow_event_section(source, event)
+                    self.assertIn("'.github/workflows/**'", section)
 
     def test_packager_names_focused_smoke_as_a_required_exact_sha_gate(self):
         self.assertEqual(

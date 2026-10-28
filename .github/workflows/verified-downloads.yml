@@ -11,12 +11,14 @@ on:
     paths:
       - 'tools/prepare-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
+      - '.github/workflows/**'
       - '.github/workflows/verified-downloads.yml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'tools/prepare-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
+      - '.github/workflows/**'
       - '.github/workflows/verified-downloads.yml'
 permissions:
   contents: read

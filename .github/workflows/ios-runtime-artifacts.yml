@@ -7,6 +7,7 @@ on:
       - 'apps/ios/**'
       - 'apps/android/**'
       - 'tools/**'
+      - '.github/workflows/**'
       - '.github/workflows/ios-runtime-artifacts.yml'
   pull_request:
     types: [opened, synchronize, reopened]
@@ -14,6 +15,7 @@ on:
       - 'apps/ios/**'
       - 'apps/android/**'
       - 'tools/**'
+      - '.github/workflows/**'
       - '.github/workflows/ios-runtime-artifacts.yml'
 permissions:
   contents: read

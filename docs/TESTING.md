@@ -239,3 +239,7 @@ Walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actio
 The candidate now uses six test methods and updates the runtime's required-test manifest and source-contract guard together. PR #72's per-device workflow topology is included, with same-branch concurrency retained to cancel stale duplicate runs. No assertion, destination, or required case was removed; no global timeout was raised.
 
 **Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.
+
+## Workflow-definition changes are exact-SHA acceptance inputs — 2026-10-28
+
+Changes under `.github/workflows/` can alter which evidence the release packager is allowed to accept. The reconstruction, focused iOS smoke, unsigned iOS archive, and independent iPhone/iPad walkthrough workflows must therefore trigger for workflow-definition changes on both `main` pushes and same-repository pull requests. The verified-download contract suite must trigger too. Without these path filters, a workflow-only commit can become the new `main` SHA while one or more required exact-SHA runs are absent; packaging must reject that SHA rather than borrowing green results from its parent. The `ExactShaWorkflowTriggerContracts` tests enforce this invariant.

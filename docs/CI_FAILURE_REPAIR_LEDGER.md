@@ -742,3 +742,10 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 
 **Repair:** the fixture now has two title records and two repeated offsets. Cardinality and stride are valid, leaving the non-increasing transition as the isolated reason for rejection. The production parser and its fail-closed behavior are unchanged. Validation on the updated PR head is pending.
 
+## Exact-SHA gates skipped after workflow-only main commits — 2026-10-28
+
+**Finding:** Main advanced from `49bdabad` to `a816f114` through two commits that add `.github/workflows/android-validation.yml` and `.github/workflows/ios-validation.yml`. The new standalone Android and iOS validation workflows passed, but the existing focused smoke, unsigned archive, and full iPhone/iPad walkthrough path filters did not include these new workflow files. The strict download packager therefore has no complete set of four required gate runs for the new main SHA, even though application source was unchanged. Intermediate run cancellation on the superseded commit `0376fc2` is expected, not a code failure.
+
+**Repair:** Add `.github/workflows/**` to push and pull-request paths for focused smoke, unsigned archive, full device walkthrough, and verified-download contract tests. Add a regression test that checks all four workflows react to workflow-definition changes. Keep the packager fail-closed; do not borrow acceptance results from a parent SHA.
+
+**Acceptance:** Require reconstruction, focused smoke, unsigned archive, and both device walkthrough jobs to complete on the same post-repair SHA. Then rerun verified-download contract tests and confirm the package job still requires an explicit owner dispatch. Public download provenance stays pinned until exact-SHA packaging and deployment validation pass.
