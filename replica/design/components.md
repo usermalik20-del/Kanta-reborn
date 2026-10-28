@@ -9,6 +9,8 @@ Designed in **KANTA's existing visual language** (KantaColors, KantaTypography, 
 
 **Purpose**: Render scrolling timed lyrics with active/inactive/upcoming states, synced to `RenderedPlaybackClock`.
 
+**Android timing contract**: render text from `MidiLyrics.Cue.line`, compare cue timestamps in milliseconds, and obtain the current position through `RenderedPlaybackClock.position(playedFrames)`. The stage host supplies the monotonically increasing rendered-frame count via `LyricStage.setPlayedFrames(long)`; do not substitute wall-clock time or microsecond fields.
+
 **Variants**: handset (portrait), TV (landscape, focus-driven)
 
 **Sizes**: full-width, safe-area inset

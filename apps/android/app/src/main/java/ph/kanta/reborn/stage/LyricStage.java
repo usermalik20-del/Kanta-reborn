@@ -37,8 +37,8 @@ public final class LyricStage extends View {
   private MidiLyrics.Cue[] cues = new MidiLyrics.Cue[0];
   private RenderedPlaybackClock clock;
   private int currentLineIndex = -1;
+  private long playedFrames;
   private List<StaticLayout> layouts = new ArrayList<>();
-  private List<Rect> lineBounds = new ArrayList<>();
   private int measuredWidth = 0;
   private int measuredHeight = 0;
 
@@ -83,19 +83,32 @@ public final class LyricStage extends View {
   public void setLyrics(MidiLyrics.Cue[] cues, RenderedPlaybackClock clock) {
     this.cues = cues != null ? cues : new MidiLyrics.Cue[0];
     this.clock = clock;
+    this.currentLineIndex = -1;
     rebuildLayouts();
+    invalidate();
+  }
+
+  /**
+   * Supplies the monotonically increasing count of rendered output frames.
+   * The playback owner must call this from the same output clock used to append
+   * spans to RenderedPlaybackClock; wall-clock time is not a playback source.
+   */
+  public void setPlayedFrames(long playedFrames) {
+    if (playedFrames < 0) throw new IllegalArgumentException("Played frames cannot be negative");
+    if (this.playedFrames == playedFrames) return;
+    this.playedFrames = playedFrames;
     invalidate();
   }
 
   private void rebuildLayouts() {
     layouts.clear();
-    lineBounds.clear();
     if (cues.length == 0 || measuredWidth <= 0) return;
 
-    int availableWidth = measuredWidth - 2 * paddingHorizontalPx;
-    for (MidiLyrics.Cue cue : cues) {
-      TextPaint paint = getPaintForLine(-1); // default to inactive for measurement
-      StaticLayout layout = StaticLayout.Builder.obtain(cue.text, 0, cue.text.length(), paint, availableWidth)
+    int availableWidth = Math.max(1, measuredWidth - 2 * paddingHorizontalPx);
+    for (int i = 0; i < cues.length; i++) {
+      String line = cues[i].line;
+      TextPaint paint = getPaintForLine(i);
+      StaticLayout layout = StaticLayout.Builder.obtain(line, 0, line.length(), paint, availableWidth)
           .setAlignment(Layout.Alignment.ALIGN_CENTER)
           .setLineSpacing(lineSpacingPx, 1.0f)
           .setIncludePad(false)
@@ -127,43 +140,45 @@ public final class LyricStage extends View {
       return;
     }
 
-    // Update current line index from clock
+    // Map rendered output frames to the same millisecond timeline used by MIDI cues.
     if (clock != null) {
-      long pos = clock.positionUs();
-      currentLineIndex = findCurrentLine(pos);
+      int nextLineIndex = findCurrentLine(clock.position(playedFrames));
+      if (nextLineIndex != currentLineIndex) {
+        currentLineIndex = nextLineIndex;
+        rebuildLayouts();
+      }
     }
 
-    // Calculate visible range (center current line)
-    int centerY = measuredHeight / 2;
-    int startLine = Math.max(0, currentLineIndex - MAX_LINES_VISIBLE / 2);
+    // Keep the active lyric near the vertical center while limiting work to visible lines.
+    int startLine = currentLineIndex >= 0
+        ? Math.max(0, currentLineIndex - MAX_LINES_VISIBLE / 2)
+        : 0;
     int endLine = Math.min(layouts.size(), startLine + MAX_LINES_VISIBLE);
+    int totalHeight = 0;
+    for (int i = startLine; i < endLine; i++) {
+      totalHeight += layouts.get(i).getHeight();
+      if (i + 1 < endLine) totalHeight += lineSpacingPx;
+    }
 
-    // Draw lines
-    int y = paddingVerticalPx;
-    for (int i = 0; i < layouts.size(); i++) {
+    int y = Math.max(paddingVerticalPx, (measuredHeight - totalHeight) / 2);
+    int x = measuredWidth / 2;
+    for (int i = startLine; i < endLine; i++) {
       StaticLayout layout = layouts.get(i);
       int lineHeight = layout.getHeight();
 
-      if (i >= startLine && i < endLine) {
-        // Visible line
-        int x = measuredWidth / 2;
-        TextPaint paint = getPaintForLine(i);
-
-        if (i == currentLineIndex) {
-          // Draw highlight background
-          Rect bounds = new Rect(
-              paddingHorizontalPx,
-              y - lineSpacingPx / 2,
-              measuredWidth - paddingHorizontalPx,
-              y + lineHeight + lineSpacingPx / 2);
-          canvas.drawRect(bounds, highlightPaint);
-        }
-
-        canvas.save();
-        canvas.translate(x - layout.getWidth() / 2, y);
-        layout.draw(canvas);
-        canvas.restore();
+      if (i == currentLineIndex) {
+        Rect bounds = new Rect(
+            paddingHorizontalPx,
+            y - lineSpacingPx / 2,
+            measuredWidth - paddingHorizontalPx,
+            y + lineHeight + lineSpacingPx / 2);
+        canvas.drawRect(bounds, highlightPaint);
       }
+
+      canvas.save();
+      canvas.translate(x - layout.getWidth() / 2, y);
+      layout.draw(canvas);
+      canvas.restore();
       y += lineHeight + lineSpacingPx;
     }
   }
@@ -177,11 +192,11 @@ public final class LyricStage extends View {
     canvas.drawText(text, measuredWidth / 2f, measuredHeight / 2f, paint);
   }
 
-  private int findCurrentLine(long positionUs) {
+  private int findCurrentLine(long positionMilliseconds) {
     for (int i = 0; i < cues.length; i++) {
-      long start = cues[i].startUs;
-      long end = (i + 1 < cues.length) ? cues[i + 1].startUs : Long.MAX_VALUE;
-      if (positionUs >= start && positionUs < end) {
+      long start = cues[i].milliseconds;
+      long end = (i + 1 < cues.length) ? cues[i + 1].milliseconds : Long.MAX_VALUE;
+      if (positionMilliseconds >= start && positionMilliseconds < end) {
         return i;
       }
     }

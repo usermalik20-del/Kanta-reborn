@@ -148,7 +148,7 @@ public final class ScoreOverlay extends FrameLayout {
   }
 
   /** Shows the score result. */
-  public void show(ScoreResult result, Runnable onDismiss) {
+  public void show(StagePresenter.ScoreResult result, Runnable onDismiss) {
     this.onDismiss = onDismiss;
     this.isVisible = true;
 

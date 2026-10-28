@@ -112,7 +112,7 @@ public final class IntroCard extends FrameLayout {
   }
 
   /** Shows the intro card. */
-  public void show(IntroCardData data, Runnable onDismiss) {
+  public void show(StagePresenter.IntroCardData data, Runnable onDismiss) {
     this.onDismiss = onDismiss;
     this.isVisible = true;
 

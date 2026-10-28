@@ -6,6 +6,8 @@
 
 `apps/android` contains a new native Java/Android Views reconstruction, explicitly distinct from original source, with its own Gradle build and signing boundary. See its README for implemented and missing features.
 
+The Android karaoke stage follows the core timing APIs rather than duplicating them: `MidiLyrics.Cue.line` holds lyric text and `Cue.milliseconds` holds the cue timestamp; `RenderedPlaybackClock.position(playedFrames)` maps rendered output frames to milliseconds. The stage host must feed monotonically increasing rendered-frame counts to `LyricStage.setPlayedFrames`. Score and intro overlay payloads are the nested `StagePresenter.ScoreResult` and `StagePresenter.IntroCardData` contracts. The presentation layer remains a read-only consumer; `SessionController` retains playback and reservation ownership.
+
 `recovery/ios/snapshots` contains other original snapshots without nested Git databases. They are evidence, not dependencies. Complete recovery ZIPs remain preserved separately. Historical source variants must be reconciled file by file.
 
 `docs/evidence/website/2026-10-15` stores exact public-site bytes, extracted readable text and URL/SHA-256 manifest. It remains immutable evidence; the active restored website is maintained separately under apps/web. No public song catalog may be added.

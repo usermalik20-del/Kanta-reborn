@@ -150,7 +150,7 @@ public final class QueueOverlay extends FrameLayout {
 
     @Override
     public void onBindViewHolder(QueueViewHolder holder, int position) {
-      holder.bind(entries.get(position), position == 0);
+      holder.bind(entries.get(position), position == 0, position);
     }
 
     @Override
@@ -167,8 +167,8 @@ public final class QueueOverlay extends FrameLayout {
       this.itemView = (QueueItemView) view;
     }
 
-    void bind(ReservationQueue.Entry entry, boolean isCurrent) {
-      itemView.bind(entry, isCurrent, (v) -> {
+    void bind(ReservationQueue.Entry entry, boolean isCurrent, int position) {
+      itemView.bind(entry, isCurrent, position, (v) -> {
         if (listener != null) listener.onRemove(entry.id);
       });
     }
@@ -234,8 +234,8 @@ public final class QueueOverlay extends FrameLayout {
       addView(removeButton);
     }
 
-    void bind(ReservationQueue.Entry entry, boolean isCurrent, android.view.View.OnClickListener removeListener) {
-      positionBadge.setText(String.valueOf(getAdapterPosition() + 1));
+    void bind(ReservationQueue.Entry entry, boolean isCurrent, int position, android.view.View.OnClickListener removeListener) {
+      positionBadge.setText(String.valueOf(position + 1));
       titleView.setText(entry.song.title);
       reserverView.setText(entry.singer.isEmpty() ? "You" : entry.singer);
 
