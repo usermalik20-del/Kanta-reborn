@@ -25,7 +25,7 @@ STRICT_CSP = {
 HOMEPAGE_CSP = {
     "default-src": frozenset({"'none'"}),
     "img-src": frozenset({"'self'"}),
-    "script-src": frozenset({"'self'", "https://www.googletagmanager.com", "https://pagead2.googlesyndication.com"}),
+    "script-src": frozenset({"'self'", "https://www.googletagmanager.com"}),
     "style-src": frozenset({"'self'", "'unsafe-inline'"}),
     "connect-src": frozenset({"https://www.google-analytics.com"}),
     "base-uri": frozenset({"'none'"}),
@@ -93,6 +93,18 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertIn("G-L0QV01MWR4", analytics)
         self.assertIn("https://www.googletagmanager.com/gtag/js", analytics)
         self.assertNotIn("eval(", analytics)
+
+    def test_adsense_stays_disabled_until_nonce_csp_is_available(self):
+        # AdSense documents nonce-based strict CSP and a nonce on every script.
+        # This static Vercel site cannot currently issue per-response nonces, so
+        # loading the third-party script would be both blocked and unsafe on the
+        # private client-side Songbook. Keep the integration disabled fail-closed.
+        for route in sorted(PUBLIC_ROUTES):
+            filename = "index.html" if route == "/" else route.lstrip("/") + ".html"
+            source = (WEB / filename).read_text(encoding="utf-8")
+            with self.subTest(route=route):
+                self.assertNotIn("adsbygoogle.js", source)
+        self.assertNotIn("pagead2.googlesyndication.com", policy_for("/")["script-src"])
 
     def test_non_home_pages_keep_network_access_disabled(self):
         for route in sorted(PUBLIC_ROUTES - {"/"}):
