@@ -87,7 +87,8 @@ check(
     "Android workspace adapts the accessory to handset and large-screen layouts",
 )
 check(
-    "new KantaWorkspace(this, null)" in activity and "workspace.addPersistentLayer(stage)" in activity,
+    "new KantaWorkspace(this, null)" in activity
+    and "workspace.addPersistentLayer(stagePresenter)" in activity,
     "Android MainActivity mounts the workspace and installs the stage as the persistent layer",
 )
 check(
@@ -185,8 +186,12 @@ check(
 # "kanta.stage.primary" is the same instance before and after a publish.
 
 check(
-    'stage.setTag("kanta.stage.primary")' in activity,
+    'stagePresenter.setTag("kanta.stage.primary")' in activity,
     "Android primary stage keeps its stable identity tag",
+)
+check(
+    "new StagePresenterImpl(this, session" in activity,
+    "Android stage persistent layer is owned by StagePresenterImpl",
 )
 check(
     "findViewWithTag(\"kanta.stage.primary\")" in runtime,
