@@ -76,7 +76,7 @@ struct RootView: View {
     @ObservedObject var services: AppServices
     @StateObject private var presentationGate = KantaPresentationGate()
     @Environment(\.scenePhase) private var scenePhase
-    @State private var sheetRoute: Route = .menu
+    @State private var navigationPath: [Route] = []
     @State private var activeNavigation: NavigationSheet? = nil
     @State private var navigationDismissing = false
     @State private var activeTab: KantaTabBar.Destination = .stage
@@ -86,7 +86,7 @@ struct RootView: View {
         var id: String { rawValue }
     }
 
-    private enum Route: String, Identifiable {
+    private enum Route: String, Hashable, Identifiable {
         case menu, library, queue, remote, settings, legal, icloud, songbook
         var id: String { rawValue }
     }
@@ -95,7 +95,13 @@ struct RootView: View {
         self.services = services
         let mode = ProcessInfo.processInfo.environment["GELO_SCREENSHOT_MODE"] ?? ""
         let initialRoute = Route(rawValue: mode)
-        _sheetRoute = State(initialValue: initialRoute ?? .menu)
+        let initialPath: [Route]
+        if let initialRoute, initialRoute != .menu {
+            initialPath = [initialRoute]
+        } else {
+            initialPath = []
+        }
+        _navigationPath = State(initialValue: initialPath)
         _activeNavigation = State(initialValue: initialRoute == nil ? nil : .navigation)
     }
 
@@ -109,7 +115,7 @@ struct RootView: View {
                     onOpenNavigation: {
                         guard activeNavigation == nil else { return }
                         presentationGate.request(.navigation) {
-                            sheetRoute = .menu
+                            navigationPath = []
                             activeNavigation = .navigation
                         }
                     }
@@ -131,25 +137,28 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .allowsHitTesting(false)
                 .sheet(item: $activeNavigation, onDismiss: {
-                    sheetRoute = .menu
+                    navigationPath = []
                     activeTab = .stage
                     navigationDismissing = false
                     presentationGate.completeDismissal(.navigation)
                 }) {
                     _ in
-                    NavigationStack {
-                        destination(sheetRoute)
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") {
-                                        guard !navigationDismissing else { return }
-                                        navigationDismissing = true
-                                        presentationGate.beginDismissal(.navigation)
-                                        activeNavigation = nil
-                                    }
-                                    .accessibilityIdentifier("navigation.done")
-                                }
+                    NavigationStack(path: $navigationPath) {
+                        destination(.menu)
+                            .navigationDestination(for: Route.self) { route in
+                                destination(route)
                             }
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                guard !navigationDismissing else { return }
+                                navigationDismissing = true
+                                presentationGate.beginDismissal(.navigation)
+                                activeNavigation = nil
+                            }
+                            .accessibilityIdentifier("navigation.done")
+                        }
                     }
                 }
         }
@@ -190,14 +199,20 @@ struct RootView: View {
     }
 
     private func openNavigation(_ route: Route) {
+        let path: [Route] = route == .menu ? [] : [route]
         if activeNavigation == nil {
             presentationGate.request(.navigation) {
-                sheetRoute = route
+                navigationPath = path
                 activeNavigation = .navigation
             }
         } else {
-            sheetRoute = route
+            navigationPath = path
         }
+    }
+
+    private func openNavigationDestination(_ route: Route) {
+        guard activeNavigation != nil, !navigationDismissing else { return }
+        navigationPath.append(route)
     }
 
     @ViewBuilder private func destination(_ route: Route) -> some View {
@@ -205,14 +220,14 @@ struct RootView: View {
         case .menu:
             List {
                 Section("KANTA") {
-                    Button("Song Library") { sheetRoute = .library }
-                    Button("KANTA Songbook") { sheetRoute = .songbook }
-                    Button("Settings") { sheetRoute = .settings }
-                    Button("Companion Remote") { sheetRoute = .remote }
+                    Button("Song Library") { openNavigationDestination(.library) }
+                    Button("KANTA Songbook") { openNavigationDestination(.songbook) }
+                    Button("Settings") { openNavigationDestination(.settings) }
+                    Button("Companion Remote") { openNavigationDestination(.remote) }
                     #if !KANTA_PERSONAL_SIGNING
-                    Button("iCloud Save") { sheetRoute = .icloud }
+                    Button("iCloud Save") { openNavigationDestination(.icloud) }
                     #endif
-                    Button("Legal & Privacy") { sheetRoute = .legal }
+                    Button("Legal & Privacy") { openNavigationDestination(.legal) }
                 }
             }
             .navigationTitle("More")
