@@ -15,6 +15,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import ph.kanta.reborn.core.Song;
+import java.util.Locale;
 
 /**
  * Post-song score breakdown overlay.
