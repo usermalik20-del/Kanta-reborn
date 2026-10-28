@@ -18,7 +18,7 @@ spec.loader.exec_module(module)
 SOURCE = "a" * 40
 
 
-def run_record(run_id=41, name="KANTA reconstruction validation", source=SOURCE,
+def run_record(run_id=41, name="KANTA Android validation", source=SOURCE,
                conclusion="success", created="2026-10-24T00:00:00Z", branch="main"):
     return {
         "id": run_id,
@@ -56,7 +56,7 @@ class DownloadContracts(unittest.TestCase):
             module, "api", return_value={"workflow_runs": [good, newer_failure]}
         ):
             with self.assertRaisesRegex(ValueError, "latest run 42 concluded failure"):
-                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+                module.find_source_run(SOURCE, "KANTA Android validation", wait_seconds=0)
 
     def test_wrong_sha_and_feature_branch_are_not_accepted(self):
         wrong_sha = run_record(run_id=50, source="b" * 40)
@@ -65,7 +65,7 @@ class DownloadContracts(unittest.TestCase):
             module, "api", return_value={"workflow_runs": [wrong_sha, feature]}
         ):
             with self.assertRaisesRegex(ValueError, "no matching run is visible"):
-                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+                module.find_source_run(SOURCE, "KANTA Android validation", wait_seconds=0)
 
     def test_waits_for_a_run_to_become_visible(self):
         with patch.object(
@@ -76,7 +76,7 @@ class DownloadContracts(unittest.TestCase):
             ],
         ), patch.object(module.time, "sleep"):
             found = module.find_source_run(
-                SOURCE, "KANTA reconstruction validation",
+                SOURCE, "KANTA Android validation",
                 wait_seconds=2,
             )
         self.assertEqual(found["id"], 41)
@@ -106,28 +106,31 @@ class DownloadContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "found 2"):
                 module.find_artifact(run, "android-reconstruction-checks")
 
-    def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
+    def test_resolver_requires_all_five_exact_sha_gates(self):
+        android = run_record(62, "KANTA Android validation")
+        ios_validation = run_record(63, "KANTA iOS validation")
+        smoke = run_record(64, "KANTA iOS focused simulator smoke")
+        ios_unsigned = run_record(65, "KANTA iOS unsigned artifacts")
         walkthrough = run_record(61, "KANTA iOS visual walkthrough")
-        reconstruction = run_record(62, "KANTA reconstruction validation")
-        ios = run_record(63, "KANTA iOS unsigned artifacts")
         android_artifact = artifact_record(82, 62, "android-reconstruction-checks")
-        ios_artifact = artifact_record(83, 63, "KANTA-personal-unsigned")
+        ios_artifact = artifact_record(83, 65, "KANTA-personal-unsigned")
         with patch.object(
             module, "find_source_run",
-            side_effect=[walkthrough, reconstruction, ios],
+            side_effect=[android, ios_validation, smoke, ios_unsigned, walkthrough],
         ) as find_run, patch.object(
             module, "find_artifact",
             side_effect=[android_artifact, ios_artifact],
         ):
-            found_walkthrough, android, device = module.resolve_source(SOURCE)
-        self.assertEqual(found_walkthrough["id"], 61)
-        self.assertEqual(android["expected"], {
+            found = module.resolve_source(SOURCE)
+        self.assertEqual(found["gates"]["walkthrough"]["id"], 61)
+        self.assertEqual(found["gates"]["ios_smoke"]["id"], 64)
+        self.assertEqual(found["android"]["expected"], {
             "run": 62, "artifact": 82, "source": SOURCE
         })
-        self.assertEqual(device["expected"], {
-            "run": 63, "artifact": 83, "source": SOURCE
+        self.assertEqual(found["ios"]["expected"], {
+            "run": 65, "artifact": 83, "source": SOURCE
         })
-        self.assertEqual(find_run.call_count, 3)
+        self.assertEqual(find_run.call_count, 5)
 
     def test_invalid_source_sha_is_rejected_before_api_access(self):
         with patch.object(module, "api") as api_call:
@@ -222,15 +225,59 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         root = pathlib.Path(__file__).resolve().parents[2]
-        cls.walkthrough = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
-        cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+        workflows = root / ".github/workflows"
+        cls.android = (workflows / "android-validation.yml").read_text(encoding="utf-8")
+        cls.ios_validation = (workflows / "ios-validation.yml").read_text(encoding="utf-8")
+        cls.smoke = (workflows / "ios-smoke.yml").read_text(encoding="utf-8")
+        cls.archive = (workflows / "ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+        cls.walkthrough = (workflows / "ios-visual-walkthrough.yml").read_text(encoding="utf-8")
+        cls.downloads = (workflows / "verified-downloads.yml").read_text(encoding="utf-8")
 
-    def test_android_source_changes_trigger_both_ios_release_gates(self):
-        for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive)):
+    def test_packager_run_names_match_live_workflows(self):
+        expected = {
+            "android": self.android,
+            "ios_validation": self.ios_validation,
+            "ios_smoke": self.smoke,
+            "ios_unsigned": self.archive,
+            "walkthrough": self.walkthrough,
+        }
+        for key, source in expected.items():
+            with self.subTest(gate=key):
+                declared = source.splitlines()[0].removeprefix("name: ").strip()
+                self.assertEqual(module.REQUIRED_RUNS[key], declared)
+
+    def test_android_source_changes_trigger_all_native_release_gates(self):
+        workflows = {
+            "android": self.android,
+            "ios_validation": self.ios_validation,
+            "ios_smoke": self.smoke,
+            "archive": self.archive,
+            "walkthrough": self.walkthrough,
+        }
+        for workflow_name, source in workflows.items():
             for event in ("push", "pull_request"):
                 with self.subTest(workflow=workflow_name, event=event):
                     section = workflow_event_section(source, event)
                     self.assertIn("'apps/android/**'", section)
+
+    def test_focused_smoke_runs_on_main_and_workflow_changes(self):
+        for event in ("push", "pull_request"):
+            with self.subTest(event=event):
+                section = workflow_event_section(self.smoke, event)
+                self.assertIn("'.github/workflows/**'", section)
+                self.assertIn("'tools/prepare-verified-downloads.py'", section)
+                self.assertIn("'apps/android/**'", section)
+        self.assertIn("branches: [main]", workflow_event_section(self.smoke, "push"))
+
+    def test_download_contracts_run_when_native_gate_workflows_change(self):
+        for event in ("push", "pull_request"):
+            with self.subTest(event=event):
+                section = workflow_event_section(self.downloads, event)
+                for workflow in (
+                    "ios-smoke.yml", "ios-validation.yml", "android-validation.yml",
+                    "ios-runtime-artifacts.yml", "ios-visual-walkthrough.yml",
+                ):
+                    self.assertIn(workflow, section)
 
     def test_android_companion_guard_changes_trigger_both_device_walkthroughs(self):
         for event in ("push", "pull_request"):
