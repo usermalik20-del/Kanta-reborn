@@ -735,3 +735,14 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Repair:** the candidate now registers an AndroidX `OnBackPressedCallback` in `onCreate`, enables it only while a workspace accessory is active, disables it on deactivation, and removes the deprecated override. The callback dismisses the accessory while leaving the persistent stage attached. This is a preventive code-review fix; fresh hosted validation is still required.
 
 **Branch status:** PR #103 is 20 commits behind main and GitHub reports it as not mergeable. Reconcile the branch with current main and rerun reconstruction, archive, and iPhone/iPad walkthrough gates before considering merge.
+
+
+## iOS — Song Library menu tap left the More root visible (2026-10-28)
+
+**Failure:** [main walkthrough #40686820501](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686820501) passed the iPad job but failed iPhone case `testMenuSongLibrary` at `KantaVisualWalkthroughUITests.swift:378`. The test tapped the visible Song Library row, then waited 25 seconds for the Library navigation bar. The preserved accessibility hierarchy still contained the More navigation bar and Song Library row, while the Library destination was absent. Other menu cases and the starter-playback walkthrough passed in that run, so the failure is intermittent rather than proof that every Library route is broken.
+
+**Root-cause direction:** `RootView` was switching `sheetRoute` to replace the root view inside an already-presented sheet. The failure evidence shows that this root replacement did not take effect on the failing iPhone attempt. The architecture already uses a NavigationStack; menu selection should use its typed path rather than depend on replacing the presented root.
+
+**Repair candidate:** More-menu buttons append typed `Route` values to `navigationPath`; direct tab/screenshot entry continues to select `sheetRoute`. The Song Library XCTest now asserts the actual `library.content` marker in addition to the navigation title, and the source-contract guard requires path-based menu pushes. This keeps the test diagnostic and avoids a retry/sleep that would mask a lifecycle defect.
+
+**Status:** candidate branch `fix/ios-library-menu-navigation-20261028`; hosted exact-head validation pending. Do not mark this failure resolved until focused smoke and both device walkthroughs pass on the candidate SHA.

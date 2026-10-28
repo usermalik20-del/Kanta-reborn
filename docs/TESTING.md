@@ -226,3 +226,10 @@ Walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actio
 The candidate now uses six test methods and updates the runtime's required-test manifest and source-contract guard together. PR #72's per-device workflow topology is included, with same-branch concurrency retained to cancel stale duplicate runs. No assertion, destination, or required case was removed; no global timeout was raised.
 
 **Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.
+
+
+## iOS More-menu route push regression — 2026-10-28
+
+Full walkthrough [#40686820501](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40686820501) passed iPad but failed iPhone in `testMenuSongLibrary`. XCTest successfully synthesized a tap on the visible Song Library row, but the captured accessibility hierarchy still showed the More navigation bar and menu row after the 25-second Library-title wait. This is stronger evidence than a title timeout alone: the destination content was not presented in that attempt.
+
+The candidate repair makes More-menu selections append typed destinations to a `NavigationStack` path instead of replacing the presented sheet's root route. The UI test now requires the `library.content` marker as well as the Library navigation bar, and `tools/check-ios-presentation-contract.py` enforces the path-based routing contract. This is not accepted until the source guard, focused smoke, unsigned archive and full iPhone/iPad walkthrough pass on one exact candidate SHA.

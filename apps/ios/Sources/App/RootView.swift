@@ -77,6 +77,7 @@ struct RootView: View {
     @StateObject private var presentationGate = KantaPresentationGate()
     @Environment(\.scenePhase) private var scenePhase
     @State private var sheetRoute: Route = .menu
+    @State private var navigationPath: [Route] = []
     @State private var activeNavigation: NavigationSheet? = nil
     @State private var navigationDismissing = false
     @State private var activeTab: KantaTabBar.Destination = .stage
@@ -86,7 +87,7 @@ struct RootView: View {
         var id: String { rawValue }
     }
 
-    private enum Route: String, Identifiable {
+    private enum Route: String, Identifiable, Hashable {
         case menu, library, queue, remote, settings, legal, icloud, songbook
         var id: String { rawValue }
     }
@@ -132,13 +133,17 @@ struct RootView: View {
                 .allowsHitTesting(false)
                 .sheet(item: $activeNavigation, onDismiss: {
                     sheetRoute = .menu
+                    navigationPath = []
                     activeTab = .stage
                     navigationDismissing = false
                     presentationGate.completeDismissal(.navigation)
                 }) {
                     _ in
-                    NavigationStack {
+                    NavigationStack(path: $navigationPath) {
                         destination(sheetRoute)
+                            .navigationDestination(for: Route.self) { route in
+                                destination(route)
+                            }
                             .toolbar {
                                 ToolbarItem(placement: .confirmationAction) {
                                     Button("Done") {
@@ -190,6 +195,8 @@ struct RootView: View {
     }
 
     private func openNavigation(_ route: Route) {
+        // Tab selections replace the sheet root; More-menu actions push a route.
+        navigationPath = []
         if activeNavigation == nil {
             presentationGate.request(.navigation) {
                 sheetRoute = route
@@ -205,14 +212,14 @@ struct RootView: View {
         case .menu:
             List {
                 Section("KANTA") {
-                    Button("Song Library") { sheetRoute = .library }
-                    Button("KANTA Songbook") { sheetRoute = .songbook }
-                    Button("Settings") { sheetRoute = .settings }
-                    Button("Companion Remote") { sheetRoute = .remote }
+                    Button("Song Library") { navigationPath.append(.library) }
+                    Button("KANTA Songbook") { navigationPath.append(.songbook) }
+                    Button("Settings") { navigationPath.append(.settings) }
+                    Button("Companion Remote") { navigationPath.append(.remote) }
                     #if !KANTA_PERSONAL_SIGNING
-                    Button("iCloud Save") { sheetRoute = .icloud }
+                    Button("iCloud Save") { navigationPath.append(.icloud) }
                     #endif
-                    Button("Legal & Privacy") { sheetRoute = .legal }
+                    Button("Legal & Privacy") { navigationPath.append(.legal) }
                 }
             }
             .navigationTitle("More")
