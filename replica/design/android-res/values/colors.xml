@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from replica/design/tokens.json -->
+<resources>
+    <!-- KANTA Canvas -->
+    <color name="kanta_canvas">#FF0A0614</color>
+    <color name="kanta_canvas_top">#FF140A26</color>
+    <color name="kanta_canvas_bottom">#FF0C0618</color>
+
+    <!-- KANTA Bloom -->
+    <color name="kanta_bloom_purple">#FFB24BFF</color>
+    <color name="kanta_bloom_pink">#FFFF3D8B</color>
+    <color name="kanta_bloom_cyan">#FF4DE3F0</color>
+
+    <!-- KANTA Surfaces -->
+    <color name="kanta_surface">#FF1B1030</color>
+    <color name="kanta_surface_high">#FF241540</color>
+    <color name="kanta_elevated">#FF2A1A47</color>
+
+    <!-- KANTA Brand -->
+    <color name="kanta_primary">#FFA24BFF</color>
+    <color name="kanta_primary_hot">#FFFF3D8B</color>
+    <color name="kanta_violet">#FF6D3BFF</color>
+    <color name="kanta_live">#FF3DE0A8</color>
+    <color name="kanta_cyan">#FF4DE3F0</color>
+    <color name="kanta_amber">#FFFFB03A</color>
+
+    <!-- Semantic -->
+    <color name="kanta_success">#FF3DE0A8</color>
+    <color name="kanta_warning">#FFFFB03A</color>
+    <color name="kanta_destructive">#FFFF5A6E</color>
+
+    <!-- Text -->
+    <color name="kanta_text_primary">#FFFFFFFF</color>
+    <color name="kanta_text_secondary">#FFCCCCCC</color>
+    <color name="kanta_text_tertiary">#FF999999</color>
+    <color name="kanta_hairline">#FF1A1A1A</color>
+
+    <!-- Accent -->
+    <color name="kanta_accent">#FFA24BFF</color>
+    <color name="kanta_on_accent">#FFFFFFFF</color>
+
+    <!-- Karaoke Stage -->
+    <color name="karaoke_bg_video_overlay">#CC000000</color>
+    <color name="karaoke_lyric_active">#FFFF3D8B</color>
+    <color name="karaoke_lyric_inactive">#FFFFFFFF</color>
+    <color name="karaoke_lyric_upcoming">#FFBBBBBB</color>
+    <color name="karaoke_countdown_number">#FFFFFFFF</color>
+    <color name="karaoke_countdown_ring">#FFA24BFF</color>
+    <color name="karaoke_score_perfect">#FF3DE0A8</color>
+    <color name="karaoke_score_great">#FF4DE3F0</color>
+    <color name="karaoke_score_good">#FFFFB03A</color>
+    <color name="karaoke_score_miss">#FFFF5A6E</color>
+    <color name="karaoke_score_value">#FFFFFFFF</color>
+    <color name="karaoke_adjustment_knob">#FFA24BFF</color>
+    <color name="karaoke_adjustment_track">#FF2A1A47</color>
+    <color name="karaoke_keypad_key">#FF1B1030</color>
+    <color name="karaoke_keypad_key_active">#FF241540</color>
+    <color name="karaoke_keypad_key_text">#FFFFFFFF</color>
+    <color name="karaoke_intro_card_bg">#E60A0614</color>
+    <color name="karaoke_intro_card_border">#FF1A1A1A</color>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Shadow -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#40000000" />
+            <size android:width="@dimen/karaoke_knob_thumb_size" android:height="@dimen/karaoke_knob_thumb_size" />
+        </shape>
+    </item>
+    <!-- Thumb -->
+    <item android:bottom="2dp" android:right="2dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/karaoke_adjustment_knob" />
+            <size android:width="@dimen/karaoke_knob_thumb_size" android:height="@dimen/karaoke_knob_thumb_size" />
+            <stroke android:width="2dp" android:color="@color/kanta_on_accent" />
+        </shape>
+    </item>
+</layer-list>
