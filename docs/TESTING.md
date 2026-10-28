@@ -226,3 +226,7 @@ Walkthrough [#40146182462](https://github.com/usermalik20-del/Kanta-reborn/actio
 The candidate now uses six test methods and updates the runtime's required-test manifest and source-contract guard together. PR #72's per-device workflow topology is included, with same-branch concurrency retained to cancel stale duplicate runs. No assertion, destination, or required case was removed; no global timeout was raised.
 
 **Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.
+
+## AdSense / CSP safety gate
+
+The static Vercel site must not load `adsbygoogle.js` while the response path cannot provide a fresh nonce on every script tag. Keep the route-specific CSP strict; do not substitute a static nonce or broad allowlist. `test_website_security_contract.py` asserts that AdSense remains disabled across public pages until a reviewed nonce-capable response architecture is available. The private Songbook must never execute third-party ad JavaScript.
