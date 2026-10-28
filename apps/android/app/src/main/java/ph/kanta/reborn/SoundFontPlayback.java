@@ -133,11 +133,6 @@ final class SoundFontPlayback implements PlaybackBackend {
     return Math.min(document.durationMilliseconds, audiblePosition);
   }
 
-  /** Returns the audible clock for lyric synchronization. */
-  public RenderedPlaybackClock getClock() {
-    return clock;
-  }
-
   public void release() {
     if (disposed) return;
     disposed = true;

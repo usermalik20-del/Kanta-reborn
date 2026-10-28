@@ -48,50 +48,50 @@ def main() -> int:
             if not booted: raise RuntimeError("Emulator did not boot within ten minutes")
         # Wait a bit more for system to settle
         time.sleep(10)
-            run(adb, "shell", "svc", "wifi", "enable", timeout=15)
-            network_deadline = time.monotonic() + 180  # 3 minutes for network
-            private_ranges = tuple(map(ipaddress.ip_network, ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")))
-            network_ok = False
-            for attempt in range(3):
-                network_deadline = time.monotonic() + 180
-                while time.monotonic() < network_deadline:
-                    try:
-                        addresses = subprocess.run([str(adb), "shell", "ip", "-4", "-o", "addr", "show"],
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=8)
-                    except subprocess.TimeoutExpired:
-                        time.sleep(2)
-                        continue
-                    if any(ipaddress.ip_interface(token).ip in private_ranges[0]
-                           or any(ipaddress.ip_interface(token).ip in network for network in private_ranges[1:])
-                           for token in addresses.stdout.split()
-                           if "/" in token):
-                        network_ok = True
-                        break
+        run(adb, "shell", "svc", "wifi", "enable", timeout=15)
+        network_deadline = time.monotonic() + 180  # 3 minutes for network
+        private_ranges = tuple(map(ipaddress.ip_network, ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")))
+        network_ok = False
+        for attempt in range(3):
+            network_deadline = time.monotonic() + 180
+            while time.monotonic() < network_deadline:
+                try:
+                    addresses = subprocess.run([str(adb), "shell", "ip", "-4", "-o", "addr", "show"],
+                        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=8)
+                except subprocess.TimeoutExpired:
                     time.sleep(2)
-                if network_ok:
+                    continue
+                if any(ipaddress.ip_interface(token).ip in private_ranges[0]
+                       or any(ipaddress.ip_interface(token).ip in network for network in private_ranges[1:])
+                       for token in addresses.stdout.split()
+                       if "/" in token):
+                    network_ok = True
                     break
-                print(f"Network not ready, attempt {attempt+1}/3", flush=True)
-                run(adb, "shell", "svc", "wifi", "disable", timeout=10)
                 time.sleep(2)
-                run(adb, "shell", "svc", "wifi", "enable", timeout=15)
-            if not network_ok:
-                raise RuntimeError(f"Emulator has no private IPv4 after Wi-Fi enable after retries")
-            run(adb, "shell", "input", "keyevent", "82", timeout=15)
-            run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/debug/app-debug.apk", timeout=60)
-            run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk", timeout=60)
-            with (ROOT / "android-runtime.log").open("wb") as output:
-                run(adb, "shell", "am", "instrument", "-w", "ph.kanta.reborn.test/ph.kanta.reborn.RuntimeChecks",
-                    stdout=output, stderr=subprocess.STDOUT, timeout=180)
-            result = (ROOT / "android-runtime.log").read_text(errors="replace")
-            print(result, flush=True)
-            if "KANTA runtime:" not in result or "checks passed" not in result:
-                raise RuntimeError("Runtime instrumentation did not report acceptance")
-            with (ROOT / "android-runtime-stage.png").open("wb") as output:
-                run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-stage.png", stdout=output, timeout=20)
-            if (ROOT / "android-runtime-stage.png").stat().st_size == 0: raise RuntimeError("Missing real stage capture")
-            with (ROOT / "android-runtime-camera.png").open("wb") as output:
-                run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-camera.png", stdout=output, timeout=20)
-            if (ROOT / "android-runtime-camera.png").stat().st_size == 0: raise RuntimeError("Missing real camera capture")
+            if network_ok:
+                break
+            print(f"Network not ready, attempt {attempt+1}/3", flush=True)
+            run(adb, "shell", "svc", "wifi", "disable", timeout=10)
+            time.sleep(2)
+            run(adb, "shell", "svc", "wifi", "enable", timeout=15)
+        if not network_ok:
+            raise RuntimeError(f"Emulator has no private IPv4 after Wi-Fi enable after retries")
+        run(adb, "shell", "input", "keyevent", "82", timeout=15)
+        run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/debug/app-debug.apk", timeout=60)
+        run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk", timeout=60)
+        with (ROOT / "android-runtime.log").open("wb") as output:
+            run(adb, "shell", "am", "instrument", "-w", "ph.kanta.reborn.test/ph.kanta.reborn.RuntimeChecks",
+                stdout=output, stderr=subprocess.STDOUT, timeout=180)
+        result = (ROOT / "android-runtime.log").read_text(errors="replace")
+        print(result, flush=True)
+        if "KANTA runtime:" not in result or "checks passed" not in result:
+            raise RuntimeError("Runtime instrumentation did not report acceptance")
+        with (ROOT / "android-runtime-stage.png").open("wb") as output:
+            run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-stage.png", stdout=output, timeout=20)
+        if (ROOT / "android-runtime-stage.png").stat().st_size == 0: raise RuntimeError("Missing real stage capture")
+        with (ROOT / "android-runtime-camera.png").open("wb") as output:
+            run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-camera.png", stdout=output, timeout=20)
+        if (ROOT / "android-runtime-camera.png").stat().st_size == 0: raise RuntimeError("Missing real camera capture")
         return 0
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         print(f"Android runtime acceptance failed: {error}", flush=True)

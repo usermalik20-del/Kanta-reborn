@@ -53,28 +53,31 @@ final class CameraStage {
       unavailable("Camera permission is needed for the optional front-camera background.");
       return;
     }
-    enabled = true;
-    session.cameraPreviewEnabled = true;
+    // Resolve a real preview surface before advertising the camera as enabled.
     surface = target;
-    long token = generation;
-    // target is a PreviewView from BackgroundStage or StageSurface
     if (target instanceof PreviewView) {
       view = (PreviewView) target;
     } else if (target instanceof StageSurface) {
-      // For StageSurface, create a new PreviewView and mount it
       view = new PreviewView(owner);
       view.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
       view.setScaleType(PreviewView.ScaleType.FILL_CENTER);
       view.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
       ((StageSurface) target).mountCamera(view);
     } else {
+      surface = null;
+      unavailable("The stage does not provide a camera preview surface.");
       return;
     }
+    enabled = true;
+    session.cameraPreviewEnabled = true;
+    long token = generation;
     streamObserver =
         state -> {
           if (token != generation || !enabled) return;
           streaming = state == PreviewView.StreamState.STREAMING;
-          // surface.cameraFrame(streaming) - handled by BackgroundStage
+          if (surface instanceof StageSurface) {
+            ((StageSurface) surface).cameraFrame(streaming);
+          }
           if (streaming) handler.removeCallbacksAndMessages(null);
         };
     view.getPreviewStreamState().observe(owner, streamObserver);
@@ -134,7 +137,9 @@ final class CameraStage {
     if (view != null && streamObserver != null)
       view.getPreviewStreamState().removeObserver(streamObserver);
     if (provider != null && preview != null) provider.unbind(preview);
-    // surface.unmountCamera(view) - handled by BackgroundStage
+    if (surface instanceof StageSurface && view != null) {
+      ((StageSurface) surface).unmountCamera(view);
+    }
     if (preview != null) preview.setSurfaceProvider(null);
     cameraStates = null;
     cameraObserver = null;

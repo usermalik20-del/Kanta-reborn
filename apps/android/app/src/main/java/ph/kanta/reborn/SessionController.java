@@ -8,12 +8,9 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
-import ph.kanta.reborn.score.ScoreSink;
-import ph.kanta.reborn.score.ScoreSink.CompletedScore;
-import ph.kanta.reborn.core.RenderedPlaybackClock;
 
 /** One app-lifetime state owner. All MediaPlayer access stays on the main Looper. */
-public final class SessionController {
+final class SessionController {
   interface Listener {
     void changed();
   }
@@ -42,9 +39,9 @@ public final class SessionController {
   long visualGeneration;
   private long stageRequest;
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
-  public List<Song> songs = Collections.emptyList();
+  List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
-  public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
+  List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
   Song current;
   UUID playbackIdentity;
@@ -57,7 +54,7 @@ public final class SessionController {
   private long scoreFrameFloor, lastScoreReading = -1;
   private boolean scoreWaitingForControls = true;
 
-  public static final class CompletedScore {
+  static final class CompletedScore {
     final UUID playbackIdentity;
     final String title, singer;
     final MelodyScoreSession.Estimate estimate;
@@ -73,12 +70,10 @@ public final class SessionController {
 
   CompletedScore lastScore;
 
-  public String singer = "", message = "Opening your library…";
+  String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
   private Listener listener;
-  private ScoreSink scoreSink;
-  public PlaybackBackend player, pending;
-  public RenderedPlaybackClock currentClock;
+  private PlaybackBackend player, pending;
   float volume = 1, tempo = 1;
   int pitch;
   float lyricScale = 1;
@@ -86,7 +81,7 @@ public final class SessionController {
   final PartyAudio party;
   final MicrophoneInput microphone;
   final MicrophoneMonitor monitor;
-  public final android.content.SharedPreferences options;
+  private final android.content.SharedPreferences options;
   boolean foreground, loopEnabled, auxiliaryInterrupted, assigningPad;
   String loopSongId = "";
   final String[] customPads = new String[8];
@@ -196,10 +191,6 @@ public final class SessionController {
   void listen(Listener l) {
     listener = l;
     if (l != null) l.changed();
-  }
-
-  void setScoreSink(ScoreSink sink) {
-    scoreSink = sink;
   }
 
   void publish() {
@@ -487,15 +478,9 @@ public final class SessionController {
     if (!scoringEnabled || score == null || current == null || playbackIdentity == null) return;
     observeMicrophone();
     MelodyScoreSession.Completion completed = score.finish(playbackIdentity);
-    if (completed != null) {
+    if (completed != null)
       lastScore =
           new CompletedScore(completed.playbackId, current.title, singer, completed.estimate);
-      if (scoreSink != null) {
-        ph.kanta.reborn.score.ScoreSink.CompletedScore sinkScore = new ph.kanta.reborn.score.ScoreSink.CompletedScore(
-            lastScore.playbackIdentity, lastScore.title, lastScore.singer, lastScore.estimate);
-        scoreSink.onScoreCompleted(sinkScore);
-      }
-    }
   }
 
   boolean onlineAudioAllowed() {
@@ -772,7 +757,7 @@ public final class SessionController {
     publish();
   }
 
-  public void saveQueue() {
+  private void saveQueue() {
     if (repository == null) return;
     List<ReservationQueue.Entry> saved = queue.snapshot();
     io.execute(
@@ -929,12 +914,10 @@ public final class SessionController {
                         }
                       };
                   try {
-                    PlaybackBackend created =
+                    pending =
                         midi == null
                             ? new FileAudioPlayback(file, callbacks)
                             : new SoundFontPlayback(bank, midi, callbacks);
-                    pending = created;
-                    currentClock = created.getClock();
                   } catch (Exception | LinkageError e) {
                     loading = false;
                     message = "Could not prepare this song. Your reservation remains in Up Next.";
@@ -1055,7 +1038,6 @@ public final class SessionController {
     currentTarget = null;
     currentDuration = 0;
     lastScoreReading = -1;
-    currentClock = null;
 
     if (player != null) {
       player.release();
@@ -1064,17 +1046,12 @@ public final class SessionController {
     playing = false;
   }
 
-  public long position() {
+  long position() {
     try {
       return player == null ? 0 : player.position();
     } catch (IllegalStateException e) {
       return 0;
     }
-  }
-
-  public RenderedPlaybackClock getClock() {
-    if (player != null) return player.getClock();
-    return currentClock;
   }
 
   void importSongs(List<Uri> files) {

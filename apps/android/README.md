@@ -90,3 +90,23 @@ legacy phone remote application, and the legacy screens themselves. The engine
 decision in `docs/ARCHITECTURE.md` stands: KANTA keeps its own synthesis and scoring
 path and does not integrate BASS. Evidence and open items are recorded in
 `replica/meg-format.md` and `replica/architecture.md`.
+
+
+## StagePresenter composition status — 2026-10-28
+
+The first StagePresenter integration attempt on main `5d7d157` failed Android compilation in [run #40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569). The presenter accessed private/package-scoped session internals, assumed song metadata fields that do not exist in `core.Song`, and replaced the established `StageSurface` without preserving its photo/video/camera lifecycle. The integration wiring is being rolled back in the current mainline hotfix candidate to restore the last working stage owner. The overlay source remains unaccepted until a proper session adapter and emulator coverage are delivered. This rollback does not remove or change the published Android APK.
+
+
+### Stage composition acceptance boundary
+
+The established `StageSurface` remains the active stage owner. The newer `StagePresenterImpl` composition is not accepted or wired into playback until it has a narrow session adapter, working CameraX API usage, preserved photo/video/camera lifecycle, and emulator regression coverage. Isolated overlay views are prototypes, not proof of integrated karaoke functionality.
+
+ 
+### Host-JVM regression boundary
+
+The `coreRegression` task compiles framework-free domain sources only. `SqliteSongCatalog` is Android-backed and must be excluded from that host-JVM classpath while remaining in the normal Android Gradle source set. This is not a runtime exclusion and does not remove catalog functionality from the APK.
+
+ 
+### CI concurrency contract
+
+Native validation workflows include the GitHub Actions run attempt in their concurrency key. A stale rerun must not cancel a newer source SHA's acceptance run; normal first-attempt pushes on the same branch may still supersede older first attempts.

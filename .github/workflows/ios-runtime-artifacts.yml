@@ -7,18 +7,18 @@ on:
       - 'apps/ios/**'
       - 'apps/android/**'
       - 'tools/**'
-      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/**'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'apps/ios/**'
       - 'apps/android/**'
       - 'tools/**'
-      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/**'
 permissions:
   contents: read
 concurrency:
-  group: ios-artifacts-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: ios-artifacts-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
   cancel-in-progress: true
 jobs:
   ios-unsigned:

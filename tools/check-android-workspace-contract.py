@@ -29,6 +29,7 @@ ACTIVITY = os.path.join(ANDROID, "MainActivity.java")
 RUNTIME_CHECKS = os.path.join(
     ROOT, "apps", "android", "app", "src", "androidTest", "java", "ph", "kanta", "reborn", "RuntimeChecks.java"
 )
+CAMERA_STAGE = os.path.join(ANDROID, "CameraStage.java")
 
 failures = []
 passes = []
@@ -54,6 +55,7 @@ if not os.path.exists(WORKSPACE):
 workspace = read(WORKSPACE)
 activity = read(ACTIVITY)
 runtime = read(RUNTIME_CHECKS)
+camera_stage = read(CAMERA_STAGE)
 
 # --- Architecture: the persistent stage and transient accessories ------------
 
@@ -191,6 +193,18 @@ check(
 check(
     "findViewWithTag(\"kanta.stage.primary\")" in runtime,
     "Android instrumentation still guards the persistent stage subtree",
+)
+check(
+    "((StageSurface) surface).cameraFrame(streaming);" in camera_stage,
+    "CameraX stream state updates the visible StageSurface camera frame",
+)
+check(
+    "((StageSurface) surface).unmountCamera(view);" in camera_stage,
+    "CameraX stop removes its preview from the owning StageSurface",
+)
+check(
+    'unavailable("The stage does not provide a camera preview surface.")' in camera_stage,
+    "CameraStage rejects unsupported targets without reporting a false enabled state",
 )
 check(
     "body.removeAllViews();" in activity and "renderPanel();" in activity,

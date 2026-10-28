@@ -735,3 +735,66 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Repair:** the candidate now registers an AndroidX `OnBackPressedCallback` in `onCreate`, enables it only while a workspace accessory is active, disables it on deactivation, and removes the deprecated override. The callback dismisses the accessory while leaving the persistent stage attached. This is a preventive code-review fix; fresh hosted validation is still required.
 
 **Branch status:** PR #103 is 20 commits behind main and GitHub reports it as not mergeable. Reconcile the branch with current main and rerun reconstruction, archive, and iPhone/iPad walkthrough gates before considering merge.
+
+
+## Android — StagePresenter integration failed compilation (2026-10-28)
+
+**Failure:** [main validation #40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569) failed after main commit `5d7d157`. The compile errors show that `StagePresenterImpl` in a subpackage cannot access package-private `SessionController`/`FileAudioPlayback`; it assumes `Song` has `duration`, `originalKey`, `tempo`, and `genre`; the `ScoreSink.CompletedScore` type differs from `SessionController.CompletedScore`; and `MainActivity` still references the removed `stage` field. The presenter also bypasses the existing StageSurface photo/video/camera owner and is not wired to session playback transitions.
+
+**Decision:** do not mask this with visibility widening or fabricated metadata. The integration is not ready for acceptance because it breaks the established media/background lifecycle as well as compilation.
+
+**Repair candidate:** [PR #114](https://github.com/usermalik20-del/Kanta-reborn/pull/114) restores the five Android files to the pre-integration implementation and removes the new `StagePresenterImpl` wiring, while preserving the rest of main's tree and documenting the deferred architecture work. The overlay components remain isolated for a later implementation with a narrow session adapter, real rendered-frame clock, background parity and lifecycle tests.
+
+**Status:** rollback candidate awaits hosted Android validation. Main remains unaccepted until the candidate is merged and the Android build/runtime gates pass. Separately, [PR #111](https://github.com/usermalik20-del/Kanta-reborn/pull/111) repairs the framework-free source set and exact-SHA gates; its Android validation passed, but focused iOS smoke failed on the menu destination and is being addressed by [PR #113](https://github.com/usermalik20-del/Kanta-reborn/pull/113).
+
+
+## Android — StagePresenter compile recurrence and masked Gradle exit (2026-10-28)
+
+**Fingerprint:** Android validation on main `0556fbb`, [run #40696115555](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40696115555), job `android`; `StagePresenterImpl.java` package-access errors, unavailable `SessionController` methods/fields, missing `ContentRoot`/`ContentScanner` imports, stale `stage` references, and unsupported `PreviewView.setSurfaceProvider(null)`.
+
+**Cause (confirmed):** the Milestone 2 stage composition was merged before its presenter had a viable public session adapter and before the existing `StageSurface` camera/photo/video lifecycle was preserved. The follow-up visibility/import patches did not repair the architectural mismatch. The workflow also piped Gradle output through `tee` without `set -o pipefail`; the shell reported the pipeline as successful despite Gradle failing, so the later APK permission verifier ran against a nonexistent APK and produced a misleading secondary failure.
+
+**Repair candidate:** restore the established `StageSurface` owner, remove the unintegrated `StagePresenterImpl` wiring while leaving independent overlay prototypes isolated, add `set -o pipefail`, and add a workflow contract guard for branch globs, path triggers, and failure-log capture. The branch matcher is changed to `['**']` because `['*']` does not match slash-containing branch names.
+
+**Regression coverage:** `tools/check-android-validation-workflow.py` asserts the branch matcher, pipefail, workspace contract, exact-SHA path coverage, and failure-log upload. Android build/lint/domain/emulator checks must pass on the exact candidate SHA before merge. This is a candidate until fresh hosted validation is green.
+
+**Recurrence rule:** do not expose private session state to a view subpackage as a compile-only workaround; do not replace the active stage without camera/photo/video lifecycle parity. Any Gradle pipeline using `tee` must enable `pipefail`. Do not interpret a missing-APK verifier error as the primary cause when the build log shows an earlier compiler failure.
+
+ 
+## Android — host-JVM coreRegression compiled an Android-backed catalog (2026-10-28)
+
+**Fingerprint:** PR #115 Android validation [run #40697448774](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40697448774), task `:app:compileCoreRegression`; errors include `package android.content does not exist`, `android.database.Cursor`, `SQLiteDatabase`, `Uri`, and missing `ContentRoot`/`ContentScanner` types in `SqliteSongCatalog.java`.
+
+**Cause (confirmed):** the host-JVM `compileCoreRegression` task compiled every file under `core/**/*.java` with an empty classpath, accidentally including `SqliteSongCatalog`, which is intentionally Android-backed. The normal Android source set already owns this implementation; the framework-free regression task should not compile it a second time.
+
+**Repair candidate:** exclude only `ph/kanta/reborn/core/catalog/SqliteSongCatalog.java` from `compileCoreRegression`, retain it in the regular Android source set, and add a workflow contract guard that requires the exclusion. This does not remove catalog functionality from the app.
+
+**Validation:** candidate. Fresh Android build/lint/domain/emulator checks must pass on the rebased PR #115 head. Keep `set -o pipefail` so the actual Gradle failure is surfaced.
+
+ 
+## Native acceptance concurrency — stale reruns must not cancel newer SHA checks (2026-10-28)
+
+**Observed:** after the main walkthrough on `ae630ea` was retried, its attempt 2 became pending while the newer `cc290232` walkthrough's iPhone job was cancelled. The workflow concurrency key used only the branch/ref, so an older rerun and the current main attempt shared the same group. The Android push run was also cancelled by a same-SHA manual dispatch; that duplicate is safe only when the dispatched run actually proceeds.
+
+**Repair candidate:** append `github.run_attempt` to concurrency groups for Android validation, iOS validation, focused iOS smoke, unsigned archive, and the full iPhone/iPad walkthrough. This preserves cancellation of stale first-attempt runs when a new commit arrives, while isolating a deliberate rerun of an older attempt from the current acceptance run. Add a source guard requiring the suffix in all five native gates.
+
+**Validation:** candidate. The workflow-contract guard and the full native gate set must pass on the exact rebased PR #115 head. The cancelled main device runs are not acceptance evidence; use fresh full walkthroughs after the workflow change lands.
+
+
+## Android CameraX stage visibility and teardown — 2026-10-28
+
+**Failure:** PR #115 Android validation [run #40699703244](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40699703244), emulator instrumentation failed with `Opt-in front camera never rendered`. Diagnostic bundle: [artifact #12821536745](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40699703244/artifacts/12821536745).
+
+**Root cause (confirmed by source and runtime assertion):** `CameraStage` updated its private `streaming` flag but never forwarded CameraX stream state to `StageSurface.cameraFrame`. `StageSurface.isCameraVisible()` therefore stayed false even when the camera preview entered streaming state. Camera stop also did not call `StageSurface.unmountCamera(view)`, leaving a detached preview lifecycle unmanaged. A separate unsupported target path returned after setting the session camera-enabled state, creating a false-positive enabled state without a preview.
+
+**Repair candidate:** forward stream visibility to the `StageSurface` owner, detach the preview on stop, and reject unsupported targets before enabling camera state. Extend the Android workspace contract guard to protect these behaviors. This is on PR #115's hotfix branch and is not yet accepted.
+
+**Validation required:** fresh Android build/lint/domain/browser/emulator checks plus iOS validation, unsigned archive and both device walkthroughs on the exact final PR head. Do not merge based on the earlier successful compile/browser steps alone.
+
+## Android stage owner mismatch and emulator harness indentation — 2026-10-28
+
+**Failure:** main Android validation [run #40701092504](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40701092504) failed during emulator instrumentation. The retained [diagnostic artifact #12822480875](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40701092504/artifacts/12822480875) confirms `java.lang.ClassCastException: ph.kanta.reborn.stage.StagePresenterImpl cannot be cast to ph.kanta.reborn.StageSurface` at `RuntimeChecks.java:246`.
+
+**Root cause:** MainActivity installed `StagePresenterImpl` as the primary stage while RuntimeChecks and CameraStage still require the established `StageSurface` lifecycle. This is an architectural integration mismatch, not an emulator flake. Restore `StageSurface` as the active stage until a proper presenter/session adapter and camera lifecycle are accepted.
+
+**Additional harness defect:** commit [`e865779`](https://github.com/usermalik20-del/Kanta-reborn/commit/e865779edd2866e0cbce1bd422ab279d54b12d5d) extended emulator boot/network retries but mis-indented the post-boot network/install block in `tools/run-android-runtime.py`. The hotfix candidate rebases onto `e865779`, preserves the new timeout/retry behavior and corrects the indentation. Require a fresh full Android runtime run on the rebased head; the prior successful camera lifecycle run on the pre-rebase candidate is not acceptance evidence for the new head.

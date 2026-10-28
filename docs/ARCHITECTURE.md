@@ -6,7 +6,7 @@
 
 `apps/android` contains a new native Java/Android Views reconstruction, explicitly distinct from original source, with its own Gradle build and signing boundary. See its README for implemented and missing features.
 
-The Android karaoke stage follows the core timing APIs rather than duplicating them: `MidiLyrics.Cue.line` holds lyric text and `Cue.milliseconds` holds the cue timestamp; `RenderedPlaybackClock.position(playedFrames)` maps rendered output frames to milliseconds. The stage host must feed monotonically increasing rendered-frame counts to `LyricStage.setPlayedFrames`. Score and intro overlay payloads are the nested `StagePresenter.ScoreResult` and `StagePresenter.IntroCardData` contracts. The presentation layer remains a read-only consumer; `SessionController` retains playback and reservation ownership.
+The active Android karaoke stage remains the established `StageSurface` owned by `MainActivity`. The newer `StagePresenterImpl` composition prototype is not wired into the application: its first integration violated the session package boundary, assumed unavailable model fields, and did not preserve the existing camera/photo/video lifecycle. Keep overlay classes isolated until a narrow public session adapter, rendered-clock contract, background parity, and emulator lifecycle tests are implemented together. Any future lyric integration must use `MidiLyrics.Cue.line`, `Cue.milliseconds`, and monotonically increasing rendered-frame counts with `RenderedPlaybackClock.position(playedFrames)`; the presentation layer must never reach into `SessionController` internals.
 
 `recovery/ios/snapshots` contains other original snapshots without nested Git databases. They are evidence, not dependencies. Complete recovery ZIPs remain preserved separately. Historical source variants must be reconciled file by file.
 
@@ -413,3 +413,25 @@ does not copy proprietary APK libraries or bundled media. `tools/check-product-b
 fails CI when legacy product branding reappears under `apps/` or the Android application
 id changes. Evidence, open items and the rejected alternatives are recorded in
 `replica/meg-format.md`.
+
+
+## Android StagePresenter integration status — 2026-10-28
+
+Main commit [`5d7d157`](https://github.com/usermalik20-del/Kanta-reborn/commit/5d7d157d952e2e158645223871408b926133dbda) attempted to replace the established `StageSurface` with `StagePresenterImpl`. The first full Android validation [#40692835569](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40692835569) failed with compile errors: the presenter reached package-private/private SessionController state, used fields not present on `core.Song`, mismatched the score sink's result type, and left MainActivity references to the removed `stage` field. The new presenter also did not preserve the established photo/video/camera stage lifecycle or receive playback start/pause/stop events.
+
+The hotfix candidate restores `StageSurface` as the single authoritative media/stage owner and removes only the unvalidated integration wiring. Keep the new overlay components as isolated source until a narrow public stage-session contract, actual rendered-frame clock, background/camera parity and lifecycle wiring are implemented with Android emulator acceptance. Do not reintroduce the integration based on compilation alone.
+
+ 
+## Android core regression source boundary
+
+The host-JVM `coreRegression` task intentionally excludes `core/catalog/SqliteSongCatalog.java`, because it depends on Android framework APIs. The normal Android source set still compiles the catalog with the SDK. Keep this separation explicit; do not replace Android imports with stubs or remove the catalog from the shipped app to make host tests pass.
+
+ 
+## Native acceptance workflow concurrency
+
+Android validation, iOS validation, focused iOS smoke, unsigned archive, and the full iPhone/iPad walkthrough scope their concurrency groups by branch/ref and `github.run_attempt`. This prevents a rerun of an older commit from cancelling the current main acceptance run while preserving same-branch stale first-attempt cancellation. The Android workflow-contract guard enforces this across all five gates.
+
+
+## Android CameraX preview lifecycle — 2026-10-28
+
+`CameraStage` owns CameraX binding and stream-state observation; `StageSurface` owns the mounted preview view and visible-camera state. When CameraX reports `STREAMING`, the owner must be told to reveal the camera frame. Stopping or moving the preview must unbind the old camera, remove the stream observer, clear visible-camera state, and detach the old preview view before releasing its reference. Unsupported stage targets must fail closed rather than leave `cameraPreviewEnabled` true without an active preview. `RuntimeChecks` covers explicit opt-in, fullscreen transfer, return to the primary stage, disable, reopen, and background/foreground lifecycle.

@@ -2,21 +2,23 @@ name: KANTA Android validation
 on:
   workflow_dispatch:
   push:
-    branches: ['*']
+    branches: ['**']
     paths:
       - 'apps/android/**'
+      - 'apps/ios/**'
       - 'tools/**'
-      - '.github/workflows/android-validation.yml'
+      - '.github/workflows/**'
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/android/**'
+      - 'apps/ios/**'
       - 'tools/**'
-      - '.github/workflows/android-validation.yml'
+      - '.github/workflows/**'
 permissions:
   contents: read
 concurrency:
-  group: android-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: android-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
   cancel-in-progress: true
 jobs:
   android:
@@ -30,16 +32,21 @@ jobs:
           java-version: '17'
       - name: Verify KANTA product branding
         run: python3 tools/check-product-branding.py
+      - name: Verify Android validation workflow contract
+        run: python3 tools/check-android-validation-workflow.py
       - name: Install required Android platform
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"'
       - name: Native SoundFont sanitizer regression
         run: |
           cc -D_POSIX_C_SOURCE=200809L -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer apps/android/tests/soundfont-test.c -lm -o /tmp/kanta-soundfont-test
           /tmp/kanta-soundfont-test apps/android/app/src/main/assets/starter/kanta-tone.sf2
+      - name: Verify Android workspace and regression source contracts
+        run: python3 tools/check-android-workspace-contract.py
       - name: Build, lint and domain regression tests
         id: build
         working-directory: apps/android
         run: |
+          set -o pipefail
           ./gradlew --no-daemon :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
       - name: Upload build log on failure
         if: failure()

@@ -20,7 +20,12 @@ android {
 // Framework-free domain checks can run before spending emulator/macOS minutes.
 def coreClasses = layout.buildDirectory.dir('core-regression-classes')
 tasks.register('compileCoreRegression', JavaCompile) {
-    source = fileTree('src/main/java') { include 'ph/kanta/reborn/core/**/*.java'; exclude 'ph/kanta/reborn/core/catalog/**' }
+    // This host-JVM regression suite intentionally excludes the Android-backed SQLite
+    // implementation. The normal Android source set compiles it with android.jar.
+    source = fileTree('src/main/java') {
+        include 'ph/kanta/reborn/core/**/*.java'
+        exclude 'ph/kanta/reborn/core/catalog/SqliteSongCatalog.java'
+    }
     source += fileTree('src/test/java') { include 'ph/kanta/reborn/core/**/*.java' }
     classpath = files()
     destinationDirectory = coreClasses

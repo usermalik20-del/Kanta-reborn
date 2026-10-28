@@ -11,7 +11,7 @@ on:
       - 'tools/capture-ios-runtime.py'
       - 'tools/verify-android-companion-interface.py'
       - 'tools/prepare-verified-downloads.py'
-      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/**'
     tags:
       - 'ios-rc-*'
   pull_request:
@@ -22,11 +22,11 @@ on:
       - 'tools/capture-ios-runtime.py'
       - 'tools/verify-android-companion-interface.py'
       - 'tools/prepare-verified-downloads.py'
-      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/**'
 permissions:
   contents: read
 concurrency:
-  group: ios-visual-${{ github.event.pull_request.head.ref || github.ref }}
+  group: ios-visual-${{ github.event.pull_request.head.ref || github.ref }}-${{ github.run_attempt }}
   cancel-in-progress: true
 # Each device walks through in its own job so one device's result cannot mask,
 # delay or time out the other, and each reports its own status and artifacts.
