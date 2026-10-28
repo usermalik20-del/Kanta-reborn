@@ -77,14 +77,18 @@ public final class MkmdDecoder {
       }
 
       int headerSize = 13;
-      int compressedLen = decrypted.length - headerSize;
-      if (compressedLen != (int) compressedBytes) {
-        throw new DecodeException("MKMD compressed length mismatch: declared="
-            + compressedBytes + " actual=" + compressedLen);
+      int available = decrypted.length - headerSize;
+      if (available < (int) compressedBytes) {
+        throw new DecodeException(
+            "MKMD truncated compressed data: declared=" + compressedBytes + " available=" + available);
       }
-
+      int trailingPadding = available - (int) compressedBytes;
+      if (trailingPadding >= AES_BLOCK) {
+        throw new DecodeException(
+            "MKMD trailing padding exceeds one AES block: " + trailingPadding);
+      }
       Inflater inflater = new Inflater(true);
-      inflater.setInput(decrypted, headerSize, compressedLen);
+      inflater.setInput(decrypted, headerSize, (int) compressedBytes);
 
       ByteArrayOutputStream output =
           new ByteArrayOutputStream((int) Math.min(decodedBytes, 1 << 20));

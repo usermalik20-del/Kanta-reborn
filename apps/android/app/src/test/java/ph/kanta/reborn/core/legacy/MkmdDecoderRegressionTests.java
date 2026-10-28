@@ -59,7 +59,7 @@ public final class MkmdDecoderRegressionTests {
           javax.crypto.Cipher.ENCRYPT_MODE,
           new javax.crypto.spec.SecretKeySpec(aesKey, "AES"),
           new javax.crypto.spec.IvParameterSpec(aesIv));
-      return cipher.doFinal(plain.toByteArray());
+      return cipher.doFinal(padToBlock(plain.toByteArray()));
     } catch (Exception e) {
       throw new RuntimeException("Failed to build test fixture", e);
     }
