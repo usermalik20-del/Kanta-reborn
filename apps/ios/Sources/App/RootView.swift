@@ -76,6 +76,7 @@ struct RootView: View {
     @ObservedObject var services: AppServices
     @StateObject private var presentationGate = KantaPresentationGate()
     @Environment(\.scenePhase) private var scenePhase
+    @State private var navigationRoot: Route = .menu
     @State private var navigationPath: [Route] = []
     @State private var activeNavigation: NavigationSheet? = nil
     @State private var navigationDismissing = false
@@ -95,13 +96,8 @@ struct RootView: View {
         self.services = services
         let mode = ProcessInfo.processInfo.environment["GELO_SCREENSHOT_MODE"] ?? ""
         let initialRoute = Route(rawValue: mode)
-        let initialPath: [Route]
-        if let initialRoute, initialRoute != .menu {
-            initialPath = [initialRoute]
-        } else {
-            initialPath = []
-        }
-        _navigationPath = State(initialValue: initialPath)
+        _navigationRoot = State(initialValue: initialRoute ?? .menu)
+        _navigationPath = State(initialValue: [])
         _activeNavigation = State(initialValue: initialRoute == nil ? nil : .navigation)
     }
 
@@ -115,6 +111,7 @@ struct RootView: View {
                     onOpenNavigation: {
                         guard activeNavigation == nil else { return }
                         presentationGate.request(.navigation) {
+                            navigationRoot = .menu
                             navigationPath = []
                             activeNavigation = .navigation
                         }
@@ -137,6 +134,7 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .allowsHitTesting(false)
                 .sheet(item: $activeNavigation, onDismiss: {
+                    navigationRoot = .menu
                     navigationPath = []
                     activeTab = .stage
                     navigationDismissing = false
@@ -144,7 +142,7 @@ struct RootView: View {
                 }) {
                     _ in
                     NavigationStack(path: $navigationPath) {
-                        destination(.menu)
+                        destination(navigationRoot)
                             .navigationDestination(for: Route.self) { route in
                                 destination(route)
                             }
@@ -199,14 +197,15 @@ struct RootView: View {
     }
 
     private func openNavigation(_ route: Route) {
-        let path: [Route] = route == .menu ? [] : [route]
         if activeNavigation == nil {
             presentationGate.request(.navigation) {
-                navigationPath = path
+                navigationRoot = route
+                navigationPath = []
                 activeNavigation = .navigation
             }
         } else {
-            navigationPath = path
+            navigationRoot = route
+            navigationPath = []
         }
     }
 
