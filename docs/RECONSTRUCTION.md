@@ -38,4 +38,9 @@ The predictive-back regression is resolved and the required native acceptance ga
 
 All Android build, lint, domain regression and instrumentation tests pass on main (`3a81dd6`). CI workflows split into separate `android-validation.yml` and `ios-validation.yml` with independent concurrency groups.
 
-**Next: Milestone 2** — StagePresenter binding to SessionController, ScoreOverlay integration, IntroCard countdown flow, SearchOverlay SongCatalog wiring, SettingsStore persistence.
+**Next: Milestone 3** — Should-haves (Beta 2):
+- BGV video backgrounds (Media3), background photos, camera background via existing CameraStage
+- Adjustment overlay: key / melody / tempo / volume, applied as intents to SessionController, with clock re-anchoring
+- Settings groups: lyric, audio, mic, score, behavior, bgv (kanta_settings)
+- Score result overlay + score settings (difficulty/mode from SongHub's ScoreSettings)
+- Smart Link host side (NSD + beacon + WebSocket) with explicit pairing, replay protection and revocation

@@ -8,6 +8,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
+import ph.kanta.reborn.core.companion.SmartLinkHost;
 import ph.kanta.reborn.score.ScoreSink;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
@@ -20,6 +21,7 @@ public final class SessionController {
 
   final CompanionControl companion;
   final BrowserCompanion browserCompanion;
+  public final SmartLinkHost smartLinkHost;
   final ReservationQueue queue = new ReservationQueue();
   final ExecutorService io = Executors.newSingleThreadExecutor();
   final ExecutorService preparation = Executors.newSingleThreadExecutor();
@@ -102,6 +104,14 @@ public final class SessionController {
     this.context = context;
     companion = new CompanionControl(this);
     browserCompanion = new BrowserCompanion(this);
+    smartLinkHost = new SmartLinkHost(context, new SmartLinkHost.SessionControllerAdapter() {
+      @Override public String handleRequest(String action, String argument, String singer) {
+        return handleSmartLinkRequest(action, argument, singer);
+      }
+      @Override public boolean isReady() {
+        return ready && !loading && !importing;
+      }
+    });
     monitor =
         new MicrophoneMonitor(
             context, this::publish, notice -> message = notice, this::inputReading);
@@ -1045,6 +1055,114 @@ public final class SessionController {
     lyrics = Collections.emptyList();
     if (!microphone.enabled()) audio.abandonAudioFocusRequest(focus);
     publish();
+  }
+
+  void startSmartLinkHost() {
+    smartLinkHost.start();
+  }
+
+  void stopSmartLinkHost() {
+    smartLinkHost.stop();
+  }
+
+  String handleSmartLinkRequest(String action, String argument, String singer) {
+    try {
+      switch (action) {
+        case "snapshot":
+          return snapshotJson();
+        case "search":
+          return searchJson(argument);
+        case "reserve":
+          return reserveJson(argument, singer);
+        case "cancel":
+          return cancelJson(argument);
+        case "play":
+          return playJson();
+        case "pause":
+          return pauseJson();
+        case "next":
+          return nextJson();
+        default:
+          return "{"status":"error","error":"Unknown action: " + action}";
+      }
+    } catch (Exception e) {
+      return "{"status":"error","error":"" + e.getMessage().replace(""", "\"") + ""}";
+    }
+  }
+
+  private String snapshotJson() {
+    java.util.List<ReservationQueue.Entry> entries = queue.snapshot();
+    StringBuilder sb = new StringBuilder();
+    sb.append("{"status":"ok","queue":[");
+    for (int i = 0; i < entries.size(); i++) {
+      if (i > 0) sb.append(",");
+      ReservationQueue.Entry e = entries.get(i);
+      sb.append("{"id":"").append(e.id).append("",");
+      sb.append(""title":"").append(e.song.title.replace(""", "\"")).append("",");
+      sb.append(""artist":"").append(e.song.artist.replace(""", "\"")).append("",");
+      sb.append(""singer":"").append(e.singer.replace(""", "\"")).append(""}");
+    }
+    sb.append("],"current":"").append(current != null ? current.title : "").append("",");
+    sb.append(""playing":").append(playing).append("}");
+    return sb.toString();
+  }
+
+  private String searchJson(String query) {
+    java.util.List<Song> found = new java.util.ArrayList<>();
+    for (Song s : songs) {
+      if (s.matches(query)) found.add(s);
+      if (found.size() >= 50) break;
+    }
+    StringBuilder sb = new StringBuilder();
+    sb.append("{"status":"ok","songs":[");
+    for (int i = 0; i < found.size(); i++) {
+      if (i > 0) sb.append(",");
+      Song s = found.get(i);
+      sb.append("{"id":"").append(s.id).append("",");
+      sb.append(""title":"").append(s.title.replace(""", "\"")).append("",");
+      sb.append(""artist":"").append(s.artist.replace(""", "\"")).append("",");
+      sb.append(""code":"").append(s.code.replace(""", "\"")).append(""}");
+    }
+    sb.append("]}");
+    return sb.toString();
+  }
+
+  private String reserveJson(String argument, String singer) {
+    // argument is song id
+    for (Song s : songs) {
+      if (s.id.equals(argument)) {
+        reserve(s, singer);
+        return "{"status":"ok","reserved":"" + s.title.replace(""", "\"") + ""}";
+      }
+    }
+    return "{"status":"error","error":"Song not found"}";
+  }
+
+  private String cancelJson(String argument) {
+    queue.remove(java.util.UUID.fromString(argument));
+    return "{"status":"ok","cancelled":"" + argument + ""}";
+  }
+
+  private String playJson() {
+    if (player == null) {
+      next();
+    } else if (playing) {
+      pause();
+    } else {
+      // Resume via toggle
+      toggle();
+    }
+    return "{"status":"ok","playing":"" + playing + ""}";
+  }
+
+  private String pauseJson() {
+    if (playing) pause();
+    return "{"status":"ok","playing":"" + playing + ""}";
+  }
+
+  private String nextJson() {
+    next();
+    return "{"status":"ok"}";
   }
 
   private void releaseCurrent() {

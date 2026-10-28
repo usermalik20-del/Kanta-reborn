@@ -587,7 +587,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     VIDEO)));
   }
 
-  /** Controls accessory: the host controls that open a real Settings destination. */
+  /** Controls accessory: settings, companion control, Smart Link host, fullscreen. */
   private void controlsAccessory(LinearLayout target) {
     target.addView(button("Settings", () -> {
       dismissAccessory();
@@ -598,6 +598,24 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         button("Companion control", () -> {
           dismissAccessory();
           companionDialog = CompanionDialog.show(this, session);
+        }));
+    boolean hosting = session.smartLinkHost.isHosting();
+    target.addView(button(
+        hosting ? "Stop Smart Link host" : "Start Smart Link host",
+        () -> {
+          dismissAccessory();
+          if (hosting) {
+            session.stopSmartLinkHost();
+          } else {
+            session.startSmartLinkHost();
+            String code = session.smartLinkHost.pairingCode();
+            new android.app.AlertDialog.Builder(MainActivity.this)
+                .setTitle("Smart Link pairing code")
+                .setMessage("Share this code with the phone app: " + code)
+                .setPositiveButton("OK", null)
+                .show();
+          }
+          render();
         }));
     target.addView(
         button("Fullscreen stage", () -> {
