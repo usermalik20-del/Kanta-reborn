@@ -20,7 +20,7 @@ android {
 // Framework-free domain checks can run before spending emulator/macOS minutes.
 def coreClasses = layout.buildDirectory.dir('core-regression-classes')
 tasks.register('compileCoreRegression', JavaCompile) {
-    source = fileTree('src/main/java') { include 'ph/kanta/reborn/core/**/*.java'; exclude 'ph/kanta/reborn/core/catalog/**'; exclude 'ph/kanta/reborn/core/legacy/**' }
+    source = fileTree('src/main/java') { include 'ph/kanta/reborn/core/**/*.java'; exclude 'ph/kanta/reborn/core/catalog/**'; exclude 'ph/kanta/reborn/core/legacy/MegContainerImporter.java' }
     source += fileTree('src/test/java') { include 'ph/kanta/reborn/core/**/*.java' }
     classpath = files()
     destinationDirectory = coreClasses
