@@ -751,3 +751,19 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Validation:** `candidate`; fresh CI on the fix branch is pending. Do not mark verified until Gradle compilation, the browser interoperability step, and the remaining Android runtime checks pass on the same candidate SHA.
 
 **Recurrence rule:** when adding an Android SDK-backed implementation under `ph/kanta/reborn/core`, explicitly decide whether it belongs in the host-JVM test source set. Never remove it from the app source set to satisfy pure-JVM tests. Keep `pipefail` enabled for any build command whose output is piped through `tee`; treat a missing test-host class as a secondary symptom until the preceding compile result is known.
+
+## Website — SEO metadata reintroduced retired product branding (2026-10-28)
+
+**Fingerprint:** Android validation, step `Verify KANTA product branding`; output `Legacy branding found` for `apps/web/{android,features,guide,index,ios-download,licenses,songbook,support}.html`.
+
+**Affected run:** [PR validation run #40688484944](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40688484944), merge candidate containing main SEO commit `4fd3d24` and Android CI repair PR #111. The failure occurred before Android compilation, so it is independent of the host-JVM regression issue above.
+
+**Cause (confirmed):** merged SEO PR #110 inserted the retired product name into eight public HTML titles and meta descriptions to target compatibility searches. This violates `tools/check-product-branding.py` and the public-surface branding contract. The Android workflow's path filters did not run for web-only changes, and website/deploy validation did not invoke the branding guard, allowing the regression to reach main.
+
+**Candidate fix:** replace the legacy product name in public SEO copy with accurate KANTA-specific descriptions; add the branding guard and its file path to website validation and Vercel pre-deploy validation. Candidate changes are on PR #111's branch; exact commits are visible in the PR history.
+
+**Regression coverage:** the existing branding checker rejects the retired brand anywhere under `apps/`; website validation and deployment now invoke it for web changes. No allowlist was added and the branding contract was not weakened.
+
+**Validation:** `candidate`; the updated website and Android workflows must pass on the final PR head before this record is marked verified.
+
+**Recurrence rule:** never solve a branding-check failure by excluding SEO metadata or weakening the checker. Website-only copy changes must run the public-surface branding guard before deployment.
