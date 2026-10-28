@@ -11,7 +11,7 @@ on:
       - 'tools/capture-ios-runtime.py'
       - 'tools/verify-android-companion-interface.py'
       - 'tools/prepare-verified-downloads.py'
-      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/**'
     tags:
       - 'ios-rc-*'
   pull_request:
@@ -22,7 +22,7 @@ on:
       - 'tools/capture-ios-runtime.py'
       - 'tools/verify-android-companion-interface.py'
       - 'tools/prepare-verified-downloads.py'
-      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/**'
 permissions:
   contents: read
 concurrency:
