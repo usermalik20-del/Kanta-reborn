@@ -40,7 +40,7 @@ STRICT_CSP_DIRECTIVES = {
 HOMEPAGE_CSP_DIRECTIVES = {
     "default-src": frozenset({"'none'"}),
     "img-src": frozenset({"'self'"}),
-    "script-src": frozenset({"'self'", "https://www.googletagmanager.com", "https://pagead2.googlesyndication.com"}),
+    "script-src": frozenset({"'self'", "https://www.googletagmanager.com"}),
     "style-src": frozenset({"'self'", "'unsafe-inline'"}),
     "connect-src": frozenset({"https://www.google-analytics.com"}),
     "base-uri": frozenset({"'none'"}),

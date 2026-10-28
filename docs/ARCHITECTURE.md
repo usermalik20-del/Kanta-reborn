@@ -416,6 +416,12 @@ fails CI when legacy product branding reappears under `apps/` or the Android app
 id changes. Evidence, open items and the rejected alternatives are recorded in
 `replica/meg-format.md`.
 
+## AdSense and the static-site CSP boundary
+
+Keep the route-specific Content Security Policy strict. Google's [AdSense CSP guidance](https://support.google.com/adsense/answer/16283098) requires a nonce-based strict policy and a nonce on every script tag; a static HTML page and fixed `vercel.json` header cannot safely mint a fresh per-response nonce. Do not add the AdSense loader or widen the policy with `unsafe-inline`, `unsafe-eval`, broad third-party source lists, or a fixed nonce as a workaround.
+
+AdSense remains disabled until a nonce-capable response architecture is implemented and reviewed. In particular, never run third-party advertising JavaScript on the client-side private Songbook, where the decrypted song list is present in the page. Any future ad integration must preserve the explicit Help, Legal, Privacy, and private-Songbook exclusions, update the privacy notice, and pass route-specific CSP tests.
+
 ## Dim-3 catalog ownership (Option 3b, accepted 2026-10-28)
 
 Folder scan (`songs/`) is the single authoritative catalog source for KANTA Karaoke.
@@ -427,10 +433,21 @@ Constraints preserved:
 - One catalog, one playback path.
 - The decoder never touches `ReservationQueue` or `RenderedPlaybackClock` owners.
 - Key material is needed only at import time, supplied at runtime — never committed to repo/CI (Option B).
-- MKMD decode port stays framework-free in `core/songbook/`, fixture-tested via `coreRegression`.
+- MKMD decode port stays framework-free in `core/legacy/MkmdDecoder.java`, fixture-tested via `coreRegression`.
+
+Shipped (2026-10-28):
+- `MkmdDecoder` (AES-256-CBC + raw DEFLATE, 64 MB caps both directions, post-decode
+  signature re-validation) and `MegContainerImporter` (user-initiated importer,
+  `O_EXCL|O_NOFOLLOW` 0600 temp files, delete-on-failure) live in `core/legacy/`.
+  `MegContainerImporter` is excluded from the framework-free `coreRegression` task
+  because it uses `android.net.Uri`; `MkmdDecoder` stays in it.
+- `SqliteSongCatalog.importFromLegacyContainer(...)` is the public entry point; it is
+  never called from `rebuild()`.
+- `apps/android/THIRD_PARTY_NOTICES.md` records the ported decoder (runtime key only).
+- `MkmdDecoderRegressionTests` covers round-trip (MIDI/WAVE/MP3) and adversarial
+  inputs (block alignment, bad magic, unsupported version, wrong key, 64 MB cap).
 
 Open items:
-- Add `THIRD_PARTY_NOTICES.md` entry for the ported decoder if kept open-source.
-- Verify `ShubCompatibilityRegressionTests` + new JVM fixtures cover MKMD round-trip
-  and adversarial inputs before any device acceptance.
-- Implement the user-initiated importer flow (separate from catalog rebuild).
+- Device acceptance of the importer against a real Meg container (hosted CI runs the
+  JVM fixtures only; a green build is not device acceptance).
+- The importer has no UI surface yet; it is reachable only through the catalog API.

@@ -227,6 +227,9 @@ The candidate now uses six test methods and updates the runtime's required-test 
 
 **Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.
 
+## AdSense / CSP safety gate
+
+The static Vercel site must not load `adsbygoogle.js` while the response path cannot provide a fresh nonce on every script tag. Keep the route-specific CSP strict; do not substitute a static nonce or broad allowlist. `test_website_security_contract.py` asserts that AdSense remains disabled across public pages until a reviewed nonce-capable response architecture is available. The private Songbook must never execute third-party ad JavaScript.
 
 ## iOS More-menu route push regression — 2026-10-28
 
@@ -238,3 +241,11 @@ The candidate repair makes More-menu selections append typed destinations to a `
 ## iOS More-menu navigation path regression — 2026-10-28
 
 The path-based More-menu candidate failed on iPad in [run #40693553013](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40693553013): multiple destinations lacked their expected navigation title, and the Done button was missing. The current candidate attaches the typed destination resolver and Done toolbar to a stable ZStack root inside the NavigationStack. The source-contract guard checks that placement, while XCTest still requires each destination's actual title/content and `navigation.done`. Do not accept the repair until focused iPhone smoke and both complete device walkthroughs pass on the exact same head SHA.
+
+### Resolution (2026-10-29)
+
+The path-based More-menu repair described above was merged to `main` as PR #113
+(merge commit `80ae286`). The source-contract guard, XCTest destination-title and
+`navigation.done` assertions, and the `library.content` marker assertion are all on
+main. Exact-SHA focused smoke and both device walkthroughs remain the acceptance
+evidence for that repair and are observed on the resulting main SHA.
