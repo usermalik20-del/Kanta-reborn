@@ -32,6 +32,10 @@ def verify():
             and 'func request(_ requested: Owner' in root),
         'host receives navigation presentation state': 'navigationSheetPresented: activeNavigation != nil' in root and 'navigationSheetPresented' in host,
         'single authoritative navigation state': 'navigationPresentation' not in root and 'navigationTransition' not in root,
+        'More-menu destinations and Done toolbar stay on a stable stack root': (
+            'ZStack {\n                            destination(sheetRoute)\n                        }\n                        .navigationDestination(for: Route.self)' in root
+            and root.index('navigationDestination(for: Route.self)') < root.index('.toolbar {', root.index('NavigationStack(path: $navigationPath)'))
+        ),
         'More-menu destinations push through the NavigationStack path': (
             'NavigationStack(path: $navigationPath)' in root
             and 'navigationDestination(for: Route.self)' in root

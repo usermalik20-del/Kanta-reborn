@@ -746,3 +746,14 @@ These artifacts are retained through November 26, 2026 UTC. They are workflow ar
 **Repair candidate:** More-menu buttons append typed `Route` values to `navigationPath`; direct tab/screenshot entry continues to select `sheetRoute`. The Song Library XCTest now asserts the actual `library.content` marker in addition to the navigation title, and the source-contract guard requires path-based menu pushes. This keeps the test diagnostic and avoids a retry/sleep that would mask a lifecycle defect.
 
 **Status:** candidate branch `fix/ios-library-menu-navigation-20261028`; hosted exact-head validation pending. Do not mark this failure resolved until focused smoke and both device walkthroughs pass on the candidate SHA.
+
+
+## iOS — More-menu pushed destinations missing on iPad (2026-10-28)
+
+**Fingerprint:** PR #113 walkthrough [run #40693553013](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40693553013), iPad job; `testMenuCompanionRemote`, `testMenuICloudSave`, `testMenuLegalPrivacy`, `testMenuSettings`, and `testMenuSongbook` reported missing destination titles or missing `navigation.done`. `testMenuSongLibrary` also failed the Done-toolbar assertion.
+
+**Observed cause:** the candidate appended route values to a bound path, but the failing iPad hierarchy did not expose the pushed destination and the Done control was absent. The precise SwiftUI propagation mechanism is not yet proven; the first candidate attached `navigationDestination` and the toolbar to the conditional `destination(sheetRoute)` view.
+
+**Repair candidate:** attach both modifiers to a stable ZStack root inside the NavigationStack, and add a static contract check for that placement. Keep the actual destination-title and Done-button XCTest assertions; no retries, sleeps, or weakened assertions were added.
+
+**Validation:** candidate. Fresh focused smoke and both iPhone/iPad walkthroughs must pass on the updated PR head before this is marked verified. The main walkthrough on `0556fbb` also had its real device-execution steps cancelled, so it does not supply replacement acceptance evidence.
