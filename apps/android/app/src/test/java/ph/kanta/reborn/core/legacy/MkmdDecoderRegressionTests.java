@@ -32,33 +32,37 @@ public final class MkmdDecoderRegressionTests {
     Arrays.fill(aesIv, (byte) 0x17);
   }
 
-  private static byte[] buildMkmd(byte[] rawPayload) throws Exception {
-    Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
-    deflater.setInput(rawPayload);
-    deflater.finish();
-    ByteArrayOutputStream compressedOut = new ByteArrayOutputStream();
-    byte[] buf = new byte[4096];
-    while (!deflater.finished()) {
-      int n = deflater.deflate(buf);
-      if (n > 0) compressedOut.write(buf, 0, n);
+  private static byte[] buildMkmd(byte[] rawPayload) {
+    try {
+      Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+      deflater.setInput(rawPayload);
+      deflater.finish();
+      ByteArrayOutputStream compressedOut = new ByteArrayOutputStream();
+      byte[] buf = new byte[4096];
+      while (!deflater.finished()) {
+        int n = deflater.deflate(buf);
+        if (n > 0) compressedOut.write(buf, 0, n);
+      }
+      deflater.end();
+      byte[] compressed = compressedOut.toByteArray();
+
+      ByteArrayOutputStream plain = new ByteArrayOutputStream();
+      append(plain, 0x4D, 0x4B, 0x4D, 0x44);
+      append(plain, 0x01);
+      appendLE32(plain, rawPayload.length);
+      appendLE32(plain, compressed.length);
+      plain.write(compressed);
+
+      javax.crypto.Cipher cipher =
+          javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+      cipher.init(
+          javax.crypto.Cipher.ENCRYPT_MODE,
+          new javax.crypto.spec.SecretKeySpec(aesKey, "AES"),
+          new javax.crypto.spec.IvParameterSpec(aesIv));
+      return cipher.doFinal(plain.toByteArray());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to build test fixture", e);
     }
-    deflater.end();
-    byte[] compressed = compressedOut.toByteArray();
-
-    ByteArrayOutputStream plain = new ByteArrayOutputStream();
-    append(plain, 0x4D, 0x4B, 0x4D, 0x44);
-    append(plain, 0x01);
-    appendLE32(plain, rawPayload.length);
-    appendLE32(plain, compressed.length);
-    plain.write(compressed);
-
-    javax.crypto.Cipher cipher =
-        javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
-    cipher.init(
-        javax.crypto.Cipher.ENCRYPT_MODE,
-        new javax.crypto.spec.SecretKeySpec(aesKey, "AES"),
-        new javax.crypto.spec.IvParameterSpec(aesIv));
-    return cipher.doFinal(plain.toByteArray());
   }
 
   private static void decodeRoundTripMidi() throws Exception {
@@ -180,21 +184,21 @@ public final class MkmdDecoderRegressionTests {
     }
   }
 
-  private static void sizeCapRejectsOversizedCompressed() {
+  private static void sizeCapRejectsOversizedCompressed() throws Exception {
     ByteArrayOutputStream plain = new ByteArrayOutputStream();
     append(plain, 0x4D, 0x4B, 0x4D, 0x44);
     append(plain, 0x01);
     appendLE32(plain, 100);
     appendLE32(plain, (long) 64 * 1024 * 1024 + 1);
     byte[] padded = padToBlock(plain.toByteArray());
+    javax.crypto.Cipher cipher =
+        javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+    cipher.init(
+        javax.crypto.Cipher.ENCRYPT_MODE,
+        new javax.crypto.spec.SecretKeySpec(aesKey, "AES"),
+        new javax.crypto.spec.IvParameterSpec(aesIv));
+    byte[] ciphertext = cipher.doFinal(padded);
     try {
-      javax.crypto.Cipher cipher =
-          javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
-      cipher.init(
-          javax.crypto.Cipher.ENCRYPT_MODE,
-          new javax.crypto.spec.SecretKeySpec(aesKey, "AES"),
-          new javax.crypto.spec.IvParameterSpec(aesIv));
-      byte[] ciphertext = cipher.doFinal(padded);
       MkmdDecoder.decode(ciphertext, aesKey, aesIv);
       check(false, "Should reject oversized compressed");
     } catch (MkmdDecoder.DecodeException expected) {
