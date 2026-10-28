@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generated from replica/design/tokens.json -->
 <resources>
-    <!-- Base KANTA Theme (already exists in app) -->
-    <!-- <style name="KantaTheme" parent="android:style/Theme.Material.NoActionBar"> ... </style> -->
+    <!-- Base KANTA Theme -->
+    <style name="KantaTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:colorAccent">#6FE5E8</item>
+        <item name="android:windowBackground">#0B1023</item>
+        <item name="android:navigationBarColor">#0B1023</item>
+        <item name="android:statusBarColor">#0B1023</item>
+    </style>
 
     <!-- TextAppearances -->
     <style name="TextAppearance.Karaoke.Hero" parent="android:TextAppearance">
