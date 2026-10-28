@@ -232,3 +232,7 @@ The candidate now uses six test methods and updates the runtime's required-test 
 Run `cd apps/android && ./gradlew --no-daemon :app:coreRegression` for framework-free core/browser protocol tests. The host-JVM source set deliberately excludes `core/catalog/SqliteSongCatalog.java`, because that implementation uses Android SDK classes; the normal `:app:assembleDebug` task compiles it against the Android SDK. Keep the exclusion and its static contract check in sync when adding new Android-backed core implementations.
 
 The Android CI build step uses `set -o pipefail` before piping Gradle output to `tee build.log`. A failing Gradle task must stop the workflow immediately rather than being masked by the successful exit code from `tee`. If the browser host later reports `ClassNotFoundException`, verify that `:app:compileCoreRegression` completed successfully first.
+
+## Website branding and SEO checks
+
+Website validation and the Vercel pre-deploy validation run `python3 tools/check-product-branding.py` in addition to route, CSP and JavaScript checks. When changing HTML titles or meta descriptions, keep copy KANTA-specific and do not use the retired product brand as an SEO keyword. The workflow path filters include the branding checker so changing the guard also runs the affected validation.
