@@ -157,7 +157,7 @@
     </style>
 
     <!-- Widget Styles -->
-    <style name="Widget.Karaoke.Card" parent="Widget.MaterialComponents.CardView">
+    <style name="Widget.Karaoke.Card" parent="android:Widget.CardView">
         <item name="cardBackgroundColor">@color/kanta_surface</item>
         <item name="cardCornerRadius">@dimen/kanta_radius_xl</item>
         <item name="cardElevation">0dp</item>
@@ -170,17 +170,15 @@
 
     <style name="Widget.Karaoke.CountdownRing" parent="android:Widget">
         <item name="android:strokeWidth">@dimen/karaoke_countdown_ring_stroke</item>
-        <item name="karaoke_ringColor">@color/karaoke_countdown_ring</item>
-        <item name="karaoke_ringTrackColor">@color/kanta_hairline</item>
     </style>
 
-    <style name="Widget.Karaoke.AdjustmentKnob" parent="Widget.AppCompat.SeekBar">
+    <style name="Widget.Karaoke.AdjustmentKnob" parent="android:Widget.SeekBar">
         <item name="android:progressDrawable">@drawable/karaoke_knob_track</item>
         <item name="android:thumb">@drawable/karaoke_knob_thumb</item>
         <item name="android:splitTrack">false</item>
     </style>
 
-    <style name="Widget.Karaoke.KeypadKey" parent="Widget.AppCompat.Button">
+    <style name="Widget.Karaoke.KeypadKey" parent="android:Widget.Button">
         <item name="android:background">@drawable/karaoke_keypad_key_bg</item>
         <item name="android:textAppearance">@style/TextAppearance.Karaoke.Keypad</item>
         <item name="android:minWidth">@dimen/karaoke_keypad_key_min</item>
@@ -196,7 +194,7 @@
         <item name="android:background">@drawable/karaoke_keypad_key_backspace_bg</item>
     </style>
 
-    <style name="Widget.Karaoke.ReserveButton" parent="Widget.AppCompat.Button">
+    <style name="Widget.Karaoke.ReserveButton" parent="android:Widget.Button">
         <item name="android:background">@drawable/karaoke_reserve_btn_bg</item>
         <item name="android:textAppearance">@style/TextAppearance.Karaoke.SongTitle</item>
         <item name="android:textColor">@color/kanta_on_accent</item>
@@ -205,7 +203,7 @@
         <item name="android:minHeight">40dp</item>
     </style>
 
-    <style name="Widget.Karaoke.PositionBadge" parent="Widget.AppCompat.TextView">
+    <style name="Widget.Karaoke.PositionBadge" parent="android:Widget.TextView">
         <item name="android:textAppearance">@style/TextAppearance.Karaoke.Badge</item>
         <item name="android:background">@drawable/karaoke_badge_bg</item>
         <item name="android:paddingHorizontal">@dimen/kanta_spacing_2</item>
@@ -214,7 +212,7 @@
     </style>
 
     <!-- Search Field -->
-    <style name="Widget.Karaoke.SearchField" parent="Widget.AppCompat.EditText">
+    <style name="Widget.Karaoke.SearchField" parent="android:Widget.EditText">
         <item name="android:background">@drawable/karaoke_search_field_bg</item>
         <item name="android:textColor">@color/kanta_text_primary</item>
         <item name="android:textColorHint">@color/kanta_text_tertiary</item>
@@ -224,7 +222,7 @@
     </style>
 
     <!-- Remote Status -->
-    <style name="Widget.Karaoke.RemoteStatus" parent="Widget.AppCompat.TextView">
+    <style name="Widget.Karaoke.RemoteStatus" parent="android:Widget.TextView">
         <item name="android:textAppearance">@style/TextAppearance.Karaoke.Caption</item>
         <item name="android:drawablePadding">@dimen/kanta_spacing_2</item>
         <item name="android:gravity">center_vertical</item>
