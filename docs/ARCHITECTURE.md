@@ -41,6 +41,8 @@ The app-level `KantaTabBar` is presentation-only: it emits a destination and own
 
 The embedded Stage navigation chevron uses `stage.more`; the fullscreen-only More control uses `stage.controls.more`. These identifiers are distinct because the controls belong to different, mutually exclusive presentations. Keep the stable IDs and their source-contract/XCTest coverage aligned.
 
+The navigation sheet uses a typed `NavigationStack(path: $navigationPath)`. `sheetRoute` selects the root for direct tab and screenshot entry; buttons inside More append typed `Route` values so SwiftUI owns the destination push instead of replacing the sheet root from inside a List row. The shared presentation gate remains the single owner until Done dismisses the sheet and its `onDismiss` callback releases ownership. The Song Library walkthrough must observe both the Library navigation bar and `library.content`; a successful tap event without the destination view is a failure.
+
 When closing an online YouTube preview, clear lifecycle presentation state and retire the player owner. Retirement must invalidate callbacks and detach/hide the native `WKWebView` synchronously before deferring media suspension and blank-page cleanup. WebKit cleanup must not hold the presentation transition, and retired coordinators must remain terminal. The native lifecycle regression asserts synchronous detachment; simulator walkthroughs separately verify the user-visible transition.
 
 
