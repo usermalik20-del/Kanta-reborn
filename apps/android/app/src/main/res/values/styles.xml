@@ -156,12 +156,10 @@
         <item name="android:textColor">@color/kanta_text_tertiary</item>
     </style>
 
-    <!-- Widget Styles -->
-    <style name="Widget.Karaoke.Card" parent="Widget.CardView">
-        <item name="cardBackgroundColor">@color/kanta_surface</item>
-        <item name="cardCornerRadius">@dimen/kanta_radius_xl</item>
-        <item name="cardElevation">0dp</item>
-        <item name="cardUseCompatPadding">true</item>
+    <!-- Widget Styles - simple FrameLayout-based cards -->
+    <style name="Widget.Karaoke.Card" parent="android:Widget.FrameLayout">
+        <item name="android:background">@color/kanta_surface</item>
+        <item name="android:padding">@dimen/kanta_spacing_6</item>
     </style>
 
     <style name="Widget.Karaoke.Card.Glow" parent="Widget.Karaoke.Card">
