@@ -385,7 +385,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       tabs.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
     }
     root.addView(tabs);
-    stage.refresh();
+    if (stagePresenter != null) stagePresenter.refresh();
   }
 
   /**
@@ -1259,7 +1259,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       requestPermissions(new String[] {android.Manifest.permission.CAMERA}, CAMERA);
       return;
     }
-    camera.start(fullscreen != null && fullscreen.isShowing() ? fullscreenStage : stage);
+    camera.start(fullscreen != null && fullscreen.isShowing() ? fullscreenStage : stagePresenter);
     session.publish();
   }
 

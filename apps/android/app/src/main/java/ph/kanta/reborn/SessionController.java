@@ -44,7 +44,7 @@ public final class SessionController {
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
   List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
-  List<MidiLyrics.Cue> lyrics = Collections.emptyList();
+  public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
   Song current;
   UUID playbackIdentity;
@@ -73,12 +73,12 @@ public final class SessionController {
 
   CompletedScore lastScore;
 
-  String singer = "", message = "Opening your library…";
+  public String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
   private Listener listener;
   private ScoreSink scoreSink;
-  private PlaybackBackend player, pending;
-  private RenderedPlaybackClock currentClock;
+  public PlaybackBackend player, pending;
+  public RenderedPlaybackClock currentClock;
   float volume = 1, tempo = 1;
   int pitch;
   float lyricScale = 1;
@@ -772,7 +772,7 @@ public final class SessionController {
     publish();
   }
 
-  private void saveQueue() {
+  private public void saveQueue() {
     if (repository == null) return;
     List<ReservationQueue.Entry> saved = queue.snapshot();
     io.execute(
@@ -1056,7 +1056,7 @@ public final class SessionController {
     playing = false;
   }
 
-  long position() {
+  public long position() {
     try {
       return player == null ? 0 : player.position();
     } catch (IllegalStateException e) {
@@ -1064,7 +1064,7 @@ public final class SessionController {
     }
   }
 
-  RenderedPlaybackClock getClock() {
+  public RenderedPlaybackClock getClock() {
     if (player != null) return player.getClock();
     return currentClock;
   }
