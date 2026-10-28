@@ -377,12 +377,6 @@ final class KantaVisualWalkthroughUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars[expectedTitle].waitForExistence(timeout: waitSeconds),
                       "Menu destination did not present its expected screen: " + destination)
-        if destination == "Song Library" {
-            XCTAssertTrue(
-                app.descendants(matching: .any)["library.content"].waitForExistence(timeout: 5),
-                "Song Library must present LibraryView content rather than leave the More root visible"
-            )
-        }
         capture("menu-" + destination, app)
 
         let done = app.buttons["navigation.done"]

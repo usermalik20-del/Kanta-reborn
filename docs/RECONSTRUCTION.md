@@ -32,9 +32,13 @@ older SHA cannot cancel the current acceptance run.
   SEO meta/title strings. The pages are rebranded and `tools/check-product-branding.py`
   is 4/4 again.
 
-**Pull requests (2026-10-29).** #113 (iOS More-menu destinations pushed through the
-`NavigationStack` path) and #112 (AdSense deferred until a nonce-capable CSP exists) are
-merged to main. #104, #111, #114 and #115 are closed as superseded: their diagnoses were
+**Pull requests (2026-10-29).** #112 (AdSense deferred until a nonce-capable CSP exists) is
+merged to main. #113 (iOS More-menu destinations pushed through the `NavigationStack` path)
+was merged and then **reverted**: the iOS visual walkthrough was green on `d3e34f95`,
+`24e091b1` and `37f7ace1`, and failed on both devices on the `80ae286` merge and on
+`2a01654f`. The revert restores a `RootView.swift` byte-identical to the green builds;
+the original Song Library transition failure was intermittent, and the candidate made it
+deterministic. #104, #111, #114 and #115 are closed as superseded: their diagnoses were
 accurate for the commits they were raised against, but every listed defect is fixed and
 validated on main, and #114/#115 would have reverted validated work. The CI hardening they
 described was adopted directly rather than through those branches.

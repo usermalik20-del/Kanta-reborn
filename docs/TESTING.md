@@ -242,10 +242,32 @@ The candidate repair makes More-menu selections append typed destinations to a `
 
 The path-based More-menu candidate failed on iPad in [run #40693553013](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40693553013): multiple destinations lacked their expected navigation title, and the Done button was missing. The current candidate attaches the typed destination resolver and Done toolbar to a stable ZStack root inside the NavigationStack. The source-contract guard checks that placement, while XCTest still requires each destination's actual title/content and `navigation.done`. Do not accept the repair until focused iPhone smoke and both complete device walkthroughs pass on the exact same head SHA.
 
-### Resolution (2026-10-29)
+### Resolution (2026-10-29) — repair reverted
 
-The path-based More-menu repair described above was merged to `main` as PR #113
-(merge commit `80ae286`). The source-contract guard, XCTest destination-title and
-`navigation.done` assertions, and the `library.content` marker assertion are all on
-main. Exact-SHA focused smoke and both device walkthroughs remain the acceptance
-evidence for that repair and are observed on the resulting main SHA.
+The path-based More-menu candidate was merged as PR #113 (`80ae286`) and then **reverted**
+after the walkthrough evidence disproved it. iOS visual walkthrough history is unambiguous:
+
+| SHA | Walkthrough |
+| --- | --- |
+| `d3e34f95` | success |
+| `24e091b1` | success |
+| `37f7ace1` | success |
+| `80ae286a` (PR #113 merged) | **failure** |
+| `2a01654f` | **failure** |
+
+Before the merge, both devices passed three consecutive runs. After it, both devices failed
+deterministically across `testMenuSongLibrary`, `testMenuCompanionRemote`, `testMenuICloudSave`,
+`testMenuLegalPrivacy`, `testMenuSettings`, `testMenuSongbook`,
+`testStarterPlaybackAndControls` and `testOnlinePreviewPreservesPausedStarterAndLocalResume`
+("Menu destination did not present its expected screen", "The navigation host must provide
+Done", "Failed to tap navigation.done").
+
+Reverting the candidate restores a state whose `RootView.swift` is byte-identical to the
+green `d3e34f95`/`24e091b1` builds. The original `testMenuSongLibrary` iPhone failure was
+**intermittent** (iPad passed in the same run); the candidate converted it into a
+deterministic two-device failure, so the revert is the strictly better state.
+
+Carry forward: the intermittent Song Library transition remains unproven-good and needs a
+repair validated by focused smoke plus both device walkthroughs on one exact SHA before it
+is accepted. Merging an iOS repair requires that walkthrough evidence, not merely a
+mergeable branch.

@@ -775,11 +775,20 @@ Google's [official AdSense CSP guidance](https://support.google.com/adsense/answ
 
 ## Resolution log — 2026-10-29 (main `c784fe5`+)
 
-**iOS More-menu / Song Library navigation (PR #113).** Merged to `main` (`80ae286`).
-More-menu selections now append typed `Route` values to the `NavigationStack` path;
-the XCTest asserts the real destination title/content and `navigation.done`, and
-`tools/check-ios-presentation-contract.py` enforces the path-based placement. Final
-exact-SHA device acceptance is read from the walkthrough run on the resulting main SHA.
+**iOS More-menu / Song Library navigation (PR #113) — MERGED THEN REVERTED.**
+Merged as `80ae286`, reverted after the walkthrough proved it a regression. Walkthrough
+history: `d3e34f95` success, `24e091b1` success, `37f7ace1` success, `80ae286a` failure,
+`2a01654f` failure. The candidate replaced `sheetRoute` assignment with
+`navigationPath.append(...)` inside the More `List`, and both devices then failed
+deterministically across eight cases with "Menu destination did not present its expected
+screen" / "The navigation host must provide Done" / "Failed to tap navigation.done".
+`RootView.swift`, the added `library.content` assertion and the path-routing contract guard
+were reverted to their `c784fe5` state, which is byte-identical to the green builds.
+
+**Recurrence rule:** an iOS navigation repair is only accepted with focused-smoke plus
+both-device walkthrough evidence on one exact SHA. A mergeable branch is not acceptance,
+and a repair that turns an intermittent single-case failure into a deterministic
+two-device failure must be reverted, not kept.
 
 **Website AdSense vs strict CSP (PR #112).** Merged after reconciling this ledger and
 `docs/ARCHITECTURE.md` with the dim-3 catalog-ownership section. The AdSense loader is

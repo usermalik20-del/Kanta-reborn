@@ -77,7 +77,6 @@ struct RootView: View {
     @StateObject private var presentationGate = KantaPresentationGate()
     @Environment(\.scenePhase) private var scenePhase
     @State private var sheetRoute: Route = .menu
-    @State private var navigationPath: [Route] = []
     @State private var activeNavigation: NavigationSheet? = nil
     @State private var navigationDismissing = false
     @State private var activeTab: KantaTabBar.Destination = .stage
@@ -87,7 +86,7 @@ struct RootView: View {
         var id: String { rawValue }
     }
 
-    private enum Route: String, Identifiable, Hashable {
+    private enum Route: String, Identifiable {
         case menu, library, queue, remote, settings, legal, icloud, songbook
         var id: String { rawValue }
     }
@@ -133,30 +132,24 @@ struct RootView: View {
                 .allowsHitTesting(false)
                 .sheet(item: $activeNavigation, onDismiss: {
                     sheetRoute = .menu
-                    navigationPath = []
                     activeTab = .stage
                     navigationDismissing = false
                     presentationGate.completeDismissal(.navigation)
                 }) {
                     _ in
-                    NavigationStack(path: $navigationPath) {
-                        ZStack {
-                            destination(sheetRoute)
-                        }
-                        .navigationDestination(for: Route.self) { route in
-                            destination(route)
-                        }
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") {
-                                    guard !navigationDismissing else { return }
-                                    navigationDismissing = true
-                                    presentationGate.beginDismissal(.navigation)
-                                    activeNavigation = nil
+                    NavigationStack {
+                        destination(sheetRoute)
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("Done") {
+                                        guard !navigationDismissing else { return }
+                                        navigationDismissing = true
+                                        presentationGate.beginDismissal(.navigation)
+                                        activeNavigation = nil
+                                    }
+                                    .accessibilityIdentifier("navigation.done")
                                 }
-                                .accessibilityIdentifier("navigation.done")
                             }
-                        }
                     }
                 }
         }
@@ -197,8 +190,6 @@ struct RootView: View {
     }
 
     private func openNavigation(_ route: Route) {
-        // Tab selections replace the sheet root; More-menu actions push a route.
-        navigationPath = []
         if activeNavigation == nil {
             presentationGate.request(.navigation) {
                 sheetRoute = route
@@ -214,14 +205,14 @@ struct RootView: View {
         case .menu:
             List {
                 Section("KANTA") {
-                    Button("Song Library") { navigationPath.append(.library) }
-                    Button("KANTA Songbook") { navigationPath.append(.songbook) }
-                    Button("Settings") { navigationPath.append(.settings) }
-                    Button("Companion Remote") { navigationPath.append(.remote) }
+                    Button("Song Library") { sheetRoute = .library }
+                    Button("KANTA Songbook") { sheetRoute = .songbook }
+                    Button("Settings") { sheetRoute = .settings }
+                    Button("Companion Remote") { sheetRoute = .remote }
                     #if !KANTA_PERSONAL_SIGNING
-                    Button("iCloud Save") { navigationPath.append(.icloud) }
+                    Button("iCloud Save") { sheetRoute = .icloud }
                     #endif
-                    Button("Legal & Privacy") { navigationPath.append(.legal) }
+                    Button("Legal & Privacy") { sheetRoute = .legal }
                 }
             }
             .navigationTitle("More")
