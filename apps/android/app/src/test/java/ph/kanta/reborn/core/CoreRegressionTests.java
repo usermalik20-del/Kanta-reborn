@@ -7,6 +7,7 @@ import java.security.*;
 import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
+import ph.kanta.reborn.core.legacy.MkmdDecoderRegressionTests;
 
 /** No framework/JUnit dependency: run on a server JVM before allocating cloud CI. */
 public final class CoreRegressionTests {
