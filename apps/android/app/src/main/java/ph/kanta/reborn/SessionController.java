@@ -42,7 +42,7 @@ public final class SessionController {
   long visualGeneration;
   private long stageRequest;
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
-  List<Song> songs = Collections.emptyList();
+  public List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
   public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
@@ -86,7 +86,7 @@ public final class SessionController {
   final PartyAudio party;
   final MicrophoneInput microphone;
   final MicrophoneMonitor monitor;
-  private final android.content.SharedPreferences options;
+  public final android.content.SharedPreferences options;
   boolean foreground, loopEnabled, auxiliaryInterrupted, assigningPad;
   String loopSongId = "";
   final String[] customPads = new String[8];
@@ -772,7 +772,7 @@ public final class SessionController {
     publish();
   }
 
-  private public void saveQueue() {
+  public void saveQueue() {
     if (repository == null) return;
     List<ReservationQueue.Entry> saved = queue.snapshot();
     io.execute(

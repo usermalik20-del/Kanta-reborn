@@ -417,9 +417,8 @@ public final class StagePresenterImpl extends FrameLayout
 
   /** Delegates to BackgroundStage for camera mounting. */
   public void mountCamera(android.view.View preview) {
-    backgroundStage.getCameraPreview().setSurfaceProvider(null); // clear previous
-    // BackgroundStage doesn't have mountCamera, use PreviewView directly
-    // We'll add the preview view to the background stage
+    // BackgroundStage manages its own PreviewView for camera
+    // This is called from CameraStage when moving camera to this presenter
   }
 
   /** Delegates to BackgroundStage for camera unmounting. */

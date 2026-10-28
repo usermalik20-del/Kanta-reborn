@@ -16,6 +16,8 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
+import ph.kanta.reborn.content.ContentRoot;
+import ph.kanta.reborn.content.ContentScanner;
 import ph.kanta.reborn.core.catalog.SongCatalog;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.score.ScoreSink;
