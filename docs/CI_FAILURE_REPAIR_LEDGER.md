@@ -17,6 +17,22 @@ Every failed CI job with an engineering fix must receive a record containing:
 
 After a relevant CI run becomes green, update this ledger **in a separate docs-only commit** recording the actual run ID and SHA, then confirm the documentation commit did not alter production behavior. If a docs-only commit triggers a new workflow, don't imply the prior green result validated the new SHA's source; state the distinction. If validation fails, retain the candidate record and continue the repair. Never rewrite a historical failure as though it never occurred.
 
+## Android — predictive-back lint regression (2026-10-27)
+
+**Fingerprint:** reconstruction [run #40485807248](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807248), Android job `android`, step `Build, lint and domain regression tests`; `GestureBackNavigation` at `apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java:177`.
+
+**Cause (confirmed):** the Compact Workspace commit added an `Activity.onBackPressed()` override to dismiss transient accessories. The app targets API 36, where predictive-back gestures bypass the deprecated activity override. Android lint correctly failed the build; browser and emulator checks were skipped after that failure. The iOS job, website validation, deployment and unsigned iOS archive passed on the same source.
+
+**Fix merged:** [PR #101](https://github.com/usermalik20-del/Kanta-reborn/pull/101), merged as [`9a2a0fc`](https://github.com/usermalik20-del/Kanta-reborn/commit/9a2a0fca3778ff10eb549c319d7f400f33661b28). The implementation registers a lifecycle-bound AndroidX `OnBackPressedCallback` and enables it only while an accessory is active. The workspace listener disables it when the accessory closes, allowing default dispatcher navigation when stage-only. No lint suppression or baseline change was used.
+
+**Regression coverage:** `RuntimeChecks.workspaceBackNavigationChecks` opens Search, dispatches back through `OnBackPressedDispatcher`, and asserts Search closes, the persistent stage remains attached, and the callback is disabled. `tools/check-android-workspace-contract.py` rejects the legacy override and requires dispatcher registration and runtime coverage.
+
+**Exact-candidate validation before merge:** reconstruction [#40488936819](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40488936819), unsigned archive [#40488936791](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40488936791), and iPhone/iPad walkthrough [#40488936570](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40488936570) passed on candidate `83b195b`; both device jobs passed.
+
+**Post-merge validation:** reconstruction [#40499591316](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591316), unsigned archive [#40499591326](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591326), and full iPhone/iPad walkthrough [#40499591484](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591484) all passed on merge SHA `9a2a0fc`. Android lint/domain, browser interoperability, private-interface validation and emulator runtime passed; both iOS device jobs executed and passed. The defect is resolved. Keep the historical failure and this passing repair evidence together.
+
+**Recurrence rule:** keep predictive back in AndroidX's dispatcher; never restore `Activity.onBackPressed()` or suppress `GestureBackNavigation`. Verify callback enablement follows accessory activation/dismissal so stage-only back falls through to normal navigation.
+
 ## iOS — Search inaccessible after leaving Library
 
 **Fingerprint:** `KantaVisualWalkthroughUITests.testStarterPlaybackAndControls`; `Search is blocked after leaving the library`; iPhone/iPad simulator runtime walkthrough.
@@ -661,6 +677,39 @@ After the six-route navigation repair, website validation [run #40279129599](htt
 
 **Runtime gates remain open:** the Search-to-keypad interaction and starter-playback state transition are not declared fixed by this documentation/branch-sync repair. Reconstruction, focused smoke, unsigned archive, and both iPhone/iPad walkthrough jobs must pass on the synchronized code SHA. If no workflow is emitted for that head, treat it as an Actions-trigger blocker rather than success.
 
+## Verified download packaging — rejected manual inputs and recovered artifact listing (October 27, 2026)
+
+**Fingerprint:** `.github/workflows/verified-downloads.yml`, job `package`, step `Package exact-SHA accepted builds`; source is the accepted native SHA `41c8dddeebe7d096322994e8af09c8c48a76308a`. These were manual packaging attempts, not application runtime failures.
+
+**Attempt 1 — abbreviated source SHA rejected:** [run #40432412427](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432412427), package job `121953078778`. The dispatch input was `SOURCE_SHA=41c8ddde`; the script stopped with `SOURCE_SHA must be a full 40-character Git commit SHA`. This is the intended fail-closed input contract, not a regression. For a manual dispatch, supply the full 40-character SHA or leave the optional input blank to use the dispatch ref's SHA.
+
+**Attempt 2 — ambiguous artifact listing rejected:** [run #40432687096](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432687096), package job `121953963441`. The contract tests passed, but packaging stopped with `Expected exactly one android-reconstruction-checks artifact from run 40424817074; found 2`. The script correctly refused to choose an ambiguous artifact. A later GitHub artifact query returned one matching artifact, [#12701709708](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424817074/artifacts/12701709708), for the same source run. The exact reason the earlier API response exposed two matches is **unconfirmed**; treat it as a transient listing inconsistency rather than weakening the uniqueness guard.
+
+**Successful recovery:** [run #40432983408](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408) passed both the contract and packaging jobs for the full SHA `41c8dddeebe7d096322994e8af09c8c48a76308a`. It verified the original Android bytes from reconstruction run #40424817074 and the original iOS bytes from unsigned archive run #40424816823, then produced:
+- Android preview download [artifact #12703290582](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408/artifacts/12703290582), 25,572,381 bytes, ZIP SHA-256 `cd94ef8d3f6a20d0b6633a8c86002eb2bf384b7ce704c89a84fe3aac282dc95e`.
+- iOS unsigned download [artifact #12703260649](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408/artifacts/12703260649), 25,137,519 bytes, ZIP SHA-256 `b8f2c4fc5a969d631289706f6ee813c96d8305d92d706d0fa8ea83972fd805d1`.
+- Verified download manifest [artifact #12702981944](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40432983408/artifacts/12702981944), 544 bytes, ZIP SHA-256 `f56cc1f9a1b06a96b26fd355e5594430ef292aeb945d73783452cdf628e8ffcf`.
+
+These artifacts are retained through November 26, 2026 UTC. They are workflow artifacts, not a new release; the published release still contains the two accepted `41c8ddd` binaries. No source-code repair was required: the short-SHA rejection was correct, and retrying after the artifact listing stabilized passed without relaxing exact-source or unique-artifact checks.
+
+**Recurrence rule:** preserve full-SHA validation and fail-closed artifact uniqueness. If the artifact endpoint reports multiple matches for a completed source run, inspect the exact run/artifact metadata and retry the packaging workflow once; if ambiguity persists, stop and diagnose the API listing instead of selecting an arbitrary artifact.
+
+**Status:** verified operational recovery; no application or release-gate source change.
+
+
+## Exact-SHA release gate omitted Android-only changes — October 27, 2026
+
+**Fingerprint:** `.github/workflows/ios-visual-walkthrough.yml` and `.github/workflows/ios-runtime-artifacts.yml` path filters; Android-only source changes could leave the latest full iPhone/iPad walkthrough and unsigned iOS archive on an older SHA even when reconstruction passed on the newer SHA.
+
+**Observed state:** code-bearing main merge [`8d742da`](https://github.com/usermalik20-del/Kanta-reborn/commit/8d742da4fbc1dfa984466351e0f8dea68859120a) passed reconstruction [run #40440909666](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40440909666) and unsigned archive [run #40440909660](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40440909660), while the latest full iPhone/iPad walkthrough remained [run #40424816930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816930) on native source `41c8ddd`. Inspection confirmed that the iOS workflow push/PR path filters excluded `apps/android/**`. This conflicts with the exact-SHA acceptance rule in `docs/ARCHITECTURE.md` and `apps/web/downloads.json`.
+
+**Repair candidate:** add `apps/android/**` to push and pull-request path filters for both iOS workflows, add `tools/verify-android-companion-interface.py` to the full walkthrough filter, and add regression tests in `tools/tests/test_verified_downloads.py` to keep those paths present. Update architecture and testing documentation. This changes CI trigger coverage only; it does not change application runtime or advance the public download manifest.
+
+**Acceptance:** on the exact PR head, verify reconstruction, unsigned archive and both iPhone/iPad walkthrough jobs actually start and pass. After merge, verify the same workflows start on the exact main commit. Keep `apps/web/downloads.json` and published release assets pinned to `41c8ddd` until all required gates pass for one SHA.
+
+**Recurrence rule:** whenever an Android-only or release-gate-tool change lands, inspect the head SHA of reconstruction, archive and walkthrough runs before advancing public download provenance. A workflow that did not trigger is not a pass.
+
+**Status:** candidate; hosted validation pending.
 ## PR #96 and PR #98 resolution — 2026-10-27 (compact workspace accepted and released)
 
 **Resolution:** PR #98 removed the unintegrated `apps/ios/Sources/DesignSystem/KantaWorkspace.swift` scaffold, repairing the source-target completeness failure. PR #96 was synchronized onto current main and merged as [`41c8ddde`](https://github.com/usermalik20-del/Kanta-reborn/commit/41c8dddeebe7d096322994e8af09c8c48a76308a) with the accessibility-identifier repair intact: the interactive transport parent no longer carries `stage.persistentPlayer`, each actionable child keeps its own stable identifier, and the Host-controls toolbar entry is labelled `More controls` rather than `Settings`. The `tools/check-ios-presentation-contract.py` guard enforces all three rules.

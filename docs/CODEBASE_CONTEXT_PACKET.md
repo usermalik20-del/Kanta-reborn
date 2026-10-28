@@ -1,6 +1,17 @@
 # Codebase Context Packet — KANTA Reborn
 
-## Current source and acceptance snapshot — October 26, 2026
+## Current source and acceptance snapshot — October 27, 2026
+
+Main head is merge commit [`9a2a0fc`](https://github.com/usermalik20-del/Kanta-reborn/commit/9a2a0fca3778ff10eb549c319d7f400f33661b28), which merged [PR #101 — Fix Android predictive-back dispatch](https://github.com/usermalik20-del/Kanta-reborn/pull/101). The Android Compact Workspace now uses AndroidX `OnBackPressedCallback` for accessory-scoped system/predictive back. This fixed the API 36 `GestureBackNavigation` lint regression in `b8e2822`.
+
+**Exact-SHA post-merge acceptance on `9a2a0fc`:**
+- Reconstruction [#40499591316](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591316): Android and iOS jobs passed. Android build/lint/domain tests, real-Chrome companion flow, captured-browser interoperability, private-interface selection guard and emulator runtime passed; Swift package tests and unsigned simulator build passed.
+- Unsigned iOS archive [#40499591326](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591326) passed; artifact [#12732093588](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591326/artifacts/12732093588), 25,137,220 bytes, ZIP SHA-256 `603d70d71f3eb320152b20c65be4e06629f1e6f1d37da2bcbf9cdb2ac592f219`.
+- Full iPhone/iPad walkthrough [#40499591484](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591484) passed both device jobs. iPhone runtime artifact [#12733327427](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591484/artifacts/12733327427); iPad runtime artifact [#12733063065](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40499591484/artifacts/12733063065). Per-device presentation diagnostics were also uploaded.
+
+The native acceptance gates are green on one exact SHA. The public download manifest and GitHub Release `v0.1.0-workspace-redesign` remain pinned to source `41c8ddde`; no new durable release assets have been published. The existing Android APK is debug-signed and the existing iOS IPA is unsigned. Fresh Actions artifacts expire and are not substitutes for Release assets. Next release step is exact-source packaging for `9a2a0fc`, followed by verified manifest/security-contract updates and successful website validation plus production deployment. No signed production IPA or physical-device acceptance is established.
+
+## Historical source and acceptance snapshot — October 26, 2026
 
 Canonical repository: [usermalik20-del/Kanta-reborn](https://github.com/usermalik20-del/Kanta-reborn). The current code-bearing main baseline is merge commit [`abda7c2`](https://github.com/usermalik20-del/Kanta-reborn/commit/abda7c27251af9f1019aa23831c6770032d754c9), which merged PR [#83 — Stage v2 app-level navigation and Queue](https://github.com/usermalik20-del/Kanta-reborn/pull/83). Later documentation-only successors do not change that validated application source. The validated PR source head was [`3aae9e8`](https://github.com/usermalik20-del/Kanta-reborn/commit/3aae9e85abafa28856f6e5752e6ba9dac3506114).
 

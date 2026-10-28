@@ -161,9 +161,23 @@ check(
     "Android retains the five existing navigation destinations",
 )
 check(
-    ("private void onBackPressed()" in activity or "public void onBackPressed()" in activity)
-    and "dismissAccessory();" in activity,
-    "Android back press dismisses an accessory before normal navigation",
+    "new OnBackPressedCallback(false)" in activity
+    and "getOnBackPressedDispatcher().addCallback(this, workspaceBackCallback)" in activity,
+    "Android workspace registers a predictive-back-compatible dispatcher callback",
+)
+check(
+    "workspaceBackCallback.setEnabled(true)" in activity
+    and "workspaceBackCallback.setEnabled(false)" in activity,
+    "Android workspace back callback follows accessory activation and dismissal",
+)
+check(
+    "public void onBackPressed()" not in activity and "super.onBackPressed()" not in activity,
+    "Android workspace does not override the deprecated Activity back handler",
+)
+check(
+    "workspaceBackNavigationChecks();" in runtime
+    and "getOnBackPressedDispatcher().onBackPressed()" in runtime,
+    "Android instrumentation exercises dispatcher-based accessory dismissal",
 )
 
 # --- The stage subtree must stay attached across session updates -------------

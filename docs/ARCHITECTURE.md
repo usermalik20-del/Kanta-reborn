@@ -6,6 +6,8 @@
 
 `apps/android` contains a new native Java/Android Views reconstruction, explicitly distinct from original source, with its own Gradle build and signing boundary. See its README for implemented and missing features.
 
+The Android karaoke stage follows the core timing APIs rather than duplicating them: `MidiLyrics.Cue.line` holds lyric text and `Cue.milliseconds` holds the cue timestamp; `RenderedPlaybackClock.position(playedFrames)` maps rendered output frames to milliseconds. The stage host must feed monotonically increasing rendered-frame counts to `LyricStage.setPlayedFrames`. Score and intro overlay payloads are the nested `StagePresenter.ScoreResult` and `StagePresenter.IntroCardData` contracts. The presentation layer remains a read-only consumer; `SessionController` retains playback and reservation ownership.
+
 `recovery/ios/snapshots` contains other original snapshots without nested Git databases. They are evidence, not dependencies. Complete recovery ZIPs remain preserved separately. Historical source variants must be reconciled file by file.
 
 `docs/evidence/website/2026-10-15` stores exact public-site bytes, extracted readable text and URL/SHA-256 manifest. It remains immutable evidence; the active restored website is maintained separately under apps/web. No public song catalog may be added.
@@ -24,6 +26,8 @@ The iOS fullscreen stage is a UIKit-owned modal: its presenter must be attached 
 Scoring is default off and observes dry microphone input without storing audio. Completion scores belong to immutable playback identities and are emitted only once. Monitoring and pitch processing are separate opt-in services and must mute on unsafe output routes. Source media and user SF2 are byte-preserved.
 
 Companion commands require explicit pairing, authorization, bounded replay protection and revocation. Website descriptions conflict between older plaintext PIN control and newer encrypted Android pairing; do not implement or advertise cross-platform transport compatibility without an explicit reviewed protocol and tests.
+
+Android companion host discovery considers active non-loopback interfaces, including virtual interfaces exposed by emulators or network adapters. Every candidate still passes the strict RFC1918 IPv4 validator, and host startup confirms the selected address belongs to a local interface before binding to that exact address; never broaden this to a wildcard bind.
 
 ## Planned built-in and browser Companion Remote
 
@@ -44,7 +48,7 @@ When closing an online YouTube preview, clear lifecycle presentation state and r
 
 Root workflows validate relevant pull requests once and validate main after merge. `reconstruction-validation.yml` owns Swift package/source guards, unsigned iOS simulator compilation and Android build/tests. `ios-smoke.yml` adds focused iPhone simulator navigation acceptance on relevant iOS pull requests; it is not a replacement for the full device walkthrough. The smoke workflow is limited to KANTA-owned source guards, native lifecycle tests, named simulator tests, and evidence uploads; it must not install unrelated external CLIs or mislabel them as audio analysis. Audio-quality and latency acceptance require a separate KANTA-specific measurement contract. `website-validation.yml` and `verified-downloads.yml` run focused website and download-contract checks. Feature-branch push events do not duplicate PR validation.
 
-Unsigned iOS personal-signing IPA packaging is an explicitly dispatched, separate `ios-runtime-artifacts.yml` workflow. `ios-visual-walkthrough.yml` runs complete iPhone/iPad acceptance manually, weekly, or on `ios-rc-*` tags. Release acceptance requires evidence for the exact candidate SHA; neither simulator checks nor unsigned archives establish signing, device audio quality, or deployment. `automated-failure-triage.yml` is dispatched with a failed run ID rather than launching after every successful run. Workflow permissions, bounded timeouts, action pinning and no signing credentials in Git remain mandatory. See `docs/TESTING.md` for authoritative triggers and gates.
+Unsigned iOS personal-signing IPA packaging is a separate `ios-runtime-artifacts.yml` workflow that runs on relevant pushes and same-repository pull requests touching native iOS/Android source, tools, or the workflow itself, with manual dispatch available. `ios-visual-walkthrough.yml` runs full iPhone/iPad acceptance on relevant iOS/Android source changes, the iOS capture and release-gate tools, the Android companion-interface guard, workflow edits, manual dispatch, its weekly schedule, and `ios-rc-*` tags. The Android path triggers are intentional: public download provenance requires reconstruction, unsigned archive and both device walkthroughs on the same exact SHA even when only Android code changes. Release acceptance requires evidence for the exact candidate SHA; neither simulator checks nor unsigned archives establish signing, device audio quality, or deployment. `automated-failure-triage.yml` is dispatched with a failed run ID rather than launching after every successful run. Workflow permissions, bounded timeouts, action pinning and no signing credentials in Git remain mandatory. See `docs/TESTING.md` for authoritative triggers and gates.
 
 ## Shared material
 
@@ -383,6 +387,8 @@ The Compact Workspace is the shipped composition on both platforms. It implement
 | Control-entry label | **More controls** | **Controls** |
 
 Android owns its workspace container in `apps/android/app/src/main/java/ph/kanta/reborn/KantaWorkspace.java` and mounts it from `MainActivity.buildWindow()`. The stage is added as the persistent layer first, so every accessory is drawn above it and the stage subtree is never detached. The Android implementation is additive: the existing tab navigation, panels, YouTube entry, camera, companion, voice, scenic, loop, realm and export paths are unchanged.
+
+**Back navigation is accessory-scoped.** `MainActivity` registers an AndroidX `OnBackPressedCallback` with the activity lifecycle and enables it only while `KantaWorkspace` has an active accessory. A system/predictive-back gesture therefore dismisses Search, Queue, Visuals or Controls first while preserving the persistent stage; when the workspace is stage-only, the callback is disabled and normal activity navigation proceeds through the dispatcher. Do not restore an `Activity.onBackPressed()` override or suppress `GestureBackNavigation` lint: API 36 predictive-back gestures do not invoke that legacy handler.
 
 A workspace redesign must be implemented at the real composition boundary before its new view is added to the app target. All referenced views, presentation models, modifiers, and enums must exist and compile; the integrated view must preserve the current single playback owner and the existing Host/presentation coordinator. Do not land an unintegrated scaffold or add placeholder types simply to silence compilation. If a planned workspace is not ready, keep it out of the compiled source target and document it as planned.
 

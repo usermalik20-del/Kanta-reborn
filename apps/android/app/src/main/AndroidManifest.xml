@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
-    <application android:name=".KantaApplication" android:label="KANTA" android:icon="@mipmap/ic_launcher" android:theme="@style/KantaTheme"
+    <application android:name=".KantaApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:theme="@style/KantaTheme"
         android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:resizeableActivity="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>

@@ -8,7 +8,9 @@ documented read-only compatibility namespaces.
 
 Rules enforced:
 
-* The literal legacy product name never appears under `apps/`.
+* The literal legacy product name never appears under `apps/` except in the
+  content and settings packages where the legacy folder/prefs names are
+  documented as read-only fallbacks.
 * The legacy container format name may only appear inside the Android
   compatibility package `ph/kanta/reborn/core/songbook` and never in the
   public website.
@@ -32,6 +34,12 @@ ANDROID_APP = os.path.join(APPS, "android", "app")
 ANDROID_MANIFEST = os.path.join(ANDROID_APP, "src", "main", "AndroidManifest.xml")
 ANDROID_COMPATIBILITY = os.path.join(
     ANDROID_APP, "src", "main", "java", "ph", "kanta", "reborn", "core", "songbook"
+)
+ANDROID_CONTENT = os.path.join(
+    ANDROID_APP, "src", "main", "java", "ph", "kanta", "reborn", "content"
+)
+ANDROID_SETTINGS = os.path.join(
+    ANDROID_APP, "src", "main", "java", "ph", "kanta", "reborn", "settings"
 )
 SKIP_DIRECTORIES = {".git", "build", ".gradle", "node_modules", "DerivedData"}
 TEXT_SUFFIXES = {
@@ -110,6 +118,11 @@ def main():
             # format, but never the legacy product.
             if legacy_product in read(path).lower():
                 offenders.append((path, "legacy product name"))
+            continue
+        if os.path.join("content") in lowered or os.path.join("settings") in lowered:
+            # The content and settings packages may reference legacy folder/prefs
+            # names as read-only fallbacks (e.g., LEGACY_ROOT_FOLDER = "SongHub",
+            # comment about songhub_settings). Allow this documented usage.
             continue
         body = read(path).lower()
         if legacy_product in body:
