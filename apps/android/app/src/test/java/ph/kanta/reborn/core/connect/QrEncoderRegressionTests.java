@@ -111,7 +111,7 @@ public final class QrEncoderRegressionTests {
       check(
           (bits >>> 12) == vector.version,
           "Version information reads back version " + vector.version);
-      check(bchRemainderIsZero(bits), "Version information has a valid BCH remainder");
+      check(versionBchRemainderIsZero(bits), "Version information has a valid BCH remainder");
     }
     check(largeSymbols > 0, "A version 7 or larger vector is present in the golden set");
   }
@@ -149,25 +149,43 @@ public final class QrEncoderRegressionTests {
   }
 
   private static void capacityBoundariesAreRespected() {
-    for (int version = QrEncoder.MIN_VERSION; version <= QrEncoder.MAX_VERSION; version++) {
-      int capacity = QrEncoder.capacity(version);
-      check(capacity > 0, "Version " + version + " has capacity");
-      check(
-          QrEncoder.chooseVersion(capacity) <= version,
-          "Capacity payload fits at most version " + version);
-      if (version > QrEncoder.MIN_VERSION) {
-        check(
-            QrEncoder.chooseVersion(QrEncoder.capacity(version - 1) + 1) == version,
-            "One byte past the previous capacity selects version " + version);
-      }
-    }
-    // Data capacity must increase monotonically with version.
     int previous = 0;
     for (int version = QrEncoder.MIN_VERSION; version <= QrEncoder.MAX_VERSION; version++) {
       int capacity = QrEncoder.capacity(version);
-      check(capacity > previous, "Capacity grows with version");
+      check(capacity > 0, "Version " + version + " has capacity");
+      check(capacity > previous, "Capacity grows with version " + version);
       previous = capacity;
+
+      // The nominal capacity is not itself usable: the mode indicator and the character
+      // count are subtracted from it. Use the true largest fitting payload.
+      int largestFitting = capacity;
+      while (largestFitting > 0 && payloadExceedsCapacity(largestFitting, version)) {
+        largestFitting--;
+      }
+      check(largestFitting > 0, "Version " + version + " has a fitting payload");
+      check(
+          QrEncoder.chooseVersion(largestFitting) == version,
+          "The largest payload fitting version "
+              + version
+              + " selects version "
+              + QrEncoder.chooseVersion(largestFitting));
+
+      if (version < QrEncoder.MAX_VERSION) {
+        boolean movedOn;
+        try {
+          movedOn = QrEncoder.chooseVersion(largestFitting + 1) > version;
+        } catch (IllegalArgumentException tooLong) {
+          movedOn = true;
+        }
+        check(movedOn, "One byte past version " + version + " capacity moves on or is rejected");
+      }
     }
+  }
+
+  /** True when a payload of this length cannot fit the version at level M. */
+  private static boolean payloadExceedsCapacity(int payloadLength, int version) {
+    int countBits = version <= 9 ? 8 : 16;
+    return (4 + countBits + 8 * payloadLength + 7) / 8 > QrEncoder.capacity(version);
   }
 
   private static void oversizedAndInvalidInputIsRejected() {
@@ -224,6 +242,20 @@ public final class QrEncoderRegressionTests {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) if (a[i] != b[i]) return false;
     return true;
+  }
+
+  /**
+   * The 18-bit version codeword (6 data + 12 check bits) divides evenly by 0x1F25.
+   *
+   * <p>Distinct from the format check below: using the 15-bit format polynomial here
+   * silently rejects every valid version block.
+   */
+  private static boolean versionBchRemainderIsZero(int codeword) {
+    int remainder = codeword;
+    for (int i = 17; i >= 12; i--) {
+      if ((remainder & (1 << i)) != 0) remainder ^= 0x1F25 << (i - 12);
+    }
+    return remainder == 0;
   }
 
   /** The 15-bit format codeword and its 10-bit BCH remainder must divide evenly. */
