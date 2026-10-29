@@ -15,7 +15,7 @@ import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 
 /** One app-lifetime state owner. All MediaPlayer access stays on the main Looper. */
-public final class SessionController {
+public final class SessionController implements ph.kanta.reborn.core.PitchSource {
   interface Listener {
     void changed();
   }
@@ -383,6 +383,22 @@ public final class SessionController {
                 });
           }
         });
+  }
+
+  // PitchSource: the single microphone owner lends its estimate to pitch-based features so
+  // they never open a second capture.
+
+  @Override
+  public float currentPitchHz() {
+    MicrophoneInput.Reading reading = inputReading();
+    if (reading == null || reading.pitch == null || reading.pitch.confidence <= 0) return 0f;
+    return (float) reading.pitch.frequencyHz;
+  }
+
+  @Override
+  public long measuredAtMs() {
+    MicrophoneInput.Reading reading = inputReading();
+    return reading == null ? 0L : reading.measuredAt;
   }
 
   private MicrophoneInput.Reading inputReading() {

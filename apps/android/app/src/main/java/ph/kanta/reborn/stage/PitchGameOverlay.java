@@ -11,6 +11,7 @@ import android.widget.TextView;
 import ph.kanta.reborn.core.AudioService;
 import ph.kanta.reborn.core.AudioServiceImpl;
 import ph.kanta.reborn.core.PitchData;
+import ph.kanta.reborn.core.PitchSource;
 
 /**
  * Overlay for the Pitch Meter Game feature.
@@ -29,6 +30,7 @@ public class PitchGameOverlay extends FrameLayout {
 
     private KaraokeGameManager gameManager;
     private AudioService audioService;
+    private PitchSource pitchSource;
     private boolean isVisible = false;
     private PitchGameListener listener;
 
@@ -36,6 +38,11 @@ public class PitchGameOverlay extends FrameLayout {
         void onGameStarted();
         void onGameEnded(int score, int maxStreak);
         void onDismissed();
+    }
+
+    /** Supplies the shared pitch estimate. Set once by the presenter. */
+    public void setPitchSource(PitchSource source) {
+        this.pitchSource = source;
     }
 
     public PitchGameOverlay(Context context) {
@@ -172,7 +179,11 @@ public class PitchGameOverlay extends FrameLayout {
 
         // Setup audio service
         if (audioService == null) {
-            audioService = new AudioServiceImpl(getContext());
+            if (pitchSource == null) {
+                statusTextView.setText("Pitch detection needs a microphone source.");
+                return;
+            }
+            audioService = new AudioServiceImpl(pitchSource);
             ((AudioServiceImpl) audioService).setTargetPitch(targetPitchHz);
             audioService.addListener(new AudioService.AudioListener() {
                 @Override

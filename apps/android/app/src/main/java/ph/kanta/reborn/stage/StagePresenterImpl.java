@@ -120,6 +120,7 @@ public final class StagePresenterImpl extends FrameLayout
 
     // Initialize pitch training overlays
     pitchGameOverlay = new PitchGameOverlay(context);
+    pitchGameOverlay.setPitchSource(session);
     pitchGameOverlay.setListener(new PitchGameOverlay.PitchGameListener() {
       @Override public void onGameStarted() {}
       @Override public void onGameEnded(int score, int maxStreak) {}
@@ -128,6 +129,7 @@ public final class StagePresenterImpl extends FrameLayout
     addView(pitchGameOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
     learningAssistantOverlay = new LearningAssistantOverlay(context);
+    learningAssistantOverlay.setPitchSource(session);
     learningAssistantOverlay.setListener(new LearningAssistantOverlay.LearningAssistantListener() {
       @Override public void onAdviceGenerated(String advice) {}
       @Override public void onDismissed() {}
@@ -359,6 +361,8 @@ public final class StagePresenterImpl extends FrameLayout
 
   @Override
   public void hideIntro() {
+    introCard.dismiss();
+  }
 
   @Override
   public void showPitchGame(float targetPitchHz) {
@@ -378,8 +382,6 @@ public final class StagePresenterImpl extends FrameLayout
   @Override
   public void hideLearningAssistant() {
     learningAssistantOverlay.dismiss();
-  }
-    introCard.dismiss();
   }
 
   // ScoreSink implementation

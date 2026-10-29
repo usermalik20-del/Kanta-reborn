@@ -1,6 +1,5 @@
 package ph.kanta.reborn.core;
 
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,8 +10,6 @@ import java.util.Random;
  * Analyzes pitch data and generates actionable advice for singers.
  */
 public class LearningAssistant {
-
-    private static final String TAG = "LearningAssistant";
 
     private static final float PERFECT_THRESHOLD = 0.9f;
     private static final float GOOD_THRESHOLD = 0.7f;
@@ -105,7 +102,6 @@ public class LearningAssistant {
             adviceHistory.remove(adviceHistory.size() - 1);
         }
 
-        Log.d(TAG, "Generated advice: " + advice);
         return advice;
     }
 

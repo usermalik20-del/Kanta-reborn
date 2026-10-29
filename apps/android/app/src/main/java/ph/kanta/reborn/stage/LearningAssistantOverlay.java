@@ -13,6 +13,7 @@ import ph.kanta.reborn.core.AudioService;
 import ph.kanta.reborn.core.AudioServiceImpl;
 import ph.kanta.reborn.core.LearningAssistant;
 import ph.kanta.reborn.core.PitchData;
+import ph.kanta.reborn.core.PitchSource;
 import ph.kanta.reborn.core.AchievementSystem;
 
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ public class LearningAssistantOverlay extends FrameLayout {
     private LearningAssistant learningAssistant;
     private AchievementSystem achievementSystem;
     private AudioService audioService;
+    private PitchSource pitchSource;
     private boolean isVisible = false;
     private LearningAssistantListener listener;
 
@@ -43,6 +45,11 @@ public class LearningAssistantOverlay extends FrameLayout {
     public interface LearningAssistantListener {
         void onAdviceGenerated(String advice);
         void onDismissed();
+    }
+
+    /** Supplies the shared pitch estimate. Set once by the presenter. */
+    public void setPitchSource(PitchSource source) {
+        this.pitchSource = source;
     }
 
     public LearningAssistantOverlay(Context context) {
@@ -177,7 +184,11 @@ public class LearningAssistantOverlay extends FrameLayout {
 
         // Setup audio service
         if (audioService == null) {
-            audioService = new AudioServiceImpl(getContext());
+            if (pitchSource == null) {
+                adviceTextView.setText("Pitch detection needs a microphone source.");
+                return;
+            }
+            audioService = new AudioServiceImpl(pitchSource);
             audioService.addListener(new AudioService.AudioListener() {
                 @Override
                 public void onPitchDetected(PitchData pitchData) {
