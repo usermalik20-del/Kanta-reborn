@@ -34,7 +34,9 @@ class VercelDeployWorkflowTests(unittest.TestCase):
 
     def test_validation_gates_deployment_and_prs_never_deploy(self):
         self.assertIn("needs: validate", self.source)
-        self.assertIn("if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'", self.source)
+        self.assertIn("github.event_name != 'pull_request'", self.source)
+        self.assertIn("github.ref == 'refs/heads/main'", self.source)
+        self.assertIn("inputs.configure_is_a_dev_domain == true", self.source)
         self.assertIn("pull_request:", self.source)
 
     def test_production_deploys_are_serialized(self):
