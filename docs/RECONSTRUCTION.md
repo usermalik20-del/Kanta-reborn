@@ -175,6 +175,17 @@ not repeat the link, the diagnostics report states the code is withheld rather t
 it, and the pairing sheet copies the code and the address *separately* so a single
 clipboard entry never carries both.
 
+**Verified.** Android validation [run #40826684007](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40826684007)
+passes on `dc03bf8`, which runs the new `coreRegression` suites on a real JVM: the golden
+matrices for versions 1, 5, 6 and 8 match the externally decoded reference byte-for-byte,
+format and version information round-trip, the structural patterns hold, and the link
+model's parsing, normalisation, address ranking and privacy assertions all pass.
+
+Two test-only bugs were caught by that run and fixed in `dc03bf8`: the version-information
+check used the 15-bit format polynomial instead of the 18-bit version polynomial, and the
+capacity boundary asserted a payload equal to the nominal capacity (which the mode and
+length headers make unusable).
+
 Still outstanding for Milestone 5: the Kanta-Connect phone app itself, and the
 public-review mining pass.
 
