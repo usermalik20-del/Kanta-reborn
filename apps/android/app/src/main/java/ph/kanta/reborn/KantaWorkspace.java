@@ -46,6 +46,14 @@ public final class KantaWorkspace extends FrameLayout {
   public static final String ACCESSORY_VISUALS = "visuals";
   public static final String ACCESSORY_MORE = "more";
 
+  /** Pitch meter game accessory for pitch practice. */
+  public static final String ACCESSORY_PITCH_GAME = "pitch_game";
+
+  /** Learning assistant accessory for real-time coaching. */
+  public static final String ACCESSORY_LEARNING_ASSISTANT = "learning_assistant";
+
+  private static final int PANEL = 0xFF19213E;
+
   private static final int PANEL = 0xFF19213E;
   private static final int CYAN = 0xFF6FE5E8;
 

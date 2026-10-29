@@ -413,10 +413,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     Button queue = workspaceButton("Queue", KantaWorkspace.ACCESSORY_QUEUE);
     Button visuals = workspaceButton("Visuals", KantaWorkspace.ACCESSORY_VISUALS);
     Button controls = workspaceButton("Controls", KantaWorkspace.ACCESSORY_MORE);
+    Button pitchGame = workspaceButton("Pitch", KantaWorkspace.ACCESSORY_PITCH_GAME);
+    Button learning = workspaceButton("Coach", KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT);
     addWeighted(bar, search);
     addWeighted(bar, queue);
     addWeighted(bar, visuals);
     addWeighted(bar, controls);
+    addWeighted(bar, pitchGame);
+    addWeighted(bar, learning);
     return bar;
   }
 
@@ -455,6 +459,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         if (stagePresenter != null) stagePresenter.showQueue();
         break;
       case KantaWorkspace.ACCESSORY_VISUALS:
+      case KantaWorkspace.ACCESSORY_PITCH_GAME:
+        workspace.addAccessoryHeader("Pitch Practice");
+        if (stagePresenter != null) stagePresenter.showPitchGame(440f);
+        break;
+      case KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT:
+        workspace.addAccessoryHeader("Voice Coach");
+        if (stagePresenter != null) stagePresenter.showLearningAssistant();
+        break;
         workspace.addAccessoryHeader("Stage Visuals");
         visualsAccessory(target);
         break;
