@@ -86,6 +86,10 @@ All Android build, lint, domain regression and instrumentation tests pass on mai
 
 ## Milestone status (2026-10-29)
 
+The authoritative list of what is **not** done — with acceptance criteria and evidence for each
+item — is [`docs/UNFINISHED_WORK.md`](UNFINISHED_WORK.md). This file records what shipped;
+that one records what has not.
+
 | Milestone | Scope | State |
 | --- | --- | --- |
 | 0 | Rebrand foundation | **Done** — merged `8d14c91`; branding sweep 4/4 |
