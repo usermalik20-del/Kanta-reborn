@@ -92,7 +92,7 @@ All Android build, lint, domain regression and instrumentation tests pass on mai
 | 1 | Vertical slice: content / catalog / stage overlays | **Done** — merged `fa37794` |
 | 2 | StagePresenter binding, score sink, legacy MKMD decode + Meg importer | **Done** — merged; MKMD padding + magic defects fixed in `1dfecd7` / `2a01654` |
 | 3 | Smart Link host (NSD + WebSocket), settings persistence | **Done** — `SmartLinkHost` + `SettingsStore` wiring on main, Android validation green on `2a01654` |
-| 4 | Smart Link phone app, voice search, spectrum analyser, score celebration, custom fonts, diagnostics, help/about | **Started** — score celebration shipped; rest not started |
+| 4 | Smart Link phone app, voice search, spectrum analyser, score celebration, custom fonts, diagnostics, help/about | **Started** — score celebration + diagnostics shipped; rest not started |
 | 5 | Public-review mining applied to positioning and fixes | **Not started** |
 
 ### Milestone 3 detail (implemented, validated on `2a01654`)
@@ -132,6 +132,13 @@ decoration: it never consumes a touch (`setClickable(false)`,
 resolved end state instead of animating when "Reduce Motion" is on.
 `StagePresenterImpl.showScore` starts it with a seed derived from the score and the song
 identity, and cancels it when the score card is dismissed or playback stops.
+
+`MainActivity.diagnostics()` adds the S14 diagnostics surface to the Controls accessory. It
+builds a read-only report from existing session state — app version, device/API, library
+counts, playback state, audio settings, microphone/monitor/scoring flags, stage background
+and camera, companion and Smart Link status, and the current message — and offers Copy.
+It deliberately reports only *whether* Smart Link is hosting, never the pairing code, so
+the report is safe to share. It changes no audio, playback or lifecycle path.
 
 Still outstanding for Milestone 4: the Smart Link phone app, voice search, the spectrum
 analyser, custom fonts, diagnostics mode and help/about.

@@ -618,6 +618,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           render();
         }));
     target.addView(
+        button("Diagnostics", () -> {
+          dismissAccessory();
+          diagnostics();
+        }));
+    target.addView(
         button("Fullscreen stage", () -> {
           dismissAccessory();
           fullscreen();
@@ -1732,6 +1737,90 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     } catch (IOException e) {
       Toast.makeText(this, "Policy could not be opened", Toast.LENGTH_LONG).show();
     }
+  }
+
+  /**
+   * Diagnostics (S14): a read-only report of runtime state.
+   *
+   * Never includes pairing codes, tokens or key material — only whether a feature is
+   * active — so the report is safe to copy and share.
+   */
+  private void diagnostics() {
+    StringBuilder report = new StringBuilder();
+    report.append("KANTA Karaoke · diagnostics\n\n");
+    try {
+      android.content.pm.PackageInfo info =
+          getPackageManager().getPackageInfo(getPackageName(), 0);
+      report.append("version      : ").append(info.versionName).append('\n');
+    } catch (Exception unavailable) {
+      report.append("version      : unavailable\n");
+    }
+    report.append("device       : ")
+        .append(android.os.Build.MANUFACTURER)
+        .append(' ')
+        .append(android.os.Build.MODEL)
+        .append(" · Android ")
+        .append(android.os.Build.VERSION.RELEASE)
+        .append(" (API ")
+        .append(android.os.Build.VERSION.SDK_INT)
+        .append(")\n");
+
+    report.append("\nlibrary\n");
+    report.append("ready        : ").append(session.ready).append('\n');
+    report.append("loading      : ").append(session.loading).append('\n');
+    report.append("importing    : ").append(session.importing).append('\n');
+    report.append("songs        : ").append(session.songs.size()).append('\n');
+    report.append("up next      : ").append(session.queue.snapshot().size()).append('\n');
+
+    report.append("\nplayback\n");
+    report.append("playing      : ").append(session.playing).append('\n');
+    report.append("current      : ")
+        .append(session.current == null ? "(none)" : session.current.title)
+        .append('\n');
+    report.append("singer       : ")
+        .append(session.singer.isEmpty() ? "(none)" : session.singer)
+        .append('\n');
+    report.append("position     : ").append(session.position()).append(" ms\n");
+    report.append("soundfont    : ").append(session.soundFontName).append('\n');
+
+    report.append("\naudio\n");
+    report.append("volume       : ").append(session.volume).append('\n');
+    report.append("tempo        : ").append(session.tempo).append('\n');
+    report.append("pitch        : ").append(session.pitch).append(" semitones\n");
+    report.append("microphone   : ").append(session.microphone.enabled()).append('\n');
+    report.append("monitor      : ").append(session.monitor.enabled()).append('\n');
+    report.append("scoring      : ").append(session.scoringEnabled).append('\n');
+
+    report.append("\nstage\n");
+    report.append("background   : ").append(session.stageKind).append('\n');
+    report.append("camera       : ").append(session.cameraPreviewEnabled).append('\n');
+    report.append("visual epoch : ").append(session.visualGeneration).append('\n');
+
+    report.append("\ncompanion\n");
+    report.append("android      : ").append(session.companion.enabled()).append('\n');
+    report.append("browser      : ").append(session.browserCompanion.active()).append('\n');
+    report.append("smart link   : ")
+        .append(session.smartLinkHost.isHosting() ? "hosting (code withheld)" : "off")
+        .append('\n');
+
+    report.append("\nmessage      : ").append(session.message).append('\n');
+
+    final String reportText = report.toString();
+    TextView content = text(reportText, 12, Color.WHITE);
+    content.setTypeface(android.graphics.Typeface.MONOSPACE);
+    content.setTextIsSelectable(true);
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(content);
+    new AlertDialog.Builder(this)
+        .setTitle("Diagnostics")
+        .setView(scroll)
+        .setPositiveButton(
+            "Copy",
+            (dialog, which) ->
+                ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+                    .setPrimaryClip(ClipData.newPlainText("KANTA diagnostics", reportText)))
+        .setNegativeButton("Close", null)
+        .show();
   }
 
   private void help() {
