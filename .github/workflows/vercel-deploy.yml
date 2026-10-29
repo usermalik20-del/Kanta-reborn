@@ -1,6 +1,12 @@
 name: KANTA Vercel deploy
 on:
   workflow_dispatch:
+    inputs:
+      configure_is_a_dev_domain:
+        description: Add kanta.is-a.dev to the Vercel project
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -65,6 +71,27 @@ jobs:
         run: npm install --global "vercel@${VERCEL_CLI_VERSION}"
       - name: Confirm Vercel CLI version
         run: vercel --version
+      - name: Configure kanta.is-a.dev domain
+        if: ${{ inputs.configure_is_a_dev_domain == true }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/domains?teamId=${VERCEL_ORG_ID}" \
+            --data '{"name":"kanta.is-a.dev"}')"
+          status="${response##*$'\n'}"
+          body="${response%$'\n'*}"
+          printf '%s\n' "$body" > /tmp/kanta-is-a-dev-vercel-domain.json
+          if [[ "$status" != "200" && "$status" != "201" && "$status" != "409" ]]; then
+            echo "::error::Vercel domain request failed with HTTP ${status}"
+            cat /tmp/kanta-is-a-dev-vercel-domain.json
+            exit 1
+          fi
+          echo "Vercel domain assignment response:"
+          cat /tmp/kanta-is-a-dev-vercel-domain.json
       # Run from the repository root: the Vercel project's configured Root Directory is apps/web.
       # Running inside apps/web makes Vercel resolve the project path as apps/web/apps/web.
       - name: Pull existing production project settings
