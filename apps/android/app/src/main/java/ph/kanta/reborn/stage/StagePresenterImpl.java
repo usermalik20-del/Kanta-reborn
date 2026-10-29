@@ -14,6 +14,7 @@ import ph.kanta.reborn.core.RenderedPlaybackClock;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.core.Song;
 import ph.kanta.reborn.core.catalog.SongCatalog;
+import ph.kanta.reborn.core.score.ScoreCelebrationPlan;
 import ph.kanta.reborn.score.ScoreSink;
 
 /**
@@ -44,6 +45,7 @@ public final class StagePresenterImpl extends FrameLayout
   private final LyricStage lyricStage;
   private final CountdownStage countdownStage;
   private final ScoreOverlay scoreOverlay;
+  private final ScoreCelebrationView celebration;
   private final BackgroundStage backgroundStage;
   private final AdjustmentOverlay adjustmentOverlay;
   private final IntroCard introCard;
@@ -85,6 +87,7 @@ public final class StagePresenterImpl extends FrameLayout
     lyricStage = new LyricStage(context);
     countdownStage = new CountdownStage(context);
     scoreOverlay = new ScoreOverlay(context);
+    celebration = new ScoreCelebrationView(context);
     backgroundStage = new BackgroundStage(context);
     adjustmentOverlay = new AdjustmentOverlay(context);
     introCard = new IntroCard(context);
@@ -103,6 +106,7 @@ public final class StagePresenterImpl extends FrameLayout
     addView(lyricStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(countdownStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(scoreOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+    addView(celebration, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(adjustmentOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(introCard, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(searchOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -161,6 +165,7 @@ public final class StagePresenterImpl extends FrameLayout
     // Initially hide all overlays except background and lyrics
     countdownStage.setVisibility(GONE);
     scoreOverlay.setVisibility(GONE);
+    celebration.setVisibility(GONE);
     adjustmentOverlay.setVisibility(GONE);
     introCard.setVisibility(GONE);
     searchOverlay.setVisibility(GONE);
@@ -263,12 +268,20 @@ public final class StagePresenterImpl extends FrameLayout
     // Hide any active overlays
     adjustmentOverlay.hide();
     introCard.dismiss();
+    celebration.cancel();
   }
 
   @Override
   public void showScore(ScoreResult score) {
+    // Deterministic per completion: the same score for the same song always plays the
+    // same choreography, so the celebration is reproducible and testable.
+    long seed =
+        (long) score.overallScore * 31L
+            + (score.song != null && score.song.id != null ? score.song.id.hashCode() : 0);
+    celebration.celebrate(score.overallScore, seed);
     scoreOverlay.show(score, () -> {
-      // Score dismissed - resume normal stage
+      // Score dismissed - the celebration has its own bounded duration.
+      celebration.cancel();
     });
   }
 
@@ -386,6 +399,16 @@ public final class StagePresenterImpl extends FrameLayout
   /** Hides the keypad accessory. */
   public void hideKeypad() {
     keypad.hide();
+  }
+
+  /** True while a celebration is on screen. */
+  public boolean isCelebrating() {
+    return celebration.isCelebrating();
+  }
+
+  /** The tier currently being celebrated, or null. */
+  public ScoreCelebrationPlan.Tier celebrationTier() {
+    return celebration.currentTier();
   }
 
   /** Sets the remote connection state. */

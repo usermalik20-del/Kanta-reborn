@@ -92,7 +92,7 @@ All Android build, lint, domain regression and instrumentation tests pass on mai
 | 1 | Vertical slice: content / catalog / stage overlays | **Done** — merged `fa37794` |
 | 2 | StagePresenter binding, score sink, legacy MKMD decode + Meg importer | **Done** — merged; MKMD padding + magic defects fixed in `1dfecd7` / `2a01654` |
 | 3 | Smart Link host (NSD + WebSocket), settings persistence | **Done** — `SmartLinkHost` + `SettingsStore` wiring on main, Android validation green on `2a01654` |
-| 4 | Smart Link phone app, voice search, spectrum analyser, score celebration, custom fonts, diagnostics, help/about | **Not started** |
+| 4 | Smart Link phone app, voice search, spectrum analyser, score celebration, custom fonts, diagnostics, help/about | **Started** — score celebration shipped; rest not started |
 | 5 | Public-review mining applied to positioning and fixes | **Not started** |
 
 ### Milestone 3 detail (implemented, validated on `2a01654`)
@@ -112,6 +112,29 @@ All Android build, lint, domain regression and instrumentation tests pass on mai
   Option 3b). Key material is supplied at runtime only.
 - `stage/StagePresenterImpl.java` — owns the persistent stage layer
   (tag `kanta.stage.primary`) and binds the ten stage overlays to `SessionController`.
+
+### Milestone 4 detail — score celebration (2026-10-29)
+
+`core/score/ScoreCelebrationPlan.java` holds the whole choreography as framework-free,
+deterministic data: a tier derived from the overall score (Perfect ≥ 95, Great ≥ 85,
+Good ≥ 70, else Miss), a confetti/balloon/star budget and duration per tier, a bounded
+particle list derived from `(overall, seed)`, and `positionX`/`positionY`/`rotationDegrees`
+helpers with gravity. Nothing reads a clock or a view, so the same input always produces
+the same plan and the host-JVM `coreRegression` task verifies it
+(`ScoreCelebrationRegressionTests`: tier boundaries, clamping, Miss never celebrating,
+monotonic budgets by tier, seed reproducibility, seed sensitivity, radius/hue/origin bounds
+across a 21-score × 25-seed sweep, star burst at the score-card centre, motion determinism,
+the rotation bound, the particle budget ceiling, and list immutability).
+
+`stage/ScoreCelebrationView.java` only converts normalised positions into pixels. It is
+decoration: it never consumes a touch (`setClickable(false)`,
+`IMPORTANT_FOR_ACCESSIBILITY_NO`) and it honours the system animation scale by drawing the
+resolved end state instead of animating when "Reduce Motion" is on.
+`StagePresenterImpl.showScore` starts it with a seed derived from the score and the song
+identity, and cancels it when the score card is dismissed or playback stops.
+
+Still outstanding for Milestone 4: the Smart Link phone app, voice search, the spectrum
+analyser, custom fonts, diagnostics mode and help/about.
 
 ### Not part of any milestone yet
 
