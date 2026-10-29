@@ -459,6 +459,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         if (stagePresenter != null) stagePresenter.showQueue();
         break;
       case KantaWorkspace.ACCESSORY_VISUALS:
+        workspace.addAccessoryHeader("Stage Visuals");
+        visualsAccessory(target);
+        break;
       case KantaWorkspace.ACCESSORY_PITCH_GAME:
         workspace.addAccessoryHeader("Pitch Practice");
         if (stagePresenter != null) stagePresenter.showPitchGame(440f);
@@ -466,9 +469,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       case KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT:
         workspace.addAccessoryHeader("Voice Coach");
         if (stagePresenter != null) stagePresenter.showLearningAssistant();
-        break;
-        workspace.addAccessoryHeader("Stage Visuals");
-        visualsAccessory(target);
         break;
       default:
         workspace.addAccessoryHeader("Controls");
