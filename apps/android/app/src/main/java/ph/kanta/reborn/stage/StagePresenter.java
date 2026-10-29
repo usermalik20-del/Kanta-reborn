@@ -49,6 +49,17 @@ public interface StagePresenter {
 
   /** Called to hide the intro card. */
   void hideIntro();
+  /** Shows the pitch meter game overlay for pitch practice. */
+  void showPitchGame(float targetPitchHz);
+
+  /** Hides the pitch meter game overlay. */
+  void hidePitchGame();
+
+  /** Shows the learning assistant overlay for real-time coaching. */
+  void showLearningAssistant();
+
+  /** Hides the learning assistant overlay. */
+  void hideLearningAssistant();
 
   /** Listener for countdown events. */
   interface CountdownListener {

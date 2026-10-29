@@ -54,6 +54,10 @@ public final class StagePresenterImpl extends FrameLayout
   private final RemoteStatusView remoteStatusView;
   private final Keypad keypad;
 
+  // Pitch training overlays
+  private final PitchGameOverlay pitchGameOverlay;
+  private final LearningAssistantOverlay learningAssistantOverlay;
+
   // Dependencies
   private final SessionController session;
   private final SongCatalog catalog;
@@ -113,6 +117,22 @@ public final class StagePresenterImpl extends FrameLayout
     addView(queueOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(remoteStatusView, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
     addView(keypad, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+    // Initialize pitch training overlays
+    pitchGameOverlay = new PitchGameOverlay(context);
+    pitchGameOverlay.setListener(new PitchGameOverlay.PitchGameListener() {
+      @Override public void onGameStarted() {}
+      @Override public void onGameEnded(int score, int maxStreak) {}
+      @Override public void onDismissed() {}
+    });
+    addView(pitchGameOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+    learningAssistantOverlay = new LearningAssistantOverlay(context);
+    learningAssistantOverlay.setListener(new LearningAssistantOverlay.LearningAssistantListener() {
+      @Override public void onAdviceGenerated(String advice) {}
+      @Override public void onDismissed() {}
+    });
+    addView(learningAssistantOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
     // Configure search overlay
     searchOverlay.setCatalog(catalog, queue);
@@ -339,6 +359,26 @@ public final class StagePresenterImpl extends FrameLayout
 
   @Override
   public void hideIntro() {
+
+  @Override
+  public void showPitchGame(float targetPitchHz) {
+    pitchGameOverlay.startGame(targetPitchHz);
+  }
+
+  @Override
+  public void hidePitchGame() {
+    pitchGameOverlay.dismiss();
+  }
+
+  @Override
+  public void showLearningAssistant() {
+    learningAssistantOverlay.startSession();
+  }
+
+  @Override
+  public void hideLearningAssistant() {
+    learningAssistantOverlay.dismiss();
+  }
     introCard.dismiss();
   }
 
@@ -464,5 +504,7 @@ public final class StagePresenterImpl extends FrameLayout
     super.onDetachedFromWindow();
     handler.removeCallbacks(frameTicker);
     countdownStage.cancel();
+    pitchGameOverlay.shutdown();
+    learningAssistantOverlay.shutdown();
   }
 }
