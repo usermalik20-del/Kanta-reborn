@@ -36,7 +36,7 @@ class VercelDeployWorkflowTests(unittest.TestCase):
         self.assertIn("needs: validate", self.source)
         self.assertIn("github.event_name != 'pull_request'", self.source)
         self.assertIn("github.ref == 'refs/heads/main'", self.source)
-        self.assertIn("inputs.configure_is_a_dev_domain == true", self.source)
+        self.assertIn("inputs.configure_domain != ''", self.source)
         self.assertIn("pull_request:", self.source)
 
     def test_production_deploys_are_serialized(self):
