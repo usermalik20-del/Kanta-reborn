@@ -46,7 +46,10 @@ jobs:
           node --check apps/web/analytics.js
 
   deploy:
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || inputs.configure_domain != '')
+    # Gate on the event name as well as the input: on a push event the `inputs` context is
+    # null rather than an empty string, so `inputs.configure_domain != ''` alone would be
+    # true and would run the domain step (or skip the deploy steps) on a normal release.
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.configure_domain != ''))
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -72,7 +75,7 @@ jobs:
       - name: Confirm Vercel CLI version
         run: vercel --version
       - name: Configure requested Vercel domain
-        if: ${{ inputs.configure_domain != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.configure_domain != '' }}
         shell: bash
         env:
           CONFIGURE_DOMAIN: ${{ inputs.configure_domain }}
@@ -98,11 +101,11 @@ jobs:
       # Run from the repository root: the Vercel project's configured Root Directory is apps/web.
       # Running inside apps/web makes Vercel resolve the project path as apps/web/apps/web.
       - name: Pull existing production project settings
-        if: ${{ inputs.configure_domain == '' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.configure_domain == '' }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
       - name: Build production output
-        if: ${{ inputs.configure_domain == '' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.configure_domain == '' }}
         run: vercel build --prod --token="$VERCEL_TOKEN"
       - name: Deploy prebuilt output to production
-        if: ${{ inputs.configure_domain == '' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.configure_domain == '' }}
         run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
