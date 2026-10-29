@@ -46,7 +46,7 @@ jobs:
           node --check apps/web/analytics.js
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || inputs.configure_is_a_dev_domain == true)
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
