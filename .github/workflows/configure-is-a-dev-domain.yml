@@ -1,0 +1,49 @@
+name: Configure KANTA Vercel domain
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: Custom domain to attach to the Vercel project (for example kanta.is-a.bot)
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Attach the requested domain to the Vercel project
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_6rrG5QXBI00wEFufnjKSJLWj
+          VERCEL_PROJECT_ID: prj_OG4AuuRqXOY9EAPRJuSvnT3UXvA6
+          DOMAIN: ${{ inputs.domain }}
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_TOKEN}"
+          test -n "${DOMAIN}"
+          # The domain is an operator input, so validate it before it reaches the request
+          # body rather than interpolating arbitrary text into JSON.
+          if [[ ! "${DOMAIN}" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || [[ "${DOMAIN}" != *.* ]]; then
+            echo "::error::Invalid domain: ${DOMAIN}"
+            exit 1
+          fi
+          response="$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/domains?teamId=${VERCEL_ORG_ID}" \
+            --data "{\"name\":\"${DOMAIN}\"}")"
+          status="${response##*$'\n'}"
+          body="${response%$'\n'*}"
+          printf '%s\n' "$body" > /tmp/vercel-domain-assignment.json
+          # 409 means the domain is already attached, which is a success for our purpose.
+          if [[ "$status" != "200" && "$status" != "201" && "$status" != "409" ]]; then
+            echo "::error::Vercel domain request failed with HTTP ${status}"
+            cat /tmp/vercel-domain-assignment.json
+            exit 1
+          fi
+          echo "Vercel domain assignment response:"
+          cat /tmp/vercel-domain-assignment.json
