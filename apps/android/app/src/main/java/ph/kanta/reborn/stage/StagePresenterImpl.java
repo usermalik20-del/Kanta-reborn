@@ -31,7 +31,7 @@ import ph.kanta.reborn.score.ScoreSink;
  *   <li>{@link IntroCard} - song metadata card shown before countdown</li>
  *   <li>{@link SearchOverlay} - type-ahead search with reserve action</li>
  *   <li>{@link QueueOverlay} - read-only projection of ReservationQueue</li>
- *   <li>{@link RemoteStatusView} - Smart Link connection indicator</li>
+ *   <li>{@link RemoteStatusView} - Kanta-Connect connection indicator</li>
  *   <li>{@link Keypad} - numeric entry for song codes</li>
  * </ul>
  *

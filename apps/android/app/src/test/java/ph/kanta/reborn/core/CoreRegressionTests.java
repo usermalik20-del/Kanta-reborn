@@ -8,6 +8,8 @@ import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import ph.kanta.reborn.core.legacy.MkmdDecoderRegressionTests;
+import ph.kanta.reborn.core.connect.KantaConnectInfoRegressionTests;
+import ph.kanta.reborn.core.connect.QrEncoderRegressionTests;
 import ph.kanta.reborn.core.score.ScoreCelebrationRegressionTests;
 
 /** No framework/JUnit dependency: run on a server JVM before allocating cloud CI. */
@@ -1106,6 +1108,8 @@ public final class CoreRegressionTests {
     checks += CompanionRegressionTests.run();
     checks += BrowserRemoteRegressionTests.run();
     checks += MkmdDecoderRegressionTests.run();
+    checks += QrEncoderRegressionTests.run();
+    checks += KantaConnectInfoRegressionTests.run();
     checks += ScoreCelebrationRegressionTests.run();
     System.out.println("KANTA Android core: " + checks + " regression checks passed");
   }

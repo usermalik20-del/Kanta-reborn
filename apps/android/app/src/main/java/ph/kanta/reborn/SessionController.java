@@ -8,7 +8,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
-import ph.kanta.reborn.core.companion.SmartLinkHost;
+import ph.kanta.reborn.core.companion.KantaConnectHost;
 import ph.kanta.reborn.score.ScoreSink;
 import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
@@ -22,7 +22,7 @@ public final class SessionController {
 
   final CompanionControl companion;
   final BrowserCompanion browserCompanion;
-  public final SmartLinkHost smartLinkHost;
+  public final KantaConnectHost kantaConnectHost;
   final ReservationQueue queue = new ReservationQueue();
   final ExecutorService io = Executors.newSingleThreadExecutor();
   final ExecutorService preparation = Executors.newSingleThreadExecutor();
@@ -106,9 +106,9 @@ public final class SessionController {
     this.context = context;
     companion = new CompanionControl(this);
     browserCompanion = new BrowserCompanion(this);
-    smartLinkHost = new SmartLinkHost(context, new SmartLinkHost.SessionControllerAdapter() {
+    kantaConnectHost = new KantaConnectHost(context, new KantaConnectHost.HostAdapter() {
       @Override public String handleRequest(String action, String argument, String singer) {
-        return handleSmartLinkRequest(action, argument, singer);
+        return handleKantaConnectRequest(action, argument, singer);
       }
       @Override public boolean isReady() {
         return ready && !loading && !importing;
@@ -1070,15 +1070,15 @@ public final class SessionController {
     publish();
   }
 
-  void startSmartLinkHost() {
-    smartLinkHost.start();
+  void startKantaConnectHost() {
+    kantaConnectHost.start();
   }
 
-  void stopSmartLinkHost() {
-    smartLinkHost.stop();
+  void stopKantaConnectHost() {
+    kantaConnectHost.stop();
   }
 
-  String handleSmartLinkRequest(String action, String argument, String singer) {
+  String handleKantaConnectRequest(String action, String argument, String singer) {
     try {
       switch (action) {
         case "snapshot":

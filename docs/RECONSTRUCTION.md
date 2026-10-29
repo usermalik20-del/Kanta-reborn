@@ -46,7 +46,7 @@ accurate for the commits they were raised against, but every listed defect is fi
 validated on main, and #114/#115 would have reverted validated work. The CI hardening they
 described was adopted directly rather than through those branches.
 
-**Milestone 3 implemented and validated on main.** `SmartLinkHost` (NSD `_kanta._tcp`
+**Milestone 3 implemented and validated on main.** `KantaConnectHost` (NSD `_kanta._tcp`
 advertisement plus a WebSocket server on port 45731, pairing-code display, request dispatch
 for snapshot/search/reserve/cancel/play/pause/next), `SessionController` audio-settings
 persistence through `SettingsStore` (master volume, tempo, pitch), and the
@@ -91,13 +91,13 @@ All Android build, lint, domain regression and instrumentation tests pass on mai
 | 0 | Rebrand foundation | **Done** — merged `8d14c91`; branding sweep 4/4 |
 | 1 | Vertical slice: content / catalog / stage overlays | **Done** — merged `fa37794` |
 | 2 | StagePresenter binding, score sink, legacy MKMD decode + Meg importer | **Done** — merged; MKMD padding + magic defects fixed in `1dfecd7` / `2a01654` |
-| 3 | Smart Link host (NSD + WebSocket), settings persistence | **Done** — `SmartLinkHost` + `SettingsStore` wiring on main, Android validation green on `2a01654` |
-| 4 | Smart Link phone app, voice search, spectrum analyser, score celebration, custom fonts, diagnostics, help/about | **Started** — score celebration + diagnostics shipped; rest not started |
-| 5 | Public-review mining applied to positioning and fixes | **Not started** |
+| 3 | Kanta-Connect host (NSD + WebSocket), settings persistence | **Done** — `KantaConnectHost` + `SettingsStore` wiring on main, Android validation green on `2a01654` |
+| 4 | Kanta-Connect phone app, voice search, spectrum analyser, score celebration, custom fonts, diagnostics, help/about | **Started** — score celebration + diagnostics shipped; rest not started |
+| 5 | Kanta-Connect naming + seamless pairing (QR and typed address); public-review mining | **Started** — naming and pairing shipped; review mining not started |
 
 ### Milestone 3 detail (implemented, validated on `2a01654`)
 
-- `core/companion/SmartLinkHost.java` — advertises `_kanta._tcp` through Android NSD,
+- `core/companion/KantaConnectHost.java` — advertises `_kanta._tcp` through Android NSD,
   serves WebSocket clients on port 45731 (HTTP upgrade handshake, masked text frames,
   extended 126/127 lengths, ping/pong), mints a 32-hex-character pairing code per hosting
   session, and dispatches `snapshot`, `search`, `reserve`, `cancel`, `play`, `pause` and
@@ -136,12 +136,47 @@ identity, and cancels it when the score card is dismissed or playback stops.
 `MainActivity.diagnostics()` adds the S14 diagnostics surface to the Controls accessory. It
 builds a read-only report from existing session state — app version, device/API, library
 counts, playback state, audio settings, microphone/monitor/scoring flags, stage background
-and camera, companion and Smart Link status, and the current message — and offers Copy.
-It deliberately reports only *whether* Smart Link is hosting, never the pairing code, so
+and camera, companion and Kanta-Connect status, and the current message — and offers Copy.
+It deliberately reports only *whether* Kanta-Connect is hosting, never the pairing code, so
 the report is safe to share. It changes no audio, playback or lifecycle path.
 
-Still outstanding for Milestone 4: the Smart Link phone app, voice search, the spectrum
+Still outstanding for Milestone 4: the Kanta-Connect phone app, voice search, the spectrum
 analyser, custom fonts, diagnostics mode and help/about.
+
+### Milestone 5 detail — Kanta-Connect naming and seamless pairing (2026-10-29)
+
+The host feature is named **Kanta-Connect** throughout: `KantaConnectHost`, its `HostAdapter`
+contract, `SessionController.startKantaConnect()` / `stopKantaConnect()`, the Controls
+accessory entry, and the diagnostics report. No user-visible "Smart Link" string remains
+(the one surviving mention in `apps/android/README.md` refers to the *legacy* third-party
+transport and is historical context).
+
+Pairing is now one action. Tapping **Start Kanta-Connect** mints a single-session code,
+picks the device's reachable LAN address and presents both routes at once:
+
+- a **QR code** encoding `kanta-connect://<host>:<port>?code=<32 hex>&v=1`, and
+- the **typed route**: the address plus the code grouped into four blocks of eight.
+
+`core/connect/QrEncoder.java` is an in-tree QR encoder (byte mode, error-correction level M,
+versions 1–10, up to 216 payload bytes). It is in-tree rather than a dependency because the
+project keeps its dependency surface small, the encoding is fully specified by ISO/IEC
+18004, and it is small enough to test exhaustively. Correctness was established by rendering
+the reference output to PNG and decoding every vector with an independent scanner (Apple
+Vision) across versions 1, 5, 6, 7, 8, 9 and 10; `QrEncoderGoldenVectors` pins those exact
+matrices so the Java encoder cannot drift from the verified reference.
+
+`core/connect/KantaConnectInfo.java` is the link model: link construction and parsing, code
+normalisation for typing, private-address detection, host ranking (a `192.168/16` Wi-Fi
+address is preferred over VPN `10/8` and `172.16/12` ranges, which is what makes the
+suggested address actually reachable) and the on-screen steps.
+
+Privacy choices that are enforced by the contract guard: the QR's content description does
+not repeat the link, the diagnostics report states the code is withheld rather than printing
+it, and the pairing sheet copies the code and the address *separately* so a single
+clipboard entry never carries both.
+
+Still outstanding for Milestone 5: the Kanta-Connect phone app itself, and the
+public-review mining pass.
 
 ### Not part of any milestone yet
 
@@ -154,5 +189,5 @@ analyser, custom fonts, diagnostics mode and help/about.
 
 - `MkmdDecoder` is validated by JVM fixtures only. No real Meg container has been decoded
   on a device, so the port is not device-accepted.
-- `SmartLinkHost` has no on-device two-host test; only the request/response contract is
+- `KantaConnectHost` has no on-device two-host test; only the request/response contract is
   unit-shaped.

@@ -17,24 +17,25 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Smart Link host side: NSD service discovery + WebSocket server for phone app clients.
+ * Kanta-Connect host side: NSD service discovery + WebSocket server for phone app clients.
  *
  * <p>Advertises {@code _kanta._tcp} via Android Network Service Discovery so the
  * KANTA Karaoke phone companion can find this host on the local network. Accepts
- * WebSocket connections from paired Smart Link clients and dispatches CompanionProtocol
+ * WebSocket connections from paired Kanta-Connect clients and dispatches CompanionProtocol
  * requests (snapshot, search, reserve, cancel, play, pause, next) to SessionController.
  *
  * <p>Key material for the encrypted channel is supplied at runtime via the pairing code
  * flow (CompanionProtocol). The host never persists pairing codes or keys.
  */
-public final class SmartLinkHost {
+public final class KantaConnectHost {
 
-  private static final String TAG = "SmartLinkHost";
+  private static final String TAG = "KantaConnectHost";
   private static final String SERVICE_TYPE = "_kanta._tcp.";
-  private static final int PORT = 45731;
+  /** One source of truth for the port: the link model and the QR agree with this. */
+  private static final int PORT = ph.kanta.reborn.core.connect.KantaConnectInfo.DEFAULT_PORT;
 
   private final Context context;
-  private final SessionControllerAdapter adapter;
+  private final HostAdapter adapter;
   private final Handler main = new Handler(Looper.getMainLooper());
   private final ExecutorService worker = Executors.newSingleThreadExecutor();
   private final ConcurrentHashMap<String, ClientSession> sessions = new ConcurrentHashMap<>();
@@ -48,15 +49,15 @@ public final class SmartLinkHost {
   private String pairingCode;
   private volatile Runnable onStatusChanged;
 
-  public interface SessionControllerAdapter {
-    /** Handle a Smart Link request and return a JSON response string. */
+  public interface HostAdapter {
+    /** Handle a Kanta-Connect request and return a JSON response string. */
     String handleRequest(String action, String argument, String singer);
 
     /** Returns true if the host app is in the foreground and ready. */
     boolean isReady();
   }
 
-  public SmartLinkHost(Context context, SessionControllerAdapter adapter) {
+  public KantaConnectHost(Context context, HostAdapter adapter) {
     this.context = context.getApplicationContext();
     this.adapter = adapter;
     this.nsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
@@ -72,8 +73,8 @@ public final class SmartLinkHost {
     registerService();
     worker.execute(this::acceptLoop);
 
-    Log.i(TAG, "Smart Link host started: code=" + pairingCode + " port=" + PORT);
-    notifyStatus("Smart Link hosting · code: " + pairingCode);
+    Log.i(TAG, "Kanta-Connect host started: code=" + pairingCode + " port=" + PORT);
+    notifyStatus("Kanta-Connect hosting · code: " + pairingCode);
   }
 
   /** Stops advertising and closes all client connections. */
@@ -101,8 +102,8 @@ public final class SmartLinkHost {
     registrationListener = null;
 
     pairingCode = null;
-    Log.i(TAG, "Smart Link host stopped");
-    notifyStatus("Smart Link stopped");
+    Log.i(TAG, "Kanta-Connect host stopped");
+    notifyStatus("Kanta-Connect stopped");
   }
 
   /** Returns the current pairing code, or null if not hosting. */
@@ -158,7 +159,7 @@ public final class SmartLinkHost {
       serverSocket = new ServerSocket();
       serverSocket.setReuseAddress(true);
       serverSocket.bind(new InetSocketAddress(PORT));
-      Log.i(TAG, "Smart Link WebSocket server listening on port " + PORT);
+      Log.i(TAG, "Kanta-Connect WebSocket server listening on port " + PORT);
 
       while (listening && !serverSocket.isClosed()) {
         try {
@@ -171,22 +172,22 @@ public final class SmartLinkHost {
           sessions.put(clientId, session);
           worker.execute(session::run);
 
-          Log.d(TAG, "Smart Link client connected: " + clientId);
+          Log.d(TAG, "Kanta-Connect client connected: " + clientId);
         } catch (IOException e) {
           if (listening) Log.e(TAG, "Accept error: " + e.getMessage());
           break;
         }
       }
     } catch (IOException e) {
-      Log.e(TAG, "Cannot bind Smart Link port " + PORT + ": " + e.getMessage());
+      Log.e(TAG, "Cannot bind Kanta-Connect port " + PORT + ": " + e.getMessage());
       listening = false;
-      main.post(() -> notifyStatus("Smart Link port in use: " + PORT));
+      main.post(() -> notifyStatus("Kanta-Connect port in use: " + PORT));
     }
   }
 
   private void removeSession(String clientId) {
     sessions.remove(clientId);
-    Log.d(TAG, "Smart Link client disconnected: " + clientId);
+    Log.d(TAG, "Kanta-Connect client disconnected: " + clientId);
   }
 
   private void notifyStatus(String status) {
@@ -205,10 +206,10 @@ public final class SmartLinkHost {
   private final class ClientSession {
     private final String clientId;
     private final Socket socket;
-    private final SessionControllerAdapter adapter;
+    private final HostAdapter adapter;
     private volatile boolean closed = false;
 
-    ClientSession(String clientId, Socket socket, SessionControllerAdapter adapter) {
+    ClientSession(String clientId, Socket socket, HostAdapter adapter) {
       this.clientId = clientId;
       this.socket = socket;
       this.adapter = adapter;

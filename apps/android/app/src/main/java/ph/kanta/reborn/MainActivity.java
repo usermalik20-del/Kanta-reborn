@@ -22,6 +22,9 @@ import ph.kanta.reborn.core.catalog.SongCatalog;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.score.ScoreSink;
 import ph.kanta.reborn.stage.StagePresenterImpl;
+import ph.kanta.reborn.core.connect.KantaConnectInfo;
+import ph.kanta.reborn.core.connect.QrEncoder;
+import ph.kanta.reborn.stage.QrCodeView;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
@@ -587,7 +590,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     VIDEO)));
   }
 
-  /** Controls accessory: settings, companion control, Smart Link host, fullscreen. */
+  /** Controls accessory: settings, companion control, Kanta-Connect host, fullscreen. */
   private void controlsAccessory(LinearLayout target) {
     target.addView(button("Settings", () -> {
       dismissAccessory();
@@ -599,23 +602,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           dismissAccessory();
           companionDialog = CompanionDialog.show(this, session);
         }));
-    boolean hosting = session.smartLinkHost.isHosting();
+    boolean hosting = session.kantaConnectHost.isHosting();
     target.addView(button(
-        hosting ? "Stop Smart Link host" : "Start Smart Link host",
+        hosting ? "Stop Kanta-Connect" : "Start Kanta-Connect",
         () -> {
           dismissAccessory();
           if (hosting) {
-            session.stopSmartLinkHost();
+            session.stopKantaConnectHost();
+            render();
           } else {
-            session.startSmartLinkHost();
-            String code = session.smartLinkHost.pairingCode();
-            new android.app.AlertDialog.Builder(MainActivity.this)
-                .setTitle("Smart Link pairing code")
-                .setMessage("Share this code with the phone app: " + code)
-                .setPositiveButton("OK", null)
-                .show();
+            kantaConnect();
           }
-          render();
         }));
     target.addView(
         button("Diagnostics", () -> {
@@ -627,6 +624,100 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           dismissAccessory();
           fullscreen();
         }));
+  }
+
+  /**
+   * Kanta-Connect pairing: start hosting, then present the scan and type routes together.
+   *
+   * The QR image and the printed address carry the same information, so a user can either
+   * scan or type. Only the address and the pairing code are individually copyable, never a
+   * combined blob: a single combined string in the clipboard is the easiest way for the
+   * single-session code to leak.
+   */
+  private void kantaConnect() {
+    session.startKantaConnectHost();
+    String code = session.kantaConnectHost.pairingCode();
+    if (code == null) {
+      Toast.makeText(this, "Kanta-Connect could not start hosting here.", Toast.LENGTH_LONG).show();
+      return;
+    }
+    String host = KantaConnectInfo.chooseHost(localPrivateAddresses());
+    if (host == null) {
+      session.stopKantaConnectHost();
+      Toast.makeText(this, "Join a Wi-Fi network first: Kanta-Connect needs a local address.", Toast.LENGTH_LONG).show();
+      return;
+    }
+
+    final KantaConnectInfo info = KantaConnectInfo.of(host, code);
+    LinearLayout content = column();
+    int pad = dp(20);
+    content.setPadding(pad, pad, pad, pad);
+
+    TextView heading = text("Kanta-Connect", 20, GOLD);
+    heading.setTypeface(null, android.graphics.Typeface.BOLD);
+    content.addView(heading);
+    content.addView(text(info.endpoint(), 15, Color.WHITE));
+
+    QrEncoder.Symbol symbol = null;
+    try {
+      symbol = QrEncoder.encode(info.link());
+    } catch (RuntimeException tooLong) {
+      symbol = null;
+    }
+    if (symbol != null) {
+      QrCodeView qr = new QrCodeView(this);
+      qr.setSymbol(symbol);
+      LinearLayout.LayoutParams qrParams = new LinearLayout.LayoutParams(dp(232), dp(232));
+      qrParams.gravity = Gravity.CENTER_HORIZONTAL;
+      qrParams.topMargin = dp(10);
+      qrParams.bottomMargin = dp(10);
+      content.addView(qr, qrParams);
+    }
+
+    for (String step : info.instructions()) {
+      content.addView(text("\u2022 " + step, 13, 0xFFAFB8D0));
+    }
+    content.addView(
+        text("Scan the code with the Kanta-Connect phone app, or type the address and code.", 12, 0xFFAFB8D0));
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(content);
+    new AlertDialog.Builder(this)
+        .setView(scroll)
+        .setPositiveButton(
+            "Copy code",
+            (dialog, which) -> copyToClipboard("Kanta-Connect code", info.code))
+        .setNeutralButton(
+            "Copy address",
+            (dialog, which) -> copyToClipboard("Kanta-Connect address", info.endpoint()))
+        .setNegativeButton("Done", null)
+        .show();
+    render();
+  }
+
+  /** Copies a value to the clipboard without ever logging it. */
+  private void copyToClipboard(String label, String value) {
+    ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+        .setPrimaryClip(ClipData.newPlainText(label, value));
+    Toast.makeText(this, label + " copied", Toast.LENGTH_SHORT).show();
+  }
+
+  /** The device's non-loopback IPv4 addresses, in interface order. */
+  private java.util.List<String> localPrivateAddresses() {
+    java.util.List<String> addresses = new java.util.ArrayList<>();
+    try {
+      for (java.net.NetworkInterface network :
+          java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+        if (!network.isUp() || network.isLoopback()) continue;
+        for (java.net.InterfaceAddress address : network.getInterfaceAddresses()) {
+          java.net.InetAddress inet = address.getAddress();
+          if (inet instanceof java.net.Inet4Address) addresses.add(inet.getHostAddress());
+        }
+      }
+    } catch (Exception unavailable) {
+      // An interface list is best effort; an empty result reports "join Wi-Fi" instead.
+    }
+    return addresses;
   }
 
   private void renderPanel() {
@@ -1800,7 +1891,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     report.append("android      : ").append(session.companion.enabled()).append('\n');
     report.append("browser      : ").append(session.browserCompanion.active()).append('\n');
     report.append("smart link   : ")
-        .append(session.smartLinkHost.isHosting() ? "hosting (code withheld)" : "off")
+        .append(session.kantaConnectHost.isHosting() ? "hosting (code withheld)" : "off")
         .append('\n');
 
     report.append("\nmessage      : ").append(session.message).append('\n');

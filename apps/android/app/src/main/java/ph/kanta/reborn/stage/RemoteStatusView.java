@@ -11,7 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * In-player indicator showing Smart Link host state.
+ * In-player indicator showing Kanta-Connect host state.
  *
  * <p>Per {@link replica/design/components.md} RemoteStatusView spec.
  */

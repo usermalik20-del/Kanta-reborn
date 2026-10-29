@@ -95,6 +95,42 @@ check(
     "workspace.activateAccessory(accessoryId)" in activity,
     "Android MainActivity presents accessories through the workspace",
 )
+
+# --- Kanta-Connect pairing surface -------------------------------------------------
+# The pairing sheet must offer both routes - a scannable QR and a typed address - and the
+# single-session code must never be written into the shareable diagnostics report.
+
+check(
+    "QrCodeView" in activity and "QrEncoder.encode(info.link())" in activity,
+    "Android pairing sheet renders a QR of the Kanta-Connect link",
+)
+check(
+    "KantaConnectInfo.of(" in activity and "chooseHost(localPrivateAddresses())" in activity,
+    "Android pairing sheet picks a reachable local address for the link",
+)
+check(
+    "info.endpoint()" in activity and "info.instructions()" in activity,
+    "Android pairing sheet shows the typed address and the connection steps",
+)
+check(
+    "info.code" in activity and "Copy code" in activity and "Copy address" in activity,
+    "Android pairing sheet copies the code and the address separately",
+)
+check(
+    "KantaConnectInfo.chooseHost(hosts)" not in activity,
+    "Android pairing sheet does not fabricate a host without enumerating interfaces",
+)
+
+diagnostics_body = activity[activity.find("private void diagnostics()") :]
+diagnostics_body = diagnostics_body[: diagnostics_body.find("\n  }")]
+check(
+    "pairingCode(" not in diagnostics_body,
+    "Diagnostics never prints the Kanta-Connect pairing code",
+)
+check(
+    "code withheld" in diagnostics_body,
+    "Diagnostics states that the Kanta-Connect code is withheld",
+)
 check(
     "workspace.deactivateAccessory()" in activity,
     "Android MainActivity dismisses accessories through the workspace",
