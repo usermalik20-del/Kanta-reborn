@@ -22,14 +22,14 @@ public class PitchMeterView extends View {
     private static final int TARGET_ZONE_WIDTH = 80;
     private static final int INDICATOR_RADIUS = 12;
 
-    private final Paint backgroundPaint;
-    private final Paint targetZonePaint;
-    private final Paint indicatorPaint;
-    private final Paint textPaint;
-    private final Paint accuracyPaint;
-    private final Paint trailPaint;
-    private final Path indicatorPath;
-    private final RectF targetRect;
+    private Paint backgroundPaint;
+    private Paint targetZonePaint;
+    private Paint indicatorPaint;
+    private Paint textPaint;
+    private Paint accuracyPaint;
+    private Paint trailPaint;
+    private Path indicatorPath;
+    private RectF targetRect;
 
     private PitchData currentPitchData;
     private float targetPitchHz = 440f;

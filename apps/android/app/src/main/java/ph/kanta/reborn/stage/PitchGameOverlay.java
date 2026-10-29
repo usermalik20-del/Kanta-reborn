@@ -22,11 +22,11 @@ public class PitchGameOverlay extends FrameLayout {
     private static final int OVERLAY_WIDTH = 800;
     private static final int OVERLAY_HEIGHT = 400;
 
-    private final PitchMeterView pitchMeterView;
-    private final TextView scoreTextView;
-    private final TextView streakTextView;
-    private final TextView statusTextView;
-    private final View closeButton;
+    private PitchMeterView pitchMeterView;
+    private TextView scoreTextView;
+    private TextView streakTextView;
+    private TextView statusTextView;
+    private View closeButton;
 
     private KaraokeGameManager gameManager;
     private AudioService audioService;

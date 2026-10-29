@@ -241,6 +241,14 @@ public class AchievementSystem {
         }
     }
 
+    /** Unlocks by id. Ids that are not registered are ignored rather than throwing. */
+    private void unlock(String id) {
+        Achievement achievement = achievements.get(id);
+        if (achievement != null) {
+            unlock(achievement);
+        }
+    }
+
     private void unlock(Achievement achievement) {
         if (achievement.unlocked) return;
 

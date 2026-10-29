@@ -53,8 +53,6 @@ public final class KantaWorkspace extends FrameLayout {
   public static final String ACCESSORY_LEARNING_ASSISTANT = "learning_assistant";
 
   private static final int PANEL = 0xFF19213E;
-
-  private static final int PANEL = 0xFF19213E;
   private static final int CYAN = 0xFF6FE5E8;
 
   private final Context context;

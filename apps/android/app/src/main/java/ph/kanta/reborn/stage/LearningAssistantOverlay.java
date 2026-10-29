@@ -27,11 +27,11 @@ public class LearningAssistantOverlay extends FrameLayout {
 
     private static final int MAX_HISTORY = 50;
 
-    private final TextView adviceTextView;
-    private final TextView summaryTextView;
-    private final TextView exerciseTextView;
-    private final TextView progressTextView;
-    private final View closeButton;
+    private TextView adviceTextView;
+    private TextView summaryTextView;
+    private TextView exerciseTextView;
+    private TextView progressTextView;
+    private View closeButton;
 
     private LearningAssistant learningAssistant;
     private AchievementSystem achievementSystem;
