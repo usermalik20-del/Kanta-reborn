@@ -97,6 +97,22 @@ rejected live there.
 | G11 | Keep Kanta-Connect LAN-only, coded and single-session; add no profiles, chat or public sharing | An unknown party on the network cannot discover, message or control a device without the displayed code | S |
 | G12 | Every failure state is actionable in one line: what happened, and the one next thing to do | No bare "something went wrong"; each error names a cause and one next action | S |
 
+## H. Pitch features (Pitch Meter Game + Learning Assistant)
+
+These landed on main in `2cf26f5`/`af0566f` and were repaired in `e8be580`/`cffa1ce`/`8210340`
+after Android validation failed three times. What is left:
+
+| ID | Item | Why it matters | Acceptance criterion | Effort |
+| --- | --- | --- | --- | --- |
+| H1 | **Switch pitch estimation to SPICE (TFLite)** | The current estimate is the frame autocorrelation in `DryPitchDetector`, which is uncalibrated against real singing. A learned estimator is the point of "AI pitch learning". | Pitch estimates come from the SPICE model, and the switch is covered by an explicit in-writing amendment (see H2) plus a golden-vector test. | L |
+| H2 | **Amend the architecture in writing for a TFLite dependency** | `docs/ARCHITECTURE.md` states dim-10 is "TinySoundFont + CameraX only" and repeats "no new dependency" in three milestone records. Adding TensorFlow Lite breaks that, needs a `THIRD_PARTY_NOTICES.md` entry, and the generated runtime-notices task throws if any license entry exceeds 1 MiB. The model is also an added asset. | The amendment, the notices entry and the guards are updated in one change, and the reasoning is recorded the way the MKMD decoder exception was. | M |
+| H3 | **Resample and reframe for the model** | SPICE expects 16 kHz mono frames of roughly 1.02 s; KANTA captures 48 kHz with `FRAME_SIZE = 4096` (~85 ms). This step belongs inside the single microphone owner's analysis path, not in a second capturer. | The model receives correctly framed 16 kHz audio and the existing monitoring path is unchanged. | M |
+| H4 | **Song-aware target pitch** | The toolbar passes a hardcoded `440f` (`MainActivity`: `stagePresenter.showPitchGame(440f)`), so practice is always in A regardless of the song. The MIDI key signature is already parsed. | Starting the game from a song uses that song's key; the target survives across sessions. | M |
+| H5 | **`PitchMeterView` still fabricates a reading** | Before real data arrives it builds `new PitchData(target, target, 1.0f, ...)` — current equals target and accuracy is perfect, so the meter can show success it has not earned. | The meter shows a neutral/unknown state until the first real estimate arrives. | S |
+| H6 | **Relocate `AchievementSystem` out of `core/`** | It needs `SharedPreferences` and `Color`, so it is excluded from `compileCoreRegression`. `core/` is meant to be framework-free, and the exclusion list is growing instead of the boundary being enforced. | It lives beside the other Android-facing classes (`MicrophoneInput`, `PartyAudio`) and the exclusion entry is removed. | S |
+| H7 | **Persist pitch settings** | Preferred target pitch and assistant sensitivity reset every session; listed in the owner's enhancement set. | Both survive an app restart through `SettingsStore`. | S |
+| H8 | **Shortcut access to the pitch features** | They are reachable only from the workspace accessory bar. | Reachable from the Controls menu as well, without adding a second entry point that bypasses the single-accessory rule. | S |
+
 ## F. Recently closed
 
 | Item | Closed by | Evidence |
@@ -109,6 +125,7 @@ rejected live there.
 | Milestone 4 — diagnostics (S14) | `f6fd0b6` | Android validation [#40796411592](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40796411592); the guard asserts the pairing code is withheld |
 | Milestone 5 — Kanta-Connect naming + QR pairing | `dc03bf8` | Android validation [#40826684007](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40826684007); golden matrices decoded by an independent scanner |
 | Domain wiring landed (the owner's `chore/configure-is-a-dev-domain`, with two fixes) | `065f956` | Merged after Android validation green on the branch (`32f2644`). Post-merge production deploy [#40886115873](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40886115873) ran with the domain step **skipped** and pull/build/deploy-to-production all succeeding, which is the push path this merge had to preserve. |
+| Main was red: pitch scaffold did not compile | `8210340` | Android validation [#40918434667](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40918434667). Three rounds: syntax break in `StagePresenterImpl.hideIntro()`; a second microphone opened by `AudioServiceImpl` against a package-private `MicrophoneInput` and a non-streaming `DryPitchDetector`; then 22 further errors the syntax break had masked (duplicate `PANEL`, 18 `final` fields assigned from an `init()` helper, `unlock(String)` vs `unlock(Achievement)`) and an unreachable `case` that also made the Visuals accessory open Pitch Practice. |
 | Android CI was failing **open** | `c784fe5` | `set -o pipefail` on the Gradle step; two real defects surfaced immediately |
 | `MkmdDecoder` magic constant and AES padding | `1dfecd7`, `2a01654` | Every real payload was rejected before this |
 | iOS PR #113 navigation regression | `b7d69f2` | Walkthrough green before `80ae286`, red after, green again after the revert |
