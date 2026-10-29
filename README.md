@@ -78,6 +78,7 @@ Start with [architecture](docs/ARCHITECTURE.md), [engineering architecture contr
 | [TESTING.md](docs/TESTING.md) | Test suites, gates and acceptance criteria |
 | [VERIFIED_DOWNLOADS.md](docs/VERIFIED_DOWNLOADS.md) | Download provenance and checksums |
 | [HARDENING_HANDOVER.md](docs/HARDENING_HANDOVER.md) | Current handover state |
+| [AI_PROMPT_BANK.md](docs/AI_PROMPT_BANK.md) | External model prompt bank: pinned metadata, helper, measured behaviour |
 | [CI_FAILURE_REPAIR_LEDGER.md](docs/CI_FAILURE_REPAIR_LEDGER.md) | CI incident history and repairs |
 | [UNFINISHED_WORK.md](docs/UNFINISHED_WORK.md) | Everything still outstanding, with acceptance criteria |
 | [GITHUB_PUBLISHING_POLICY.md](docs/GITHUB_PUBLISHING_POLICY.md) | Publishing and release gates |
