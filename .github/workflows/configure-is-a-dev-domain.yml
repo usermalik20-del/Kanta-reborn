@@ -1,0 +1,34 @@
+name: Configure KANTA is-a.dev Vercel domain
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Add kanta.is-a.dev to the Vercel project
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_6rrG5QXBI00wEFufnjKSJLWj
+          VERCEL_PROJECT_ID: prj_OG4AuuRqXOY9EAPRJuSvnT3UXvA6
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_TOKEN}"
+          response="$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/domains?teamId=${VERCEL_ORG_ID}" \
+            --data '{"name":"kanta.is-a.dev"}')"
+          status="${response##*$'\n'}"
+          body="${response%$'\n'*}"
+          printf '%s\n' "$body" > /tmp/kanta-is-a-dev-vercel-domain.json
+          if [[ "$status" != "200" && "$status" != "201" && "$status" != "409" ]]; then
+            echo "::error::Vercel domain request failed with HTTP ${status}"
+            exit 1
+          fi
+          echo "Vercel domain assignment response:"
+          cat /tmp/kanta-is-a-dev-vercel-domain.json
