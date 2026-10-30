@@ -19,7 +19,7 @@ on:
       - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
+
     tags:
       - 'ios-rc-*'
   pull_request:
@@ -35,7 +35,10 @@ on:
       - 'tools/tests/test_publish_verified_downloads.py'
       - 'tools/verify-website.py'
       - 'tools/tests/test_website_security_contract.py'
+      - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/verified-downloads.yml'
+
 permissions:
   contents: read
 concurrency:
