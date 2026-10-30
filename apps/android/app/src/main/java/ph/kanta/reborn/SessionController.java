@@ -395,14 +395,14 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
    * no key is known. A song in A minor therefore targets 440 Hz, and one in C major targets
    * middle C.
    */
-  float practiceTargetHz() {
+  public float practiceTargetHz() {
     if (!currentKeyPresent) return 440f;
     float hz = MidiKey.practiceTargetHz(currentKeySharpsFlats, currentKeyMinor);
     return hz > 0f ? hz : 440f;
   }
 
   /** The playing song's key name, for the learning assistant. */
-  String practiceKeyName() {
+  public String practiceKeyName() {
     if (!currentKeyPresent) return "C major";
     String name = MidiKey.name(currentKeySharpsFlats, currentKeyMinor);
     return name == null ? "C major" : name;
