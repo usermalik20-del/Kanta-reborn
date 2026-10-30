@@ -6,6 +6,24 @@ on:
         description: Exact main-branch commit SHA to package; defaults to the dispatch ref.
         required: false
         type: string
+  push:
+    branches: [main]
+    paths:
+      - 'tools/prepare-verified-downloads.py'
+      - 'tools/publish-verified-downloads.py'
+      - 'tools/tests/test_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'
+      - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tools/prepare-verified-downloads.py'
+      - 'tools/publish-verified-downloads.py'
+      - 'tools/tests/test_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'
+      - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
   workflow_run:
     workflows: ["KANTA iOS unsigned artifacts"]
     types: [completed]
@@ -64,9 +82,7 @@ jobs:
       - name: Publish verified download manifest and platform links
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          VERIFIED_AT: ${{ github.run_started_at }}
         run: |
           set -euo pipefail
           artifacts="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts")"
@@ -74,7 +90,7 @@ jobs:
           ios_id="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .id')"
           test -n "${android_id}" && test "${android_id}" != "null"
           test -n "${ios_id}" && test "${ios_id}" != "null"
-          ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" python3 tools/publish-verified-downloads.py
+          VERIFIED_AT="$(date -u +%F)" ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" python3 tools/publish-verified-downloads.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/web/downloads.json apps/web/android.html apps/web/ios-download.html
