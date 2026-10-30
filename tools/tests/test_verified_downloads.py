@@ -281,5 +281,65 @@ class IOSSimulatorAcceptanceNamingTests(unittest.TestCase):
         self.assertIn("physical-device acceptance", self.testing)
 
 
+class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        cls.android = (root / ".github/workflows/android-validation.yml").read_text(encoding="utf-8")
+        cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+        cls.visual = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
+        cls.workflow = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
+
+    def test_release_tooling_changes_trigger_every_exact_sha_gate(self):
+        release_paths = (
+            "'tools/prepare-verified-downloads.py'",
+            "'tools/publish-verified-downloads.py'",
+            "'tools/tests/test_verified_downloads.py'",
+            "'tools/tests/test_publish_verified_downloads.py'",
+            "'tools/verify-website.py'",
+            "'tools/tests/test_website_security_contract.py'",
+        )
+        for event in ("push", "pull_request"):
+            with self.subTest(event=event):
+                android_section = workflow_event_section(self.android, event)
+                archive_section = workflow_event_section(self.archive, event)
+                visual_section = workflow_event_section(self.visual, event)
+                package_section = workflow_event_section(self.workflow, event)
+                self.assertIn("'tools/**'", android_section)
+                self.assertIn("branches: [main]", self.android)
+                self.assertNotIn("branches: ['**']", self.android)
+                for path in release_paths:
+                    self.assertIn(path, archive_section)
+                    self.assertIn(path, visual_section)
+                    self.assertIn(path, package_section)
+                for path in (
+                    "'.github/workflows/android-validation.yml'",
+                    "'.github/workflows/ios-runtime-artifacts.yml'",
+                    "'.github/workflows/ios-visual-walkthrough.yml'",
+                    "'.github/workflows/verified-downloads.yml'",
+                ):
+                    for section in (android_section, archive_section, visual_section, package_section):
+                        self.assertIn(path, section)
+
+    def test_successful_main_unsigned_archive_automatically_starts_packaging(self):
+        self.assertIn("workflow_run:", self.workflow)
+        self.assertIn('workflows: ["KANTA iOS unsigned artifacts"]', self.workflow)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", self.workflow)
+        self.assertIn("github.event.workflow_run.head_branch == 'main'", self.workflow)
+        self.assertIn("github.event.workflow_run.head_sha", self.workflow)
+
+    def test_packaging_publishes_site_and_dispatches_production_deploy(self):
+        self.assertIn("permissions:\n  contents: read\n  actions: read", self.workflow)
+        self.assertIn("persist-credentials: false", self.workflow)
+        self.assertIn("persist-credentials: true", self.workflow)
+        self.assertIn("  package:\n    permissions:\n      contents: write\n      actions: write", self.workflow)
+        self.assertIn("tools/publish-verified-downloads.py", self.workflow)
+        self.assertIn("python3 tools/verify-website.py", self.workflow)
+        self.assertIn("python3 -m unittest tools.tests.test_website_security_contract", self.workflow)
+        self.assertIn("actions/workflows/vercel-deploy.yml/dispatches", self.workflow)
+        self.assertIn("Content-Type: application/json", self.workflow)
+        self.assertIn("git push origin HEAD:main", self.workflow)
+
+
 if __name__ == "__main__":
     unittest.main()

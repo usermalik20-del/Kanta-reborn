@@ -2,17 +2,25 @@ name: KANTA Android validation
 on:
   workflow_dispatch:
   push:
-    branches: ['**']
+    branches: [main]
     paths:
       - 'apps/android/**'
       - 'tools/**'
       - '.github/workflows/android-validation.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/verified-downloads.yml'
+
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/android/**'
       - 'tools/**'
       - '.github/workflows/android-validation.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/verified-downloads.yml'
+
 permissions:
   contents: read
 concurrency:

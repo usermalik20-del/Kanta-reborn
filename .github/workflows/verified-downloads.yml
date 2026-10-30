@@ -10,42 +10,72 @@ on:
     branches: [main]
     paths:
       - 'tools/prepare-verified-downloads.py'
+      - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'
+      - 'tools/verify-website.py'
+      - 'tools/tests/test_website_security_contract.py'
+      - '.github/workflows/android-validation.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
+
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'tools/prepare-verified-downloads.py'
+      - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'
+      - 'tools/verify-website.py'
+      - 'tools/tests/test_website_security_contract.py'
+      - '.github/workflows/android-validation.yml'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
+
+  workflow_run:
+    workflows: ["KANTA iOS unsigned artifacts"]
+    types: [completed]
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: verified-downloads-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name }}
+  group: verified-downloads-${{ github.event.workflow_run.head_sha || inputs.source_sha || github.sha }}
   cancel-in-progress: false
 jobs:
   contracts:
-    if: ${{ github.event_name != 'workflow_run' }}
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
       - name: Check exact-SHA artifact and release-gate contracts
-        run: python3 -m unittest discover -s tools/tests -p test_verified_downloads.py
+        run: |
+          python3 -m unittest discover -s tools/tests -p 'test_verified_downloads.py'
+          python3 -m unittest discover -s tools/tests -p 'test_publish_verified_downloads.py'
   package:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: write
+      actions: write
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.name == 'KANTA iOS unsigned artifacts') }}
     needs: contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: true
       - name: Package exact-SHA accepted builds
         run: python3 tools/prepare-verified-downloads.py
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
+          SOURCE_SHA: ${{ inputs.source_sha || github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: KANTA-Android-preview-download
@@ -64,3 +94,42 @@ jobs:
           path: verified-downloads/downloads.json
           if-no-files-found: error
           retention-days: 30
+      - name: Publish verified download manifest and platform links
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          artifacts="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts")"
+          android_id="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .id')"
+          ios_id="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .id')"
+          android_digest="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .digest')"
+          ios_digest="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .digest')"
+          android_created="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .created_at')"
+          android_expires="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .expires_at')"
+          ios_created="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .created_at')"
+          ios_expires="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .expires_at')"
+          test -n "${android_id}" && test "${android_id}" != "null"
+          test -n "${ios_id}" && test "${ios_id}" != "null"
+          test -n "${android_digest}" && test "${android_digest}" != "null"
+          test -n "${ios_digest}" && test "${ios_digest}" != "null"
+          test -n "${android_created}" && test "${android_created}" != "null"
+          test -n "${android_expires}" && test "${android_expires}" != "null"
+          test -n "${ios_created}" && test "${ios_created}" != "null"
+          test -n "${ios_expires}" && test "${ios_expires}" != "null"
+          VERIFIED_AT="$(date -u +%F)" ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" ANDROID_PACKAGE_ARTIFACT_SHA256="${android_digest}" IOS_PACKAGE_ARTIFACT_SHA256="${ios_digest}" ANDROID_PACKAGE_CREATED_AT="${android_created}" ANDROID_PACKAGE_EXPIRES_AT="${android_expires}" IOS_PACKAGE_CREATED_AT="${ios_created}" IOS_PACKAGE_EXPIRES_AT="${ios_expires}" python3 tools/publish-verified-downloads.py
+          python3 tools/verify-website.py
+          python3 -m unittest tools.tests.test_website_security_contract
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/downloads.json apps/web/android.html apps/web/ios-download.html
+          git diff --cached --check
+          git commit -m "chore(downloads): publish verified exact-SHA builds"
+          git push origin HEAD:main
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/vercel-deploy.yml/dispatches" \
+            -d '{"ref":"main"}'

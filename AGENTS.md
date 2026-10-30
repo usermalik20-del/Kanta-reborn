@@ -166,7 +166,7 @@ any workflow, any branch, any trigger, workflow dispatch, reruns, labels and PR-
 No per-run approval, label, actor or run-count gate applies.
 
 The root workflow triggers are intentionally scoped by source paths:
-- `android-validation.yml`: Android source and shared tooling changes on pushes and pull requests.
+- `android-validation.yml`: Android source, shared tooling and release-workflow changes on main pushes and pull requests. Feature-branch validation runs through the pull-request event rather than a duplicate branch-push run.
 - `ios-validation.yml`: iOS source changes on pushes and pull requests.
 - `ios-smoke.yml`: focused iOS native/UI smoke on pull requests and manual dispatch.
 - `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on main pushes, pull requests, and manual dispatch when iOS/Android source changes.
@@ -278,3 +278,12 @@ Never claim background or autonomous execution after the active session ends. Fu
 Before each substantive change, also read `docs/ENGINEERING_ARCHITECTURE_CONTRACT.md` and follow its ownership, lifecycle, parity, and documentation review checklist. Treat planned seams as unimplemented until code and tests prove otherwise.
 
 For each CI failure, update `docs/CI_FAILURE_REPAIR_LEDGER.md` with the fingerprint, run/SHA, confirmed cause versus hypothesis, repair commit, and regression coverage. Append green validation evidence in a separate documentation follow-up after the actual fixed head passes; do not erase failures or infer simulator acceptance from compilation.
+
+
+## Exact-SHA download publication automation
+
+A successful KANTA iOS unsigned artifacts run on main is the release-pipeline completion signal. The Verified download packaging workflow then resolves the Android validation artifact, unsigned iPhoneOS IPA and both-device simulator walkthrough from the same exact main-branch SHA. It waits for in-flight exact-SHA gates instead of accepting an older successful artifact.
+
+Only after all three gates pass does packaging create up-to-30-day, provenance-bearing Android and unsigned iOS bundles. The publication helper verifies that both builds share the same full source SHA, validates the expected debug/unsigned signing states, and writes apps/web/downloads.json plus the two platform download sections. The workflow commits those generated website files with its narrowly scoped GitHub Actions token and dispatches the existing Vercel production deployment workflow.
+
+The iOS download remains an unsigned personal-signing input; this automation does not create Apple signing identities, provisioning profiles, Safari OTA installation or physical-device acceptance. A failed or missing exact-SHA gate fails closed and leaves the previous website downloads untouched. A rejected non-fast-forward publication push also fails safely rather than overwriting newer main-branch work.
