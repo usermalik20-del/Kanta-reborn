@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import sys
@@ -49,7 +50,7 @@ def publish() -> dict:
 
     manifest = {
         "repository": REPO,
-        "verifiedAt": os.environ.get("VERIFIED_AT", ""),
+        "verifiedAt": os.environ.get("VERIFIED_AT") or datetime.now(timezone.utc).date().isoformat(),
         "retentionDays": 30,
         "signInRequired": True,
         "source": source,
