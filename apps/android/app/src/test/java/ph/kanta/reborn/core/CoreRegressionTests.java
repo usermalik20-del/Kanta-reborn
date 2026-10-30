@@ -1108,6 +1108,7 @@ public final class CoreRegressionTests {
     checks += CompanionRegressionTests.run();
     checks += BrowserRemoteRegressionTests.run();
     checks += MkmdDecoderRegressionTests.run();
+    checks += SpicePitchRegressionTests.run();
     checks += QrEncoderRegressionTests.run();
     checks += KantaConnectInfoRegressionTests.run();
     checks += ScoreCelebrationRegressionTests.run();
