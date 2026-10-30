@@ -1794,7 +1794,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       });
       session.importFolder(data.getData());
     }
-    } else if (request == VOICE) {
+    else if (request == VOICE) {
       ArrayList<String> values = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
       if (values != null && !values.isEmpty()) {
         query = values.get(0);
