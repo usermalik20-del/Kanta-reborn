@@ -202,17 +202,20 @@ class WebsiteSecurityContractTests(unittest.TestCase):
     def test_download_manifest_matches_current_accepted_native_baseline(self):
         # Advance this baseline only after reconstruction, unsigned iOS packaging,
         # and the full iPhone/iPad walkthrough all pass on the same native SHA.
+        # All three pass on source 35bf48ba (Android validation run 41029928610,
+        # iOS unsigned artifacts run 41029928516, walkthrough run 41029928637 with
+        # both iPhone and iPad success).
         manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
-        source = "41c8dddeebe7d096322994e8af09c8c48a76308a"
+        source = "35bf48ba9f43a4483becfaa36b66bc62ccdf1b8d"
         self.assertEqual(manifest["android"]["source"], source)
         self.assertEqual(manifest["ios"]["source"], source)
-        self.assertEqual(manifest["android"]["run"], 40424817074)
-        self.assertEqual(manifest["android"]["artifact"], 12701709708)
-        self.assertEqual(manifest["android"]["sha256"], "dbf10ac1479f7feb300abd191d32662a6df137fa90629a5b83e9a6c2fab836b4")
-        self.assertEqual(manifest["ios"]["run"], 40424816823)
-        self.assertEqual(manifest["ios"]["artifact"], 12698769982)
-        self.assertEqual(manifest["ios"]["sha256"], "531f89467c24dcd6206307d48d075302b7428739c1361b481c971a3ceb7bec8a")
-        self.assertEqual(manifest["ios"]["walkthroughRun"], 40424816930)
+        self.assertEqual(manifest["android"]["run"], 41029928610)
+        self.assertEqual(manifest["android"]["artifact"], 12965267288)
+        self.assertEqual(manifest["android"]["sha256"], "e628856e9ec9d49c1269655dbdc2fe518135a14b40ae45f0b9747a6724cb7c2f")
+        self.assertEqual(manifest["ios"]["run"], 41029928516)
+        self.assertEqual(manifest["ios"]["artifact"], 12964814338)
+        self.assertEqual(manifest["ios"]["sha256"], "a4e6e681b1c4fcffd5cd2cbe80a170746e000085c9218a0aac2633e256f63d27")
+        self.assertEqual(manifest["ios"]["walkthroughRun"], 41029928637)
 
 
 if __name__ == "__main__":
