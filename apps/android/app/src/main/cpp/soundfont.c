@@ -1,7 +1,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "soundfont.h"
 #include "sf2-validation.h"
 
@@ -45,10 +48,26 @@ struct kanta_soundfont { tsf* synth; };
 kanta_soundfont* kanta_sf_open(const char* path) {
     struct stat info;
     if (!path || stat(path, &info) || !S_ISREG(info.st_mode) || info.st_size < 12) return NULL;
+
+    // Validate the cross-table references before the third-party loader dereferences them. The
+    // file is mapped for this rather than read, so a large bank costs address space instead of
+    // a heap copy that has to fit in RAM, and the validator only faults in the directory and
+    // the sample headers. This also returns the sample count the region check below needs; the
+    // pinned loader keeps no such count of its own.
+    size_t size = (size_t)info.st_size;
+    int descriptor = open(path, O_RDONLY | O_CLOEXEC);
+    if (descriptor < 0) return NULL;
+    void* mapped = mmap(NULL, size, PROT_READ, MAP_PRIVATE, descriptor, 0);
+    close(descriptor);
+    if (mapped == MAP_FAILED) return NULL;
+    size_t sample_count = sf_validate((const unsigned char*)mapped, size);
+    munmap(mapped, size);
+    if (!sample_count) return NULL;
+
+    // The sample data is streamed into the loader instead of being read into a second copy of
+    // the whole file.
     FILE* file = fopen(path, "rb");
     if (!file) return NULL;
-
-    // Use streaming loader: reads from FILE* on demand, no full-file memory allocation
     struct tsf_stream stream = {
         .data = file,
         .read = (int(*)(void*, void*, unsigned int))&tsf_stream_stdio_read,
@@ -59,8 +78,8 @@ kanta_soundfont* kanta_sf_open(const char* path) {
 
     if (!synth || tsf_get_presetcount(synth) == 0) { if (synth) tsf_close(synth); return NULL; }
 
-    // Validate region bounds against sample count
-    size_t sample_count = synth->sampleCount;
+    // Second line of defence: every decoded region must stay inside the sample data the
+    // validator sized above.
     for (int p = 0; p < synth->presetNum; ++p) {
         for (int r = 0; r < synth->presets[p].regionNum; ++r) {
             struct tsf_region* region = &synth->presets[p].regions[r];
