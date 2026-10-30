@@ -42,6 +42,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
       - name: Check exact-SHA artifact and release-gate contracts
         run: |
           python3 -m unittest discover -s tools/tests -p 'test_verified_downloads.py'
@@ -58,6 +59,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: true
       - name: Package exact-SHA accepted builds
         run: python3 tools/prepare-verified-downloads.py
         env:
