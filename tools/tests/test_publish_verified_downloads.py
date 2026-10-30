@@ -55,6 +55,10 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
             "IOS_PACKAGE_ARTIFACT_ID": "502",
             "ANDROID_PACKAGE_ARTIFACT_SHA256": "d" * 64,
             "IOS_PACKAGE_ARTIFACT_SHA256": "e" * 64,
+            "ANDROID_PACKAGE_CREATED_AT": "2026-10-31T00:00:00Z",
+            "ANDROID_PACKAGE_EXPIRES_AT": "2026-11-30T00:00:00Z",
+            "IOS_PACKAGE_CREATED_AT": "2026-10-31T00:00:00Z",
+            "IOS_PACKAGE_EXPIRES_AT": "2026-11-30T00:00:00Z",
             "GITHUB_REPOSITORY": "usermalik20-del/Kanta-reborn",
             "VERIFIED_AT": "2026-10-31",
         })
