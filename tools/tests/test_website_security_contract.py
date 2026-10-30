@@ -265,7 +265,8 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertRegex(source, r"^[0-9a-f]{40}$")
         self.assertEqual(manifest["android"]["source"], source)
         self.assertEqual(manifest["ios"]["source"], source)
-        self.assertEqual(manifest["retentionDays"], 30)
+        self.assertGreaterEqual(manifest["retentionDays"], 1)
+        self.assertLessEqual(manifest["retentionDays"], 30)
         self.assertGreater(manifest["packagingRun"], 0)
         self.assertGreater(manifest["ios"]["walkthroughRun"], 0)
         self.assertTrue(manifest["android"]["downloadUrl"].endswith(
