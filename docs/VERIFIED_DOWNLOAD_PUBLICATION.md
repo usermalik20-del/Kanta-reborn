@@ -2,7 +2,7 @@
 
 The download pipeline is deliberately fail-closed and exact-SHA pinned.
 
-1. A main-branch change to tools/prepare-verified-downloads.py starts Android validation, the iPhone/iPad simulator walkthrough and the unsigned iPhoneOS archive.
+1. A main-branch change to any release packager/publisher, its contract tests, the website verifier, or one of the four release workflow definitions starts Android validation, the iPhone/iPad simulator walkthrough and the unsigned iPhoneOS archive on the same commit SHA.
 2. Only a successful KANTA iOS unsigned artifacts run on main starts Verified download packaging.
 3. The packager waits for and resolves all three successful runs by the same full commit SHA. It rejects missing, failed, expired, ambiguous or cross-revision artifacts.
 4. It copies the accepted APK and unsigned IPA bytes into up-to-30-day GitHub Actions artifacts and writes checksums and provenance.
