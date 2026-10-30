@@ -188,7 +188,7 @@ final class LibraryRepository {
     return bankName;
   }
 
-private Song importSong(Uri uri) throws Exception {
+  private Song importSong(Uri uri) throws Exception {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening song...");
 
@@ -282,12 +282,23 @@ private Song importSong(Uri uri) throws Exception {
     } finally {
       if (!installed) temp.delete();
     }
-  }  private static int readPrefix(InputStream in, byte[] bytes) throws IOException {
+  }
+
+  private static int readPrefix(InputStream in, byte[] bytes) throws IOException {
     int total = 0;
     while (total < bytes.length) {
       int count = in.read(bytes, total, bytes.length - total);
       if (count < 0) break;
-private void importSoundFont(Uri uri) throws Exception {
+      if (count == 0) {
+        int value = in.read();
+        if (value < 0) break;
+        bytes[total++] = (byte) value;
+      } else total += count;
+    }
+    return total;
+  }
+
+  private void importSoundFont(Uri uri) throws Exception {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening SoundFont...");
 
@@ -352,19 +363,35 @@ private void importSoundFont(Uri uri) throws Exception {
     notifyProgress(fileSize, fileSize, "Import complete");
   }
 
+  /**
+   * The size the provider reports for an import, or -1 when it cannot be queried. A provider
+   * that will not report a size is not a reason to refuse the import; only the progress total
+   * is unknown.
+   */
+  private long getFileSize(Uri uri) {
+    try (Cursor c =
+        context
+            .getContentResolver()
+            .query(uri, new String[] {OpenableColumns.SIZE}, null, null, null)) {
+      if (c != null && c.moveToFirst() && !c.isNull(0)) return c.getLong(0);
+    } catch (RuntimeException unknown) {
+      // Fall through to the unknown-size result.
+    }
+    return -1;
+  }
+
+  /** Reports import progress to the registered listener, if there is one. */
+  private void notifyProgress(long total, long copied, String status) {
+    ImportProgressListener listener = progressListener;
+    if (listener != null) listener.onProgress(total, copied, status);
+  }
+
   private static String formatBytes(long bytes) {
     if (bytes < 0) return "?";
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
     if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
     return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
-  }      if (count == 0) {
-        int value = in.read();
-        if (value < 0) break;
-        bytes[total++] = (byte) value;
-      } else total += count;
-    }
-    return total;
   }
 
   boolean importMedia(Uri uri) throws Exception {
@@ -424,3 +451,52 @@ private void importSoundFont(Uri uri) throws Exception {
     }
   }
 
+  void setStarter(String id, boolean enabled) throws Exception {
+    int index = Arrays.asList(STARTERS).indexOf(id.replace("starter:", ""));
+    if (index < 0) throw new IOException("Unknown starter song");
+    ArrayList<Song> before = new ArrayList<>(songs);
+    Set<String> previous = new HashSet<>(removed);
+    if (enabled) {
+      removed.remove(id);
+      if (find(id) == null)
+        songs.add(
+            new Song(
+                id,
+                TITLES[index],
+                "KANTA Originals",
+                "S00" + (index + 1),
+                STARTERS[index] + ".mid",
+                true));
+    } else {
+      removed.add(id);
+      songs.removeIf(s -> s.id.equals(id));
+    }
+    try {
+      persist();
+    } catch (Exception e) {
+      songs.clear();
+      songs.addAll(before);
+      removed.clear();
+      removed.addAll(previous);
+      throw e;
+    }
+  }
+
+  void saveSet(String name, List<Song> values) throws Exception {
+    if (sets.size() >= 1000 || values.size() > 10000)
+      throw new IOException("Saved-set limit reached");
+    name = name.trim();
+    if (name.isEmpty() || name.length() > 120)
+      throw new IOException("Enter a set name under 120 characters");
+    ArrayList<String> ids = new ArrayList<>();
+    for (Song s : values) ids.add(s.id);
+    SavedSet set = new SavedSet(UUID.randomUUID().toString(), name, ids);
+    sets.add(set);
+    try {
+      persist();
+    } catch (Exception e) {
+      sets.remove(set);
+      throw e;
+    }
+  }
+}
