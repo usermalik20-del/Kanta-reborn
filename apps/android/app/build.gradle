@@ -41,6 +41,9 @@ dependencies {
     implementation 'androidx.camera:camera-lifecycle:1.5.3'
     implementation 'androidx.camera:camera-view:1.5.3'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    // Optional pitch DSP adapter. The AAR declares no permissions and pulls in no Google
+    // Play services, so the APK keeps its exact CAMERA/RECORD_AUDIO/INTERNET permission set.
+    implementation 'org.tensorflow:tensorflow-lite:2.16.1'
 }
 
 // Keep the exact upstream runtime notices available offline in the app.

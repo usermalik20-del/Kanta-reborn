@@ -167,13 +167,16 @@ public final class SpicePitch {
     /**
      * Emits the outputs whose filter window runs past the end of the captured audio, using
      * zeros for the missing tail. Without this the last few output samples are lost.
+     *
+     * <p>The outputs are written from {@code offset}, so a caller that has already filled part
+     * of its buffer keeps what is there.
      */
-    public int flush(float[] out) {
+    public int flush(float[] out, int offset) {
       int written = 0;
       // Only a complete decimation group counts: output j needs the capture samples
       // [3j, 3j+3). A trailing partial group is not a sample the model would have produced.
       while (nextCentre + DECIMATION <= received) {
-        out[written++] = window(nextCentre, received);
+        out[offset + written++] = window(nextCentre, received);
         nextCentre += DECIMATION;
       }
       return written;

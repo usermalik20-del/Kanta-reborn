@@ -59,7 +59,7 @@ public final class SpicePitchRegressionTests {
     SpicePitch.Resampler resampler = new SpicePitch.Resampler();
     float[] out = new float[pcm.length / SpicePitch.DECIMATION + 16];
     int written = resampler.accept(pcm, pcm.length, out);
-    written += resampler.flush(out);
+    written += resampler.flush(out, written);
     return Arrays.copyOf(out, written);
   }
 
@@ -76,7 +76,7 @@ public final class SpicePitchRegressionTests {
     SpicePitch.Resampler resampler = new SpicePitch.Resampler();
     float[] out = new float[64];
     int written = resampler.accept(ramp, ramp.length, out);
-    written += resampler.flush(out);
+    written += resampler.flush(out, written);
 
     check(written == GOLDEN_RAMP.length, "Resampler output count: " + written);
     for (int i = 0; i < GOLDEN_RAMP.length; i++) {

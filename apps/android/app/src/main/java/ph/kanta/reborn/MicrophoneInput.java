@@ -60,6 +60,7 @@ final class MicrophoneInput {
     volatile boolean cancelled;
     volatile boolean capturing;
     volatile Reading reading;
+    volatile SpicePitchEstimator spice;
     final float[] analysisFrame = new float[DryPitchDetector.FRAME_SIZE];
   }
 
@@ -81,6 +82,20 @@ final class MicrophoneInput {
   boolean capturing() {
     Run run = active;
     return run != null && run.capturing;
+  }
+
+  /** The calibrated pitch estimate in Hz, or 0 when SPICE has not produced one. */
+  float calibratedPitchHz() {
+    Run run = active;
+    if (run == null || run.spice == null) return 0f;
+    return run.spice.pitchHz();
+  }
+
+  /** When the calibrated estimate was measured, in milliseconds; 0 when unknown. */
+  long calibratedMeasuredAt() {
+    Run run = active;
+    if (run == null || run.spice == null) return 0L;
+    return run.spice.measuredAt();
   }
 
   Reading reading() {
@@ -154,6 +169,9 @@ final class MicrophoneInput {
       input.startRecording();
       if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
         throw new IllegalStateException();
+      // SPICE is an optional DSP adapter. If the model cannot be loaded the pitch features
+      // keep using the frame detector, so this must never stop the capture.
+      run.spice = SpicePitchEstimator.create(context);
       long lastData = SystemClock.elapsedRealtime(), lastAnalysis = 0, lastConfig = 0;
       int filled = 0;
       while (current(run)) {
@@ -178,6 +196,8 @@ final class MicrophoneInput {
         if (!current(run)) break;
         run.capturing = true;
         sink.offer(block, count);
+        SpicePitchEstimator estimator = run.spice;
+        if (estimator != null) estimator.offer(block, count);
         for (int i = 0; i < count; i++) {
           frame[filled++] = block[i] / 32768f;
           if (filled == frame.length) {
@@ -219,6 +239,8 @@ final class MicrophoneInput {
             if (!current(run)) return;
             double energy = 0;
             for (float value : run.analysisFrame) energy += value * value;
+            SpicePitchEstimator estimator = run.spice;
+            if (estimator != null) estimator.poll();
             DryPitchDetector.Pitch pitch = detector.detect(run.analysisFrame, RATE);
             Reading value =
                 new Reading(Math.sqrt(energy / run.analysisFrame.length), pitch, measuredAt);

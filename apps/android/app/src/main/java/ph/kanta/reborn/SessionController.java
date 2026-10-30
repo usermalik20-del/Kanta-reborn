@@ -390,6 +390,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   @Override
   public float currentPitchHz() {
+    // SPICE is the calibrated estimate and is preferred when it is available; the frame
+    // detector is the fallback so the pitch features keep working without the model.
+    float calibrated = microphone.calibratedPitchHz();
+    if (calibrated > 0f) return calibrated;
     MicrophoneInput.Reading reading = inputReading();
     if (reading == null || reading.pitch == null || reading.pitch.confidence <= 0) return 0f;
     return (float) reading.pitch.frequencyHz;
@@ -397,6 +401,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   @Override
   public long measuredAtMs() {
+    if (microphone.calibratedPitchHz() > 0f) return microphone.calibratedMeasuredAt();
     MicrophoneInput.Reading reading = inputReading();
     return reading == null ? 0L : reading.measuredAt;
   }
