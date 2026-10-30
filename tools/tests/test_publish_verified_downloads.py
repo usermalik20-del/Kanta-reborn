@@ -104,6 +104,14 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
         self.assertIn("Artifact ZIP SHA-256: <code>" + "e" * 64 + "</code>", ios_page)
 
 
+
+    def test_rejects_expired_package_artifact_metadata(self):
+        with patch.dict(os.environ, {
+            "ANDROID_PACKAGE_EXPIRES_AT": "2026-10-30T00:00:00Z",
+        }):
+            with self.assertRaisesRegex(ValueError, "valid retention window"):
+                publisher.publish()
+
     def test_records_the_shorter_repository_enforced_retention(self):
         with patch.dict(os.environ, {
             "IOS_PACKAGE_EXPIRES_AT": "2026-11-07T00:00:00Z",
