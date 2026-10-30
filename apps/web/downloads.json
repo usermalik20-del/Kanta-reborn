@@ -1,28 +1,37 @@
 {
   "repository": "usermalik20-del/Kanta-reborn",
   "verifiedAt": "2026-10-30",
-  "retentionDays": 7,
+  "retentionDays": 30,
   "signInRequired": true,
+  "source": "95cf5a00ba32aa2f3f653e865318e05e1d2fa59c",
+  "packagingRun": 41107352968,
+  "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41107352968",
+  "walkthroughRun": 41106351112,
   "android": {
-    "source": "35bf48ba9f43a4483becfaa36b66bc62ccdf1b8d",
-    "run": 41029928610,
-    "artifact": 12965267288,
+    "source": "95cf5a00ba32aa2f3f653e865318e05e1d2fa59c",
+    "run": 41106351415,
+    "artifact": 13002300956,
+    "packagingArtifact": 13003226770,
+    "artifactName": "KANTA-Android-preview-download",
+    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41107352968/artifacts/13003226770",
     "signed": "debug",
-    "version": "0.10.0-reconstruction",
-    "artifactName": "android-reconstruction-checks",
-    "sha256": "e628856e9ec9d49c1269655dbdc2fe518135a14b40ae45f0b9747a6724cb7c2f",
-    "apkSha256": "09fcdcaf1366425bc7158cacaf41d7a09f24444233f7809ee54ee97629c9b27a",
-    "apkSigned": "debug-self-signed-v1"
+    "sha256": "6f9abfbe129c03bea9038205faaec04ebf8add778c049be846954a812d1edef8",
+    "apkSha256": "9a8089dce8803dfd04abc33aec4355d1a3ab1fb170706962d3cabe1316184b08",
+    "bytes": 46362440
   },
   "ios": {
-    "source": "35bf48ba9f43a4483becfaa36b66bc62ccdf1b8d",
-    "run": 41029928516,
-    "artifact": 12964814338,
+    "source": "95cf5a00ba32aa2f3f653e865318e05e1d2fa59c",
+    "run": 41106351471,
+    "artifact": 13002210406,
+    "packagingArtifact": 13002552341,
+    "artifactName": "KANTA-iOS-personal-unsigned-download",
+    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41107352968/artifacts/13002552341",
     "signed": false,
     "personalSigningRequired": true,
     "icloudAvailable": false,
-    "artifactName": "KANTA-personal-unsigned",
-    "sha256": "a4e6e681b1c4fcffd5cd2cbe80a170746e000085c9218a0aac2633e256f63d27",
-    "walkthroughRun": 41029928637
+    "sha256": "831551d8499bf78974b8d5025244deca77a258d0b1e6795022c2e64fbb3eb782",
+    "ipaSha256": "4ebfe35c1c4336f50450392ab65e90a3ee29d8e57e19074ea37d16e3a652d874",
+    "walkthroughRun": 41106351112,
+    "bytes": 25136593
   }
 }
