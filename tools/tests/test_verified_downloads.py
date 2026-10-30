@@ -259,7 +259,7 @@ class IOSSimulatorAcceptanceNamingTests(unittest.TestCase):
         for key, relative_path in workflows.items():
             with self.subTest(workflow=key):
                 source = (root / relative_path).read_text(encoding="utf-8")
-                match = re.search(r"(?m)^name:\\s*(.+)$", source)
+                match = re.search(r"(?m)^name:\s*(.+)$", source)
                 self.assertIsNotNone(match, relative_path)
                 self.assertEqual(module.REQUIRED_RUNS[key], match.group(1).strip())
 
