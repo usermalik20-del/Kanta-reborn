@@ -2,7 +2,7 @@ name: KANTA Android validation
 on:
   workflow_dispatch:
   push:
-    branches: ['**']
+    branches: [main]
     paths:
       - 'apps/android/**'
       - 'tools/**'
