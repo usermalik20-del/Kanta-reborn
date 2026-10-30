@@ -285,6 +285,7 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         root = pathlib.Path(__file__).resolve().parents[2]
+        cls.android = (root / ".github/workflows/android-validation.yml").read_text(encoding="utf-8")
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
         cls.visual = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.workflow = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
@@ -300,13 +301,22 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         )
         for event in ("push", "pull_request"):
             with self.subTest(event=event):
+                android_section = workflow_event_section(self.android, event)
                 archive_section = workflow_event_section(self.archive, event)
                 visual_section = workflow_event_section(self.visual, event)
                 package_section = workflow_event_section(self.workflow, event)
+                self.assertIn("'tools/**'", android_section)
                 for path in release_paths:
                     self.assertIn(path, archive_section)
                     self.assertIn(path, visual_section)
                     self.assertIn(path, package_section)
+                for path in (
+                    "'.github/workflows/ios-runtime-artifacts.yml'",
+                    "'.github/workflows/ios-visual-walkthrough.yml'",
+                    "'.github/workflows/verified-downloads.yml'",
+                ):
+                    for section in (android_section, archive_section, visual_section, package_section):
+                        self.assertIn(path, section)
 
     def test_successful_main_unsigned_archive_automatically_starts_packaging(self):
         self.assertIn("workflow_run:", self.workflow)
