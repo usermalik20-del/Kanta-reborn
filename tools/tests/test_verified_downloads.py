@@ -239,5 +239,32 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
                 self.assertIn("'tools/verify-android-companion-interface.py'", section)
 
 
+
+class IOSSimulatorAcceptanceNamingTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        cls.workflow = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
+        cls.runner = (root / "tools/capture-ios-runtime.py").read_text(encoding="utf-8")
+        cls.testing = (root / "docs/TESTING.md").read_text(encoding="utf-8")
+
+    def test_workflow_names_both_jobs_as_simulator_acceptance(self):
+        self.assertIn("name: iPhone simulator acceptance", self.workflow)
+        self.assertIn("name: iPad simulator acceptance", self.workflow)
+        self.assertIn("- name: iPhone simulator walkthrough", self.workflow)
+        self.assertIn("- name: iPad simulator walkthrough", self.workflow)
+        self.assertNotRegex(self.workflow, r"(?i)real iPhone|real iPad")
+
+    def test_runner_records_simulator_not_physical_device_evidence(self):
+        self.assertIn("Capture iPhone/iPad simulator interactions", self.runner)
+        self.assertIn("platform=iOS Simulator", self.runner)
+        self.assertIn("do not prove physical-device behavior", self.runner)
+        self.assertNotIn("Capture real iPhone/iPad interactions", self.runner)
+
+    def test_testing_policy_separates_simulator_and_physical_device_acceptance(self):
+        self.assertIn("simulator UI acceptance", self.testing)
+        self.assertIn("physical-device acceptance", self.testing)
+
+
 if __name__ == "__main__":
     unittest.main()
