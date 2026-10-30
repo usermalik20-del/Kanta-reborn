@@ -1355,6 +1355,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
+  void setImportProgressListener(LibraryRepository.ImportProgressListener listener) {
+    repository.setImportProgressListener(listener);
+  }
+
   void cancelImports() {
     importCancelled.set(true);
   }

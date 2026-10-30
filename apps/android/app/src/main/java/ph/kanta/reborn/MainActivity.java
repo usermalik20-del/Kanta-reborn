@@ -62,6 +62,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int resultLimit = 50;
   private int queueLimit = 20;
   private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private android.app.ProgressDialog importProgressDialog;
   private final ExecutorService searchWorker = Executors.newSingleThreadExecutor();
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
@@ -1769,9 +1771,29 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         for (int i = 0; i < data.getClipData().getItemCount() && i < 1000; i++)
           uris.add(data.getClipData().getItemAt(i).getUri());
       } else if (data.getData() != null) uris.add(data.getData());
+      showImportProgress();
+      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+        @Override public void onProgress(long total, long copied, String status) {
+          updateImportProgress(total, copied, status);
+        }
+        @Override public void onComplete(boolean success, String message) {
+          hideImportProgress(message);
+        }
+      });
       session.importSongs(uris);
-    } else if (request == FOLDER && data.getData() != null) {
+    }
+    else if (request == FOLDER && data.getData() != null) {
+      showImportProgress();
+      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+        @Override public void onProgress(long total, long copied, String status) {
+          updateImportProgress(total, copied, status);
+        }
+        @Override public void onComplete(boolean success, String message) {
+          hideImportProgress(message);
+        }
+      });
       session.importFolder(data.getData());
+    }
     } else if (request == VOICE) {
       ArrayList<String> values = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
       if (values != null && !values.isEmpty()) {

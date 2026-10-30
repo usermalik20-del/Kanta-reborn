@@ -175,6 +175,7 @@ final class LibraryRepository {
     try {
       persist();
     } catch (Exception e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       queue = old;
       throw e;
     }
@@ -273,11 +274,13 @@ final class LibraryRepository {
       try {
         persist();
       } catch (Exception e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
         songs.remove(song);
         if (created) destination.delete();
         throw e;
       }
       notifyProgress(fileSize, fileSize, "Import complete");
+    if (progressListener != null) progressListener.onComplete(true, "Import complete");
       return song;
     } finally {
       if (!installed) temp.delete();
@@ -353,6 +356,7 @@ final class LibraryRepository {
       persist();
       if (created && batching) batchFiles.add(destination);
     } catch (Exception | LinkageError e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       selectedBank = oldBank;
       bankName = oldName;
       if (created && destination != null) destination.delete();
@@ -361,6 +365,7 @@ final class LibraryRepository {
       temp.delete();
     }
     notifyProgress(fileSize, fileSize, "Import complete");
+    if (progressListener != null) progressListener.onComplete(true, "Import complete");
   }
 
   /**
@@ -430,6 +435,7 @@ final class LibraryRepository {
           importMedia(uri);
           good++;
         } catch (Exception | LinkageError e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
           failed++;
         }
       }
@@ -438,6 +444,7 @@ final class LibraryRepository {
       persist();
       return new int[] {good, failed};
     } catch (Exception e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       songs.clear();
       songs.addAll(before);
       selectedBank = oldBank;
@@ -474,6 +481,7 @@ final class LibraryRepository {
     try {
       persist();
     } catch (Exception e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       songs.clear();
       songs.addAll(before);
       removed.clear();
@@ -495,6 +503,7 @@ final class LibraryRepository {
     try {
       persist();
     } catch (Exception e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       sets.remove(set);
       throw e;
     }
@@ -544,6 +553,7 @@ final class LibraryRepository {
       out.write(encoded);
       state.finishWrite(out);
     } catch (Exception e) {
+        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       if (out != null) state.failWrite(out);
       throw e;
     }
