@@ -18,6 +18,7 @@ import zipfile
 REPO = os.environ.get("GITHUB_REPOSITORY", "usermalik20-del/Kanta-reborn")
 LIMIT = 128 * 1024 * 1024
 SOURCE_WAIT_SECONDS = 2700
+# Peer release gates share this exact SHA; poll conservatively to limit API traffic.
 POLL_INTERVAL_SECONDS = 15
 
 REQUIRED_RUNS = {
