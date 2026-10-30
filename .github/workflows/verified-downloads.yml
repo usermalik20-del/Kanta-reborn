@@ -28,8 +28,8 @@ on:
     workflows: ["KANTA iOS unsigned artifacts"]
     types: [completed]
 permissions:
-  contents: write
-  actions: write
+  contents: read
+  actions: read
 concurrency:
   group: verified-downloads-${{ github.event.workflow_run.head_sha || inputs.source_sha || github.sha }}
   cancel-in-progress: false
@@ -47,6 +47,9 @@ jobs:
           python3 -m unittest discover -s tools/tests -p 'test_verified_downloads.py'
           python3 -m unittest discover -s tools/tests -p 'test_publish_verified_downloads.py'
   package:
+    permissions:
+      contents: write
+      actions: write
     if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.name == 'KANTA iOS unsigned artifacts') }}
     needs: contracts
     runs-on: ubuntu-latest
