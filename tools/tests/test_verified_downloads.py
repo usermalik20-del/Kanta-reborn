@@ -303,6 +303,8 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
 
     def test_packaging_publishes_site_and_dispatches_production_deploy(self):
         self.assertIn("permissions:\n  contents: read\n  actions: read", self.workflow)
+        self.assertIn("persist-credentials: false", self.workflow)
+        self.assertIn("persist-credentials: true", self.workflow)
         self.assertIn("  package:\n    permissions:\n      contents: write\n      actions: write", self.workflow)
         self.assertIn("tools/publish-verified-downloads.py", self.workflow)
         self.assertIn("python3 tools/verify-website.py", self.workflow)
