@@ -310,6 +310,7 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         self.assertIn("python3 tools/verify-website.py", self.workflow)
         self.assertIn("python3 -m unittest tools.tests.test_website_security_contract", self.workflow)
         self.assertIn("actions/workflows/vercel-deploy.yml/dispatches", self.workflow)
+        self.assertIn("Content-Type: application/json", self.workflow)
         self.assertIn("git push origin HEAD:main", self.workflow)
 
 
