@@ -36,7 +36,9 @@ def actual_retention_days(prefix: str) -> int:
     try:
         created_at = datetime.fromisoformat(created.replace("Z", "+00:00"))
         expires_at = datetime.fromisoformat(expires.replace("Z", "+00:00"))
-    except ValueError as exc:
+        if created_at.tzinfo is None or expires_at.tzinfo is None:
+            raise ValueError("artifact timestamps must include timezone offsets")
+    except (TypeError, ValueError) as exc:
         raise ValueError(prefix + " artifact creation/expiry timestamps are invalid") from exc
     days = round((expires_at - created_at).total_seconds() / 86400)
     if days < 1 or days > 30:
