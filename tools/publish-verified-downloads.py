@@ -21,6 +21,15 @@ def required_int(name: str) -> int:
     return int(value)
 
 
+def required_sha256(name: str) -> str:
+    value = os.environ.get(name, "")
+    if value.startswith("sha256:"):
+        value = value[7:]
+    if not re.fullmatch(r"[0-9a-f]{64}", value):
+        raise ValueError(name + " must be a SHA-256 artifact digest")
+    return value
+
+
 def publish() -> dict:
     package = json.loads(Path("verified-downloads/downloads.json").read_text(encoding="utf-8"))
     source = package.get("source_sha", "")
@@ -44,6 +53,8 @@ def publish() -> dict:
     run_id = required_int("GITHUB_RUN_ID")
     android_package_artifact = required_int("ANDROID_PACKAGE_ARTIFACT_ID")
     ios_package_artifact = required_int("IOS_PACKAGE_ARTIFACT_ID")
+    android_package_digest = required_sha256("ANDROID_PACKAGE_ARTIFACT_SHA256")
+    ios_package_digest = required_sha256("IOS_PACKAGE_ARTIFACT_SHA256")
     run_url = "https://github.com/" + REPO + "/actions/runs/" + str(run_id)
     android_url = run_url + "/artifacts/" + str(android_package_artifact)
     ios_url = run_url + "/artifacts/" + str(ios_package_artifact)
@@ -65,7 +76,8 @@ def publish() -> dict:
             "artifactName": "KANTA-Android-preview-download",
             "downloadUrl": android_url,
             "signed": "debug",
-            "sha256": android["sha256"],
+            "sha256": android_package_digest,
+            "apkSha256": android["sha256"],
             "bytes": int(android["bytes"]),
         },
         "ios": {
@@ -78,7 +90,9 @@ def publish() -> dict:
             "signed": False,
             "personalSigningRequired": True,
             "icloudAvailable": False,
-            "sha256": ios["sha256"],
+            "sha256": ios_package_digest,
+            "ipaSha256": ios["sha256"],
+            "walkthroughRun": int(walkthrough_run),
             "bytes": int(ios["bytes"]),
         },
     }
@@ -88,18 +102,20 @@ def publish() -> dict:
     android_text = android_page.read_text(encoding="utf-8")
     ios_text = ios_page.read_text(encoding="utf-8")
 
+    android_source_url = "https://github.com/" + REPO + "/actions/runs/" + str(int(android["run"])) + "/artifacts/" + str(int(android["artifact"]))
+    ios_source_url = "https://github.com/" + REPO + "/actions/runs/" + str(int(ios["run"])) + "/artifacts/" + str(int(ios["artifact"]))
     android_section = f'''<section class="section" id="download"><h2>Android preview download</h2>
 <p><a class="button primary" href="{android_url}">Download verified Android bundle ↗</a></p>
-<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. The bundle contains the debug-signed APK, checksum and build provenance. The APK is a testing preview, not a Google Play release.</p>
-<p>Source <code>{source[:8]}</code> · Debug-signed APK. Validated Android run <a href="https://github.com/{REPO}/actions/runs/{int(android["run"])}">#{int(android["run"])}</a>.</p>
-<p>APK SHA-256: <code>{android["sha256"]}</code>.</p>
+<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. The bundle contains the debug-signed APK, SHA256.txt checksum and build provenance. The APK is a testing preview, not a Google Play release.</p>
+<p>Source <code>{source[:8]}</code> · Debug-signed APK. Validated Android run <a href="https://github.com/{REPO}/actions/runs/{int(android["run"])}">#{int(android["run"])}</a> · <a href="{android_source_url}">Original accepted build artifact</a>.</p>
+<p>Artifact ZIP SHA-256: <code>{android_package_digest}</code>. APK SHA-256: <code>{android["sha256"]}</code>. SHA256.txt is included.</p>
 <p>iPhone/iPad simulator acceptance also passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>.</p></section>'''
     ios_section = f'''<section class="section" id="download"><h2>Unsigned iPhone / iPad package</h2>
 <p><a class="button primary" href="{ios_url}">Download unsigned iOS bundle ↗</a></p>
-<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. This bundle contains an unsigned iPhoneOS IPA, checksum and build provenance.</p>
-<p>Source <code>{source[:8]}</code> · iOS/iPadOS 17 or newer. <strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable in this build.</p>
-<p>IPA SHA-256: <code>{ios["sha256"]}</code>.</p>
-<p>Both iPhone and iPad simulator acceptance jobs passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>. Simulator results do not establish physical-device acceptance.</p></section>'''
+<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. This bundle contains an unsigned iPhoneOS IPA, SHA256.txt checksum and build provenance.</p>
+<p>Source <code>{source[:8]}</code> · iOS/iPadOS 17 or newer. <strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable in this build. <a href="{ios_source_url}">Original unsigned archive artifact</a>.</p>
+<p>Artifact ZIP SHA-256: <code>{ios_package_digest}</code>. IPA SHA-256: <code>{ios["sha256"]}</code>. SHA256.txt is included.</p>
+<p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>. Simulator results do not establish physical-device acceptance.</p></section>'''
 
     def replace_section(document: str, replacement: str) -> str:
         pattern = re.compile(r'<section class="section" id="download">.*?</section>', re.DOTALL)
