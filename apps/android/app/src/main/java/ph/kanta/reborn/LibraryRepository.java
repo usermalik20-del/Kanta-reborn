@@ -499,4 +499,69 @@ final class LibraryRepository {
       throw e;
     }
   }
+
+  private void persist() throws Exception {
+    if (batching) return;
+    JSONObject root =
+        new JSONObject()
+            .put("version", 1)
+            .put("soundfont", selectedBank)
+            .put("soundfontName", bankName);
+    JSONArray rows = new JSONArray();
+    for (Song s : songs)
+      rows.put(
+          new JSONObject()
+              .put("id", s.id)
+              .put("title", s.title)
+              .put("artist", s.artist)
+              .put("code", s.code)
+              .put("file", s.fileName)
+              .put("starter", s.starter));
+    root.put("songs", rows);
+    root.put("removed", new JSONArray(removed));
+    JSONArray q = new JSONArray();
+    for (ReservationQueue.Entry e : queue)
+      q.put(
+          new JSONObject()
+              .put("id", e.id.toString())
+              .put("song", e.song.id)
+              .put("singer", e.singer));
+    root.put("queue", q);
+    JSONArray saved = new JSONArray();
+    for (SavedSet s : sets)
+      saved.put(
+          new JSONObject()
+              .put("id", s.id)
+              .put("name", s.name)
+              .put("songs", new JSONArray(s.songs)));
+    root.put("sets", saved);
+    FileOutputStream out = null;
+    try {
+      out = state.startWrite();
+      byte[] encoded = root.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      if (encoded.length > 16 * 1024 * 1024)
+        throw new IOException("Library metadata capacity reached");
+      out.write(encoded);
+      state.finishWrite(out);
+    } catch (Exception e) {
+      if (out != null) state.failWrite(out);
+      throw e;
+    }
+  }
+
+  private void verifyCopy(File destination, String expected) throws Exception {
+    MessageDigest hash = MessageDigest.getInstance("SHA-256");
+    try (InputStream bytes = new FileInputStream(destination)) {
+      byte[] block = new byte[65536];
+      int count;
+      while ((count = bytes.read(block)) != -1) {
+        if (cancelled.getAsBoolean()) throw new InterruptedIOException();
+        hash.update(block, 0, count);
+      }
+    }
+    StringBuilder key = new StringBuilder();
+    for (byte b : hash.digest()) key.append(String.format(Locale.ROOT, "%02x", b & 255));
+    if (!expected.contentEquals(key))
+      throw new IOException("Private media copy failed integrity check");
+  }
 }
