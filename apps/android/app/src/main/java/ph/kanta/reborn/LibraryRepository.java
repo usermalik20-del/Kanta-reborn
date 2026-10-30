@@ -175,7 +175,7 @@ final class LibraryRepository {
     try {
       persist();
     } catch (Exception e) {
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
+      notifyComplete(false, e.getMessage());
       queue = old;
       throw e;
     }
@@ -274,13 +274,13 @@ final class LibraryRepository {
       try {
         persist();
       } catch (Exception e) {
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
+        notifyComplete(false, e.getMessage());
         songs.remove(song);
         if (created) destination.delete();
         throw e;
       }
       notifyProgress(fileSize, fileSize, "Import complete");
-    if (progressListener != null) progressListener.onComplete(true, "Import complete");
+      notifyComplete(true, "Import complete");
       return song;
     } finally {
       if (!installed) temp.delete();
@@ -356,7 +356,7 @@ final class LibraryRepository {
       persist();
       if (created && batching) batchFiles.add(destination);
     } catch (Exception | LinkageError e) {
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
+      notifyComplete(false, e.getMessage());
       selectedBank = oldBank;
       bankName = oldName;
       if (created && destination != null) destination.delete();
@@ -365,7 +365,7 @@ final class LibraryRepository {
       temp.delete();
     }
     notifyProgress(fileSize, fileSize, "Import complete");
-    if (progressListener != null) progressListener.onComplete(true, "Import complete");
+    notifyComplete(true, "Import complete");
   }
 
   /**
@@ -392,10 +392,14 @@ final class LibraryRepository {
   }
 
   /**
-   * Reports the end of a batch. Without this the caller's onComplete never runs, which is what
-   * dismisses the import dialog, so an import would leave it on screen forever.
+   * Reports the end of a user-visible import, exactly once.
+   *
+   * <p>While a batch is running the individual files are not each an operation, so a completion
+   * per file would dismiss the caller's dialog after the first one. The batch reports once at
+   * the end instead. Outside a batch, a single import reports for itself.
    */
   private void notifyComplete(boolean success, String message) {
+    if (batching) return;
     ImportProgressListener listener = progressListener;
     if (listener != null) listener.onComplete(success, message);
   }
@@ -444,7 +448,7 @@ final class LibraryRepository {
           importMedia(uri);
           good++;
         } catch (Exception | LinkageError e) {
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
+          notifyComplete(false, e.getMessage());
           failed++;
         }
       }
@@ -454,8 +458,9 @@ final class LibraryRepository {
       notifyComplete(true, "Imported " + good + (failed > 0 ? ", skipped " + failed : ""));
       return new int[] {good, failed};
     } catch (Exception e) {
+      // Clear the flag before reporting: notifyComplete stays silent while a batch is running.
+      batching = false;
       notifyComplete(false, String.valueOf(e.getMessage()));
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       songs.clear();
       songs.addAll(before);
       selectedBank = oldBank;
@@ -492,7 +497,7 @@ final class LibraryRepository {
     try {
       persist();
     } catch (Exception e) {
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
+      notifyComplete(false, e.getMessage());
       songs.clear();
       songs.addAll(before);
       removed.clear();
@@ -514,7 +519,7 @@ final class LibraryRepository {
     try {
       persist();
     } catch (Exception e) {
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
+      notifyComplete(false, e.getMessage());
       sets.remove(set);
       throw e;
     }
@@ -564,7 +569,7 @@ final class LibraryRepository {
       out.write(encoded);
       state.finishWrite(out);
     } catch (Exception e) {
-        if (progressListener != null) progressListener.onComplete(false, e.getMessage());
+      notifyComplete(false, e.getMessage());
       if (out != null) state.failWrite(out);
       throw e;
     }
