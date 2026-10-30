@@ -91,7 +91,7 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
         data = fixture_manifest()
         data["builds"]["ios"]["source"] = "d" * 40
         (self.root / "verified-downloads/downloads.json").write_text(json.dumps(data))
-        with self.assertRaisesRegex(ValueError, "same exact source SHA"):
+        with self.assertRaisesRegex(ValueError, "share one exact source SHA"):
             publisher.publish()
 
     def test_rejects_signed_ipa(self):
