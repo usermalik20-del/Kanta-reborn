@@ -815,3 +815,10 @@ one of those defects has since been fixed on main and the full Android acceptanc
 (lint, framework-free `coreRegression`, instrumentation runtime checks, camera checks,
 workspace contract guard) passes on `1dfecd7`. The reverts would discard validated work,
 so they are closed as superseded rather than merged.
+
+
+## Verified download publisher fixture wording mismatch — 2026-10-30
+
+PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41094983755) failed in `test_rejects_mixed_source_revisions`. The publisher correctly rejected an Android/iOS source-SHA mismatch with the message `Android and iOS artifacts must share one exact source SHA`, while the new test expected the different phrase `same exact source SHA`. This was a stale assertion string, not a release-gate or publisher behavior defect.
+
+**Repair:** commit [f318a13](https://github.com/usermalik20-del/Kanta-reborn/commit/f318a13b0dd97f2efda0c220e8718b113d0fa9ea) aligned the assertion with the explicit rejection message. The subsequent exact-SHA publisher/contract run [#41095375672](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41095375672) passed. The polling interval and least-privilege permission refinements were applied afterward and are being revalidated on the latest PR head.
