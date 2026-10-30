@@ -302,8 +302,8 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         self.assertIn("github.event.workflow_run.head_sha", self.workflow)
 
     def test_packaging_publishes_site_and_dispatches_production_deploy(self):
-        self.assertIn("contents: write", self.workflow)
-        self.assertIn("actions: write", self.workflow)
+        self.assertIn("permissions:\\n  contents: read\\n  actions: read", self.workflow)
+        self.assertIn("  package:\\n    permissions:\\n      contents: write\\n      actions: write", self.workflow)
         self.assertIn("tools/publish-verified-downloads.py", self.workflow)
         self.assertIn("actions/workflows/vercel-deploy.yml/dispatches", self.workflow)
         self.assertIn("git push origin HEAD:main", self.workflow)
