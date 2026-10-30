@@ -15,7 +15,7 @@ on:
       - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
+
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
@@ -28,6 +28,9 @@ on:
       - 'tools/verify-website.py'
       - 'tools/tests/test_website_security_contract.py'
       - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/verified-downloads.yml'
+
 permissions:
   contents: read
 concurrency:
