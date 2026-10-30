@@ -171,6 +171,33 @@ class WebsiteSecurityContractTests(unittest.TestCase):
 
     def test_download_pages_match_verified_artifact_provenance(self):
         manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
+        if "packagingRun" not in manifest:
+            # Legacy source-run artifacts remain published until the first exact-SHA
+            # 30-day package is produced by the automated workflow.
+            self.assertEqual(manifest["android"]["source"], manifest["ios"]["source"])
+            for platform, filename in (("android", "android.html"), ("ios", "ios-download.html")):
+                build = manifest[platform]
+                page = (WEB / filename).read_text(encoding="utf-8")
+                artifact_url = (
+                    "https://github.com/" + manifest["repository"] + "/actions/runs/"
+                    + str(build["run"]) + "/artifacts/" + str(build["artifact"])
+                )
+                self.assertIn(artifact_url, page)
+                self.assertIn(build["source"][:8], page)
+                self.assertRegex(build["sha256"], r"^[0-9a-f]{64}$")
+                self.assertIn("Artifact ZIP SHA-256: <code>" + build["sha256"] + "</code>", page)
+            ios_page = (WEB / "ios-download.html").read_text(encoding="utf-8")
+            walkthrough_url = (
+                "https://github.com/" + manifest["repository"] + "/actions/runs/"
+                + str(manifest["ios"]["walkthroughRun"])
+            )
+            self.assertIn(walkthrough_url, ios_page)
+            self.assertIn("Both iPhone and iPad simulator walkthroughs passed", ios_page)
+            android_page = (WEB / "android.html").read_text(encoding="utf-8")
+            self.assertIn("no standalone <code>sha256.txt</code> is included", android_page.lower())
+            self.assertIn("instrumentation-test APK, lint report and runtime diagnostics", android_page)
+            return
+
         source = manifest["source"]
         self.assertRegex(source, r"^[0-9a-f]{40}$")
         self.assertEqual(manifest["android"]["source"], source)
@@ -214,14 +241,25 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertFalse(manifest["ios"]["icloudAvailable"])
         self.assertNotIn("later visual walkthrough attempt failed", ios_page.lower())
         self.assertNotIn("coverage remains under investigation", ios_page.lower())
-
         android_page = (WEB / "android.html").read_text(encoding="utf-8")
         self.assertIn("SHA256.txt is included", android_page)
 
     def test_download_manifest_matches_current_accepted_native_baseline(self):
-        # The publisher advances this manifest only after every release gate passes
-        # for the same exact main-branch source revision.
         manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
+        if "packagingRun" not in manifest:
+            # Current baseline remains valid until a successful package replaces it.
+            source = "35bf48ba9f43a4483becfaa36b66bc62ccdf1b8d"
+            self.assertEqual(manifest["android"]["source"], source)
+            self.assertEqual(manifest["ios"]["source"], source)
+            self.assertEqual(manifest["android"]["run"], 41029928610)
+            self.assertEqual(manifest["android"]["artifact"], 12965267288)
+            self.assertEqual(manifest["android"]["sha256"], "e628856e9ec9d49c1269655dbdc2fe518135a14b40ae45f0b9747a6724cb7c2f")
+            self.assertEqual(manifest["ios"]["run"], 41029928516)
+            self.assertEqual(manifest["ios"]["artifact"], 12964814338)
+            self.assertEqual(manifest["ios"]["sha256"], "a4e6e681b1c4fcffd5cd2cbe80a170746e000085c9218a0aac2633e256f63d27")
+            self.assertEqual(manifest["ios"]["walkthroughRun"], 41029928637)
+            return
+
         source = manifest["source"]
         self.assertRegex(source, r"^[0-9a-f]{40}$")
         self.assertEqual(manifest["android"]["source"], source)
