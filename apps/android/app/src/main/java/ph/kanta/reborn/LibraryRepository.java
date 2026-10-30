@@ -13,6 +13,12 @@ import ph.kanta.reborn.core.*;
 
 /** Called on one IO executor. Only app-private copies and metadata are mutable. */
 final class LibraryRepository {
+
+  /** Callback for import progress updates. */
+  public interface ImportProgressListener {
+    void onProgress(long bytesTotal, long bytesCopied, String status);
+    void onComplete(boolean success, String message);
+  }
   static final String[] STARTERS = {"morning-light", "sing-together", "starlight-echo"};
   static final String[] TITLES = {"Morning Light", "Sing Together", "Starlight Echo"};
 
@@ -38,6 +44,7 @@ final class LibraryRepository {
   private boolean batching;
   private java.util.function.BooleanSupplier cancelled = () -> false;
   private final ArrayList<File> batchFiles = new ArrayList<>();
+  private ImportProgressListener progressListener;
 
   LibraryRepository(Context context) throws IOException {
     this.context = context;
@@ -159,6 +166,9 @@ final class LibraryRepository {
     return new ArrayList<>(queue);
   }
 
+  public void setImportProgressListener(ImportProgressListener listener) {
+    this.progressListener = listener;
+  }
   void saveQueue(List<ReservationQueue.Entry> next) throws Exception {
     List<ReservationQueue.Entry> old = queue;
     queue = new ArrayList<>(next);
@@ -178,12 +188,177 @@ final class LibraryRepository {
     return bankName;
   }
 
-  private static int readPrefix(InputStream in, byte[] bytes) throws IOException {
+private Song importSong(Uri uri) throws Exception {
+    long fileSize = getFileSize(uri);
+    notifyProgress(fileSize, 0, "Opening song...");
+
+    String name = "Imported song";
+    try (Cursor c =
+        context
+            .getContentResolver()
+            .query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+      if (c != null && c.moveToFirst() && !c.isNull(0)) name = c.getString(0);
+    }
+    if (songs.size() >= 150000) throw new IOException("Library capacity reached");
+    String lower = name.toLowerCase(Locale.ROOT);
+    String ext =
+        lower.endsWith(".kar") || lower.endsWith(".mid") || lower.endsWith(".midi")
+            ? "mid"
+            : lower.endsWith(".mp3") ? "mp3" : lower.endsWith(".wav") ? "wav" : null;
+    if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music");
+    File temp = File.createTempFile("import-", ".tmp", media);
+    boolean installed = false;
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      long total = 0;
+      byte[] buffer = new byte[65536];
+      try (InputStream input = context.getContentResolver().openInputStream(uri);
+          FileOutputStream out = new FileOutputStream(temp)) {
+        if (input == null) throw new IOException("Cannot open selected file");
+        int count;
+        while ((count = input.read(buffer)) != -1) {
+          if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
+            throw new InterruptedIOException();
+          total += count;
+          notifyProgress(fileSize, total, "Copying: " + formatBytes(total) + " / " + formatBytes(fileSize));
+          if (ext.equals("mid") && total > 16 * 1024 * 1024)
+            throw new IOException("MIDI file exceeds 16 MB");
+          else if (ext.equals("mp3") || ext.equals("wav")) {
+            if (total > 512L * 1024 * 1024) throw new IOException("Music file exceeds 512 MB");
+          }
+          digest.update(buffer, 0, count);
+          out.write(buffer, 0, count);
+        }
+        out.getFD().sync();
+      }
+      if (total == 0) throw new IOException("Selected file is empty");
+      notifyProgress(fileSize, total, "Validating...");
+      byte[] signature = new byte[12];
+      try (FileInputStream in = new FileInputStream(temp)) {
+        if (readPrefix(in, signature) < 4) throw new IOException("Music file is incomplete");
+      }
+      if (ext.equals("mid")) {
+        MidiLyrics.parse(java.nio.file.Files.readAllBytes(temp.toPath()));
+      } else if (ext.equals("wav")
+          && !(new String(signature, 0, 4, java.nio.charset.StandardCharsets.US_ASCII)
+                  .equals("RIFF")
+              && new String(signature, 8, 4, java.nio.charset.StandardCharsets.US_ASCII)
+                  .equals("WAVE")))
+        throw new IOException("Not a WAVE file");
+      else if (ext.equals("mp3")
+          && !(signature[0] == 'I' && signature[1] == 'D' && signature[2] == '3')
+          && !((signature[0] & 255) == 255 && (signature[1] & 224) == 224))
+        throw new IOException("Not a supported MP3 file");
+      StringBuilder hex = new StringBuilder();
+      for (byte b : digest.digest()) hex.append(String.format(Locale.ROOT, "%02x", b & 255));
+      String id = hex.toString();
+      Song existing = find(id);
+      if (existing != null) return existing;
+      File destination = new File(media, id + "." + ext);
+      boolean created = !destination.exists();
+      if (created) {
+        if (!temp.renameTo(destination)) throw new IOException("Cannot save imported song");
+        installed = true;
+        if (batching) batchFiles.add(destination);
+      } else {
+        verifyCopy(destination, id);
+      }
+      String title = name.replaceFirst("\\.[^.]+$", "");
+      Set<String> codes = new HashSet<>();
+      for (Song existingSong : songs) codes.add(existingSong.code);
+      int reference = 100000;
+      while (codes.contains(String.valueOf(reference))) reference++;
+      Song song = new Song(id, title, "", String.valueOf(reference), destination.getName(), false);
+      songs.add(song);
+      try {
+        persist();
+      } catch (Exception e) {
+        songs.remove(song);
+        if (created) destination.delete();
+        throw e;
+      }
+      notifyProgress(fileSize, fileSize, "Import complete");
+      return song;
+    } finally {
+      if (!installed) temp.delete();
+    }
+  }  private static int readPrefix(InputStream in, byte[] bytes) throws IOException {
     int total = 0;
     while (total < bytes.length) {
       int count = in.read(bytes, total, bytes.length - total);
       if (count < 0) break;
-      if (count == 0) {
+private void importSoundFont(Uri uri) throws Exception {
+    long fileSize = getFileSize(uri);
+    notifyProgress(fileSize, 0, "Opening SoundFont...");
+
+    File temp = File.createTempFile("bank-", ".tmp", media);
+    boolean created = false;
+    File destination = null;
+    String oldBank = selectedBank, oldName = bankName;
+    try {
+      MessageDigest hash = MessageDigest.getInstance("SHA-256");
+      try (InputStream in = context.getContentResolver().openInputStream(uri);
+          FileOutputStream out = new FileOutputStream(temp)) {
+        if (in == null) throw new IOException("Cannot open SoundFont");
+        byte[] bytes = new byte[65536];
+        long total = 0;
+        int count;
+        while ((count = in.read(bytes)) != -1) {
+          total += count;
+          notifyProgress(fileSize, total, "Copying: " + formatBytes(total) + " / " + formatBytes(fileSize));
+          if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
+            throw new InterruptedIOException();
+          hash.update(bytes, 0, count);
+          out.write(bytes, 0, count);
+        }
+        notifyProgress(fileSize, total, "Validating...");
+        // Size validated by native loader; check disk space only
+        long freeBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
+        if (total > freeBytes - 64 * 1024 * 1024) throw new IOException("Insufficient storage space for SoundFont");
+        out.getFD().sync();
+      }
+      notifyProgress(fileSize, fileSize, "Validating structure...");
+      long test = NativeSoundFont.open(temp.getAbsolutePath());
+      if (test == 0) throw new IOException("Unsupported SoundFont structure");
+      NativeSoundFont.close(test);
+      notifyProgress(fileSize, fileSize, "Finalizing...");
+      StringBuilder key = new StringBuilder();
+      for (byte b : hash.digest()) key.append(String.format(Locale.ROOT, "%02x", b & 255));
+      destination = new File(media, key + ".sf2");
+      if (!destination.exists()) {
+        if (!temp.renameTo(destination)) throw new IOException("Cannot save SoundFont");
+        created = true;
+      }
+      if (!created) verifyCopy(destination, key.toString());
+      selectedBank = destination.getName();
+      bankName = "Imported SoundFont";
+      try (Cursor c =
+          context
+              .getContentResolver()
+              .query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+        if (c != null && c.moveToFirst() && !c.isNull(0))
+          bankName = c.getString(0).substring(0, Math.min(120, c.getString(0).length()));
+      }
+      persist();
+      if (created && batching) batchFiles.add(destination);
+    } catch (Exception | LinkageError e) {
+      selectedBank = oldBank;
+      bankName = oldName;
+      if (created && destination != null) destination.delete();
+      throw e;
+    } finally {
+      temp.delete();
+    }
+    notifyProgress(fileSize, fileSize, "Import complete");
+  }
+
+  private static String formatBytes(long bytes) {
+    if (bytes < 0) return "?";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+    if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+    return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+  }      if (count == 0) {
         int value = in.read();
         if (value < 0) break;
         bytes[total++] = (byte) value;
@@ -249,273 +424,3 @@ final class LibraryRepository {
     }
   }
 
-  private void importSoundFont(Uri uri) throws Exception {
-    File temp = File.createTempFile("bank-", ".tmp", media);
-    boolean created = false;
-    File destination = null;
-    String oldBank = selectedBank, oldName = bankName;
-    try {
-      MessageDigest hash = MessageDigest.getInstance("SHA-256");
-      try (InputStream in = context.getContentResolver().openInputStream(uri);
-          FileOutputStream out = new FileOutputStream(temp)) {
-        if (in == null) throw new IOException("Cannot open SoundFont");
-        byte[] bytes = new byte[65536];
-        long total = 0;
-        int count;
-        while ((count = in.read(bytes)) != -1) {
-          total += count;
-          if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
-            throw new InterruptedIOException();
-          hash.update(bytes, 0, count);
-          out.write(bytes, 0, count);
-        }
-        // Size validated by native loader; check disk space only
-        long freeBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
-        if (total > freeBytes - 64 * 1024 * 1024) throw new IOException("Insufficient storage space for SoundFont");
-        out.getFD().sync();
-      }
-      long test = NativeSoundFont.open(temp.getAbsolutePath());
-      if (test == 0) throw new IOException("Unsupported SoundFont structure");
-      NativeSoundFont.close(test);
-      StringBuilder key = new StringBuilder();
-      for (byte b : hash.digest()) key.append(String.format(Locale.ROOT, "%02x", b & 255));
-      destination = new File(media, key + ".sf2");
-      if (!destination.exists()) {
-        if (!temp.renameTo(destination)) throw new IOException("Cannot save SoundFont");
-        created = true;
-      }
-      if (!created) verifyCopy(destination, key.toString());
-      selectedBank = destination.getName();
-      bankName = "Imported SoundFont";
-      try (Cursor c =
-          context
-              .getContentResolver()
-              .query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null)) {
-        if (c != null && c.moveToFirst() && !c.isNull(0))
-          bankName = c.getString(0).substring(0, Math.min(120, c.getString(0).length()));
-      }
-      persist();
-      if (created && batching) batchFiles.add(destination);
-    } catch (Exception | LinkageError e) {
-      selectedBank = oldBank;
-      bankName = oldName;
-      if (created && destination != null) destination.delete();
-      throw e;
-    } finally {
-      temp.delete();
-    }
-  }
-
-  Song importSong(Uri uri) throws Exception {
-    String name = "Imported song";
-    try (Cursor c =
-        context
-            .getContentResolver()
-            .query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null)) {
-      if (c != null && c.moveToFirst() && !c.isNull(0)) name = c.getString(0);
-    }
-    if (songs.size() >= 150000) throw new IOException("Library capacity reached");
-    String lower = name.toLowerCase(Locale.ROOT);
-    String ext =
-        lower.endsWith(".kar") || lower.endsWith(".mid") || lower.endsWith(".midi")
-            ? "mid"
-            : lower.endsWith(".mp3") ? "mp3" : lower.endsWith(".wav") ? "wav" : null;
-    if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music");
-    File temp = File.createTempFile("import-", ".tmp", media);
-    boolean installed = false;
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      long total = 0;
-      byte[] buffer = new byte[65536];
-      try (InputStream input = context.getContentResolver().openInputStream(uri);
-          FileOutputStream out = new FileOutputStream(temp)) {
-        if (input == null) throw new IOException("Cannot open selected file");
-        int count;
-        while ((count = input.read(buffer)) != -1) {
-          if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
-            throw new InterruptedIOException();
-          total += count;
-          if (total > 512L * 1024 * 1024) throw new IOException("Music file exceeds 512 MB");
-          digest.update(buffer, 0, count);
-          out.write(buffer, 0, count);
-        }
-        out.getFD().sync();
-      }
-      if (total == 0) throw new IOException("Selected file is empty");
-      byte[] signature = new byte[12];
-      try (FileInputStream in = new FileInputStream(temp)) {
-        if (readPrefix(in, signature) < 4) throw new IOException("Music file is incomplete");
-      }
-      if (ext.equals("mid")) {
-        if (total > 16 * 1024 * 1024) throw new IOException("MIDI file exceeds 16 MB");
-        MidiLyrics.parse(java.nio.file.Files.readAllBytes(temp.toPath()));
-      } else if (ext.equals("wav")
-          && !(new String(signature, 0, 4, java.nio.charset.StandardCharsets.US_ASCII)
-                  .equals("RIFF")
-              && new String(signature, 8, 4, java.nio.charset.StandardCharsets.US_ASCII)
-                  .equals("WAVE"))) throw new IOException("Not a WAVE file");
-      else if (ext.equals("mp3")
-          && !(signature[0] == 'I' && signature[1] == 'D' && signature[2] == '3')
-          && !((signature[0] & 255) == 255 && (signature[1] & 224) == 224))
-        throw new IOException("Not a supported MP3 file");
-      StringBuilder hex = new StringBuilder();
-      for (byte b : digest.digest()) hex.append(String.format(Locale.ROOT, "%02x", b & 255));
-      String id = hex.toString();
-      Song existing = find(id);
-      if (existing != null) return existing;
-      File destination = new File(media, id + "." + ext);
-      boolean created = !destination.exists();
-      if (created) {
-        if (!temp.renameTo(destination)) throw new IOException("Cannot save imported song");
-        installed = true;
-        if (batching) batchFiles.add(destination);
-      } else {
-        // A completed copy may survive a process death before the metadata commit.
-        verifyCopy(destination, id);
-      }
-      String title = name.replaceFirst("\\.[^.]+$", "");
-      Set<String> codes = new HashSet<>();
-      for (Song existingSong : songs) codes.add(existingSong.code);
-      int reference = 100000;
-      while (codes.contains(String.valueOf(reference))) reference++;
-      Song song = new Song(id, title, "", String.valueOf(reference), destination.getName(), false);
-      songs.add(song);
-      try {
-        persist();
-      } catch (Exception e) {
-        songs.remove(song);
-        if (created) destination.delete();
-        throw e;
-      }
-      return song;
-    } finally {
-      if (!installed) temp.delete();
-    }
-  }
-
-  private void verifyCopy(File destination, String expected) throws Exception {
-    MessageDigest hash = MessageDigest.getInstance("SHA-256");
-    try (InputStream bytes = new FileInputStream(destination)) {
-      byte[] block = new byte[65536];
-      int count;
-      while ((count = bytes.read(block)) != -1) {
-        if (cancelled.getAsBoolean()) throw new InterruptedIOException();
-        hash.update(block, 0, count);
-      }
-    }
-    StringBuilder key = new StringBuilder();
-    for (byte b : hash.digest()) key.append(String.format(Locale.ROOT, "%02x", b & 255));
-    if (!expected.contentEquals(key))
-      throw new IOException("Private media copy failed integrity check");
-  }
-
-  void setStarter(String id, boolean enabled) throws Exception {
-    int index = Arrays.asList(STARTERS).indexOf(id.replace("starter:", ""));
-    if (index < 0) throw new IOException("Unknown starter song");
-    ArrayList<Song> before = new ArrayList<>(songs);
-    Set<String> previous = new HashSet<>(removed);
-    if (enabled) {
-      removed.remove(id);
-      if (find(id) == null)
-        songs.add(
-            new Song(
-                id,
-                TITLES[index],
-                "KANTA Originals",
-                "S00" + (index + 1),
-                STARTERS[index] + ".mid",
-                true));
-    } else {
-      removed.add(id);
-      songs.removeIf(s -> s.id.equals(id));
-    }
-    try {
-      persist();
-    } catch (Exception e) {
-      songs.clear();
-      songs.addAll(before);
-      removed.clear();
-      removed.addAll(previous);
-      throw e;
-    }
-  }
-
-  void saveSet(String name, List<Song> values) throws Exception {
-    if (sets.size() >= 1000 || values.size() > 10000)
-      throw new IOException("Saved-set limit reached");
-    name = name.trim();
-    if (name.isEmpty() || name.length() > 120)
-      throw new IOException("Enter a set name under 120 characters");
-    ArrayList<String> ids = new ArrayList<>();
-    for (Song s : values) ids.add(s.id);
-    SavedSet set = new SavedSet(UUID.randomUUID().toString(), name, ids);
-    sets.add(set);
-    try {
-      persist();
-    } catch (Exception e) {
-      sets.remove(set);
-      throw e;
-    }
-  }
-
-  void deleteSet(String id) throws Exception {
-    ArrayList<SavedSet> old = new ArrayList<>(sets);
-    sets.removeIf(s -> s.id.equals(id));
-    try {
-      persist();
-    } catch (Exception e) {
-      sets.clear();
-      sets.addAll(old);
-      throw e;
-    }
-  }
-
-  private void persist() throws Exception {
-    if (batching) return;
-    JSONObject root =
-        new JSONObject()
-            .put("version", 1)
-            .put("soundfont", selectedBank)
-            .put("soundfontName", bankName);
-    JSONArray rows = new JSONArray();
-    for (Song s : songs)
-      rows.put(
-          new JSONObject()
-              .put("id", s.id)
-              .put("title", s.title)
-              .put("artist", s.artist)
-              .put("code", s.code)
-              .put("file", s.fileName)
-              .put("starter", s.starter));
-    root.put("songs", rows);
-    root.put("removed", new JSONArray(removed));
-    JSONArray q = new JSONArray();
-    for (ReservationQueue.Entry e : queue)
-      q.put(
-          new JSONObject()
-              .put("id", e.id.toString())
-              .put("song", e.song.id)
-              .put("singer", e.singer));
-    root.put("queue", q);
-    JSONArray saved = new JSONArray();
-    for (SavedSet s : sets)
-      saved.put(
-          new JSONObject()
-              .put("id", s.id)
-              .put("name", s.name)
-              .put("songs", new JSONArray(s.songs)));
-    root.put("sets", saved);
-    FileOutputStream out = null;
-    try {
-      out = state.startWrite();
-      byte[] encoded = root.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-      if (encoded.length > 16 * 1024 * 1024)
-        throw new IOException("Library metadata capacity reached");
-      out.write(encoded);
-      state.finishWrite(out);
-    } catch (Exception e) {
-      if (out != null) state.failWrite(out);
-      throw e;
-    }
-  }
-}
