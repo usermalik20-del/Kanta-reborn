@@ -21,7 +21,7 @@ SOURCE_WAIT_SECONDS = 120
 POLL_INTERVAL_SECONDS = 5
 
 REQUIRED_RUNS = {
-    "reconstruction": "KANTA reconstruction validation",
+    "reconstruction": "KANTA Android validation",
     "ios_unsigned": "KANTA iOS unsigned artifacts",
     "walkthrough": "KANTA iOS visual walkthrough",
 }
