@@ -305,6 +305,8 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         self.assertIn("permissions:\n  contents: read\n  actions: read", self.workflow)
         self.assertIn("  package:\n    permissions:\n      contents: write\n      actions: write", self.workflow)
         self.assertIn("tools/publish-verified-downloads.py", self.workflow)
+        self.assertIn("python3 tools/verify-website.py", self.workflow)
+        self.assertIn("python3 -m unittest tools.tests.test_website_security_contract", self.workflow)
         self.assertIn("actions/workflows/vercel-deploy.yml/dispatches", self.workflow)
         self.assertIn("git push origin HEAD:main", self.workflow)
 
