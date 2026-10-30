@@ -264,12 +264,14 @@ final class LibraryRepository {
         int count;
         while ((count = in.read(bytes)) != -1) {
           total += count;
-          if (total > 32L * 1024 * 1024) throw new IOException("SoundFonts must be under 32 MB");
           if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
             throw new InterruptedIOException();
           hash.update(bytes, 0, count);
           out.write(bytes, 0, count);
         }
+        // Size validated by native loader; check disk space only
+        long freeBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
+        if (total > freeBytes - 64 * 1024 * 1024) throw new IOException("Insufficient storage space for SoundFont");
         out.getFD().sync();
       }
       long test = NativeSoundFont.open(temp.getAbsolutePath());

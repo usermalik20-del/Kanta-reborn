@@ -44,23 +44,26 @@ struct kanta_soundfont { tsf* synth; };
 
 kanta_soundfont* kanta_sf_open(const char* path) {
     struct stat info;
-    if (!path || stat(path, &info) || !S_ISREG(info.st_mode) || info.st_size < 12 ||
-        info.st_size > 32 * 1024 * 1024) return NULL;
+    if (!path || stat(path, &info) || !S_ISREG(info.st_mode) || info.st_size < 12) return NULL;
     FILE* file = fopen(path, "rb");
     if (!file) return NULL;
-    size_t size = (size_t)info.st_size;
-    unsigned char* bytes = malloc(size);
-    if (!bytes) { fclose(file); return NULL; }
-    int complete = fread(bytes, 1, size, file) == size && fgetc(file) == EOF;
+
+    // Use streaming loader: reads from FILE* on demand, no full-file memory allocation
+    struct tsf_stream stream = {
+        .data = file,
+        .read = (int(*)(void*, void*, unsigned int))&tsf_stream_stdio_read,
+        .skip = (int(*)(void*, unsigned int))&tsf_stream_stdio_skip
+    };
+    tsf* synth = tsf_load(&stream);
     fclose(file);
-    size_t sample_count = complete ? sf_validate(bytes, size) : 0;
-    tsf* synth = sample_count ? tsf_load_memory(bytes, (int)size) : NULL;
-    free(bytes);
+
     if (!synth || tsf_get_presetcount(synth) == 0) { if (synth) tsf_close(synth); return NULL; }
+
+    // Validate region bounds against sample count
+    size_t sample_count = synth->sampleCount;
     for (int p = 0; p < synth->presetNum; ++p) {
         for (int r = 0; r < synth->presets[p].regionNum; ++r) {
             struct tsf_region* region = &synth->presets[p].regions[r];
-            /* Linear interpolation reads the sample after the current position. */
             if (region->offset >= region->end || region->end >= sample_count ||
                 (region->loop_mode && (region->loop_start >= region->loop_end ||
                  region->loop_end >= region->end))) {
@@ -69,12 +72,14 @@ kanta_soundfont* kanta_sf_open(const char* path) {
             }
         }
     }
+
     tsf_set_output(synth, TSF_STEREO_INTERLEAVED, 44100, -9.0f);
     if (!tsf_set_max_voices(synth, 128)) { tsf_close(synth); return NULL; }
     for (int channel = 0; channel < 16; ++channel) {
         if (!tsf_channel_set_presetindex(synth, channel, 0)) { tsf_close(synth); return NULL; }
     }
     tsf_channel_set_presetnumber(synth, 9, 0, 1);
+
     kanta_soundfont* result = malloc(sizeof(*result));
     if (!result) { tsf_close(synth); return NULL; }
     result->synth = synth;
