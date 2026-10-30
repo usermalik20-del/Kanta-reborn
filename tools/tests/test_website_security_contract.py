@@ -216,7 +216,7 @@ class WebsiteSecurityContractTests(unittest.TestCase):
             page = (WEB / filename).read_text(encoding="utf-8")
             source_artifact_url = (
                 "https://github.com/" + manifest["repository"] + "/actions/runs/"
-                + str(build["run"]) + "/artifacts/" + str(build["artifact"])
+                + str(build["run"])
             )
             packaged_artifact_url = packaging_run_url + "/artifacts/" + str(build["packagingArtifact"])
             self.assertEqual(build["source"], source)
