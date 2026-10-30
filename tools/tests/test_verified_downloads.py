@@ -18,7 +18,7 @@ spec.loader.exec_module(module)
 SOURCE = "a" * 40
 
 
-def run_record(run_id=41, name="KANTA reconstruction validation", source=SOURCE,
+def run_record(run_id=41, name="KANTA Android validation", source=SOURCE,
                conclusion="success", created="2026-10-24T00:00:00Z", branch="main"):
     return {
         "id": run_id,
@@ -56,7 +56,7 @@ class DownloadContracts(unittest.TestCase):
             module, "api", return_value={"workflow_runs": [good, newer_failure]}
         ):
             with self.assertRaisesRegex(ValueError, "latest run 42 concluded failure"):
-                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+                module.find_source_run(SOURCE, "KANTA Android validation", wait_seconds=0)
 
     def test_wrong_sha_and_feature_branch_are_not_accepted(self):
         wrong_sha = run_record(run_id=50, source="b" * 40)
@@ -65,7 +65,7 @@ class DownloadContracts(unittest.TestCase):
             module, "api", return_value={"workflow_runs": [wrong_sha, feature]}
         ):
             with self.assertRaisesRegex(ValueError, "no matching run is visible"):
-                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+                module.find_source_run(SOURCE, "KANTA Android validation", wait_seconds=0)
 
     def test_waits_for_a_run_to_become_visible(self):
         with patch.object(
@@ -76,7 +76,7 @@ class DownloadContracts(unittest.TestCase):
             ],
         ), patch.object(module.time, "sleep"):
             found = module.find_source_run(
-                SOURCE, "KANTA reconstruction validation",
+                SOURCE, "KANTA Android validation",
                 wait_seconds=2,
             )
         self.assertEqual(found["id"], 41)
@@ -108,7 +108,7 @@ class DownloadContracts(unittest.TestCase):
 
     def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
         walkthrough = run_record(61, "KANTA iOS visual walkthrough")
-        reconstruction = run_record(62, "KANTA reconstruction validation")
+        reconstruction = run_record(62, "KANTA Android validation")
         ios = run_record(63, "KANTA iOS unsigned artifacts")
         android_artifact = artifact_record(82, 62, "android-reconstruction-checks")
         ios_artifact = artifact_record(83, 63, "KANTA-personal-unsigned")
@@ -237,6 +237,48 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
             with self.subTest(event=event):
                 section = workflow_event_section(self.walkthrough, event)
                 self.assertIn("'tools/verify-android-companion-interface.py'", section)
+
+
+
+class IOSSimulatorAcceptanceNamingTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        cls.workflow = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
+        cls.runner = (root / "tools/capture-ios-runtime.py").read_text(encoding="utf-8")
+        cls.testing = (root / "docs/TESTING.md").read_text(encoding="utf-8")
+
+
+    def test_required_run_names_match_root_workflow_definitions(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        workflows = {
+            "android_validation": ".github/workflows/android-validation.yml",
+            "ios_unsigned": ".github/workflows/ios-runtime-artifacts.yml",
+            "walkthrough": ".github/workflows/ios-visual-walkthrough.yml",
+        }
+        for key, relative_path in workflows.items():
+            with self.subTest(workflow=key):
+                source = (root / relative_path).read_text(encoding="utf-8")
+                match = re.search(r"(?m)^name:\s*(.+)$", source)
+                self.assertIsNotNone(match, relative_path)
+                self.assertEqual(module.REQUIRED_RUNS[key], match.group(1).strip())
+
+    def test_workflow_names_both_jobs_as_simulator_acceptance(self):
+        self.assertIn("name: iPhone simulator acceptance", self.workflow)
+        self.assertIn("name: iPad simulator acceptance", self.workflow)
+        self.assertIn("- name: iPhone simulator walkthrough", self.workflow)
+        self.assertIn("- name: iPad simulator walkthrough", self.workflow)
+        self.assertNotRegex(self.workflow, r"(?i)real iPhone|real iPad")
+
+    def test_runner_records_simulator_not_physical_device_evidence(self):
+        self.assertIn("Capture iPhone/iPad simulator interactions", self.runner)
+        self.assertIn("platform=iOS Simulator", self.runner)
+        self.assertIn("do not prove physical-device behavior", self.runner)
+        self.assertNotIn("Capture real iPhone/iPad interactions", self.runner)
+
+    def test_testing_policy_separates_simulator_and_physical_device_acceptance(self):
+        self.assertIn("simulator UI acceptance", self.testing)
+        self.assertIn("physical-device acceptance", self.testing)
 
 
 if __name__ == "__main__":

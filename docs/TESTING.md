@@ -282,3 +282,13 @@ mergeable branch.
 ## Physical iPhone installation versus hosted acceptance
 
 Hosted simulator walkthroughs and unsigned iPhoneOS archives do not establish physical-device installation. The unsigned IPA from `ios-runtime-artifacts.yml` is a build/signing input only. Free Apple Personal Team provisioning is a development-install path, not Safari OTA distribution. Do not upload the unsigned IPA to a public install button or mark it as device-installable. Follow [IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md](IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md) for the supported free-account boundary and the additional Apple distribution, profile, manifest, HTTPS and real-device checks required before Safari OTA can be enabled. Physical-device acceptance remains NOT RUN until a real iPhone install and test are evidenced.
+
+
+## Simulator versus physical-device acceptance terminology
+
+The iPhone and iPad jobs in `.github/workflows/ios-visual-walkthrough.yml` boot Apple simulators through `xcrun simctl` and run XCTest against `platform=iOS Simulator`. Their job names, step names, manifests and reports must say **simulator acceptance**. This is **simulator UI acceptance**, not physical-device acceptance. They are valuable automated UI/runtime evidence, but they are not physical iPhone/iPad tests and do not establish hardware audio, camera, network-environment or device-performance acceptance. Keep physical-device acceptance as a separate, explicitly uncompleted gate unless evidence from an actual device is supplied.
+
+
+## Exact-SHA verified download workflow identity
+
+The verified-download packager discovers the Android APK from the `KANTA Android validation` run and the unsigned iOS IPA from `KANTA iOS unsigned artifacts`. It separately requires `KANTA iOS visual walkthrough` to pass on the same exact main-branch source SHA. Keep these names synchronized with the `name:` fields in the root workflow files; a renamed or missing workflow must fail its contract tests rather than silently accepting an older artifact.

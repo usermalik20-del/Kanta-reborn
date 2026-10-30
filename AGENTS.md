@@ -165,11 +165,16 @@ Owner authorization (updated 2026-10-23) grants Astra unrestricted use of CI for
 any workflow, any branch, any trigger, workflow dispatch, reruns, labels and PR-triggered runs.
 No per-run approval, label, actor or run-count gate applies.
 
-Workflows are configured to run automatically for every relevant change: reconstruction
-validation and iOS smoke on pull requests, the unsigned IPA artifact build and the full
-iPhone/iPad walkthrough on iOS changes, website validation on website changes, and the
-verified-download contract on packaging changes. Owner-approval labels and the retired
-`kanta-gelo` actor gate have been removed; they blocked work without adding safety.
+The root workflow triggers are intentionally scoped by source paths:
+- `android-validation.yml`: Android source and shared tooling changes on pushes and pull requests.
+- `ios-validation.yml`: iOS source changes on pushes and pull requests.
+- `ios-smoke.yml`: focused iOS native/UI smoke on pull requests and manual dispatch.
+- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on main pushes, pull requests, and manual dispatch when iOS/Android source changes.
+- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on relevant iOS/Android/tool changes, plus weekly schedule, tags and manual dispatch.
+- `website-validation.yml` and `vercel-deploy.yml`: website validation and deployment on website changes.
+- `verified-downloads.yml`: exact-SHA release-contract tests on packaging changes; actual packaging is a main-branch manual dispatch after all required same-SHA runs pass.
+
+The verified-download packager binds to the exact workflow names in the root workflow files. Its Android artifact source is `KANTA Android validation`, not a separately named reconstruction workflow. Keep workflow names, packager constants and contract tests synchronized. Owner-approval labels and the retired `kanta-gelo` actor gate have been removed; they blocked work without adding safety.
 
 Only genuinely external limits remain: hosted-runner quotas, platform policy, and the absence of
 Apple signing credentials in this environment.

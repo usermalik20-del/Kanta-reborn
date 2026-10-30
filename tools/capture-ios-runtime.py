@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture real iPhone/iPad interactions and preserve failed XCTest evidence."""
+"""Capture iPhone/iPad simulator interactions and preserve failed XCTest evidence."""
 from __future__ import annotations
 import json
 import argparse
@@ -162,7 +162,7 @@ def main() -> int:
             missing_tests=sorted(missing)))
         print(f"{label}: {'PASS' if passed else 'FAIL'}", flush=True)
     (OUT / (f"manifest-{requested}.json" if requested else "manifest.json")).write_text(json.dumps(dict(source_sha=os.environ.get("GITHUB_SHA"),
-        results=results, boundary="Real simulator interactions; demo tests are named separately. Videos do not prove hardware audio."), indent=2) + "\n")
+        results=results, boundary="iPhone/iPad simulator UI interactions; demo tests are named separately. Videos do not prove physical-device behavior or hardware audio."), indent=2) + "\n")
     return 0 if all(item["passed"] for item in results) else 1
 
 if __name__ == "__main__": raise SystemExit(main())
