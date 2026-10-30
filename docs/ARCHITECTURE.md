@@ -512,3 +512,12 @@ The hosted iPhone/iPad walkthrough jobs run Apple simulators, selected with `xcr
 ## Verified download workflow identity
 
 The exact-SHA packaging contract resolves the Android preview APK from `KANTA Android validation`, the unsigned iOS IPA from `KANTA iOS unsigned artifacts`, and the simulator acceptance evidence from `KANTA iOS visual walkthrough`. These workflow names are part of the release contract and must match the root workflow definitions and regression fixtures. Packaging must refuse missing, failed, stale or mismatched source runs; it must never substitute an older artifact.
+
+
+## Exact-SHA download publication automation
+
+A successful KANTA iOS unsigned artifacts run on main is the release-pipeline completion signal. The Verified download packaging workflow then resolves the Android validation artifact, unsigned iPhoneOS IPA and both-device simulator walkthrough from the same exact main-branch SHA. It waits for in-flight exact-SHA gates instead of accepting an older successful artifact.
+
+Only after all three gates pass does packaging create 30-day, provenance-bearing Android and unsigned iOS bundles. The publication helper verifies that both builds share the same full source SHA, validates the expected debug/unsigned signing states, and writes apps/web/downloads.json plus the two platform download sections. The workflow commits those generated website files with its narrowly scoped GitHub Actions token and dispatches the existing Vercel production deployment workflow.
+
+The iOS download remains an unsigned personal-signing input; this automation does not create Apple signing identities, provisioning profiles, Safari OTA installation or physical-device acceptance. A failed or missing exact-SHA gate fails closed and leaves the previous website downloads untouched. A rejected non-fast-forward publication push also fails safely rather than overwriting newer main-branch work.
