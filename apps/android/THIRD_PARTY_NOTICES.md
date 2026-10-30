@@ -8,6 +8,20 @@ Camera preview adds AndroidX Activity 1.10.1 and CameraX camera-camera2/camera-l
 
 The build resolves the pinned graph, copies embedded LICENSE/NOTICE resources unchanged into a generated offline runtime-notices.txt asset with dependency coordinates, and preserves upstream packaged metadata. My Set exposes this file separately from TinySoundFont's MIT license. Kotlin, AndroidX and concurrent-future support arrive through those declared dependencies; the CI dependency report records the resolved graph. No upstream library source or copyright header is rewritten. Store/public distribution remains a separate acceptance gate.
 
+Pitch estimation adds the TensorFlow Lite runtime, `org.tensorflow:tensorflow-lite:2.16.1`, from
+Maven Central, under Apache License 2.0. The AAR declares no permissions, pulls in no Google
+Play services, and carries its upstream `LICENSE`, which the build copies unchanged into the
+generated offline `runtime-notices.txt` asset. Upstream sources: https://github.com/tensorflow/tensorflow .
+
+The SPICE pitch model, `app/src/main/assets/spice.tflite` (8,733,770 bytes, SHA-256
+`b88f96ffa5d0691a50774f7843ba2356bbddd5fb33981ef1913c9b06afe25e07`), is the model published by
+Google Research for the Kaggle "spice" TensorFlow Lite release, described upstream as
+"A mobile-compatible pitch extraction model to recognize the dominant pitch in sung audio.
+Trained (in a self-supervised way) on the MIR-1k dataset". It is a trained model file used
+unchanged; no upstream source or licence text was rewritten, and the file is redistributed under
+its upstream terms. Upstream sources: https://www.kaggle.com/models/google/spice . The model is
+run locally on the device; no microphone audio leaves the device and no model input is uploaded.
+
 The MKMD decoder (`core/import/MkmdDecoder.java`) is a port of the iOS LegacyCompatibility
 MKMD format parser, included for legacy Meg container interoperability. It is a
 read-only format decoder: AES-256-CBC decryption (via javax.crypto) and raw DEFLATE

@@ -69,6 +69,7 @@ Control panels still rebuild on controller publication and search remains in-mem
 
 - Root: `apps/android/`; AGP **8.13.2**, compileSdk/targetSdk **36**, minSdk **26**, Java **17** source/target. Gradle 8.13 wrapper is included and its JAR/distribution hashes are verified.
 - Native Android Views built in Java; no Compose, Hilt, Koin, Room or Kotlin. MIDI synthesis uses revision-pinned MIT TinySoundFont via C11/JNI, NDK 27.2.12479018 and CMake 3.22.1.
+- Pitch estimation uses the optional SPICE DSP adapter behind the framework-free `core.PitchSource` port: `org.tensorflow:tensorflow-lite:2.16.1` (Apache 2.0, no permissions, no Play services) plus the 8.7 MB `assets/spice.tflite` model. `MicrophoneInput` stays the only `AudioRecord` owner and feeds the adapter the block it already hands the monitor. `core/SpicePitch` holds the 48 kHz to 16 kHz resampling and the model calibration, and is checked by `SpicePitchRegressionTests` in the host-JVM `coreRegression` task. See the pitch estimation decision in `docs/ARCHITECTURE.md`.
 - `LibraryRepository.java`: app-private media copies plus versioned JSON metadata committed through `AtomicFile`. This is the current implementation, not a SQL/Room schema.
 - Song fields: stable ID, title, artist, code, safe app-private filename, first-party starter flag. Content SHA-256 identifies imported files; starter IDs are allowlisted.
 - Queue fields: distinct reservation UUID, song ID, optional singer. Saved sets contain ID, name and ordered song IDs. Starter removals are persistent tombstones.

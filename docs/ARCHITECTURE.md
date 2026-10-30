@@ -269,6 +269,42 @@ The single import pipeline must scan with provider-safe limits, preview categori
 **TinySoundFont is the MIDI/SoundFont synthesis engine for KANTA on Android.** It is integrated under MIT via `app/src/main/cpp/soundfont.c` with a JNI wrapper (`NativeSoundFont`), declared in `apps/android/THIRD_PARTY_NOTICES.md`, and satisfies dim-10 (old KANTA native deps: TinySoundFont + CameraX only). iOS retains its existing synthesis stack (AudioKit/Tonic/SoundpipeAudioKit); no FluidSynth integration is introduced on either platform. Do not integrate or license Un4seen BASS/BASSMIDI/BASS_FX as part of the planned SongHub compatibility work. Keep the synthesis adapter isolated behind the platform playback contract; retain native audio decoders for non-MIDI formats and the separate YouTube player. FluidSynth is not a KANTA dependency; do not report it as integrated. Verify SF2 loading, MIDI/KAR events, lyrics synchronization, tempo and key controls, audio focus/session ownership, resource cleanup, and parity in platform tests. SongHub shubidx/shubblob parsing is an independent read-only interoperability task and does not require BASS. No proprietary SongHub APK libraries or bundled media may be copied into KANTA.
 
 
+## Pitch estimation decision - SPICE on TensorFlow Lite (owner approved 2026-10-30)
+
+**SPICE is the pitch estimator for the pitch-practice and learning features on Android.** It is a
+self-supervised pitch-extraction model, integrated as an optional DSP adapter behind the
+framework-free `core.PitchSource` port. It is not a second capture path and it does not replace
+the synthesis engine.
+
+This is a deliberate exception to dim-10 ("TinySoundFont + CameraX only") and to the repeated
+"no new dependency" statement in the milestone records. The reasoning is recorded here so the
+exception is not mistaken for a general loosening of the rule:
+
+- The exception covers exactly **one** dependency, `org.tensorflow:tensorflow-lite:2.16.1`, and
+  exactly **one** model asset, `app/src/main/assets/spice.tflite`. Nothing else about the
+  dependency set changes.
+- TensorFlow Lite declares no permissions and pulls in no Google Play services, so the APK keeps
+  its exact CAMERA/RECORD_AUDIO/INTERNET permission set.
+- The AAR carries its Apache 2.0 LICENSE, which the build copies unchanged into the generated
+  offline `runtime-notices.txt`. The model and the runtime are declared in
+  `apps/android/THIRD_PARTY_NOTICES.md`.
+- The microphone keeps exactly one owner. `MicrophoneInput` remains the only `AudioRecord`
+  holder; the SPICE adapter is fed the same captured block the monitor already receives and never
+  opens a capture of its own.
+- The adapter is optional. If the model cannot be loaded it is not created, and the pitch features
+  fall back to the existing frame detector instead of failing.
+- The existing frame detector still runs and still drives scoring. SPICE replaces the estimate the
+  pitch features read through `PitchSource`, not the scoring path.
+
+The model's output is not a frequency. It is a normalised value that requires the published
+calibration `semitones = 24.37 + 62.51 * pitch` before it means anything. The capture runs at
+48 kHz and the model consumes 16 kHz, so `core/SpicePitch` resamples with a 33-tap
+Hann-windowed sinc low-pass at 4.5 kHz before inference; without that low-pass, content above
+8 kHz folds into the model's band and the model reports a fundamental that is not in the audio.
+
+Device acceptance is still required: the confidence threshold, inference latency on real
+hardware, and the calibrated accuracy of the estimate have not been measured on a device.
+
 ## Android online preview follows authoritative playback publication — October 18, 2026
 
 Baseline: PR #51 `5c1b0f4`, whose reconstruction and focused iPhone smoke checks passed. The online/local overlap guard previously ran only after primary Play/Next button callbacks. Encrypted companion commands bypass those callbacks, and backend start acknowledgement is asynchronous, so those paths could leave a visible online player alive after local playback started.
