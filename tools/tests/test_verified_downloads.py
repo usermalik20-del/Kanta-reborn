@@ -283,3 +283,31 @@ class IOSSimulatorAcceptanceNamingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+        cls.workflow = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
+
+    def test_tooling_changes_trigger_exact_sha_ios_archive(self):
+        for event in ("push", "pull_request"):
+            with self.subTest(event=event):
+                section = workflow_event_section(self.archive, event)
+                self.assertIn("'tools/prepare-verified-downloads.py'", section)
+
+    def test_successful_main_unsigned_archive_automatically_starts_packaging(self):
+        self.assertIn("workflow_run:", self.workflow)
+        self.assertIn('workflows: ["KANTA iOS unsigned artifacts"]', self.workflow)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", self.workflow)
+        self.assertIn("github.event.workflow_run.head_branch == 'main'", self.workflow)
+        self.assertIn("github.event.workflow_run.head_sha", self.workflow)
+
+    def test_packaging_publishes_site_and_dispatches_production_deploy(self):
+        self.assertIn("contents: write", self.workflow)
+        self.assertIn("actions: write", self.workflow)
+        self.assertIn("tools/publish-verified-downloads.py", self.workflow)
+        self.assertIn("actions/workflows/vercel-deploy.yml/dispatches", self.workflow)
+        self.assertIn("git push origin HEAD:main", self.workflow)
