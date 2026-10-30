@@ -211,7 +211,7 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertEqual(manifest["ios"]["source"], source)
         self.assertEqual(manifest["android"]["run"], 41029928610)
         self.assertEqual(manifest["android"]["artifact"], 12965267288)
-        self.assertEqual(manifest["android"]["sha256"], "e628856e9ec9d49c1269655dbdc2fe518135a14b40ae45f0b9747a6724cb7c2f")
+        self.assertEqual(manifest["android"]["sha256"], "09fcdcaf1366425bc7158cacaf41d7a09f24444233f7809ee54ee97629c9b27a")
         self.assertEqual(manifest["ios"]["run"], 41029928516)
         self.assertEqual(manifest["ios"]["artifact"], 12964814338)
         self.assertEqual(manifest["ios"]["sha256"], "a4e6e681b1c4fcffd5cd2cbe80a170746e000085c9218a0aac2633e256f63d27")

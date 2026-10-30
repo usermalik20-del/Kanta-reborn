@@ -10,7 +10,7 @@
     "signed": "debug",
     "version": "0.10.0-reconstruction",
     "artifactName": "android-reconstruction-checks",
-    "sha256": "e628856e9ec9d49c1269655dbdc2fe518135a14b40ae45f0b9747a6724cb7c2f"
+    "sha256": "09fcdcaf1366425bc7158cacaf41d7a09f24444233f7809ee54ee97629c9b27a"
   },
   "ios": {
     "source": "35bf48ba9f43a4483becfaa36b66bc62ccdf1b8d",
