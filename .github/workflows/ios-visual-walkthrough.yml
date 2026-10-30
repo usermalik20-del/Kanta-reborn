@@ -6,6 +6,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/android-validation.yml'
       - 'apps/ios/**'
       - 'apps/android/**'
       - 'tools/capture-ios-runtime.py'
