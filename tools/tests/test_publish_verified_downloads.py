@@ -103,6 +103,18 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
         self.assertIn("not a Safari installer", ios_page)
         self.assertIn("Artifact ZIP SHA-256: <code>" + "e" * 64 + "</code>", ios_page)
 
+
+    def test_records_the_shorter_repository_enforced_retention(self):
+        with patch.dict(os.environ, {
+            "IOS_PACKAGE_EXPIRES_AT": "2026-11-07T00:00:00Z",
+        }):
+            result = publisher.publish()
+        self.assertEqual(result["retentionDays"], 7)
+        android_page = (self.root / "apps/web/android.html").read_text()
+        ios_page = (self.root / "apps/web/ios-download.html").read_text()
+        self.assertIn("7-day retention", android_page)
+        self.assertIn("7-day retention", ios_page)
+
     def test_rejects_mixed_source_revisions(self):
         data = fixture_manifest()
         data["builds"]["ios"]["source"] = "d" * 40
