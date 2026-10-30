@@ -502,3 +502,8 @@ Open items:
 ## iOS cloud signing and device installation
 
 Cloud iOS compilation, simulator acceptance, unsigned device packaging, Apple signing, and physical-device installation are separate release states. The current unsigned artifact workflow does not create an installable IPA. A free Apple Personal Team does not authorize Safari OTA distribution; do not expose an unsigned IPA as an iPhone installer. The approved constraints, supported testing paths, and exact Safari OTA release gate are maintained in [IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md](IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md). The historical Ad Hoc workflow under `apps/ios/.github/workflows/` is not discoverable by GitHub Actions because workflows must live under the repository-root `.github/workflows/`; do not claim it is active or move/enable it until its action pins and release gates are reviewed.
+
+
+## iOS cloud validation evidence boundary
+
+The hosted iPhone/iPad walkthrough jobs run Apple simulators, selected with `xcrun simctl`, and execute XCTest using the iOS Simulator destination. Report these as simulator acceptance only. They do not represent physical iPhone/iPad testing, signed installation, hardware audio, camera, or device-performance acceptance. Keep cloud compilation, simulator UI acceptance, unsigned device packaging, Apple signing and physical-device acceptance as distinct states.
