@@ -18,7 +18,7 @@ import zipfile
 REPO = os.environ.get("GITHUB_REPOSITORY", "usermalik20-del/Kanta-reborn")
 LIMIT = 128 * 1024 * 1024
 SOURCE_WAIT_SECONDS = 2700
-POLL_INTERVAL_SECONDS = 5
+POLL_INTERVAL_SECONDS = 15
 
 REQUIRED_RUNS = {
     "android_validation": "KANTA Android validation",
