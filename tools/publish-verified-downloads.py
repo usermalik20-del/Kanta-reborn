@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Publish only verified exact-SHA build artifacts to the static download pages."""
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import re
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+REPO = os.environ.get("GITHUB_REPOSITORY", "usermalik20-del/Kanta-reborn")
+
+
+def required_int(name: str) -> int:
+    value = os.environ.get(name, "")
+    if not re.fullmatch(r"[1-9][0-9]*", value):
+        raise ValueError(name + " must be a positive artifact/run ID")
+    return int(value)
+
+
+def publish() -> dict:
+    package = json.loads(Path("verified-downloads/downloads.json").read_text(encoding="utf-8"))
+    source = package.get("source_sha", "")
+    if not re.fullmatch(r"[0-9a-f]{40}", source):
+        raise ValueError("Package manifest has no full source SHA")
+    builds = package.get("builds", {})
+    android = builds.get("android", {})
+    ios = builds.get("ios", {})
+    if android.get("source") != source or ios.get("source") != source:
+        raise ValueError("Android and iOS artifacts must share one exact source SHA")
+    if android.get("signed") != "debug" or ios.get("signed") is not False:
+        raise ValueError("Unexpected signing state; iOS must remain unsigned")
+    if not android.get("run") or not android.get("artifact") or not android.get("sha256"):
+        raise ValueError("Android artifact provenance is incomplete")
+    if not ios.get("run") or not ios.get("artifact") or not ios.get("sha256"):
+        raise ValueError("iOS artifact provenance is incomplete")
+    walkthrough_run = package.get("walkthrough_run")
+    if not walkthrough_run:
+        raise ValueError("A successful same-SHA iPhone/iPad walkthrough is required")
+
+    run_id = required_int("GITHUB_RUN_ID")
+    android_package_artifact = required_int("ANDROID_PACKAGE_ARTIFACT_ID")
+    ios_package_artifact = required_int("IOS_PACKAGE_ARTIFACT_ID")
+    run_url = "https://github.com/" + REPO + "/actions/runs/" + str(run_id)
+    android_url = run_url + "/artifacts/" + str(android_package_artifact)
+    ios_url = run_url + "/artifacts/" + str(ios_package_artifact)
+
+    manifest = {
+        "repository": REPO,
+        "verifiedAt": os.environ.get("VERIFIED_AT", ""),
+        "retentionDays": 30,
+        "signInRequired": True,
+        "source": source,
+        "packagingRun": run_id,
+        "packagingRunUrl": run_url,
+        "walkthroughRun": int(walkthrough_run),
+        "android": {
+            "source": source,
+            "run": int(android["run"]),
+            "artifact": int(android["artifact"]),
+            "packagingArtifact": android_package_artifact,
+            "artifactName": "KANTA-Android-preview-download",
+            "downloadUrl": android_url,
+            "signed": "debug",
+            "sha256": android["sha256"],
+            "bytes": int(android["bytes"]),
+        },
+        "ios": {
+            "source": source,
+            "run": int(ios["run"]),
+            "artifact": int(ios["artifact"]),
+            "packagingArtifact": ios_package_artifact,
+            "artifactName": "KANTA-iOS-personal-unsigned-download",
+            "downloadUrl": ios_url,
+            "signed": False,
+            "personalSigningRequired": True,
+            "icloudAvailable": False,
+            "sha256": ios["sha256"],
+            "bytes": int(ios["bytes"]),
+        },
+    }
+
+    android_page = ROOT / "apps/web/android.html"
+    ios_page = ROOT / "apps/web/ios-download.html"
+    android_text = android_page.read_text(encoding="utf-8")
+    ios_text = ios_page.read_text(encoding="utf-8")
+
+    android_section = f'''<section class="section" id="download"><h2>Android preview download</h2>
+<p><a class="button primary" href="{android_url}">Download verified Android bundle ↗</a></p>
+<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. The bundle contains the debug-signed APK, checksum and build provenance. The APK is a testing preview, not a Google Play release.</p>
+<p>Source <code>{source[:8]}</code> · Debug-signed APK. Validated Android run <a href="https://github.com/{REPO}/actions/runs/{int(android["run"])}">#{int(android["run"])}</a>.</p>
+<p>APK SHA-256: <code>{android["sha256"]}</code>.</p>
+<p>iPhone/iPad simulator acceptance also passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>.</p></section>'''
+    ios_section = f'''<section class="section" id="download"><h2>Unsigned iPhone / iPad package</h2>
+<p><a class="button primary" href="{ios_url}">Download unsigned iOS bundle ↗</a></p>
+<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. This bundle contains an unsigned iPhoneOS IPA, checksum and build provenance.</p>
+<p>Source <code>{source[:8]}</code> · iOS/iPadOS 17 or newer. <strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable in this build.</p>
+<p>IPA SHA-256: <code>{ios["sha256"]}</code>.</p>
+<p>Both iPhone and iPad simulator acceptance jobs passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>. Simulator results do not establish physical-device acceptance.</p></section>'''
+
+    def replace_section(document: str, replacement: str) -> str:
+        pattern = re.compile(r'<section class="section" id="download">.*?</section>', re.DOTALL)
+        updated, count = pattern.subn(lambda _: replacement, document, count=1)
+        if count != 1:
+            raise ValueError("Expected exactly one download section in platform page")
+        return updated
+
+    android_page.write_text(replace_section(android_text, android_section), encoding="utf-8")
+    ios_page.write_text(replace_section(ios_text, ios_section), encoding="utf-8")
+    (ROOT / "apps/web/downloads.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    return manifest
+
+
+if __name__ == "__main__":
+    try:
+        result = publish()
+        print("Published exact-SHA download manifest for " + result["source"])
+    except (ValueError, KeyError, OSError, json.JSONDecodeError) as exc:
+        print("download publication refused: " + str(exc), file=sys.stderr)
+        raise SystemExit(1)
