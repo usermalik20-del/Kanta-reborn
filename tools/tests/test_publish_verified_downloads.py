@@ -96,6 +96,8 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
         self.assertIn("Keep me", android_page)
         self.assertIn("Keep me", ios_page)
         self.assertIn("debug-signed APK", android_page)
+        self.assertIn("30-day retention", android_page)
+        self.assertIn("30-day retention", ios_page)
         self.assertIn("Artifact ZIP SHA-256: <code>" + "d" * 64 + "</code>", android_page)
         self.assertIn("APK SHA-256: <code>" + "b" * 64 + "</code>", android_page)
         self.assertIn("SHA256.txt is included", android_page)
