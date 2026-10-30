@@ -36,13 +36,13 @@ def actual_retention_days(prefix: str) -> int:
     try:
         created_at = datetime.fromisoformat(created.replace("Z", "+00:00"))
         expires_at = datetime.fromisoformat(expires.replace("Z", "+00:00"))
-        if created_at.tzinfo is None or expires_at.tzinfo is None:
-            raise ValueError("artifact timestamps must include timezone offsets")
-        now = datetime.now(timezone.utc)
-        if created_at > now or expires_at <= now:
-            raise ValueError("artifact is not currently within its valid retention window")
     except (TypeError, ValueError) as exc:
         raise ValueError(prefix + " artifact creation/expiry timestamps are invalid") from exc
+    if created_at.tzinfo is None or expires_at.tzinfo is None:
+        raise ValueError(prefix + " artifact timestamps must include timezone offsets")
+    now = datetime.now(timezone.utc)
+    if created_at > now or expires_at <= now:
+        raise ValueError(prefix + " artifact is not currently within its valid retention window")
     days = round((expires_at - created_at).total_seconds() / 86400)
     if days < 1 or days > 30:
         raise ValueError(prefix + " artifact retention is outside the requested 1–30 day range")
