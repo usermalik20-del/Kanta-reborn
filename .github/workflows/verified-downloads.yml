@@ -91,9 +91,13 @@ jobs:
           artifacts="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts")"
           android_id="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .id')"
           ios_id="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .id')"
+          android_digest="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .digest')"
+          ios_digest="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .digest')"
           test -n "${android_id}" && test "${android_id}" != "null"
           test -n "${ios_id}" && test "${ios_id}" != "null"
-          VERIFIED_AT="$(date -u +%F)" ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" python3 tools/publish-verified-downloads.py
+          test -n "${android_digest}" && test "${android_digest}" != "null"
+          test -n "${ios_digest}" && test "${ios_digest}" != "null"
+          VERIFIED_AT="$(date -u +%F)" ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" ANDROID_PACKAGE_ARTIFACT_SHA256="${android_digest}" IOS_PACKAGE_ARTIFACT_SHA256="${ios_digest}" python3 tools/publish-verified-downloads.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/web/downloads.json apps/web/android.html apps/web/ios-download.html
