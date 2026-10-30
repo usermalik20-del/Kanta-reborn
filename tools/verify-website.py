@@ -309,7 +309,7 @@ def main():
             ("ios", "ios-download.html", "ipaSha256", "IPA"),
         ):
             build = manifest[platform]
-            source_artifact_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"]) + "/artifacts/" + str(build["artifact"])
+            source_artifact_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"])
             packaged_artifact_url = packaging_run_url + "/artifacts/" + str(build["packagingArtifact"])
             page_source = (WEB / filename).read_text(encoding="utf-8")
             assert build["source"] == source, filename + " source revision differs from manifest"
