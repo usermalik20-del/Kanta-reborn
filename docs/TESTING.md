@@ -286,4 +286,9 @@ Hosted simulator walkthroughs and unsigned iPhoneOS archives do not establish ph
 
 ## Simulator versus physical-device acceptance terminology
 
-The iPhone and iPad jobs in `.github/workflows/ios-visual-walkthrough.yml` boot Apple simulators through `xcrun simctl` and run XCTest against `platform=iOS Simulator`. Their job names, step names, manifests and reports must say **simulator acceptance**. They are valuable automated UI/runtime evidence, but they are not physical iPhone/iPad tests and do not establish hardware audio, camera, network-environment or device-performance acceptance. Keep physical-device acceptance as a separate, explicitly uncompleted gate unless evidence from an actual device is supplied.
+The iPhone and iPad jobs in `.github/workflows/ios-visual-walkthrough.yml` boot Apple simulators through `xcrun simctl` and run XCTest against `platform=iOS Simulator`. Their job names, step names, manifests and reports must say **simulator acceptance**. This is **simulator UI acceptance**, not physical-device acceptance. They are valuable automated UI/runtime evidence, but they are not physical iPhone/iPad tests and do not establish hardware audio, camera, network-environment or device-performance acceptance. Keep physical-device acceptance as a separate, explicitly uncompleted gate unless evidence from an actual device is supplied.
+
+
+## Exact-SHA verified download workflow identity
+
+The verified-download packager discovers the Android APK from the `KANTA Android validation` run and the unsigned iOS IPA from `KANTA iOS unsigned artifacts`. It separately requires `KANTA iOS visual walkthrough` to pass on the same exact main-branch source SHA. Keep these names synchronized with the `name:` fields in the root workflow files; a renamed or missing workflow must fail its contract tests rather than silently accepting an older artifact.
