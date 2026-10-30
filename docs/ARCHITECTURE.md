@@ -308,6 +308,11 @@ target note in the octave of middle C, so practice follows the song instead of a
 file without a key event falls back to A4, and the learning assistant is given the real key
 name instead of a fixed "C major".
 
+The cost is size, and the owner accepted it on 2026-10-30: the model is 8.7 MB and the runtime
+adds its native library per packaged ABI, so the installable grows by roughly 20 MB. That is
+recorded here as an accepted tradeoff rather than an open question, so it is not re-raised. The
+alternative considered and not taken was a smaller model at lower pitch accuracy.
+
 Device acceptance is still required: the confidence threshold, inference latency on real
 hardware, the calibrated accuracy of the estimate, and that the target actually follows a song
 with a key signature have not been measured on a device.

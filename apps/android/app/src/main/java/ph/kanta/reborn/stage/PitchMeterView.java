@@ -90,13 +90,18 @@ public class PitchMeterView extends View {
 
         indicatorPath = new Path();
         targetRect = new RectF();
-
-        // Initialize with default pitch
-        currentPitchData = new PitchData(targetPitchHz, targetPitchHz, 1.0f, System.currentTimeMillis());
+        // Deliberately no initial reading. The meter used to seed currentPitchHz = targetPitchHz
+        // with accuracy 1.0, which displayed a perfect score before a single sample arrived.
+        // It now says nothing until the microphone actually reports something.
     }
 
     public void setTargetPitch(float targetPitchHz) {
         this.targetPitchHz = targetPitchHz;
+        // A new game starts with no result, so the previous reading cannot be mistaken for one.
+        this.currentPitchData = null;
+        this.accuracy = 0f;
+        this.animatedAccuracy = 0f;
+        postInvalidate();
     }
 
     public void updatePitch(PitchData pitchData) {
@@ -173,8 +178,11 @@ public class PitchMeterView extends View {
         indicatorPath.lineTo(indicatorX - INDICATOR_RADIUS, centerY);
         indicatorPath.close();
 
-        // Color indicator based on accuracy
-        if (animatedAccuracy >= 0.9f) {
+        // Color indicator based on accuracy. With no estimate yet the indicator stays neutral:
+        // red would assert the singer is off, which is not something the meter knows.
+        if (currentPitchData == null) {
+            indicatorPaint.setColor(Color.parseColor("#90A4AE"));
+        } else if (animatedAccuracy >= 0.9f) {
             indicatorPaint.setColor(Color.parseColor("#00E676")); // Green - perfect
         } else if (animatedAccuracy >= 0.7f) {
             indicatorPaint.setColor(Color.parseColor("#FFD600")); // Yellow - good
@@ -218,7 +226,8 @@ public class PitchMeterView extends View {
         canvas.drawText("YOU: " + currentNote, centerX, height - 20, textPaint);
 
         // Draw accuracy percentage
-        String accuracyText = String.format("%.0f%%", animatedAccuracy * 100);
+        String accuracyText =
+                currentPitchData == null ? "\u2014" : String.format("%.0f%%", animatedAccuracy * 100);
         canvas.drawText(accuracyText, centerX, centerY + 5, accuracyPaint);
 
         // Draw cents offset
