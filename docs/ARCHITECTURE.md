@@ -302,8 +302,15 @@ calibration `semitones = 24.37 + 62.51 * pitch` before it means anything. The ca
 Hann-windowed sinc low-pass at 4.5 kHz before inference; without that low-pass, content above
 8 kHz folds into the model's band and the model reports a fundamental that is not in the audio.
 
+The practice target is the song's own key. `core/MidiLyrics` reads the key-signature meta event
+and `core/MidiKey` converts the signed sharps/flats count into the tonic pitch class and a
+target note in the octave of middle C, so practice follows the song instead of a constant. A
+file without a key event falls back to A4, and the learning assistant is given the real key
+name instead of a fixed "C major".
+
 Device acceptance is still required: the confidence threshold, inference latency on real
-hardware, and the calibrated accuracy of the estimate have not been measured on a device.
+hardware, the calibrated accuracy of the estimate, and that the target actually follows a song
+with a key signature have not been measured on a device.
 
 ## Android online preview follows authoritative playback publication — October 18, 2026
 
