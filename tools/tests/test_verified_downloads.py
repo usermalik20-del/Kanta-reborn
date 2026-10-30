@@ -248,6 +248,21 @@ class IOSSimulatorAcceptanceNamingTests(unittest.TestCase):
         cls.runner = (root / "tools/capture-ios-runtime.py").read_text(encoding="utf-8")
         cls.testing = (root / "docs/TESTING.md").read_text(encoding="utf-8")
 
+
+    def test_required_run_names_match_root_workflow_definitions(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        workflows = {
+            "android_validation": ".github/workflows/android-validation.yml",
+            "ios_unsigned": ".github/workflows/ios-runtime-artifacts.yml",
+            "walkthrough": ".github/workflows/ios-visual-walkthrough.yml",
+        }
+        for key, relative_path in workflows.items():
+            with self.subTest(workflow=key):
+                source = (root / relative_path).read_text(encoding="utf-8")
+                match = re.search(r"(?m)^name:\\s*(.+)$", source)
+                self.assertIsNotNone(match, relative_path)
+                self.assertEqual(module.REQUIRED_RUNS[key], match.group(1).strip())
+
     def test_workflow_names_both_jobs_as_simulator_acceptance(self):
         self.assertIn("name: iPhone simulator acceptance", self.workflow)
         self.assertIn("name: iPad simulator acceptance", self.workflow)
