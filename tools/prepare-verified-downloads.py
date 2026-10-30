@@ -21,7 +21,7 @@ SOURCE_WAIT_SECONDS = 120
 POLL_INTERVAL_SECONDS = 5
 
 REQUIRED_RUNS = {
-    "reconstruction": "KANTA Android validation",
+    "android_validation": "KANTA Android validation",
     "ios_unsigned": "KANTA iOS unsigned artifacts",
     "walkthrough": "KANTA iOS visual walkthrough",
 }
@@ -151,16 +151,16 @@ def resolve_source(source_sha: str) -> tuple[dict, dict, dict]:
         raise ValueError("SOURCE_SHA must be a full 40-character Git commit SHA")
 
     # A release bundle is not accepted until both device walkthroughs have passed
-    # on this exact revision, alongside the native reconstruction and unsigned IPA.
+    # on this exact revision, alongside the Android validation artifact and unsigned iOS IPA.
     walkthrough = find_source_run(source_sha, REQUIRED_RUNS["walkthrough"])
-    reconstruction = find_source_run(source_sha, REQUIRED_RUNS["reconstruction"])
+    android_validation = find_source_run(source_sha, REQUIRED_RUNS["android_validation"])
     ios_run = find_source_run(source_sha, REQUIRED_RUNS["ios_unsigned"])
 
-    android_artifact = find_artifact(reconstruction, ARTIFACT_NAMES["android"])
+    android_artifact = find_artifact(android_validation, ARTIFACT_NAMES["android"])
     ios_artifact = find_artifact(ios_run, ARTIFACT_NAMES["ios"])
 
     android = {
-        "run": reconstruction["id"],
+        "run": android_validation["id"],
         "artifact": android_artifact["id"],
         "source": source_sha,
     }
@@ -169,9 +169,9 @@ def resolve_source(source_sha: str) -> tuple[dict, dict, dict]:
         "artifact": ios_artifact["id"],
         "source": source_sha,
     }
-    accepted(reconstruction, android_artifact, android)
+    accepted(android_validation, android_artifact, android)
     accepted(ios_run, ios_artifact, ios)
-    return walkthrough, {"run": reconstruction, "artifact": android_artifact, "expected": android}, {
+    return walkthrough, {"run": android_validation, "artifact": android_artifact, "expected": android}, {
         "run": ios_run, "artifact": ios_artifact, "expected": ios
     }
 
