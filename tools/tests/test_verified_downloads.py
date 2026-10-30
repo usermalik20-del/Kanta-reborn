@@ -281,10 +281,6 @@ class IOSSimulatorAcceptanceNamingTests(unittest.TestCase):
         self.assertIn("physical-device acceptance", self.testing)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -311,3 +307,7 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         self.assertIn("tools/publish-verified-downloads.py", self.workflow)
         self.assertIn("actions/workflows/vercel-deploy.yml/dispatches", self.workflow)
         self.assertIn("git push origin HEAD:main", self.workflow)
+
+
+if __name__ == "__main__":
+    unittest.main()
