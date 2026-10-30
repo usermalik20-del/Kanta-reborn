@@ -17,7 +17,7 @@ import zipfile
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "usermalik20-del/Kanta-reborn")
 LIMIT = 128 * 1024 * 1024
-SOURCE_WAIT_SECONDS = 120
+SOURCE_WAIT_SECONDS = 2700
 POLL_INTERVAL_SECONDS = 5
 
 REQUIRED_RUNS = {
