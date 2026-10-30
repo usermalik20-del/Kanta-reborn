@@ -9,6 +9,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/android-validation.yml'
       - 'tools/prepare-verified-downloads.py'
       - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
