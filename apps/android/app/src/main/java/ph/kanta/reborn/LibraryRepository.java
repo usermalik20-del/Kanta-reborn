@@ -391,6 +391,15 @@ final class LibraryRepository {
     if (listener != null) listener.onProgress(total, copied, status);
   }
 
+  /**
+   * Reports the end of a batch. Without this the caller's onComplete never runs, which is what
+   * dismisses the import dialog, so an import would leave it on screen forever.
+   */
+  private void notifyComplete(boolean success, String message) {
+    ImportProgressListener listener = progressListener;
+    if (listener != null) listener.onComplete(success, message);
+  }
+
   private static String formatBytes(long bytes) {
     if (bytes < 0) return "?";
     if (bytes < 1024) return bytes + " B";
@@ -442,8 +451,10 @@ final class LibraryRepository {
       if (cancelled.getAsBoolean()) throw new InterruptedIOException();
       batching = false;
       persist();
+      notifyComplete(true, "Imported " + good + (failed > 0 ? ", skipped " + failed : ""));
       return new int[] {good, failed};
     } catch (Exception e) {
+      notifyComplete(false, String.valueOf(e.getMessage()));
         if (progressListener != null) progressListener.onComplete(false, e.getMessage());
       songs.clear();
       songs.addAll(before);

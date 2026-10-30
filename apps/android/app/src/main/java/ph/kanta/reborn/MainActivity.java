@@ -63,7 +63,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int queueLimit = 20;
   private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private android.app.ProgressDialog importProgressDialog;
+  private android.app.ProgressDialog importProgressDialog;
   private final ExecutorService searchWorker = Executors.newSingleThreadExecutor();
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
@@ -1843,6 +1843,45 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             }
           });
     }
+  }
+
+  /** Shows the blocking import dialog. Imports run off the main thread, so it must not be
+   * cancelable by tapping outside: the work cannot actually be interrupted from here. */
+  private void showImportProgress() {
+    if (importProgressDialog == null) {
+      importProgressDialog = new android.app.ProgressDialog(this);
+      importProgressDialog.setTitle("Importing");
+      importProgressDialog.setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL);
+      importProgressDialog.setMax(100);
+      importProgressDialog.setCancelable(false);
+    }
+    importProgressDialog.setProgress(0);
+    importProgressDialog.setIndeterminate(true);
+    importProgressDialog.setMessage("Preparing\u2026");
+    importProgressDialog.show();
+  }
+
+  /**
+   * Moves the import dialog. A provider that will not report a size gives total 0, and then only
+   * the message can progress, so the bar stays indeterminate rather than sitting at zero.
+   */
+  private void updateImportProgress(long total, long copied, String status) {
+    if (importProgressDialog == null || !importProgressDialog.isShowing()) return;
+    if (status != null) importProgressDialog.setMessage(status);
+    if (total > 0) {
+      importProgressDialog.setIndeterminate(false);
+      importProgressDialog.setProgress((int) Math.max(0, Math.min(100, copied * 100 / total)));
+    } else {
+      importProgressDialog.setIndeterminate(true);
+    }
+  }
+
+  /** Dismisses the import dialog and reports the outcome the repository returned. */
+  private void hideImportProgress(String message) {
+    if (importProgressDialog != null && importProgressDialog.isShowing())
+      importProgressDialog.dismiss();
+    if (message != null && !message.isEmpty())
+      Toast.makeText(this, message, Toast.LENGTH_LONG).show();
   }
 
   private void policy(String asset, String title) {
