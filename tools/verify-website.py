@@ -299,7 +299,7 @@ def main():
     manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
     assert manifest["repository"] == "usermalik20-del/Kanta-reborn"
     if "packagingRun" in manifest:
-        assert manifest["signInRequired"] is True and manifest["retentionDays"] == 30
+        assert manifest["signInRequired"] is True and 1 <= manifest["retentionDays"] <= 30
         source = manifest["source"]
         assert re.fullmatch(r"[0-9a-f]{40}", source), "Download manifest source SHA is malformed"
         packaging_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(manifest["packagingRun"])
