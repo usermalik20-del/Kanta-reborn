@@ -1,8 +1,8 @@
 import importlib.util
 import json
 import os
-from pathlib import Path
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -53,7 +53,9 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
         now = datetime.now(timezone.utc).replace(microsecond=0)
         created = now - timedelta(hours=1)
         expires = created + timedelta(days=30)
-        timestamp = lambda value: value.isoformat().replace("+00:00", "Z")
+        def timestamp(value):
+            return value.isoformat().replace("+00:00", "Z")
+
         self.env = patch.dict(os.environ, {
             "GITHUB_RUN_ID": "404",
             "ANDROID_PACKAGE_ARTIFACT_ID": "501",
@@ -113,7 +115,11 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
 
 
     def test_rejects_expired_package_artifact_metadata(self):
-        expired = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat().replace("+00:00", "Z")
+        expired = (
+            (datetime.now(timezone.utc) - timedelta(days=1))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         with patch.dict(os.environ, {
             "ANDROID_PACKAGE_EXPIRES_AT": expired,
         }):
