@@ -306,6 +306,8 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
                 visual_section = workflow_event_section(self.visual, event)
                 package_section = workflow_event_section(self.workflow, event)
                 self.assertIn("'tools/**'", android_section)
+                self.assertIn("branches: [main]", self.android)
+                self.assertNotIn("branches: ['**']", self.android)
                 for path in release_paths:
                     self.assertIn(path, archive_section)
                     self.assertIn(path, visual_section)
