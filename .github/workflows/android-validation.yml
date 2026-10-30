@@ -6,6 +6,9 @@ on:
     paths:
       - 'apps/android/**'
       - 'tools/**'
+      - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/verified-downloads.yml'
       - '.github/workflows/android-validation.yml'
   pull_request:
     types: [opened, synchronize, reopened, labeled]
