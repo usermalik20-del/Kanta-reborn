@@ -311,6 +311,7 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
                     self.assertIn(path, visual_section)
                     self.assertIn(path, package_section)
                 for path in (
+                    "'.github/workflows/android-validation.yml'",
                     "'.github/workflows/ios-runtime-artifacts.yml'",
                     "'.github/workflows/ios-visual-walkthrough.yml'",
                     "'.github/workflows/verified-downloads.yml'",
