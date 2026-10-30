@@ -98,6 +98,8 @@ jobs:
           test -n "${android_digest}" && test "${android_digest}" != "null"
           test -n "${ios_digest}" && test "${ios_digest}" != "null"
           VERIFIED_AT="$(date -u +%F)" ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" ANDROID_PACKAGE_ARTIFACT_SHA256="${android_digest}" IOS_PACKAGE_ARTIFACT_SHA256="${ios_digest}" python3 tools/publish-verified-downloads.py
+          python3 tools/verify-website.py
+          python3 -m unittest tools.tests.test_website_security_contract
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/web/downloads.json apps/web/android.html apps/web/ios-download.html
