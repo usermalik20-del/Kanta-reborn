@@ -15,11 +15,10 @@ on:
       - 'tools/tests/test_publish_verified_downloads.py'
       - 'tools/verify-website.py'
       - 'tools/tests/test_website_security_contract.py'
-      - '.github/workflows/verified-downloads.yml'
       - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
+
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
@@ -29,8 +28,10 @@ on:
       - 'tools/tests/test_publish_verified_downloads.py'
       - 'tools/verify-website.py'
       - 'tools/tests/test_website_security_contract.py'
-      - '.github/workflows/verified-downloads.yml'
       - '.github/workflows/ios-runtime-artifacts.yml'
+      - '.github/workflows/ios-visual-walkthrough.yml'
+      - '.github/workflows/verified-downloads.yml'
+
   workflow_run:
     workflows: ["KANTA iOS unsigned artifacts"]
     types: [completed]
