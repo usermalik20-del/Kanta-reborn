@@ -102,18 +102,18 @@ def publish() -> dict:
     android_text = android_page.read_text(encoding="utf-8")
     ios_text = ios_page.read_text(encoding="utf-8")
 
-    android_source_url = "https://github.com/" + REPO + "/actions/runs/" + str(int(android["run"])) + "/artifacts/" + str(int(android["artifact"]))
-    ios_source_url = "https://github.com/" + REPO + "/actions/runs/" + str(int(ios["run"])) + "/artifacts/" + str(int(ios["artifact"]))
+    android_source_url = "https://github.com/" + REPO + "/actions/runs/" + str(int(android["run"]))
+    ios_source_url = "https://github.com/" + REPO + "/actions/runs/" + str(int(ios["run"]))
     android_section = f'''<section class="section" id="download"><h2>Android preview download</h2>
 <p><a class="button primary" href="{android_url}">Download verified Android bundle ↗</a></p>
 <p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. The bundle contains the debug-signed APK, SHA256.txt checksum and build provenance. The APK is a testing preview, not a Google Play release.</p>
-<p>Source <code>{source[:8]}</code> · Debug-signed APK. Validated Android run <a href="https://github.com/{REPO}/actions/runs/{int(android["run"])}">#{int(android["run"])}</a> · <a href="{android_source_url}">Original accepted build artifact</a>.</p>
+<p>Source <code>{source[:8]}</code> · Debug-signed APK. Validated Android run <a href="https://github.com/{REPO}/actions/runs/{int(android["run"])}">#{int(android["run"])}</a> · <a href="{android_source_url}">Original Android validation run</a>.</p>
 <p>Artifact ZIP SHA-256: <code>{android_package_digest}</code>. APK SHA-256: <code>{android["sha256"]}</code>. SHA256.txt is included.</p>
 <p>iPhone/iPad simulator acceptance also passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>.</p></section>'''
     ios_section = f'''<section class="section" id="download"><h2>Unsigned iPhone / iPad package</h2>
 <p><a class="button primary" href="{ios_url}">Download unsigned iOS bundle ↗</a></p>
 <p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. This bundle contains an unsigned iPhoneOS IPA, SHA256.txt checksum and build provenance.</p>
-<p>Source <code>{source[:8]}</code> · iOS/iPadOS 17 or newer. <strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable in this build. <a href="{ios_source_url}">Original unsigned archive artifact</a>.</p>
+<p>Source <code>{source[:8]}</code> · iOS/iPadOS 17 or newer. <strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable in this build. <a href="{ios_source_url}">Original unsigned archive run</a>.</p>
 <p>Artifact ZIP SHA-256: <code>{ios_package_digest}</code>. IPA SHA-256: <code>{ios["sha256"]}</code>. SHA256.txt is included.</p>
 <p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>. Simulator results do not establish physical-device acceptance.</p></section>'''
 
