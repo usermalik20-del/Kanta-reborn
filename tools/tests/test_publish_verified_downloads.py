@@ -2,6 +2,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -49,18 +50,22 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
                 '<html><section class="section" id="download"><h2>Old download</h2></section><section id="rest">Keep me</section></html>',
                 encoding="utf-8",
             )
+        now = datetime.now(timezone.utc).replace(microsecond=0)
+        created = now - timedelta(hours=1)
+        expires = created + timedelta(days=30)
+        timestamp = lambda value: value.isoformat().replace("+00:00", "Z")
         self.env = patch.dict(os.environ, {
             "GITHUB_RUN_ID": "404",
             "ANDROID_PACKAGE_ARTIFACT_ID": "501",
             "IOS_PACKAGE_ARTIFACT_ID": "502",
             "ANDROID_PACKAGE_ARTIFACT_SHA256": "d" * 64,
             "IOS_PACKAGE_ARTIFACT_SHA256": "e" * 64,
-            "ANDROID_PACKAGE_CREATED_AT": "2026-10-30T00:00:00Z",
-            "ANDROID_PACKAGE_EXPIRES_AT": "2026-11-29T00:00:00Z",
-            "IOS_PACKAGE_CREATED_AT": "2026-10-30T00:00:00Z",
-            "IOS_PACKAGE_EXPIRES_AT": "2026-11-29T00:00:00Z",
+            "ANDROID_PACKAGE_CREATED_AT": timestamp(created),
+            "ANDROID_PACKAGE_EXPIRES_AT": timestamp(expires),
+            "IOS_PACKAGE_CREATED_AT": timestamp(created),
+            "IOS_PACKAGE_EXPIRES_AT": timestamp(expires),
             "GITHUB_REPOSITORY": "usermalik20-del/Kanta-reborn",
-            "VERIFIED_AT": "2026-10-31",
+            "VERIFIED_AT": now.date().isoformat(),
         })
         self.env.start()
         self.root_patch = patch.object(publisher, "ROOT", self.root)
@@ -108,15 +113,18 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
 
 
     def test_rejects_expired_package_artifact_metadata(self):
+        expired = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat().replace("+00:00", "Z")
         with patch.dict(os.environ, {
-            "ANDROID_PACKAGE_EXPIRES_AT": "2026-10-30T00:00:00Z",
+            "ANDROID_PACKAGE_EXPIRES_AT": expired,
         }):
             with self.assertRaisesRegex(ValueError, "valid retention window"):
                 publisher.publish()
 
     def test_records_the_shorter_repository_enforced_retention(self):
+        created = datetime.fromisoformat(os.environ["IOS_PACKAGE_CREATED_AT"].replace("Z", "+00:00"))
+        expires = (created + timedelta(days=7)).isoformat().replace("+00:00", "Z")
         with patch.dict(os.environ, {
-            "IOS_PACKAGE_EXPIRES_AT": "2026-11-06T00:00:00Z",
+            "IOS_PACKAGE_EXPIRES_AT": expires,
         }):
             result = publisher.publish()
         self.assertEqual(result["retentionDays"], 7)
