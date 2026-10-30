@@ -18,7 +18,7 @@ spec.loader.exec_module(module)
 SOURCE = "a" * 40
 
 
-def run_record(run_id=41, name="KANTA reconstruction validation", source=SOURCE,
+def run_record(run_id=41, name="KANTA Android validation", source=SOURCE,
                conclusion="success", created="2026-10-24T00:00:00Z", branch="main"):
     return {
         "id": run_id,
@@ -56,7 +56,7 @@ class DownloadContracts(unittest.TestCase):
             module, "api", return_value={"workflow_runs": [good, newer_failure]}
         ):
             with self.assertRaisesRegex(ValueError, "latest run 42 concluded failure"):
-                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+                module.find_source_run(SOURCE, "KANTA Android validation", wait_seconds=0)
 
     def test_wrong_sha_and_feature_branch_are_not_accepted(self):
         wrong_sha = run_record(run_id=50, source="b" * 40)
@@ -65,7 +65,7 @@ class DownloadContracts(unittest.TestCase):
             module, "api", return_value={"workflow_runs": [wrong_sha, feature]}
         ):
             with self.assertRaisesRegex(ValueError, "no matching run is visible"):
-                module.find_source_run(SOURCE, "KANTA reconstruction validation", wait_seconds=0)
+                module.find_source_run(SOURCE, "KANTA Android validation", wait_seconds=0)
 
     def test_waits_for_a_run_to_become_visible(self):
         with patch.object(
@@ -76,7 +76,7 @@ class DownloadContracts(unittest.TestCase):
             ],
         ), patch.object(module.time, "sleep"):
             found = module.find_source_run(
-                SOURCE, "KANTA reconstruction validation",
+                SOURCE, "KANTA Android validation",
                 wait_seconds=2,
             )
         self.assertEqual(found["id"], 41)
@@ -108,7 +108,7 @@ class DownloadContracts(unittest.TestCase):
 
     def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
         walkthrough = run_record(61, "KANTA iOS visual walkthrough")
-        reconstruction = run_record(62, "KANTA reconstruction validation")
+        reconstruction = run_record(62, "KANTA Android validation")
         ios = run_record(63, "KANTA iOS unsigned artifacts")
         android_artifact = artifact_record(82, 62, "android-reconstruction-checks")
         ios_artifact = artifact_record(83, 63, "KANTA-personal-unsigned")
