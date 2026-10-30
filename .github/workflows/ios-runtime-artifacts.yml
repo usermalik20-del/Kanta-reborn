@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/ios/**'
       - 'apps/android/**'
+      - 'tools/prepare-verified-downloads.py'
       - '.github/workflows/ios-runtime-artifacts.yml'
   pull_request:
     types: [opened, synchronize, reopened]
