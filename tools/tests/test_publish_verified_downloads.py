@@ -53,6 +53,8 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
             "GITHUB_RUN_ID": "404",
             "ANDROID_PACKAGE_ARTIFACT_ID": "501",
             "IOS_PACKAGE_ARTIFACT_ID": "502",
+            "ANDROID_PACKAGE_ARTIFACT_SHA256": "d" * 64,
+            "IOS_PACKAGE_ARTIFACT_SHA256": "e" * 64,
             "GITHUB_REPOSITORY": "usermalik20-del/Kanta-reborn",
             "VERIFIED_AT": "2026-10-31",
         })
@@ -78,6 +80,11 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
         self.assertFalse(saved["ios"]["signed"])
         self.assertTrue(saved["ios"]["personalSigningRequired"])
         self.assertEqual(saved["retentionDays"], 30)
+        self.assertEqual(saved["android"]["sha256"], "d" * 64)
+        self.assertEqual(saved["android"]["apkSha256"], "b" * 64)
+        self.assertEqual(saved["ios"]["sha256"], "e" * 64)
+        self.assertEqual(saved["ios"]["ipaSha256"], "c" * 64)
+        self.assertEqual(saved["ios"]["walkthroughRun"], 303)
         android_page = (self.root / "apps/web/android.html").read_text()
         ios_page = (self.root / "apps/web/ios-download.html").read_text()
         self.assertIn("/artifacts/501", android_page)
@@ -85,7 +92,12 @@ class VerifiedDownloadPublisherTests(unittest.TestCase):
         self.assertIn("Keep me", android_page)
         self.assertIn("Keep me", ios_page)
         self.assertIn("debug-signed APK", android_page)
+        self.assertIn("Artifact ZIP SHA-256: <code>" + "d" * 64 + "</code>", android_page)
+        self.assertIn("APK SHA-256: <code>" + "b" * 64 + "</code>", android_page)
+        self.assertIn("SHA256.txt is included", android_page)
+        self.assertIn("Both iPhone and iPad simulator walkthroughs passed", ios_page)
         self.assertIn("not a Safari installer", ios_page)
+        self.assertIn("Artifact ZIP SHA-256: <code>" + "e" * 64 + "</code>", ios_page)
 
     def test_rejects_mixed_source_revisions(self):
         data = fixture_manifest()
