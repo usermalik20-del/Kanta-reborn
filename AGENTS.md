@@ -166,7 +166,7 @@ any workflow, any branch, any trigger, workflow dispatch, reruns, labels and PR-
 No per-run approval, label, actor or run-count gate applies.
 
 The root workflow triggers are intentionally scoped by source paths:
-- `android-validation.yml`: Android source and shared tooling changes on pushes and pull requests.
+- `android-validation.yml`: Android source, shared tooling and release-workflow changes on main pushes and pull requests. Feature-branch validation runs through the pull-request event rather than a duplicate branch-push run.
 - `ios-validation.yml`: iOS source changes on pushes and pull requests.
 - `ios-smoke.yml`: focused iOS native/UI smoke on pull requests and manual dispatch.
 - `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on main pushes, pull requests, and manual dispatch when iOS/Android source changes.
