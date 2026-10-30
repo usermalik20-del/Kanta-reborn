@@ -497,3 +497,8 @@ Open items:
 - Device acceptance of the importer against a real Meg container (hosted CI runs the
   JVM fixtures only; a green build is not device acceptance).
 - The importer has no UI surface yet; it is reachable only through the catalog API.
+
+
+## iOS cloud signing and device installation
+
+Cloud iOS compilation, simulator acceptance, unsigned device packaging, Apple signing, and physical-device installation are separate release states. The current unsigned artifact workflow does not create an installable IPA. A free Apple Personal Team does not authorize Safari OTA distribution; do not expose an unsigned IPA as an iPhone installer. The approved constraints, supported testing paths, and exact Safari OTA release gate are maintained in [IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md](IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md). The historical Ad Hoc workflow under `apps/ios/.github/workflows/` is not discoverable by GitHub Actions because workflows must live under the repository-root `.github/workflows/`; do not claim it is active or move/enable it until its action pins and release gates are reviewed.

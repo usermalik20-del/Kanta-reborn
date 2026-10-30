@@ -277,3 +277,8 @@ Carry forward: the intermittent Song Library transition remains unproven-good an
 repair validated by focused smoke plus both device walkthroughs on one exact SHA before it
 is accepted. Merging an iOS repair requires that walkthrough evidence, not merely a
 mergeable branch.
+
+
+## Physical iPhone installation versus hosted acceptance
+
+Hosted simulator walkthroughs and unsigned iPhoneOS archives do not establish physical-device installation. The unsigned IPA from `ios-runtime-artifacts.yml` is a build/signing input only. Free Apple Personal Team provisioning is a development-install path, not Safari OTA distribution. Do not upload the unsigned IPA to a public install button or mark it as device-installable. Follow [IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md](IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md) for the supported free-account boundary and the additional Apple distribution, profile, manifest, HTTPS and real-device checks required before Safari OTA can be enabled. Physical-device acceptance remains NOT RUN until a real iPhone install and test are evidenced.
