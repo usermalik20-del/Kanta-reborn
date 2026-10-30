@@ -107,11 +107,14 @@ public final class SpicePitchRegressionTests {
     check(
         SpicePitch.semitones(1f) == 86.87999725341797f,
         "Calibration slope: " + SpicePitch.semitones(1f));
+    // The calibration itself is pure arithmetic and is asserted exactly. Converting semitones
+    // to Hz goes through Math.pow, which is not required to be correctly rounded across
+    // implementations, so those are checked to a tolerance rather than bit-for-bit.
     check(
-        SpicePitch.hz(24.3700008392334f) == 33.40965270996094f,
+        Math.abs(SpicePitch.hz(24.3700008392334f) - 33.40965f) < 0.001f,
         "Lowest calibrated pitch: " + SpicePitch.hz(24.3700008392334f));
     check(
-        SpicePitch.hz(86.87999725341797f) == 1235.9114990234375f,
+        Math.abs(SpicePitch.hz(86.87999725341797f) - 1235.9115f) < 0.01f,
         "Highest calibrated pitch: " + SpicePitch.hz(86.87999725341797f));
     check(SpicePitch.confidence(0.25f) == 0.75f, "Confidence is the complement of uncertainty");
     // A4 is 69 semitones above MIDI note 0.
