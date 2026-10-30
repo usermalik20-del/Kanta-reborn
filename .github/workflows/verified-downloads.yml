@@ -93,11 +93,19 @@ jobs:
           ios_id="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .id')"
           android_digest="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .digest')"
           ios_digest="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .digest')"
+          android_created="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .created_at')"
+          android_expires="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-Android-preview-download") | .expires_at')"
+          ios_created="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .created_at')"
+          ios_expires="$(printf '%s' "${artifacts}" | jq -r '.artifacts[] | select(.name == "KANTA-iOS-personal-unsigned-download") | .expires_at')"
           test -n "${android_id}" && test "${android_id}" != "null"
           test -n "${ios_id}" && test "${ios_id}" != "null"
           test -n "${android_digest}" && test "${android_digest}" != "null"
           test -n "${ios_digest}" && test "${ios_digest}" != "null"
-          VERIFIED_AT="$(date -u +%F)" ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" ANDROID_PACKAGE_ARTIFACT_SHA256="${android_digest}" IOS_PACKAGE_ARTIFACT_SHA256="${ios_digest}" python3 tools/publish-verified-downloads.py
+          test -n "${android_created}" && test "${android_created}" != "null"
+          test -n "${android_expires}" && test "${android_expires}" != "null"
+          test -n "${ios_created}" && test "${ios_created}" != "null"
+          test -n "${ios_expires}" && test "${ios_expires}" != "null"
+          VERIFIED_AT="$(date -u +%F)" ANDROID_PACKAGE_ARTIFACT_ID="${android_id}" IOS_PACKAGE_ARTIFACT_ID="${ios_id}" ANDROID_PACKAGE_ARTIFACT_SHA256="${android_digest}" IOS_PACKAGE_ARTIFACT_SHA256="${ios_digest}" ANDROID_PACKAGE_CREATED_AT="${android_created}" ANDROID_PACKAGE_EXPIRES_AT="${android_expires}" IOS_PACKAGE_CREATED_AT="${ios_created}" IOS_PACKAGE_EXPIRES_AT="${ios_expires}" python3 tools/publish-verified-downloads.py
           python3 tools/verify-website.py
           python3 -m unittest tools.tests.test_website_security_contract
           git config user.name "github-actions[bot]"
