@@ -19,6 +19,11 @@ on:
       - 'apps/ios/**'
       - 'apps/android/**'
       - 'tools/prepare-verified-downloads.py'
+      - 'tools/publish-verified-downloads.py'
+      - 'tools/tests/test_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'
+      - 'tools/verify-website.py'
+      - 'tools/tests/test_website_security_contract.py'
       - '.github/workflows/ios-runtime-artifacts.yml'
 permissions:
   contents: read
