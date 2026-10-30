@@ -286,13 +286,27 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
     def setUpClass(cls):
         root = pathlib.Path(__file__).resolve().parents[2]
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
+        cls.visual = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.workflow = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
 
-    def test_tooling_changes_trigger_exact_sha_ios_archive(self):
+    def test_release_tooling_changes_trigger_every_exact_sha_gate(self):
+        release_paths = (
+            "'tools/prepare-verified-downloads.py'",
+            "'tools/publish-verified-downloads.py'",
+            "'tools/tests/test_verified_downloads.py'",
+            "'tools/tests/test_publish_verified_downloads.py'",
+            "'tools/verify-website.py'",
+            "'tools/tests/test_website_security_contract.py'",
+        )
         for event in ("push", "pull_request"):
             with self.subTest(event=event):
-                section = workflow_event_section(self.archive, event)
-                self.assertIn("'tools/prepare-verified-downloads.py'", section)
+                archive_section = workflow_event_section(self.archive, event)
+                visual_section = workflow_event_section(self.visual, event)
+                package_section = workflow_event_section(self.workflow, event)
+                for path in release_paths:
+                    self.assertIn(path, archive_section)
+                    self.assertIn(path, visual_section)
+                    self.assertIn(path, package_section)
 
     def test_successful_main_unsigned_archive_automatically_starts_packaging(self):
         self.assertIn("workflow_run:", self.workflow)
