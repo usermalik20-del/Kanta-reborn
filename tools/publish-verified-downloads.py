@@ -30,6 +30,20 @@ def required_sha256(name: str) -> str:
     return value
 
 
+def actual_retention_days(prefix: str) -> int:
+    created = os.environ.get(prefix + "_CREATED_AT", "")
+    expires = os.environ.get(prefix + "_EXPIRES_AT", "")
+    try:
+        created_at = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        expires_at = datetime.fromisoformat(expires.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(prefix + " artifact creation/expiry timestamps are invalid") from exc
+    days = round((expires_at - created_at).total_seconds() / 86400)
+    if days < 1 or days > 30:
+        raise ValueError(prefix + " artifact retention is outside the requested 1–30 day range")
+    return days
+
+
 def publish() -> dict:
     package = json.loads(Path("verified-downloads/downloads.json").read_text(encoding="utf-8"))
     source = package.get("source_sha", "")
@@ -55,6 +69,10 @@ def publish() -> dict:
     ios_package_artifact = required_int("IOS_PACKAGE_ARTIFACT_ID")
     android_package_digest = required_sha256("ANDROID_PACKAGE_ARTIFACT_SHA256")
     ios_package_digest = required_sha256("IOS_PACKAGE_ARTIFACT_SHA256")
+    retention_days = min(
+        actual_retention_days("ANDROID_PACKAGE"),
+        actual_retention_days("IOS_PACKAGE"),
+    )
     run_url = "https://github.com/" + REPO + "/actions/runs/" + str(run_id)
     android_url = run_url + "/artifacts/" + str(android_package_artifact)
     ios_url = run_url + "/artifacts/" + str(ios_package_artifact)
@@ -62,7 +80,7 @@ def publish() -> dict:
     manifest = {
         "repository": REPO,
         "verifiedAt": os.environ.get("VERIFIED_AT") or datetime.now(timezone.utc).date().isoformat(),
-        "retentionDays": 30,
+        "retentionDays": retention_days,
         "signInRequired": True,
         "source": source,
         "packagingRun": run_id,
@@ -106,13 +124,13 @@ def publish() -> dict:
     ios_source_url = "https://github.com/" + REPO + "/actions/runs/" + str(int(ios["run"]))
     android_section = f'''<section class="section" id="download"><h2>Android preview download</h2>
 <p><a class="button primary" href="{android_url}">Download verified Android bundle ↗</a></p>
-<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. The bundle contains the debug-signed APK, SHA256.txt checksum and build provenance. The APK is a testing preview, not a Google Play release.</p>
+<p class="release-note">Verified CI artifact · GitHub sign-in required · {retention_days}-day retention. The bundle contains the debug-signed APK, SHA256.txt checksum and build provenance. The APK is a testing preview, not a Google Play release.</p>
 <p>Source <code>{source[:8]}</code> · Debug-signed APK. Validated Android run <a href="https://github.com/{REPO}/actions/runs/{int(android["run"])}">#{int(android["run"])}</a> · <a href="{android_source_url}">Original Android validation run</a>.</p>
 <p>Artifact ZIP SHA-256: <code>{android_package_digest}</code>. APK SHA-256: <code>{android["sha256"]}</code>. SHA256.txt is included.</p>
 <p>iPhone/iPad simulator acceptance also passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>.</p></section>'''
     ios_section = f'''<section class="section" id="download"><h2>Unsigned iPhone / iPad package</h2>
 <p><a class="button primary" href="{ios_url}">Download unsigned iOS bundle ↗</a></p>
-<p class="release-note">Verified CI artifact · GitHub sign-in required · 30-day retention. This bundle contains an unsigned iPhoneOS IPA, SHA256.txt checksum and build provenance.</p>
+<p class="release-note">Verified CI artifact · GitHub sign-in required · {retention_days}-day retention. This bundle contains an unsigned iPhoneOS IPA, SHA256.txt checksum and build provenance.</p>
 <p>Source <code>{source[:8]}</code> · iOS/iPadOS 17 or newer. <strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable in this build. <a href="{ios_source_url}">Original unsigned archive run</a>.</p>
 <p>Artifact ZIP SHA-256: <code>{ios_package_digest}</code>. IPA SHA-256: <code>{ios["sha256"]}</code>. SHA256.txt is included.</p>
 <p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/{REPO}/actions/runs/{int(walkthrough_run)}">walkthrough run #{int(walkthrough_run)}</a>. Simulator results do not establish physical-device acceptance.</p></section>'''
