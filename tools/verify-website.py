@@ -315,6 +315,7 @@ def main():
             assert build["source"] == source, filename + " source revision differs from manifest"
             assert build["downloadUrl"] == packaged_artifact_url, filename + " packaged artifact differs from manifest"
             assert packaged_artifact_url in page_source, filename + " packaged artifact link differs from manifest"
+            assert str(manifest["retentionDays"]) + "-day retention" in page_source, filename + " published retention differs from manifest"
             assert source_artifact_url in page_source, filename + " source artifact provenance link is missing"
             assert source[:8] in page_source, filename + " source revision differs from manifest"
             assert re.fullmatch(r"[0-9a-f]{64}", build["sha256"]), filename + " packaged ZIP digest is malformed"
@@ -341,6 +342,7 @@ def main():
             expected = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"]) + "/artifacts/" + str(build["artifact"])
             page_source = (WEB / filename).read_text(encoding="utf-8")
             assert expected in page_source, filename + " artifact differs from manifest"
+            assert str(manifest["retentionDays"]) + "-day retention" in page_source, filename + " published retention differs from manifest"
             assert build["source"][:8] in page_source, filename + " source revision differs from manifest"
             assert re.fullmatch(r"[0-9a-f]{64}", build["sha256"]), filename + " artifact ZIP digest is malformed"
             assert "Artifact ZIP SHA-256: <code>" + build["sha256"] + "</code>" in page_source, filename + " artifact ZIP digest differs from manifest"
