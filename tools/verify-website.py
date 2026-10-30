@@ -298,26 +298,39 @@ def main():
 
     manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
     assert manifest["repository"] == "usermalik20-del/Kanta-reborn"
-    assert manifest["signInRequired"] is True and manifest["retentionDays"] == 7
-    for platform, filename in (("android", "android.html"), ("ios", "ios-download.html")):
+    assert manifest["signInRequired"] is True and manifest["retentionDays"] == 30
+    source = manifest["source"]
+    assert re.fullmatch(r"[0-9a-f]{40}", source), "Download manifest source SHA is malformed"
+    packaging_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(manifest["packagingRun"])
+    assert manifest["packagingRunUrl"] == packaging_run_url
+    for platform, filename, app_digest_key, app_label in (
+        ("android", "android.html", "apkSha256", "APK"),
+        ("ios", "ios-download.html", "ipaSha256", "IPA"),
+    ):
         build = manifest[platform]
-        expected = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"]) + "/artifacts/" + str(build["artifact"])
+        source_artifact_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"]) + "/artifacts/" + str(build["artifact"])
+        packaged_artifact_url = packaging_run_url + "/artifacts/" + str(build["packagingArtifact"])
         page_source = (WEB / filename).read_text(encoding="utf-8")
-        assert expected in page_source, filename + " artifact differs from manifest"
-        assert build["source"][:8] in page_source, filename + " source revision differs from manifest"
-        assert re.fullmatch(r"[0-9a-f]{64}", build["sha256"]), filename + " artifact ZIP digest is malformed"
-        assert "Artifact ZIP SHA-256: <code>" + build["sha256"] + "</code>" in page_source, filename + " artifact ZIP digest differs from manifest"
+        assert build["source"] == source, filename + " source revision differs from manifest"
+        assert build["downloadUrl"] == packaged_artifact_url, filename + " packaged artifact differs from manifest"
+        assert packaged_artifact_url in page_source, filename + " packaged artifact link differs from manifest"
+        assert source_artifact_url in page_source, filename + " source artifact provenance link is missing"
+        assert source[:8] in page_source, filename + " source revision differs from manifest"
+        assert re.fullmatch(r"[0-9a-f]{64}", build["sha256"]), filename + " packaged ZIP digest is malformed"
+        assert "Artifact ZIP SHA-256: <code>" + build["sha256"] + "</code>" in page_source, filename + " packaged ZIP digest differs from manifest"
+        assert re.fullmatch(r"[0-9a-f]{64}", build[app_digest_key]), filename + " application checksum is malformed"
+        assert app_label + " SHA-256: <code>" + build[app_digest_key] + "</code>" in page_source, filename + " application checksum differs from manifest"
     assert manifest["android"]["source"] == manifest["ios"]["source"], "Platform downloads must describe the same accepted source revision"
     assert manifest["ios"]["signed"] is False and manifest["ios"]["personalSigningRequired"]
     assert not manifest["ios"]["icloudAvailable"]
     ios_page = (WEB / "ios-download.html").read_text(encoding="utf-8")
     walkthrough_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(manifest["ios"]["walkthroughRun"])
     assert walkthrough_url in ios_page, "iOS download page must link to the recorded simulator walkthrough"
-    assert "Both iPhone and iPad simulator walkthroughs passed" in ios_page, "iOS page must state the verified device result"
+    assert "Both iPhone and iPad simulator walkthroughs passed" in ios_page, "iOS page must state the verified simulator result"
     assert "later visual walkthrough attempt failed" not in ios_page.lower(), "Stale failed-walkthrough claim must not be published"
     assert "coverage remains under investigation" not in ios_page.lower(), "Stale walkthrough investigation claim must not be published"
     android_page = (WEB / "android.html").read_text(encoding="utf-8")
-    assert "no standalone <code>sha256.txt</code> is included" in android_page.lower(), "Android artifact contents must be described accurately"
+    assert "SHA256.txt is included" in android_page, "Android bundle checksum contents must be described accurately"
     print(
         "10 public pages, local routes/anchors, lowercase ads.txt, canonical sitemap, "
         "route-scoped CSP, immutable Songbook reader and verified download provenance passed"
