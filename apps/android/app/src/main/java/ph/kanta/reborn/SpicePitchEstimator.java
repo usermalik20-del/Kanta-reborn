@@ -157,7 +157,9 @@ final class SpicePitchEstimator {
     interpreter.resizeInput(0, new int[] {window.length});
     ByteBuffer input =
         ByteBuffer.allocateDirect(window.length * 4).order(ByteOrder.nativeOrder());
-    input.put(window).rewind();
+    // ByteBuffer has no put(float[]); the float view does.
+    input.asFloatBuffer().put(window);
+    input.rewind();
     pitchBuffer.clear();
     uncertaintyBuffer.clear();
     interpreter.run(input, new ByteBuffer[] {pitchBuffer, uncertaintyBuffer});
@@ -169,8 +171,8 @@ final class SpicePitchEstimator {
     uncertaintyBuffer.rewind();
     float[] pitches = new float[count];
     float[] uncertainties = new float[count];
-    pitchBuffer.get(pitches);
-    uncertaintyBuffer.get(uncertainties);
+    pitchBuffer.asFloatBuffer().get(pitches);
+    uncertaintyBuffer.asFloatBuffer().get(uncertainties);
     return SpicePitch.selectPitch(pitches, uncertainties, MIN_CONFIDENCE);
   }
 

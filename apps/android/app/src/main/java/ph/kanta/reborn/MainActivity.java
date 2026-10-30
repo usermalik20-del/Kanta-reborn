@@ -464,7 +464,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         break;
       case KantaWorkspace.ACCESSORY_PITCH_GAME:
         workspace.addAccessoryHeader("Pitch Practice");
-        if (stagePresenter != null) stagePresenter.showPitchGame(440f);
+        if (stagePresenter != null) stagePresenter.showPitchGame(session.practiceTargetHz());
         break;
       case KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT:
         workspace.addAccessoryHeader("Voice Coach");

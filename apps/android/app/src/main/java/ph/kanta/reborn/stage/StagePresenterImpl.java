@@ -376,6 +376,7 @@ public final class StagePresenterImpl extends FrameLayout
 
   @Override
   public void showLearningAssistant() {
+    learningAssistantOverlay.setSongKey(session.practiceKeyName());
     learningAssistantOverlay.startSession();
   }
 

@@ -79,11 +79,30 @@ public final class MidiLyrics {
     public final List<Track> tracks;
     public final long durationMilliseconds;
 
-    Document(List<Cue> cues, List<Message> messages, List<Track> tracks, long duration) {
+    /** True when the file carried a key-signature meta event. */
+    public final boolean keyPresent;
+
+    /** Signed sharps (positive) or flats (negative) count, -7 to +7. */
+    public final int keySharpsFlats;
+
+    /** True when the key signature is minor. */
+    public final boolean keyMinor;
+
+    Document(
+        List<Cue> cues,
+        List<Message> messages,
+        List<Track> tracks,
+        long duration,
+        boolean keyPresent,
+        int keySharpsFlats,
+        boolean keyMinor) {
       this.cues = Collections.unmodifiableList(cues);
       this.messages = Collections.unmodifiableList(messages);
       this.tracks = Collections.unmodifiableList(new ArrayList<>(tracks));
       durationMilliseconds = duration;
+      this.keyPresent = keyPresent;
+      this.keySharpsFlats = keySharpsFlats;
+      this.keyMinor = keyMinor;
     }
   }
 
@@ -173,6 +192,8 @@ public final class MidiLyrics {
     r.skip(header - 6);
     ArrayList<Event> events = new ArrayList<>();
     int seq = 0, total = 0;
+    boolean keyFound = false, keyMinor = false;
+    int keySharpsFlats = 0;
     ArrayList<Track> trackMetadata = new ArrayList<>();
     for (int track = 0; track < tracks; track++) {
       if (!r.magic("MTrk")) throw new IOException("Missing MIDI track");
@@ -219,6 +240,19 @@ public final class MidiLyrics {
               if (name.length() > 256) name = "";
               if (type == 3 && trackName.isEmpty()) trackName = name;
               if (type == 4 && instrumentName.isEmpty()) instrumentName = name;
+            }
+          } else if (type == 0x59) {
+            // Key signature: a signed sharps/flats count and a mode flag. Every track tends to
+            // repeat the same key, so the first one wins.
+            if (n != 2) t.skip(n);
+            else {
+              int sharpsFlats = (byte) t.u8();
+              int mode = t.u8();
+              if (!keyFound) {
+                keyFound = true;
+                keySharpsFlats = sharpsFlats;
+                keyMinor = mode != 0;
+              }
             }
           } else t.skip(n);
           if (type == 0x2f) {
@@ -308,7 +342,8 @@ public final class MidiLyrics {
     }
     if (line.length() > 0 && !line.toString().trim().isEmpty())
       cues.add(new Cue(lineStart, line.toString(), fragments));
-    return new Document(cues, messages, trackMetadata, (long) (micros / 1000));
+    return new Document(
+        cues, messages, trackMetadata, (long) (micros / 1000), keyFound, keySharpsFlats, keyMinor);
   }
 
   public static int activeIndex(List<Cue> cues, long milliseconds) {

@@ -56,6 +56,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   MelodyScoreSession score;
   private MelodyTarget currentTarget;
   private long currentDuration;
+  private boolean currentKeyPresent, currentKeyMinor;
+  private int currentKeySharpsFlats;
   private volatile long scoreRequest;
   private long scoreFrameFloor, lastScoreReading = -1;
   private boolean scoreWaitingForControls = true;
@@ -387,6 +389,24 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   // PitchSource: the single microphone owner lends its estimate to pitch-based features so
   // they never open a second capture.
+
+  /**
+   * The note the pitch game measures against: the tonic of the playing song's key, or A4 when
+   * no key is known. A song in A minor therefore targets 440 Hz, and one in C major targets
+   * middle C.
+   */
+  float practiceTargetHz() {
+    if (!currentKeyPresent) return 440f;
+    float hz = MidiKey.practiceTargetHz(currentKeySharpsFlats, currentKeyMinor);
+    return hz > 0f ? hz : 440f;
+  }
+
+  /** The playing song's key name, for the learning assistant. */
+  String practiceKeyName() {
+    if (!currentKeyPresent) return "C major";
+    String name = MidiKey.name(currentKeySharpsFlats, currentKeyMinor);
+    return name == null ? "C major" : name;
+  }
 
   @Override
   public float currentPitchHz() {
@@ -862,6 +882,9 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                     ? MidiLyrics.decode(java.nio.file.Files.readAllBytes(file.toPath()))
                     : null;
             MelodyTarget melody = MelodyTarget.extract(midi);
+            boolean keyPresent = midi != null && midi.keyPresent;
+            int keySharpsFlats = keyPresent ? midi.keySharpsFlats : 0;
+            boolean keyMinor = keyPresent && midi.keyMinor;
             File bank = selectedBank;
             List<MidiLyrics.Cue> cues = midi == null ? Collections.emptyList() : midi.cues;
             main.post(
@@ -925,6 +948,9 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                           playbackIdentity = entry.id;
                           currentTarget = melody;
                           currentDuration = midi == null ? 0 : midi.durationMilliseconds;
+                          currentKeyPresent = keyPresent;
+                          currentKeySharpsFlats = keySharpsFlats;
+                          currentKeyMinor = keyMinor;
                           resetScore();
                           singer = entry.singer;
                           lyrics = cues;
@@ -1265,6 +1291,9 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     playbackIdentity = null;
     currentTarget = null;
     currentDuration = 0;
+    currentKeyPresent = false;
+    currentKeySharpsFlats = 0;
+    currentKeyMinor = false;
     lastScoreReading = -1;
     currentClock = null;
 
