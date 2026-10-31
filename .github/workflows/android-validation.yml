@@ -18,10 +18,6 @@ on:
       - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - 'tools/tests/test_publish_verified_downloads.py'
-      - '.github/workflows/android-validation.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
-      - '.github/workflows/verified-downloads.yml'
 
   pull_request:
     types: [opened, synchronize, reopened, labeled]
@@ -40,15 +36,11 @@ on:
       - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - 'tools/tests/test_publish_verified_downloads.py'
-      - '.github/workflows/android-validation.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
-      - '.github/workflows/verified-downloads.yml'
 
 permissions:
   contents: read
 concurrency:
-  group: android-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
+  group: android-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
   android:
