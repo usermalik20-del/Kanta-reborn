@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - 'apps/ios/**'
+      - '!apps/ios/PRIVACY.md'
+      - '!apps/ios/README.md'
+      - '!apps/ios/AGENTS.md'
+      - '!apps/ios/Docs/**'
+      - '!apps/ios/PublicSite/**'
       - 'apps/android/**'
       - 'tools/prepare-verified-downloads.py'
       - 'tools/publish-verified-downloads.py'
@@ -19,6 +24,11 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'apps/ios/**'
+      - '!apps/ios/PRIVACY.md'
+      - '!apps/ios/README.md'
+      - '!apps/ios/AGENTS.md'
+      - '!apps/ios/Docs/**'
+      - '!apps/ios/PublicSite/**'
       - 'apps/android/**'
       - 'tools/prepare-verified-downloads.py'
       - 'tools/publish-verified-downloads.py'
