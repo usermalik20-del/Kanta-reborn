@@ -13,22 +13,36 @@ on:
       - 'tools/tests/test_website_security_contract.py'
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'apps/web/**'
-      - 'apps/ios/PRIVACY.md'
-      - 'apps/ios/PublicSite/**'
-      - 'apps/android/app/src/main/assets/privacy.txt'
-      - 'tools/verify-website.py'
-      - 'tools/tests/test_vercel_deploy_workflow.py'
-      - 'tools/tests/test_website_security_contract.py'
 permissions:
   contents: read
 concurrency:
   group: website-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  documentation-sync:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      website_changed: ${{ steps.sync.outputs.website_changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check documentation synchronization and classify website changes
+        id: sync
+        env:
+          DOC_SYNC_BASE: ${{ github.event.pull_request.base.sha }}
+          DOC_SYNC_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -m unittest tools.tests.test_documentation_sync
+          python3 tools/check-documentation-sync.py "$DOC_SYNC_BASE" "$DOC_SYNC_HEAD" "$GITHUB_OUTPUT"
+
   website:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    needs: documentation-sync
+    if: always() && (github.event_name != 'pull_request' || (needs.documentation-sync.outputs.website_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
