@@ -1,0 +1,53 @@
+"""Regression tests for the implementation-to-documentation guard."""
+import unittest
+
+from tools.check_documentation_sync import required_docs, validate
+
+
+class DocumentationSyncTests(unittest.TestCase):
+    def test_website_changes_require_root_and_website_docs(self):
+        required = required_docs({"apps/web/site-consent.js"})
+        self.assertEqual(required, {
+            "README.md", "apps/web/README.md",
+            "docs/ARCHITECTURE.md", "docs/TESTING.md",
+        })
+
+    def test_android_changes_require_android_release_docs(self):
+        required = required_docs({"apps/android/app/src/main/java/example/Player.java"})
+        self.assertEqual(required, {
+            "README.md", "apps/android/README.md",
+            "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md",
+        })
+
+    def test_ios_changes_require_ios_owner_and_release_docs(self):
+        required = required_docs({"apps/ios/Sources/App/App.swift"})
+        self.assertEqual(required, {
+            "README.md", "apps/ios/AGENTS.md",
+            "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md",
+        })
+
+    def test_workflow_changes_require_engineering_policy_docs(self):
+        self.assertEqual(required_docs({".github/workflows/android-validation.yml"}), {
+            "AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md",
+        })
+
+    def test_tools_changes_require_testing_docs(self):
+        self.assertEqual(required_docs({"tools/verify-website.py"}), {"docs/TESTING.md"})
+
+    def test_privacy_changes_require_platform_disclosure(self):
+        self.assertIn("apps/web/privacy.html", required_docs({"apps/web/privacy.html"}))
+        self.assertIn("apps/android/app/src/main/assets/privacy.txt",
+                      required_docs({"apps/android/app/src/main/assets/privacy.txt"}))
+        self.assertIn("apps/ios/PRIVACY.md", required_docs({"apps/ios/PRIVACY.md"}))
+
+    def test_missing_docs_fail_and_complete_docs_pass(self):
+        changed = {"apps/web/site-consent.js", "apps/web/README.md", "docs/ARCHITECTURE.md"}
+        _, missing = validate(changed)
+        self.assertEqual(missing, {"README.md", "docs/TESTING.md"})
+        complete = changed | {"README.md", "docs/TESTING.md"}
+        _, missing = validate(complete)
+        self.assertEqual(missing, set())
+
+
+if __name__ == "__main__":
+    unittest.main()
