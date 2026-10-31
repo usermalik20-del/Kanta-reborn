@@ -159,6 +159,10 @@ Do not rerun an unchanged commit for a deterministic failure. An unchanged rerun
 
 Avoid duplicate workflow dispatches. Respect provider quotas, concurrency controls and policy denials.
 
+## Documentation synchronization is a release requirement
+
+Every implementation or workflow change must update its owner documentation in the same PR. `documentation-sync.yml` runs the lightweight diff-based guard for every PR; a missing required README, architecture, testing, reconstruction, engineering-instructions or privacy document fails validation. The required paths are maintained in `tools/check-documentation-sync.py` and tested in `tools/tests/test_documentation_sync.py`. Web changes require the root and website README plus architecture/testing; Android changes require the root and Android README plus architecture/testing/reconstruction; iOS changes require the root README, iOS engineering instructions plus architecture/testing/reconstruction; workflow edits require this file plus architecture/testing; tooling changes require testing documentation. Any privacy disclosure change requires all website, Android, iOS app and iOS public-site privacy copies to be updated together. Do not weaken the matrix to make a PR pass; update the relevant documents with the accepted behavior, changed architecture, test evidence and remaining limitations. Existing main-branch platform/release/deploy workflows execute the same guard inside their existing job before building or publishing. Documentation-only changes must not start platform build runners.
+
 ## 9. CI and build authorization
 
 Owner authorization (updated 2026-10-23) grants Astra unrestricted use of CI for this repository:
