@@ -837,3 +837,16 @@ PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/K
 **Current verified evidence:** on PR head `c7564c3d73de8c6aaf3425dda6a693154b0a8dc8`, the documentation-sync job and full website validation (site verifier, privacy/legal contracts, Node syntax and nonce handler tests) passed [run #41165515126](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515126). Workflow and exact-SHA release contract tests passed [run #41165515053](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515053). Android validation remains pending [run #41165515041](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515041) because the bundled Android `privacy.txt` asset changed; this is an intentional Android package input, not a web-only false trigger. No iOS archive/walkthrough or Vercel production deployment was started for the PR.
 
 **Recurrence rules:** keep the documentation gate in the established PR workflow until a base-branch workflow can be safely introduced; compare full PR base/head, require substantive diffs in all owner docs, and update the mapping tests with every new source category. Do not broaden Android to `tools/**`, do not run iOS release gates on Android PRs, and do not change Vercel dispatch conditions without preserving the manual-domain and main-production tests. The PR remains a draft and is not merged.
+
+
+## Website — eager Analytics bypasses consent (2026-10-31)
+
+**Fingerprint:** PR #121 Vercel preview `kanta-public-la107ai6r-gelo-tech.vercel.app`; homepage HTML contained `<script nonce="…" defer src="/analytics.js"></script>` before the consent manager, and the served `analytics.js` immediately initialized `gtag` and appended Google's tag loader.
+
+**Cause (confirmed):** the request-time renderer added a nonce to every existing script but did not remove the legacy static Analytics tag in `index.html`. A CSP nonce authorizes a script; it does not represent visitor consent. This allowed Analytics to start before a consent choice and duplicated the post-acceptance loader path.
+
+**Fix candidate:** `apps/web/api/page.js` removes legacy static `/analytics.js` script elements before nonce decoration. `tools/tests/test_site_page_handler.test.js` asserts that the rendered response contains no eager Analytics tag and retains the consent manager's accept/reject controls. PR #121 remains open; this fix is not yet CI-verified at the time of this entry.
+
+**Validation:** direct Vercel preview inspection confirmed the pre-fix behavior; the updated candidate requires fresh website CI and a new preview deployment before the repair can be marked verified.
+
+**Recurrence rule:** never treat a nonce as consent. Search every page/template and renderer for direct Analytics/AdSense script tags; only the consent manager may create third-party script elements after explicit acceptance. Keep Songbook excluded.
