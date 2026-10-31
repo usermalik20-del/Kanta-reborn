@@ -822,3 +822,16 @@ so they are closed as superseded rather than merged.
 PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41094983755) failed in `test_rejects_mixed_source_revisions`. The publisher correctly rejected an Android/iOS source-SHA mismatch with the message `Android and iOS artifacts must share one exact source SHA`, while the new test expected the different phrase `same exact source SHA`. This was a stale assertion string, not a release-gate or publisher behavior defect.
 
 **Repair:** commit [f318a13](https://github.com/usermalik20-del/Kanta-reborn/commit/f318a13b0dd97f2efda0c220e8718b113d0fa9ea) aligned the assertion with the explicit rejection message. The subsequent exact-SHA publisher/contract run [#41095375672](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41095375672) passed. The least-privilege permission refinement was included in that successful contract run. Subsequent polling, packaged-artifact checksum, and legacy-to-new website-manifest compatibility refinements are being revalidated on the latest PR head.
+
+
+## Website analytics contradicted the published privacy policy — 2026-10-31
+
+**Finding:** the homepage loaded analytics.js, which initialized Google Analytics and fetched the Google Tag Manager script. The published privacy policy explicitly says the website does not include analytics tracking or tracking cookies. The homepage CSP also allowed the external script and analytics connections, so this was active tracking rather than a blocked or unused integration.
+
+**Root cause:** an analytics integration was added to the homepage and its route-specific CSP without updating the public privacy statement or providing an analytics consent/disclosure flow.
+
+**Repair:** remove the homepage analytics loader and initializer, restore the homepage to the same restrictive CSP as every other route, and remove obsolete analytics syntax checks. The privacy policy's no-analytics statement remains accurate.
+
+**Regression protection:** website security tests and tools/verify-website.py now require strict CSP on every route and reject analytics script/origin references. The website README and architecture/testing contracts record this boundary.
+
+**Validation:** pending website verifier, website security unit tests, JavaScript syntax checks, and hosted website validation.
