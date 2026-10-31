@@ -236,9 +236,9 @@ The candidate now uses six test methods and updates the runtime's required-test 
 
 **Status: candidate.** Require the source guard, reconstruction, focused smoke, unsigned archive, and complete iPhone and iPad walkthrough to pass on one exact head SHA before considering the repair accepted.
 
-## AdSense / CSP safety gate
+## Website consent, nonce and third-party script gate
 
-The static Vercel site must not load `adsbygoogle.js` while the response path cannot provide a fresh nonce on every script tag. Keep the route-specific CSP strict; do not substitute a static nonce or broad allowlist. `test_website_security_contract.py` asserts that AdSense remains disabled across public pages until a reviewed nonce-capable response architecture is available. The private Songbook must never execute third-party ad JavaScript.
+The website security contract now validates the request-time nonce architecture rather than asserting that AdSense is globally disabled. Validate fresh per-response nonce generation, the same nonce on every rendered script tag and CSP header, strict-dynamic behavior, no-store HTML responses, consent-required loading of Analytics and AdSense, reject/revoke behavior, and complete exclusion of the private Songbook. Node handler tests cover nonce injection and route isolation; website contract tests cover the Vercel route map, publisher ID, consent loader, ads.txt, privacy disclosures and native-app separation. Preview acceptance must still verify that Vercel routes actually invoke the function instead of serving static HTML around it. Account approval, Auto Ads configuration and any required Google-certified consent platform are external release gates.
 
 ## iOS More-menu route push regression — 2026-10-28
 
