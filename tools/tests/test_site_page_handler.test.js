@@ -16,3 +16,16 @@ test("CSP binds scripts to the response nonce and enables strict-dynamic", () =>
   assert.match(policy, /object-src 'none'/);
   assert.match(policy, /base-uri 'none'/);
 });
+
+test("legacy eager Analytics tags are removed until consent is granted", () => {
+  const nonce = "consent-gated-nonce";
+  const html = renderHtml(
+    '<html><head><script defer src="/analytics.js"></script></head><body></body></html>',
+    nonce,
+    true
+  );
+  assert.doesNotMatch(html, /<script\b[^>]*src=["']\/analytics\.js["']/i);
+  assert.match(html, /site-consent\.js/);
+  assert.match(html, /data-consent="accept"/);
+  assert.match(html, /data-consent="reject"/);
+});
