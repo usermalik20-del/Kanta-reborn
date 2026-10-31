@@ -87,7 +87,7 @@ class WorkflowOwnershipTests(unittest.TestCase):
 
     def test_website_workflow_owns_one_lightweight_pr_documentation_gate(self):
         source = workflow("website-validation.yml")
-        self.assertIn("  pull_request:\\n    types:", source)
+        self.assertIn("  pull_request:\n    types:", source)
         self.assertNotIn("    paths:", source.split("  pull_request:", 1)[1].split("permissions:", 1)[0])
         self.assertIn("  documentation-sync:", source)
         self.assertIn("runs-on: ubuntu-latest", source)
