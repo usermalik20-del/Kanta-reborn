@@ -15,6 +15,9 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'apps/web/**'
+      - 'apps/ios/PRIVACY.md'
+      - 'apps/ios/PublicSite/**'
+      - 'apps/android/app/src/main/assets/privacy.txt'
       - 'tools/verify-website.py'
       - 'tools/tests/test_vercel_deploy_workflow.py'
       - 'tools/tests/test_website_security_contract.py'
