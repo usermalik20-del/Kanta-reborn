@@ -10,7 +10,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 def event_section(source: str, event: str) -> str:
     trigger_block = source.split("\njobs:", 1)[0]
     match = re.search(
-        rf"(?ms)^  {re.escape(event)}:\n(.*?)(?=^  [A-Za-z0-9_-]+:\n|^permissions:|^concurrency:|\\Z)",
+        rf"(?ms)^  {re.escape(event)}:\n(.*?)(?=^  [A-Za-z0-9_-]+:\n|^permissions:|^concurrency:|\Z)",
         trigger_block,
     )
     if match is None:
@@ -40,7 +40,6 @@ class WorkflowOwnershipTests(unittest.TestCase):
             self.assertIn("'apps/web/**'", section)
             self.assertIn("'tools/verify-website.py'", section)
             self.assertIn("'tools/tests/test_website_security_contract.py'", section)
-            self.assertIn("'.github/workflows/**'", section)
 
     def test_native_release_gates_ignore_website_only_tooling(self):
         for name in ("ios-runtime-artifacts.yml", "ios-visual-walkthrough.yml"):
@@ -49,15 +48,18 @@ class WorkflowOwnershipTests(unittest.TestCase):
                 section = event_section(source, event)
                 self.assertNotIn("'tools/verify-website.py'", section)
                 self.assertNotIn("'tools/tests/test_website_security_contract.py'", section)
-                # Preserve same-SHA native release evidence for Android changes.
-                self.assertIn("'apps/android/**'", section)
+                # Android changes need same-SHA iOS release evidence after merge, not on PRs.
+                if event == "push":
+                    self.assertIn("'apps/android/**'", section)
+                else:
+                    self.assertNotIn("'apps/android/**'", section)
 
     def test_ios_documentation_changes_do_not_allocate_native_runners(self):
         for name in ("ios-validation.yml", "ios-runtime-artifacts.yml",
                      "ios-visual-walkthrough.yml", "ios-smoke.yml"):
             source = workflow(name)
             for event in ("push", "pull_request"):
-                if event not in source.split("\\njobs:", 1)[0]:
+                if event not in source.split("\njobs:", 1)[0]:
                     continue
                 section = event_section(source, event)
                 self.assertIn("'!apps/ios/PRIVACY.md'", section)
@@ -69,6 +71,15 @@ class WorkflowOwnershipTests(unittest.TestCase):
         push = event_section(source, "push")
         self.assertIn("branches: [main]", push)
         self.assertNotIn("['**']", push)
+        pr = event_section(source, "pull_request")
+        self.assertIn("'apps/android/app/src/main/java/ph/kanta/reborn/core/CompanionProtocol.java'", pr)
+
+    def test_workflow_contracts_have_their_own_lightweight_trigger(self):
+        source = workflow("workflow-contract-validation.yml")
+        for event in ("push", "pull_request"):
+            section = event_section(source, event)
+            self.assertIn("'.github/workflows/**'", section)
+            self.assertIn("'tools/tests/test_workflow_path_ownership.py'", section)
 
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
         source = workflow("vercel-deploy.yml")
