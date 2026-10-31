@@ -52,7 +52,7 @@ def required_docs(changed_paths: set[str]) -> set[str]:
 
 def changed_paths(base: str, head: str) -> set[str]:
     result = subprocess.run(
-        ["git", "diff", "--name-only", "--no-renames", f"{base}...{head}"],
+        ["git", "diff", "--name-only", "--no-renames", "--ignore-all-space", "--ignore-blank-lines", f"{base}...{head}"],
         check=True, capture_output=True, text=True,
     )
     return {line.strip() for line in result.stdout.splitlines() if line.strip()}
