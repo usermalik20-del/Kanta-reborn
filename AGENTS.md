@@ -169,9 +169,10 @@ The root workflow triggers are intentionally scoped by ownership and source path
 - `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
 - `ios-validation.yml`: iOS build inputs, resources and tests on pull requests and main pushes. Exclude documentation-only `PRIVACY.md`, `PublicSite/**`, `Docs/**`, README and AGENTS paths; feature branches use the pull-request event only.
 - `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
-- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on native iOS/Android source and exact-SHA release-packaging inputs, plus its own workflow and manual dispatch. Website-only tools are excluded.
-- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on relevant iOS/Android/tool changes, plus weekly schedule, tags and manual dispatch. Website-only verifier/test edits are excluded.
-- `website-validation.yml`: website source and website tooling, plus lightweight workflow-ownership contracts whenever any workflow definition changes.
+- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on iOS pull requests and native iOS/Android source plus exact-SHA release-packaging inputs on main; Android-only pull requests do not allocate an iOS archive. Website-only tools are excluded.
+- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on iOS pull requests; Android source triggers it on main after merge for exact-SHA release provenance. Relevant shared release tools, weekly schedule, tags and manual dispatch remain supported. Website-only verifier/test edits are excluded.
+- `website-validation.yml`: website source and website tooling.
+- `workflow-contract-validation.yml`: lightweight workflow-ownership tests whenever any workflow definition changes.
 - `vercel-deploy.yml`: production deployment on main pushes or explicit dispatch; no pull-request validation trigger.
 - `verified-downloads.yml`: exact-SHA release-contract tests on packaging changes; actual packaging is gated by successful same-SHA release runs or an explicit main-branch dispatch.
 
