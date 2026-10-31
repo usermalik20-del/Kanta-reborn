@@ -10,7 +10,7 @@ ROOT_DOCS = {
     "apps/android": {"README.md", "apps/android/README.md", "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"},
     "apps/ios": {"README.md", "apps/ios/AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"},
 }
-WORKFLOW_DOCS = {"AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md"}
+WORKFLOW_DOCS = {"README.md", "AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md"}
 TOOL_DOCS = {"docs/TESTING.md"}
 WEBSITE_PATHS = (
     "apps/web/", "apps/ios/PRIVACY.md", "apps/ios/PublicSite/",
