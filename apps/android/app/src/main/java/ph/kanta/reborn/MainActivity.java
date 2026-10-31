@@ -604,15 +604,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     VIDEO)));
   }
 
-  /** Controls accessory: settings, companion control, Kanta-Connect host, fullscreen. */
+  /** Controls accessory: pitch settings, pitch practice, voice coach, companion control, Kanta-Connect host, fullscreen. */
   private void controlsAccessory(LinearLayout target) {
-  /** Controls accessory: settings, companion control, Kanta-Connect host, fullscreen. */
-  private void controlsAccessory(LinearLayout target) {
-    target.addView(button("Settings", () -> {
-      dismissAccessory();
-      tab = "Control";
-      render();
-    }));
+    target.addView(
+        button("Pitch Settings", () -> {
+          dismissAccessory();
+          showPitchSettings();
+        }));
     target.addView(
         button("Pitch Practice", () -> {
           dismissAccessory();
@@ -651,3 +649,1511 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           fullscreen();
         }));
   }
+        }));
+  }
+
+  /**
+   * Kanta-Connect pairing: start hosting, then present the scan and type routes together.
+   *
+   * The QR image and the printed address carry the same information, so a user can either
+   * scan or type. Only the address and the pairing code are individually copyable, never a
+   * combined blob: a single combined string in the clipboard is the easiest way for the
+   * single-session code to leak.
+   */
+  private void kantaConnect() {
+
+  /** Shows pitch settings dialog (sensitivity, target pitch). */
+  private void showPitchSettings() {
+    SettingsStore store = new SettingsStore(this);
+    LinearLayout content = column();
+    content.setPadding(dp(24), dp(16), dp(24), dp(16));
+
+    TextView title = text("Pitch Settings", 20, GOLD);
+    title.setTypeface(null, android.graphics.Typeface.BOLD);
+    title.setGravity(android.view.Gravity.CENTER);
+    content.addView(title);
+
+    // Sensitivity
+    TextView sensLabel = text("Voice Coach Sensitivity", 16, Color.WHITE);
+    sensLabel.setPadding(0, dp(16), 0, dp(4));
+    content.addView(sensLabel);
+
+    TextView sensDesc = text("Higher = stricter pitch evaluation. Lower = more forgiving.", 12, 0xFFAFB8D0);
+    content.addView(sensDesc);
+
+    SeekBar sensSeek = new SeekBar(this);
+    sensSeek.setMax(200);
+    float currentSens = store.getAssistantSensitivity();
+    sensSeek.setProgress((int) ((currentSens - 0.1f) / 2.9f * 200));
+    content.addView(sensSeek);
+
+    TextView sensValue = text(String.format("%.2f", currentSens), 18, GOLD);
+    sensValue.setGravity(android.view.Gravity.CENTER);
+    content.addView(sensValue);
+
+    sensSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        if (fromUser) {
+          float val = 0.1f + (progress / 200f) * 2.9f;
+          sensValue.setText(String.format("%.2f", val));
+        }
+      }
+      @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+      @Override public void onStopTrackingTouch(SeekBar seekBar) {
+        float val = 0.1f + (seekBar.getProgress() / 200f) * 2.9f;
+        store.setAssistantSensitivity(val);
+        sensValue.setText(String.format("%.2f", val));
+        Toast.makeText(MainActivity.this, "Sensitivity saved: " + String.format("%.2f", val), Toast.LENGTH_SHORT).show();
+      }
+    });
+
+    // Preset buttons
+    LinearLayout presets = row();
+    presets.setOrientation(LinearLayout.HORIZONTAL);
+    presets.setPadding(0, dp(8), 0, dp(8));
+    for (String preset : new String[] {"Beginner (0.5)", "Normal (1.0)", "Pro (2.0)"}) {
+      String[] parts = preset.split(" \\(");
+      float val = Float.parseFloat(parts[1].replace(")", ""));
+      Button b = button(parts[0], () -> {
+        store.setAssistantSensitivity(val);
+        int prog = (int) ((val - 0.1f) / 2.9f * 200);
+        sensSeek.setProgress(prog);
+        sensValue.setText(String.format("%.2f", val));
+        Toast.makeText(MainActivity.this, "Sensitivity: " + String.format("%.2f", val), Toast.LENGTH_SHORT).show();
+      });
+      b.setTextSize(12);
+      presets.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
+    }
+    content.addView(presets);
+
+    // Target Pitch
+    TextView targetLabel = text("Default Target Pitch", 16, Color.WHITE);
+    targetLabel.setPadding(0, dp(16), 0, dp(4));
+    content.addView(targetLabel);
+
+    TextView targetDesc = text("Used when no song is playing or as manual override.", 12, 0xFFAFB8D0);
+    content.addView(targetDesc);
+
+    final String[] notes = {"C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4",
+                            "C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5", "G#5", "A5", "A#5", "B5"};
+    final float[] noteHz = {261.63f, 277.18f, 293.66f, 311.13f, 329.63f, 349.23f, 369.99f, 392.00f, 415.30f, 440.00f, 466.16f, 493.88f,
+                            523.25f, 554.37f, 587.33f, 622.25f, 659.25f, 698.46f, 739.99f, 783.99f, 830.61f, 880.00f, 932.33f, 987.77f};
+
+    String currentName = store.getPitchTargetName();
+    int currentIdx = 9;
+    for (int i = 0; i < notes.length; i++) {
+      if (notes[i].equals(currentName)) { currentIdx = i; break; }
+    }
+
+    Spinner noteSpinner = new Spinner(this);
+    ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, notes);
+    noteSpinner.setAdapter(adapter);
+    noteSpinner.setSelection(currentIdx);
+    content.addView(noteSpinner);
+
+    noteSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+      @Override
+      public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        store.setPitchTargetHz(noteHz[position]);
+        store.setPitchTargetName(notes[position]);
+        Toast.makeText(MainActivity.this, "Target pitch: " + notes[position] + " (" + String.format("%.1f", noteHz[position]) + " Hz)", Toast.LENGTH_SHORT).show();
+      }
+      @Override
+      public void onNothingSelected(AdapterView<?> parent) {}
+    });
+
+    // Manual Hz input
+    LinearLayout hzRow = row();
+    hzRow.setOrientation(LinearLayout.HORIZONTAL);
+    hzRow.setPadding(0, dp(8), 0, dp(8));
+    TextView hzLabel = text("Custom Hz:", 14, Color.WHITE);
+    EditText hzInput = new EditText(this);
+    hzInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+    hzInput.setHint("e.g. 440.0");
+    hzInput.setTextColor(Color.WHITE);
+    hzInput.setHintTextColor(0xFF888888);
+    hzInput.setText(String.format("%.1f", store.getPitchTargetHz()));
+    hzRow.addView(hzLabel, new LinearLayout.LayoutParams(dp(100), -2));
+    hzRow.addView(hzInput, new LinearLayout.LayoutParams(0, -2, 1));
+    content.addView(hzRow);
+
+    Button applyHz = button("Apply Custom Hz", () -> {
+      try {
+        float hz = Float.parseFloat(hzInput.getText().toString());
+        if (hz > 20 && hz < 2000) {
+          store.setPitchTargetHz(hz);
+          store.setPitchTargetName("Custom");
+          Toast.makeText(MainActivity.this, "Target pitch: " + String.format("%.1f", hz) + " Hz", Toast.LENGTH_SHORT).show();
+        } else {
+          Toast.makeText(MainActivity.this, "Please enter 20-2000 Hz", Toast.LENGTH_SHORT).show();
+        }
+      } catch (NumberFormatException e) {
+        Toast.makeText(MainActivity.this, "Invalid number", Toast.LENGTH_SHORT).show();
+      }
+    });
+    content.addView(applyHz);
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(content);
+
+    new AlertDialog.Builder(this)
+        .setView(scroll)
+        .setPositiveButton("Close", null)
+        .show();
+  }
+    session.startKantaConnectHost();
+    String code = session.kantaConnectHost.pairingCode();
+    if (code == null) {
+      Toast.makeText(this, "Kanta-Connect could not start hosting here.", Toast.LENGTH_LONG).show();
+      return;
+    }
+    String host = KantaConnectInfo.chooseHost(localPrivateAddresses());
+    if (host == null) {
+      session.stopKantaConnectHost();
+      Toast.makeText(this, "Join a Wi-Fi network first: Kanta-Connect needs a local address.", Toast.LENGTH_LONG).show();
+      return;
+    }
+
+    final KantaConnectInfo info = KantaConnectInfo.of(host, code);
+    LinearLayout content = column();
+    int pad = dp(20);
+    content.setPadding(pad, pad, pad, pad);
+
+    TextView heading = text("Kanta-Connect", 20, GOLD);
+    heading.setTypeface(null, android.graphics.Typeface.BOLD);
+    content.addView(heading);
+    content.addView(text(info.endpoint(), 15, Color.WHITE));
+
+    QrEncoder.Symbol symbol = null;
+    try {
+      symbol = QrEncoder.encode(info.link());
+    } catch (RuntimeException tooLong) {
+      symbol = null;
+    }
+    if (symbol != null) {
+      QrCodeView qr = new QrCodeView(this);
+      qr.setSymbol(symbol);
+      LinearLayout.LayoutParams qrParams = new LinearLayout.LayoutParams(dp(232), dp(232));
+      qrParams.gravity = Gravity.CENTER_HORIZONTAL;
+      qrParams.topMargin = dp(10);
+      qrParams.bottomMargin = dp(10);
+      content.addView(qr, qrParams);
+    }
+
+    for (String step : info.instructions()) {
+      content.addView(text("\u2022 " + step, 13, 0xFFAFB8D0));
+    }
+    content.addView(
+        text("Scan the code with the Kanta-Connect phone app, or type the address and code.", 12, 0xFFAFB8D0));
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(content);
+    new AlertDialog.Builder(this)
+        .setView(scroll)
+        .setPositiveButton(
+            "Copy code",
+            (dialog, which) -> copyToClipboard("Kanta-Connect code", info.code))
+        .setNeutralButton(
+            "Copy address",
+            (dialog, which) -> copyToClipboard("Kanta-Connect address", info.endpoint()))
+        .setNegativeButton("Done", null)
+        .show();
+    render();
+  }
+
+  /** Copies a value to the clipboard without ever logging it. */
+  private void copyToClipboard(String label, String value) {
+    ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+        .setPrimaryClip(ClipData.newPlainText(label, value));
+    Toast.makeText(this, label + " copied", Toast.LENGTH_SHORT).show();
+  }
+
+  /** The device's non-loopback IPv4 addresses, in interface order. */
+  private java.util.List<String> localPrivateAddresses() {
+    java.util.List<String> addresses = new java.util.ArrayList<>();
+    try {
+      for (java.net.NetworkInterface network :
+          java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+        if (!network.isUp() || network.isLoopback()) continue;
+        for (java.net.InterfaceAddress address : network.getInterfaceAddresses()) {
+          java.net.InetAddress inet = address.getAddress();
+          if (inet instanceof java.net.Inet4Address) addresses.add(inet.getHostAddress());
+        }
+      }
+    } catch (Exception unavailable) {
+      // An interface list is best effort; an empty result reports "join Wi-Fi" instead.
+    }
+    return addresses;
+  }
+
+  private void renderPanel() {
+    microphoneReading = null;
+    monitorReading = null;
+    scoreReading = null;
+    body.addView(text(session.message, 13, CYAN));
+    body.addView(button("YouTube video (online)", this::openYouTubeVideo));
+
+    switch (tab) {
+      case "My Set":
+        mySet();
+        break;
+      case "Scenic":
+        scenic();
+        break;
+      case "Loop":
+        loop();
+        break;
+      case "Realm":
+        realm();
+        break;
+      default:
+        control();
+    }
+  }
+
+
+  private void openYouTubeVideo() {
+    if (!youtubeForeground || isFinishing() || isDestroyed()) return;
+    if (youtubeEntryDialog != null) youtubeEntryDialog.dismiss();
+    EditText input = new EditText(this);
+    input.setSingleLine(true);
+    input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+        | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+    input.setHint("https://www.youtube.com/watch?v=...");
+    LinearLayout panel = column();
+    panel.setPadding(dp(20), dp(8), dp(20), dp(8));
+    panel.addView(text("Optional online video. YouTube/Google may collect playback data and show ads. "
+        + "Local karaoke continues to work without Internet.", 14, Color.WHITE));
+    panel.addView(input);
+    youtubeEntryDialog = new AlertDialog.Builder(this)
+        .setTitle("Open YouTube video")
+        .setView(panel)
+        .setNegativeButton("Cancel", null)
+        .setPositiveButton("Continue", (dialog, which) -> {
+          YouTubeVideoReference reference = YouTubeVideoReference.parse(
+              input.getText().toString().trim());
+          if (reference == null) {
+            Toast.makeText(this, "Enter a valid HTTPS YouTube video link.", Toast.LENGTH_LONG).show();
+            return;
+          }
+          showYouTubeVideo(reference);
+        }).create();
+    final AlertDialog entry = youtubeEntryDialog;
+    entry.setOnDismissListener(ignored -> {
+      if (youtubeEntryDialog == entry) youtubeEntryDialog = null;
+    });
+    entry.show();
+  }
+
+  void showYouTubeVideo(YouTubeVideoReference reference) {
+    // This is a standalone foreground preview, not a queue reservation.
+    if (!youtubeForeground || isFinishing() || isDestroyed()) return;
+    if (!session.onlineAudioAllowed()) {
+      Toast.makeText(this, "Pause local karaoke and turn off microphone input before opening an online video.",
+          Toast.LENGTH_LONG).show();
+      return;
+    }
+    closeYouTubeVideo();
+    final YouTubePreviewLifecycle.Session online = youtubeLifecycle.open(reference);
+    if (!session.claimOnlineAudio(online.id, () -> {
+      if (youtubeLifecycle.active() != null && youtubeLifecycle.active().id.equals(online.id)) {
+        closeYouTubeVideo();
+      }
+    })) {
+      youtubeLifecycle.close(online.id);
+      return;
+    }
+    final Dialog dialog = new Dialog(this);
+    youtubeDialog = dialog;
+    LinearLayout layout = column();
+    layout.setBackgroundColor(Color.BLACK);
+    YouTubeEmbeddedPlayer player = new YouTubeEmbeddedPlayer(this, () -> {
+      if (!youtubeForeground || !youtubeLifecycle.close(online.id)) return;
+      session.releaseOnlineAudio(online.id);
+      dialog.dismiss();
+      Toast.makeText(this, "Online video could not load. Check your connection and try again.",
+          Toast.LENGTH_LONG).show();
+    });
+    youtubePlayer = player;
+    player.setTag("kanta.youtube.player");
+    layout.addView(player, new LinearLayout.LayoutParams(-1, 0, 1));
+    layout.addView(button("Close online video", dialog::dismiss));
+    layout.addView(text("YouTube has its own playback controls. Opening it stops effects and between-song music. Local audio actions close the online video.", 12, Color.WHITE));
+    dialog.setContentView(layout);
+    dialog.setOnDismissListener(ignored -> {
+      youtubeLifecycle.close(online.id);
+      player.release();
+      session.releaseOnlineAudio(online.id);
+      if (youtubePlayer == player) youtubePlayer = null;
+      if (youtubeDialog == dialog) youtubeDialog = null;
+    });
+    dialog.show();
+    if (dialog.getWindow() != null) {
+      dialog.getWindow().setLayout(-1, -1);
+    }
+    player.show(reference);
+  }
+
+  private void voiceControls() {
+    body.addView(
+        button(
+            session.microphone.enabled() ? "Turn off microphone" : "Turn on microphone",
+            this::toggleMicrophone));
+    microphoneReading = text("", 14, CYAN);
+    microphoneReading.setTag("kanta.microphone.reading");
+    body.addView(microphoneReading);
+    refreshMicrophoneReading();
+    body.addView(
+        text(
+            "Effects apply only to voice output. Pitch estimates use the original input. No singing"
+                + " is saved or uploaded. Optional correction changes monitored output only.",
+            12,
+            Color.WHITE));
+
+    body.addView(
+        button(
+            session.monitor.enabled() ? "Turn off monitoring" : "Wired / USB monitoring",
+            this::toggleMonitoring));
+    monitorReading = text("", 13, CYAN);
+    body.addView(monitorReading);
+    refreshMicrophoneReading();
+    body.addView(
+        text(
+            "Optional voice output for connected wired or USB equipment. Use headphones, start"
+                + " quietly and check your equipment volume. Speaker and Bluetooth monitoring are"
+                + " blocked when reported by Android. Older Android reports only one output. This"
+                + " experimental feature still needs device testing for sound and delay.",
+            12,
+            Color.WHITE));
+    LinearLayout effects = row();
+    for (VocalMonitorEffects.Mode value : VocalMonitorEffects.Mode.values()) {
+      String title =
+          value.name().substring(0, 1)
+              + value.name().substring(1).toLowerCase(java.util.Locale.ROOT);
+      Button option =
+          button(
+              title,
+              () -> {
+                session.monitor.mode(value);
+                session.publish();
+              });
+      option.setEnabled(session.monitor.enabled());
+      if (session.monitor.mode() == value) option.setTextColor(GOLD);
+      addWeighted(effects, option);
+    }
+    body.addView(effects);
+    Button correction =
+        button(
+            session.monitor.correctionEnabled()
+                ? "Turn off pitch correction"
+                : "Turn on pitch correction",
+            () -> session.monitor.correction(!session.monitor.correctionEnabled()));
+    correction.setTag("kanta.pitchcorrection.toggle");
+    correction.setEnabled(session.monitor.correctionAvailable());
+    body.addView(correction);
+    body.addView(
+        text(
+            "Experimental chromatic correction: enable wired/USB monitoring first. Stable voice"
+                + " follows the nearest semitone; uncertain input stays unshifted. This adds delay"
+                + " and can change voice tone or create artifacts. It does not follow the song's"
+                + " melody or change scoring. Leaving monitoring turns it off.",
+            12,
+            Color.WHITE));
+    body.addView(text("Voice output · maximum 35%", 13, Color.WHITE));
+    SeekBar voiceGain = new SeekBar(this);
+    voiceGain.setEnabled(session.monitor.enabled());
+    voiceGain.setContentDescription("Voice output volume, maximum 35 percent");
+    voiceGain.setMax(35);
+    voiceGain.setProgress(Math.round(session.monitor.gain() * 100));
+    voiceGain.setOnSeekBarChangeListener(
+        new SeekBar.OnSeekBarChangeListener() {
+          public void onStartTrackingTouch(SeekBar bar) {}
+
+          public void onStopTrackingTouch(SeekBar bar) {
+            session.publish();
+          }
+
+          public void onProgressChanged(SeekBar bar, int value, boolean user) {
+            if (user) session.monitor.gain(value / 100f);
+          }
+        });
+    body.addView(voiceGain);
+    Button scoring =
+        button(
+            session.scoringEnabled ? "Turn off song scoring" : "Turn on song scoring",
+            () -> session.setScoring(!session.scoringEnabled));
+    scoring.setTag("kanta.score.toggle");
+    body.addView(scoring);
+    scoreReading = text("", 14, CYAN);
+    body.addView(scoreReading);
+    refreshScoreReading();
+    body.addView(
+        text(
+            "Optional pitch-following estimate for a single identified MIDI melody. Backing music"
+                + " can affect it. Silence or unreliable input does not produce a score. Check"
+                + " timing on your device; changing key, pace or timing clears the current"
+                + " estimate.",
+            12,
+            Color.WHITE));
+    TextView timing = text("Score timing offset: " + session.scoreLatency + " ms", 13, Color.WHITE);
+    body.addView(timing);
+    SeekBar scoreTiming = new SeekBar(this);
+    scoreTiming.setContentDescription("Score timing offset, minus 500 to 1500 milliseconds");
+    scoreTiming.setMax(200);
+    scoreTiming.setProgress((session.scoreLatency + 500) / 10);
+    scoreTiming.setOnSeekBarChangeListener(
+        new SeekBar.OnSeekBarChangeListener() {
+          public void onStartTrackingTouch(SeekBar bar) {}
+
+          public void onStopTrackingTouch(SeekBar bar) {
+            session.scoreLatency(bar.getProgress() * 10 - 500);
+          }
+
+          public void onProgressChanged(SeekBar bar, int value, boolean user) {
+            if (user) timing.setText("Score timing offset: " + (value * 10 - 500) + " ms");
+          }
+        });
+    body.addView(scoreTiming);
+  }
+
+  private void refreshScoreReading() {
+    if (scoreReading != null) scoreReading.setText(session.scoreStatus());
+  }
+
+  private void lastScore() {
+    SessionController.CompletedScore completed = session.lastScore;
+    if (completed == null || !session.scoringEnabled) return;
+    String result =
+        completed.estimate.reportable
+            ? String.format(
+                java.util.Locale.ROOT,
+                "Estimate %.0f/100 · coverage %.0f%%",
+                completed.estimate.overall,
+                completed.estimate.coverage)
+            : "Not enough stable voice input for a score";
+    TextView label =
+        text(
+            "Last song · "
+                + completed.title
+                + (completed.singer.isEmpty() ? "" : " · " + completed.singer)
+                + "\n"
+                + result,
+            15,
+            GOLD);
+    label.setTag("kanta.score.last");
+    body.addView(label);
+  }
+
+  private void control() {
+    Button companion = button("Companion control", () -> companionDialog = CompanionDialog.show(this, session));
+    companion.setTag("kanta.companion.settings");
+    body.addView(companion);
+    Button voiceSettings =
+        button(
+            session.microphone.enabled()
+                ? "Microphone on · voice settings"
+                : "Microphone & voice settings",
+            () -> {
+              voiceExpanded = !voiceExpanded;
+              session.publish();
+            });
+    voiceSettings.setTag("kanta.voice.settings");
+    body.addView(voiceSettings);
+    lastScore();
+    if (voiceExpanded) voiceControls();
+    body.addView(text("Sound & pace", 18, GOLD));
+    LinearLayout tuning = row();
+    addWeighted(
+        tuning,
+        button("Key −", () -> session.controls(session.volume, session.tempo, session.pitch - 1)));
+    addWeighted(
+        tuning,
+        button(
+            "Key " + (session.pitch > 0 ? "+" : "") + session.pitch,
+            () -> session.controls(session.volume, session.tempo, 0)));
+    addWeighted(
+        tuning,
+        button("Key +", () -> session.controls(session.volume, session.tempo, session.pitch + 1)));
+    body.addView(tuning);
+    LinearLayout pace = row();
+    addWeighted(
+        pace,
+        button(
+            "Slower",
+            () -> session.controls(session.volume, session.tempo - 0.05f, session.pitch)));
+    addWeighted(
+        pace,
+        button(
+            String.format(java.util.Locale.ROOT, "%.0f%%", session.tempo * 100),
+            () -> session.controls(session.volume, 1, session.pitch)));
+    addWeighted(
+        pace,
+        button(
+            "Faster",
+            () -> session.controls(session.volume, session.tempo + 0.05f, session.pitch)));
+    body.addView(pace);
+    SeekBar volume = new SeekBar(this);
+    volume.setContentDescription("Music volume");
+    volume.setMax(100);
+    volume.setProgress(Math.round(session.volume * 100));
+    volume.setOnSeekBarChangeListener(
+        new SeekBar.OnSeekBarChangeListener() {
+          public void onStartTrackingTouch(SeekBar b) {}
+
+          public void onStopTrackingTouch(SeekBar b) {
+            session.publish();
+          }
+
+          public void onProgressChanged(SeekBar b, int value, boolean user) {
+            if (user) session.setVolume(value / 100f);
+          }
+        });
+    body.addView(volume);
+    body.addView(text("Find your next song", 20, Color.WHITE));
+    queryInput = new EditText(this);
+    queryInput.setSingleLine();
+    queryInput.setTextColor(Color.WHITE);
+    queryInput.setTextSize(18);
+    queryInput.setHintTextColor(0xFFAFB8D0);
+    queryInput.setHint("Song code, title or artist");
+    queryInput.setText(query);
+    body.addView(queryInput);
+    queryInput.addTextChangedListener(
+        new TextWatcher() {
+          public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+          public void onTextChanged(CharSequence s, int start, int before, int count) {
+            query = s.toString();
+            resultLimit = 50;
+            search();
+          }
+
+          public void afterTextChanged(Editable e) {}
+        });
+    EditText singerInput = new EditText(this);
+    singerInput.setSingleLine();
+    singerInput.setTextColor(Color.WHITE);
+    singerInput.setHintTextColor(0xFFAFB8D0);
+    singerInput.setHint("Singer name (optional)");
+    singerInput.setText(singer);
+    body.addView(singerInput);
+    singerInput.addTextChangedListener(
+        new TextWatcher() {
+          public void beforeTextChanged(CharSequence s, int a, int c, int f) {}
+
+          public void onTextChanged(CharSequence s, int a, int b, int c) {
+            singer = s.toString();
+          }
+
+          public void afterTextChanged(Editable e) {}
+        });
+    LinearLayout tools = row();
+    addWeighted(tools, button("Voice search", this::voiceSearch));
+    addWeighted(
+        tools,
+        button(
+            "Cancel",
+            () -> {
+              query = "";
+              queryInput.setText("");
+            }));
+    body.addView(tools);
+    for (String[] digits :
+        new String[][] {{"1", "2", "3"}, {"4", "5", "6"}, {"7", "8", "9"}, {"RES", "0", "⌫"}}) {
+      LinearLayout keys = row();
+      for (String digit : digits)
+        addWeighted(
+            keys,
+            button(
+                digit,
+                () -> {
+                  if (digit.equals("RES")) {
+                    List<Song> matches = new ArrayList<>();
+                    for (Song s : session.songs) if (s.matches(query)) matches.add(s);
+                    if (matches.size() == 1) session.reserve(matches.get(0), singer);
+                    else
+                      new AlertDialog.Builder(this)
+                          .setMessage("Choose Reserve beside the song you want below.")
+                          .setPositiveButton("OK", null)
+                          .show();
+                  } else if (digit.equals("⌫")) {
+                    if (!query.isEmpty())
+                      queryInput.setText(query.substring(0, query.length() - 1));
+                  } else queryInput.setText(query + digit);
+                }));
+      body.addView(keys);
+    }
+    results = column();
+    body.addView(results);
+    search();
+    queue();
+  }
+
+  private void search() {
+    if (results == null) return;
+    int token = ++searchGeneration;
+    String requested = query;
+    String[] terms = Song.searchTerms(requested);
+    LinearLayout target = results;
+    int limit = resultLimit;
+    List<Song> catalog = session.songs;
+    searchWorker.execute(
+        () -> {
+          ArrayList<Song> found = new ArrayList<>();
+          int total = 0;
+          for (Song s : catalog) {
+            if (Thread.currentThread().isInterrupted()) return;
+            if (s.matchesTerms(terms)) {
+              total++;
+              if (found.size() < limit) found.add(s);
+            }
+          }
+          int count = total;
+          handler.post(
+              () -> {
+                if (token != searchGeneration || target != results || isDestroyed()) return;
+                target.removeAllViews();
+                target.addView(text(count + " matching songs", 13, GOLD));
+                for (Song s : found) {
+                  LinearLayout item = row();
+                  TextView name =
+                      text(
+                          (s.code.isEmpty() ? "" : s.code + " · ")
+                              + s.title
+                              + (s.artist.isEmpty() ? "" : "\n" + s.artist),
+                          15,
+                          Color.WHITE);
+                  item.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+                  item.addView(button("Reserve", () -> session.reserve(s, singer)));
+                  target.addView(item);
+                }
+                if (count > found.size())
+                  target.addView(
+                      button(
+                          "Show more songs",
+                          () -> {
+                            resultLimit = Math.min(resultLimit + 50, 150000);
+                            search();
+                          }));
+              });
+        });
+  }
+
+  private void queue() {
+    body.addView(text("Up Next · " + session.queue.snapshot().size(), 20, GOLD));
+    int n = 0;
+    for (ReservationQueue.Entry e : session.queue.snapshot()) {
+      if (n >= queueLimit) break;
+      final int position = n++;
+      LinearLayout item = row();
+      item.addView(
+          text(
+              (position + 1) + ". " + e.song.title + (e.singer.isEmpty() ? "" : " · " + e.singer),
+              15,
+              Color.WHITE),
+          new LinearLayout.LayoutParams(0, -2, 1));
+      if (position > 0) item.addView(button("↑", () -> session.move(e.id, position - 1)));
+      item.addView(button("Remove", () -> session.remove(e.id)));
+      body.addView(item);
+    }
+    if (session.queue.snapshot().size() > queueLimit)
+      body.addView(
+          button(
+              "Show more reservations",
+              () -> {
+                queueLimit += 20;
+                render();
+              }));
+    if (n == 0) body.addView(text("Reserve a song, then choose Play to begin.", 14, 0xFFAFB8D0));
+  }
+
+  private void mySet() {
+    body.addView(text("My Set", 22, Color.WHITE));
+    Button importButton =
+        button(
+            session.importing ? "Importing…" : "Add music or SoundFont",
+            () -> {
+              Intent i =
+                  new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                      .setType("*/*")
+                      .addCategory(Intent.CATEGORY_OPENABLE)
+                      .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+              startActivityForResult(i, MUSIC);
+            });
+    importButton.setEnabled(session.ready && !session.importing);
+    body.addView(importButton);
+    Button folder =
+        button(
+            "Import a music folder",
+            () -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), FOLDER));
+    folder.setEnabled(session.ready && !session.importing);
+    body.addView(folder);
+    if (session.importing) body.addView(button("Cancel import", session::cancelImports));
+    body.addView(text("SoundFont: " + session.soundFontName, 14, CYAN));
+    body.addView(
+        text(
+            "SoundFonts up to 32 MB. MIDI/KAR up to 16 MB and six hours. Original files stay"
+                + " unchanged.",
+            13,
+            0xFFAFB8D0));
+
+    body.addView(button("Save Up Next as a playlist", () -> nameSet(false)));
+    body.addView(button("Save played songs as Favorites", () -> nameSet(true)));
+    body.addView(button("Export private Songbook", () -> export(true)));
+    body.addView(button("Export song list (CSV)", () -> export(false)));
+    body.addView(text("Saved sets", 20, GOLD));
+    for (LibraryRepository.SavedSet set : session.savedSets)
+      body.addView(
+          button(set.name + " · " + set.songs.size() + " songs", () -> session.loadSet(set)));
+    body.addView(text("Original starter songs", 20, GOLD));
+    for (int i = 0; i < LibraryRepository.STARTERS.length; i++) {
+      final String id = "starter:" + LibraryRepository.STARTERS[i];
+      boolean present = session.songs.stream().anyMatch(s -> s.id.equals(id));
+      LinearLayout item = row();
+      item.addView(
+          text(LibraryRepository.TITLES[i], 15, Color.WHITE),
+          new LinearLayout.LayoutParams(0, -2, 1));
+      item.addView(button(present ? "Remove" : "Restore", () -> session.starter(id, !present)));
+      body.addView(item);
+    }
+    body.addView(
+        button(
+            "AndroidX and runtime software notices",
+            () -> policy("runtime-notices.txt", "Runtime software notices")));
+    body.addView(
+        button(
+            "TinySoundFont license",
+            () -> policy("tinysoundfont-license.txt", "TinySoundFont · MIT")));
+    body.addView(button("Privacy", () -> policy("privacy.txt", "Privacy")));
+    body.addView(button("Music rights", () -> policy("legal.txt", "Music rights")));
+  }
+
+  private void nameSet(boolean played) {
+    ArrayList<Song> songs = new ArrayList<>();
+    if (played) songs.addAll(session.played);
+    else for (ReservationQueue.Entry e : session.queue.snapshot()) songs.add(e.song);
+    if (songs.isEmpty()) {
+      new AlertDialog.Builder(this)
+          .setMessage(
+              played
+                  ? "Finish a song first to save the songs you sang."
+                  : "Reserve songs first to save a playlist.")
+          .setPositiveButton("OK", null)
+          .show();
+      return;
+    }
+    EditText name = new EditText(this);
+    name.setHint("Set name");
+    new AlertDialog.Builder(this)
+        .setTitle(played ? "Save Favorites" : "Save playlist")
+        .setView(name)
+        .setPositiveButton("Save", (d, w) -> session.saveSet(name.getText().toString(), songs))
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  void toggleMonitoring() {
+    if (session.monitor.enabled()) {
+      session.stopMonitor();
+      return;
+    }
+    if (!session.foreground || !session.microphone.capturing()) {
+      session.message = "Turn on microphone input before enabling monitoring.";
+      session.publish();
+      return;
+    }
+    List<android.media.AudioDeviceInfo> outputs = session.monitor.outputs();
+    if (outputs.isEmpty()) {
+      session.message =
+          "Connect wired or USB headphones or an audio interface. Speaker and Bluetooth monitoring"
+              + " are unavailable.";
+      session.publish();
+      return;
+    }
+    String[] labels = new String[outputs.size()];
+    for (int i = 0; i < labels.length; i++) {
+      String label =
+          outputs.get(i).getProductName().toString().replaceAll("[\\p{Cntrl}]", " ").trim();
+      labels[i] =
+          label.isEmpty() ? "Wired / USB output" : label.substring(0, Math.min(80, label.length()));
+    }
+    new AlertDialog.Builder(this)
+        .setTitle("Select wired / USB output")
+        .setItems(labels, (dialog, selected) -> session.startMonitor(outputs.get(selected)))
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  void toggleMicrophone() {
+    if (session.microphone.enabled()) {
+      session.stopMicrophone();
+      return;
+    }
+    if (!session.foreground || microphonePermissionPending) return;
+    if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+      microphonePermissionPending = true;
+      requestPermissions(new String[] {android.Manifest.permission.RECORD_AUDIO}, MICROPHONE);
+      return;
+    }
+    session.startMicrophone();
+  }
+
+  private void refreshMicrophoneReading() {
+    if (microphoneReading == null) return;
+    MicrophoneInput.Reading value = session.microphone.reading();
+    String label;
+    if (!session.microphone.enabled()) label = "Microphone off";
+    else if (!session.microphone.capturing()) label = "Starting microphone…";
+    else if (value == null) label = "Listening — waiting for input";
+    else {
+      double db = 20 * Math.log10(Math.max(.000001, value.rms));
+      label = String.format(java.util.Locale.ROOT, "Input %.0f dBFS", db);
+      if (value.pitch != null)
+        label += String.format(java.util.Locale.ROOT, " · Pitch %.1f Hz", value.pitch.frequencyHz);
+      else label += " · No stable pitch";
+    }
+    microphoneReading.setText(label);
+    if (monitorReading != null) {
+      String output =
+          !session.monitor.enabled()
+              ? "Monitoring off"
+              : session.monitor.audible()
+                  ? "Monitoring on · "
+                      + Math.round(session.monitor.gain() * 100)
+                      + "%"
+                      + (session.monitor.correctionEnabled() ? " · pitch correction" : "")
+                  : "Monitoring muted · checking connection or input";
+      monitorReading.setText(output);
+    }
+  }
+
+  void toggleCamera() {
+    if (camera.enabled()) {
+      camera.stop();
+      session.publish();
+      return;
+    }
+    if (!session.foreground || cameraPermissionPending) return;
+    if (checkSelfPermission(android.Manifest.permission.CAMERA)
+        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+      cameraPermissionPending = true;
+      requestPermissions(new String[] {android.Manifest.permission.CAMERA}, CAMERA);
+      return;
+    }
+    camera.start(fullscreen != null && fullscreen.isShowing() ? fullscreenStage : stagePresenter);
+    session.publish();
+  }
+
+  boolean cameraStreaming() {
+    return camera.streaming();
+  }
+
+  @Override
+  public void onRequestPermissionsResult(int request, String[] permissions, int[] grants) {
+    super.onRequestPermissionsResult(request, permissions, grants);
+    if (request == MICROPHONE) {
+      if (!microphonePermissionPending) return;
+      microphonePermissionPending = false;
+      if (session.foreground
+          && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+              == android.content.pm.PackageManager.PERMISSION_GRANTED) session.startMicrophone();
+      else {
+        session.message = "Microphone permission was not granted. Local playback still works.";
+        session.publish();
+      }
+      return;
+    }
+    if (request != CAMERA || !cameraPermissionPending) return;
+    cameraPermissionPending = false;
+    if (session.foreground
+        && checkSelfPermission(android.Manifest.permission.CAMERA)
+            == android.content.pm.PackageManager.PERMISSION_GRANTED) toggleCamera();
+    else {
+      session.message = "Camera permission was not granted. Your saved background is unchanged.";
+      session.publish();
+    }
+  }
+
+  private void scenic() {
+    body.addView(text("Choose your stage", 22, Color.WHITE));
+    body.addView(
+        button(
+            camera.enabled() ? "Turn off front camera" : "Turn on front camera",
+            this::toggleCamera));
+    body.addView(
+        text(
+            "Optional live preview only. Nothing is recorded. Camera turns off when you leave"
+                + " KANTA. TV output uses a still background.",
+            14,
+            Color.WHITE));
+    Button photo =
+        button(
+            "Choose your photo",
+            () ->
+                startActivityForResult(
+                    new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                        .setType("image/*")
+                        .addCategory(Intent.CATEGORY_OPENABLE),
+                    PHOTO));
+    Button video =
+        button(
+            "Choose your silent background video",
+            () ->
+                startActivityForResult(
+                    new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                        .setType("video/*")
+                        .addCategory(Intent.CATEGORY_OPENABLE),
+                    VIDEO));
+    photo.setEnabled(session.stageReady && !session.importing);
+    video.setEnabled(session.stageReady && !session.importing);
+    body.addView(photo);
+    body.addView(video);
+    body.addView(
+        text(
+            "Photos up to 32 MB; videos up to 512 MB and six hours. Originals stay unchanged. Video"
+                + " sound is muted.",
+            14,
+            Color.WHITE));
+    if (session.stageSelection != null && session.stageSelection.photo != null)
+      body.addView(
+          button(
+              "Use your last photo",
+              () -> {
+                camera.stop();
+                session.chooseStage("photo");
+              }));
+    if (session.stageSelection != null && session.stageSelection.video != null)
+      body.addView(
+          button(
+              "Use your last video",
+              () -> {
+                camera.stop();
+                session.chooseStage("video");
+              }));
+    if (session.importing) body.addView(button("Cancel import", session::cancelImports));
+    String[] names = {
+      "bayanDawn",
+      "bambooMist",
+      "coralHaze",
+      "deepLagoon",
+      "emberSunset",
+      "indigoHorizon",
+      "mangoGlow",
+      "moonlitBay",
+      "orchidNight",
+      "pearlSky"
+    };
+    for (String name : names) {
+      String title = name.replaceAll("([a-z])([A-Z])", "$1 $2");
+      body.addView(
+          button(
+              (session.stageKind.equals("scenic") && session.scenicName.equals(name) ? "✓ " : "")
+                  + title,
+              () -> {
+                if (session.stageReady) {
+                  camera.stop();
+                  session.scene(name);
+                }
+              }));
+    }
+  }
+
+  private void loop() {
+    body.addView(text("Loop & party sounds", 22, GOLD));
+    body.addView(
+        text(
+            "Choose an imported MP3/WAV for between-song music. It stops for karaoke and when you"
+                + " leave the app. Party clips can be assigned from My Set (up to 8 MB / 30"
+                + " seconds).",
+            15,
+            Color.WHITE));
+    Song loopSong =
+        session.songs.stream()
+            .filter(song -> song.id.equals(session.loopSongId))
+            .findFirst()
+            .orElse(null);
+    body.addView(
+        button(
+            loopSong == null ? "Choose between-song music" : "Music: " + loopSong.title,
+            () -> chooseAudio("Between-song music", session::chooseIntermission)));
+    Button enabled =
+        button(
+            session.loopEnabled ? "Turn off between-song music" : "Turn on between-song music",
+            session::toggleIntermission);
+    enabled.setEnabled(loopSong != null);
+    body.addView(enabled);
+    volumeControl(
+        "Between-song volume",
+        session.party.loopVolume,
+        value -> session.partyVolumes(session.party.sfxVolume, value));
+    volumeControl(
+        "Party sound volume",
+        session.party.sfxVolume,
+        value -> session.partyVolumes(value, session.party.loopVolume));
+    body.addView(text("Original synthesized party sounds", 18, GOLD));
+    body.addView(button("Stop all party audio", session::stopParty));
+    for (int i = 0; i < PartySounds.TITLES.size(); i++) {
+      final int slot = i;
+      LinearLayout row = row();
+      Button trigger =
+          button(
+              PartySounds.TITLES.get(i) + (session.customPads[i].isEmpty() ? "" : " · custom"),
+              () -> session.triggerPad(slot));
+      trigger.setEnabled(session.party.ready(i));
+      row.addView(trigger, new LinearLayout.LayoutParams(0, -2, 1));
+      Button assign =
+          button(
+              "Assign clip",
+              () ->
+                  chooseAudio(PartySounds.TITLES.get(slot), song -> session.assignPad(slot, song)));
+      assign.setEnabled(!session.assigningPad);
+      row.addView(assign);
+      if (!session.customPads[i].isEmpty())
+        row.addView(button("Reset", () -> session.resetPad(slot)));
+      body.addView(row);
+    }
+    queue();
+  }
+
+  private void chooseAudio(String title, java.util.function.Consumer<Song> selected) {
+    List<Song> audio = new ArrayList<>();
+    for (Song song : session.songs) if (SessionController.isAudio(song)) audio.add(song);
+    if (audio.isEmpty()) {
+      new AlertDialog.Builder(this)
+          .setTitle(title)
+          .setMessage("Add an MP3 or WAV in My Set first. Your originals stay unchanged.")
+          .setPositiveButton("OK", null)
+          .show();
+      return;
+    }
+    String[] names = audio.stream().map(song -> song.title).toArray(String[]::new);
+    new AlertDialog.Builder(this)
+        .setTitle(title)
+        .setItems(names, (dialog, index) -> selected.accept(audio.get(index)))
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  private void volumeControl(
+      String title, float initial, java.util.function.Consumer<Float> apply) {
+    body.addView(text(title, 16, GOLD));
+    SeekBar bar = new SeekBar(this);
+    bar.setMax(100);
+    bar.setProgress(Math.round(initial * 100));
+    bar.setContentDescription(title);
+    bar.setOnSeekBarChangeListener(
+        new SeekBar.OnSeekBarChangeListener() {
+          public void onProgressChanged(SeekBar seek, int progress, boolean user) {
+            if (user) apply.accept(progress / 100f);
+          }
+
+          public void onStartTrackingTouch(SeekBar seek) {}
+
+          public void onStopTrackingTouch(SeekBar seek) {}
+        });
+    body.addView(bar);
+  }
+
+  private void realm() {
+    body.addView(text("Realm", 22, GOLD));
+    body.addView(
+        text(
+            "Animated lights behind your lyrics. Turn this off for a still stage.",
+            16,
+            Color.WHITE));
+    body.addView(
+        button(
+            session.realm ? "Turn off animated lights" : "Turn on animated lights",
+            () -> {
+              session.realm = !session.realm;
+              session.publish();
+            }));
+    body.addView(text("Lyric size", 18, GOLD));
+    SeekBar size = new SeekBar(this);
+    size.setMax(75);
+    size.setProgress(Math.round((session.lyricScale - .75f) * 100));
+    size.setContentDescription("Lyric size");
+    size.setOnSeekBarChangeListener(
+        new SeekBar.OnSeekBarChangeListener() {
+          public void onProgressChanged(SeekBar bar, int value, boolean user) {
+            if (user) session.lyricSize(.75f + value / 100f);
+          }
+
+          public void onStartTrackingTouch(SeekBar bar) {}
+
+          public void onStopTrackingTouch(SeekBar bar) {
+            session.publish();
+          }
+        });
+    body.addView(size);
+  }
+
+  void closeFullscreen() {
+    if (fullscreen != null) fullscreen.dismiss();
+  }
+
+  void fullscreen() {
+    if (fullscreen != null && fullscreen.isShowing()) return;
+    fullscreen = new Dialog(this, android.R.style.Theme_Material_NoActionBar_Fullscreen);
+    LinearLayout content = column();
+    content.setBackgroundColor(Color.BLACK);
+    fullscreenStage = new StageSurface(this, session);
+    content.addView(fullscreenStage, new LinearLayout.LayoutParams(-1, 0, 1));
+    LinearLayout controls = row();
+    addWeighted(controls, button("Play / Pause", session::toggle));
+    addWeighted(controls, button("Next", session::next));
+    addWeighted(controls, button("Close", this::closeFullscreen));
+    content.addView(controls);
+    fullscreen.setContentView(content);
+    fullscreen.setOnDismissListener(
+        d -> {
+          fullscreenStage = null;
+          if (stagePresenter != null) stagePresenter.setVisualActive(true);
+          camera.moveTo(stagePresenter.getCameraPreview());
+        });
+    if (stagePresenter != null) stagePresenter.setVisualActive(false);
+    fullscreen.show();
+    camera.moveTo(fullscreenStage);
+  }
+
+  private void refreshDisplay() {
+    if (presentation != null) {
+      presentation.dismiss();
+      presentation = null;
+      externalStage = null;
+    }
+    for (Display display : displays.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
+      if (display.getDisplayId() == getWindowManager().getDefaultDisplay().getDisplayId()) continue;
+      try {
+        presentation = new Presentation(this, display);
+        externalStage = new StageSurface(presentation.getContext(), session);
+        presentation.setContentView(externalStage);
+        presentation.show();
+        break;
+      } catch (WindowManager.InvalidDisplayException e) {
+        presentation = null;
+        externalStage = null;
+      }
+    }
+  }
+
+  private void voiceSearch() {
+    new AlertDialog.Builder(this)
+        .setTitle("Voice search")
+        .setMessage(
+            "Your device's speech provider may process your voice online. KANTA uses the result"
+                + " only to search; it will not reserve a song automatically.")
+        .setPositiveButton(
+            "Continue",
+            (d, w) -> {
+              Intent i =
+                  new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                      .putExtra(
+                          RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                          RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                      .putExtra(RecognizerIntent.EXTRA_PROMPT, "Say a song title or artist");
+              try {
+                startActivityForResult(i, VOICE);
+              } catch (ActivityNotFoundException e) {
+                Toast.makeText(
+                        this, "Voice search is not available on this device", Toast.LENGTH_LONG)
+                    .show();
+              }
+            })
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  private void export(boolean encrypted) {
+    if (exportBytes != null || preparingExport) return;
+    preparingExport = true;
+    List<Song> captured = session.songs;
+    session.io.execute(
+        () -> {
+          try {
+            String csv = PrivateSongbook.csv(captured);
+            PrivateSongbook.Export book = encrypted ? PrivateSongbook.seal(csv) : null;
+            byte[] bytes =
+                (encrypted ? book.envelope : csv).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            handler.post(
+                () -> {
+                  preparingExport = false;
+                  if (isDestroyed()) return;
+                  exportBytes = bytes;
+                  exportCode = encrypted ? book.accessCode : null;
+                  Intent intent =
+                      new Intent(Intent.ACTION_CREATE_DOCUMENT)
+                          .addCategory(Intent.CATEGORY_OPENABLE)
+                          .setType(encrypted ? "application/octet-stream" : "text/csv")
+                          .putExtra(
+                              Intent.EXTRA_TITLE,
+                              encrypted ? "KANTA-My-Songbook.kanta-book" : "KANTA-My-Songbook.csv");
+                  startActivityForResult(intent, EXPORT);
+                });
+          } catch (Exception e) {
+            handler.post(
+                () -> {
+                  preparingExport = false;
+                  if (!isDestroyed())
+                    Toast.makeText(this, "Could not prepare your Songbook", Toast.LENGTH_LONG)
+                        .show();
+                });
+          }
+        });
+  }
+
+  @Override
+  protected void onActivityResult(int request, int result, Intent data) {
+    super.onActivityResult(request, result, data);
+    if (result != RESULT_OK || data == null) {
+      if (request == EXPORT) {
+        exportBytes = null;
+        exportCode = null;
+      }
+      return;
+    }
+    if ((request == PHOTO || request == VIDEO) && data.getData() != null) {
+      session.importStage(data.getData(), request == VIDEO);
+      return;
+    }
+    if (request == MUSIC) {
+      List<Uri> uris = new ArrayList<>();
+      if (data.getClipData() != null) {
+        for (int i = 0; i < data.getClipData().getItemCount() && i < 1000; i++)
+          uris.add(data.getClipData().getItemAt(i).getUri());
+      } else if (data.getData() != null) uris.add(data.getData());
+      showImportProgress();
+      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+        @Override public void onProgress(long total, long copied, String status) {
+          updateImportProgress(total, copied, status);
+        }
+        @Override public void onComplete(boolean success, String message) {
+          hideImportProgress(message);
+        }
+      });
+      session.importSongs(uris);
+    }
+    else if (request == FOLDER && data.getData() != null) {
+      showImportProgress();
+      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+        @Override public void onProgress(long total, long copied, String status) {
+          updateImportProgress(total, copied, status);
+        }
+        @Override public void onComplete(boolean success, String message) {
+          hideImportProgress(message);
+        }
+      });
+      session.importFolder(data.getData());
+    }
+    else if (request == VOICE) {
+      ArrayList<String> values = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+      if (values != null && !values.isEmpty()) {
+        query = values.get(0);
+        tab = "Control";
+        render();
+      }
+    } else if (request == EXPORT) {
+      Uri uri = data.getData();
+      byte[] bytes = exportBytes;
+      String code = exportCode;
+      exportBytes = null;
+      exportCode = null;
+      if (uri == null || bytes == null) return;
+      session.io.execute(
+          () -> {
+            try (OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+              if (out == null) throw new IOException();
+              out.write(bytes);
+              handler.post(
+                  () -> {
+                    if (isDestroyed()) return;
+                    if (code != null)
+                      new AlertDialog.Builder(this)
+                          .setTitle("Keep this code separate from your file")
+                          .setMessage(
+                              code
+                                  + "\n\n"
+                                  + "Open the Songbook page on the KANTA website and choose your"
+                                  + " saved file. Anyone with both the file and this code can read"
+                                  + " the list.")
+                          .setPositiveButton(
+                              "Copy code",
+                              (d, w) ->
+                                  ((android.content.ClipboardManager)
+                                          getSystemService(CLIPBOARD_SERVICE))
+                                      .setPrimaryClip(
+                                          ClipData.newPlainText("KANTA Songbook code", code)))
+                          .setNegativeButton("Done", null)
+                          .show();
+                    else Toast.makeText(this, "Song list saved", Toast.LENGTH_LONG).show();
+                  });
+            } catch (Exception e) {
+              handler.post(
+                  () ->
+                      Toast.makeText(this, "Could not save the export", Toast.LENGTH_LONG).show());
+            }
+          });
+    }
+  }
+
+  /** Shows the blocking import dialog. Imports run off the main thread, so it must not be
+   * cancelable by tapping outside: the work cannot actually be interrupted from here. */
+  private void showImportProgress() {
+    if (importProgressDialog == null) {
+      importProgressDialog = new android.app.ProgressDialog(this);
+      importProgressDialog.setTitle("Importing");
+      importProgressDialog.setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL);
+      importProgressDialog.setMax(100);
+      importProgressDialog.setCancelable(false);
+    }
+    importProgressDialog.setProgress(0);
+    importProgressDialog.setIndeterminate(true);
+    importProgressDialog.setMessage("Preparing\u2026");
+    importProgressDialog.show();
+  }
+
+  /**
+   * Moves the import dialog. A provider that will not report a size gives total 0, and then only
+   * the message can progress, so the bar stays indeterminate rather than sitting at zero.
+   */
+  private void updateImportProgress(long total, long copied, String status) {
+    if (importProgressDialog == null || !importProgressDialog.isShowing()) return;
+    if (status != null) importProgressDialog.setMessage(status);
+    if (total > 0) {
+      importProgressDialog.setIndeterminate(false);
+      importProgressDialog.setProgress((int) Math.max(0, Math.min(100, copied * 100 / total)));
+    } else {
+      importProgressDialog.setIndeterminate(true);
+    }
+  }
+
+  /** Dismisses the import dialog and reports the outcome the repository returned. */
+  private void hideImportProgress(String message) {
+    if (importProgressDialog != null && importProgressDialog.isShowing())
+      importProgressDialog.dismiss();
+    if (message != null && !message.isEmpty())
+      Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+  }
+
+  private void policy(String asset, String title) {
+    try (InputStream in = getAssets().open(asset)) {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      byte[] buffer = new byte[4096];
+      int n;
+      while ((n = in.read(buffer)) != -1) bytes.write(buffer, 0, n);
+      TextView content = text(bytes.toString("UTF-8"), 15, Color.WHITE);
+      ScrollView scroll = new ScrollView(this);
+      scroll.addView(content);
+      new AlertDialog.Builder(this)
+          .setTitle(title)
+          .setView(scroll)
+          .setPositiveButton("Close", null)
+          .show();
+    } catch (IOException e) {
+      Toast.makeText(this, "Policy could not be opened", Toast.LENGTH_LONG).show();
+    }
+  }
+
+  /**
+   * Diagnostics (S14): a read-only report of runtime state.
+   *
+   * Never includes pairing codes, tokens or key material — only whether a feature is
+   * active — so the report is safe to copy and share.
+   */
+  private void diagnostics() {
+    StringBuilder report = new StringBuilder();
+    report.append("KANTA Karaoke · diagnostics\n\n");
+    try {
+      android.content.pm.PackageInfo info =
+          getPackageManager().getPackageInfo(getPackageName(), 0);
+      report.append("version      : ").append(info.versionName).append('\n');
+    } catch (Exception unavailable) {
+      report.append("version      : unavailable\n");
+    }
+    report.append("device       : ")
+        .append(android.os.Build.MANUFACTURER)
+        .append(' ')
+        .append(android.os.Build.MODEL)
+        .append(" · Android ")
+        .append(android.os.Build.VERSION.RELEASE)
+        .append(" (API ")
+        .append(android.os.Build.VERSION.SDK_INT)
+        .append(")\n");
+
+    report.append("\nlibrary\n");
+    report.append("ready        : ").append(session.ready).append('\n');
+    report.append("loading      : ").append(session.loading).append('\n');
+    report.append("importing    : ").append(session.importing).append('\n');
+    report.append("songs        : ").append(session.songs.size()).append('\n');
+    report.append("up next      : ").append(session.queue.snapshot().size()).append('\n');
+
+    report.append("\nplayback\n");
+    report.append("playing      : ").append(session.playing).append('\n');
+    report.append("current      : ")
+        .append(session.current == null ? "(none)" : session.current.title)
+        .append('\n');
+    report.append("singer       : ")
+        .append(session.singer.isEmpty() ? "(none)" : session.singer)
+        .append('\n');
+    report.append("position     : ").append(session.position()).append(" ms\n");
+    report.append("soundfont    : ").append(session.soundFontName).append('\n');
+
+    report.append("\naudio\n");
+    report.append("volume       : ").append(session.volume).append('\n');
+    report.append("tempo        : ").append(session.tempo).append('\n');
+    report.append("pitch        : ").append(session.pitch).append(" semitones\n");
+    report.append("microphone   : ").append(session.microphone.enabled()).append('\n');
+    report.append("monitor      : ").append(session.monitor.enabled()).append('\n');
+    report.append("scoring      : ").append(session.scoringEnabled).append('\n');
+
+    report.append("\nstage\n");
+    report.append("background   : ").append(session.stageKind).append('\n');
+    report.append("camera       : ").append(session.cameraPreviewEnabled).append('\n');
+    report.append("visual epoch : ").append(session.visualGeneration).append('\n');
+
+    report.append("\ncompanion\n");
+    report.append("android      : ").append(session.companion.enabled()).append('\n');
+    report.append("browser      : ").append(session.browserCompanion.active()).append('\n');
+    report.append("smart link   : ")
+        .append(session.kantaConnectHost.isHosting() ? "hosting (code withheld)" : "off")
+        .append('\n');
+
+    report.append("\nmessage      : ").append(session.message).append('\n');
+
+    final String reportText = report.toString();
+    TextView content = text(reportText, 12, Color.WHITE);
+    content.setTypeface(android.graphics.Typeface.MONOSPACE);
+    content.setTextIsSelectable(true);
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(content);
+    new AlertDialog.Builder(this)
+        .setTitle("Diagnostics")
+        .setView(scroll)
+        .setPositiveButton(
+            "Copy",
+            (dialog, which) ->
+                ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+                    .setPrimaryClip(ClipData.newPlainText("KANTA diagnostics", reportText)))
+        .setNegativeButton("Close", null)
+        .show();
+  }
+
+  private void help() {
+    new AlertDialog.Builder(this)
+        .setTitle("Your karaoke night")
+        .setMessage(
+            "1. Try the three original songs, or add your own MIDI, KAR, MP3 or WAV in My Set.\n\n"
+                + "2. Find a song in Control and choose Reserve. Add a singer name if you like.\n\n"
+                + "3. Choose Play. Next starts the next reservation. Tap the stage for"
+                + " fullscreen.\n\n"
+                + "4. Save playlists or the songs you finished in My Set.\n\n"
+                + "SoundFonts can be added in My Set. Loop has party sounds and between-song music."
+                + " Voice settings in Control offer microphone input, experimental wired/USB"
+                + " effects and optional MIDI pitch-following scores. Check input timing on your"
+                + " device. Experimental pitch correction is available after verified monitoring. Android companion pairing is in Control; share the full code only with a trusted person on the same Wi-Fi. Use"
+                + " music you have permission to use.")
+        .setPositiveButton("Done", null)
+        .show();
+  }
+}
