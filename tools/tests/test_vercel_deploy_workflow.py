@@ -38,7 +38,7 @@ class VercelDeployWorkflowTests(unittest.TestCase):
         self.assertIn("github.event_name != 'pull_request'", self.source)
         self.assertIn("github.ref == 'refs/heads/main'", self.source)
         self.assertIn("inputs.configure_domain != ''", self.source)
-        self.assertIn("pull_request:", self.source)
+        self.assertNotIn("pull_request:", self.source)
 
     def test_push_deploys_do_not_depend_on_how_inputs_resolves(self):
         """On a push event the `inputs` context is null, not an empty string.
@@ -63,7 +63,7 @@ class VercelDeployWorkflowTests(unittest.TestCase):
         self.assertNotIn("if: ${{ inputs.configure_domain != '' }}", self.source)
 
     def test_production_deploys_are_serialized(self):
-        self.assertIn("group: vercel-deploy-${{ github.event.pull_request.head.ref || github.ref }}", self.source)
+        self.assertIn("group: vercel-deploy-${{ github.ref }}", self.source)
         self.assertIn("cancel-in-progress: false", self.source)
 
 
