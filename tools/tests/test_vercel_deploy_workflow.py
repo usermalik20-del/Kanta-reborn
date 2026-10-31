@@ -35,10 +35,12 @@ class VercelDeployWorkflowTests(unittest.TestCase):
 
     def test_validation_gates_deployment_and_prs_never_deploy(self):
         self.assertIn("needs: validate", self.source)
-        self.assertIn("github.event_name != 'pull_request'", self.source)
         self.assertIn("github.ref == 'refs/heads/main'", self.source)
+        self.assertIn("github.event_name == 'workflow_dispatch' && inputs.configure_domain != ''", self.source)
+        self.assertNotIn("github.event_name != 'pull_request'", self.source)
         self.assertIn("inputs.configure_domain != ''", self.source)
         self.assertNotIn("pull_request:", self.source)
+        self.assertIn("if: github.event_name == 'push'", self.source)
 
     def test_push_deploys_do_not_depend_on_how_inputs_resolves(self):
         """On a push event the `inputs` context is null, not an empty string.
