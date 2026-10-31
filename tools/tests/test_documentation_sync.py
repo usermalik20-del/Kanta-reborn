@@ -33,7 +33,7 @@ class DocumentationSyncTests(unittest.TestCase):
 
     def test_workflow_changes_require_engineering_policy_docs(self):
         self.assertEqual(required_docs({".github/workflows/android-validation.yml"}), {
-            "AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md",
+            "README.md", "AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md",
         })
 
     def test_tools_changes_require_testing_docs(self):
