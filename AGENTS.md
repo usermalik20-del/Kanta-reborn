@@ -171,7 +171,7 @@ The root workflow triggers are intentionally scoped by ownership and source path
 - `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
 - `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on iOS-source pull requests and native iOS/Android source plus exact-SHA release-packaging inputs on main; Android-only pull requests do not allocate an iOS archive. Website-only tools and packaging-tool PRs are excluded.
 - `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on iOS pull requests; Android source and release-packaging tools trigger it on main after merge for exact-SHA release provenance. The Android companion-interface guard can trigger a PR walkthrough. Weekly schedule, tags and manual dispatch remain supported. Website-only verifier/test edits and workflow-only edits are excluded.
-- `website-validation.yml`: website source and website tooling.
+- `website-validation.yml`: website source/tooling plus iOS PublicSite and native privacy-copy contract checks; documentation changes use this lightweight job, not native builds.
 - `vercel-deploy.yml`: production deployment on main pushes or explicit dispatch; no pull-request validation trigger.
 - `verified-downloads.yml`: exact-SHA release-contract tests and workflow-ownership tests on packaging/workflow changes; actual packaging is gated by successful same-SHA main-branch release runs or an explicit main-branch dispatch.
 
