@@ -39,6 +39,9 @@ class WorkflowOwnershipTests(unittest.TestCase):
             section = event_section(source, event)
             self.assertIn("'apps/web/**'", section)
             self.assertIn("'tools/verify-website.py'", section)
+            self.assertIn("'apps/ios/PRIVACY.md'", section)
+            self.assertIn("'apps/ios/PublicSite/**'", section)
+            self.assertIn("'apps/android/app/src/main/assets/privacy.txt'", section)
             self.assertIn("'tools/tests/test_website_security_contract.py'", section)
 
     def test_native_release_gates_ignore_website_only_tooling(self):
