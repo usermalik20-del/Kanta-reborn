@@ -5,11 +5,21 @@ on:
     branches: [main]
     paths:
       - 'apps/ios/**'
+      - '!apps/ios/PRIVACY.md'
+      - '!apps/ios/README.md'
+      - '!apps/ios/AGENTS.md'
+      - '!apps/ios/Docs/**'
+      - '!apps/ios/PublicSite/**'
       - '.github/workflows/ios-validation.yml'
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/ios/**'
+      - '!apps/ios/PRIVACY.md'
+      - '!apps/ios/README.md'
+      - '!apps/ios/AGENTS.md'
+      - '!apps/ios/Docs/**'
+      - '!apps/ios/PublicSite/**'
       - '.github/workflows/ios-validation.yml'
 permissions:
   contents: read
