@@ -57,7 +57,7 @@ class DocumentationSyncTests(unittest.TestCase):
         _, missing = validate(changed)
         self.assertEqual(missing, {
             "README.md", "apps/web/README.md",
-            "docs/ARCHITECTURE.md", "docs/TESTING.md",
+            "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md",
         })
 
     def test_website_job_is_selected_only_for_website_and_disclosure_paths(self):
