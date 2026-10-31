@@ -8,9 +8,9 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 
 
 def event_section(source: str, event: str) -> str:
-    trigger_block = source.split("\\njobs:", 1)[0]
+    trigger_block = source.split("\njobs:", 1)[0]
     match = re.search(
-        rf"(?ms)^  {re.escape(event)}:\\n(.*?)(?=^  [A-Za-z0-9_-]+:\\n|^permissions:|^concurrency:|\\Z)",
+        rf"(?ms)^  {re.escape(event)}:\n(.*?)(?=^  [A-Za-z0-9_-]+:\n|^permissions:|^concurrency:|\\Z)",
         trigger_block,
     )
     if match is None:
@@ -60,7 +60,7 @@ class WorkflowOwnershipTests(unittest.TestCase):
 
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
         source = workflow("vercel-deploy.yml")
-        self.assertNotIn("\\n  pull_request:", source)
+        self.assertNotIn("\n  pull_request:", source)
         self.assertIn("workflow_dispatch:", source)
         self.assertIn("push:", source)
 
