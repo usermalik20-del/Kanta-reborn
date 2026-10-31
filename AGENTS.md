@@ -159,20 +159,25 @@ Do not rerun an unchanged commit for a deterministic failure. An unchanged rerun
 
 Avoid duplicate workflow dispatches. Respect provider quotas, concurrency controls and policy denials.
 
+## Documentation synchronization is a release requirement
+
+Every implementation or workflow change must update its owner documentation in the same PR. the `website-validation.yml` documentation-sync job runs the lightweight diff-based guard for every PR; a missing required README, architecture, testing, reconstruction, engineering-instructions or privacy document fails validation. The required paths are maintained in `tools/check-documentation-sync.py` and tested in `tools/tests/test_documentation_sync.py`. Web changes require the root and website README plus architecture/testing; Android changes require the root and Android README plus architecture/testing/reconstruction; iOS changes require the root README, iOS engineering instructions plus architecture/testing/reconstruction; workflow edits require the root README, this file, architecture and testing; tooling changes require testing documentation. Any privacy disclosure change requires all website, Android, iOS app and iOS public-site privacy copies to be updated together. Do not weaken the matrix to make a PR pass; update the relevant documents with the accepted behavior, changed architecture, test evidence and remaining limitations. Existing main-branch platform/release/deploy workflows execute the same guard inside their existing job before building or publishing. Documentation-only changes must not start platform build runners.
+
 ## 9. CI and build authorization
 
 Owner authorization (updated 2026-10-23) grants Astra unrestricted use of CI for this repository:
 any workflow, any branch, any trigger, workflow dispatch, reruns, labels and PR-triggered runs.
 No per-run approval, label, actor or run-count gate applies.
 
-The root workflow triggers are intentionally scoped by source paths:
-- `android-validation.yml`: Android source, shared tooling and release-workflow changes on main pushes and pull requests. Feature-branch validation runs through the pull-request event rather than a duplicate branch-push run.
-- `ios-validation.yml`: iOS source changes on pushes and pull requests.
-- `ios-smoke.yml`: focused iOS native/UI smoke on pull requests and manual dispatch.
-- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on main pushes, pull requests, and manual dispatch when iOS/Android source changes.
-- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on relevant iOS/Android/tool changes, plus weekly schedule, tags and manual dispatch.
-- `website-validation.yml` and `vercel-deploy.yml`: website validation and deployment on website changes.
-- `verified-downloads.yml`: exact-SHA release-contract tests on packaging changes; actual packaging is a main-branch manual dispatch after all required same-SHA runs pass.
+The root workflow triggers are intentionally scoped by ownership and source paths:
+- `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
+- `ios-validation.yml`: iOS build inputs, resources and tests on pull requests and main pushes. Exclude documentation-only `PRIVACY.md`, `PublicSite/**`, `Docs/**`, README and AGENTS paths; feature branches use the pull-request event only.
+- `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
+- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on iOS-source pull requests and native iOS/Android source plus exact-SHA release-packaging inputs on main; Android-only pull requests do not allocate an iOS archive. Website-only tools and packaging-tool PRs are excluded.
+- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on iOS pull requests; Android source and release-packaging tools trigger it on main after merge for exact-SHA release provenance. The Android companion-interface guard can trigger a PR walkthrough. Weekly schedule, tags and manual dispatch remain supported. Website-only verifier/test edits and workflow-only edits are excluded.
+- `website-validation.yml`: website source/tooling plus iOS PublicSite and native privacy-copy contract checks; documentation changes use this lightweight job, not native builds.
+- `vercel-deploy.yml`: production deployment on main pushes or explicit dispatch; no pull-request validation trigger.
+- `verified-downloads.yml`: exact-SHA release-contract tests and workflow-ownership tests on packaging/workflow changes; actual packaging is gated by successful same-SHA main-branch release runs or an explicit main-branch dispatch.
 
 The verified-download packager binds to the exact workflow names in the root workflow files. Its Android artifact source is `KANTA Android validation`, not a separately named reconstruction workflow. Keep workflow names, packager constants and contract tests synchronized. Owner-approval labels and the retired `kanta-gelo` actor gate have been removed; they blocked work without adding safety.
 
@@ -287,3 +292,5 @@ A successful KANTA iOS unsigned artifacts run on main is the release-pipeline co
 Only after all three gates pass does packaging create up-to-30-day, provenance-bearing Android and unsigned iOS bundles. The publication helper verifies that both builds share the same full source SHA, validates the expected debug/unsigned signing states, and writes apps/web/downloads.json plus the two platform download sections. The workflow commits those generated website files with its narrowly scoped GitHub Actions token and dispatches the existing Vercel production deployment workflow.
 
 The iOS download remains an unsigned personal-signing input; this automation does not create Apple signing identities, provisioning profiles, Safari OTA installation or physical-device acceptance. A failed or missing exact-SHA gate fails closed and leaves the previous website downloads untouched. A rejected non-fast-forward publication push also fails safely rather than overwriting newer main-branch work.
+
+**Current CI implementation note (2026-10-31):** the `website-validation.yml` documentation-sync job is the single lightweight pull-request-wide documentation gate. It uses the PR base/head diff, not only the latest commit, and runs on Ubuntu with a five-minute timeout. The same checker is embedded as a step in existing main-branch Android/iOS/website/release/deployment jobs; it must not create additional platform jobs. iOS simulator walkthrough checks the documentation contract in both device jobs. A workflow path change must update this operating standard, `docs/ARCHITECTURE.md` and `docs/TESTING.md` in the same PR. The workflow ownership regression test must keep this topology and the path boundaries covered.

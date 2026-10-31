@@ -225,12 +225,13 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
         cls.walkthrough = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
 
-    def test_android_source_changes_trigger_both_ios_release_gates(self):
+    def test_android_source_changes_trigger_ios_release_gates_on_main_only(self):
         for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive)):
-            for event in ("push", "pull_request"):
-                with self.subTest(workflow=workflow_name, event=event):
-                    section = workflow_event_section(source, event)
-                    self.assertIn("'apps/android/**'", section)
+            with self.subTest(workflow=workflow_name):
+                push = workflow_event_section(source, "push")
+                pull_request = workflow_event_section(source, "pull_request")
+                self.assertIn("'apps/android/**'", push)
+                self.assertNotIn("'apps/android/**'", pull_request)
 
     def test_android_companion_guard_changes_trigger_both_device_walkthroughs(self):
         for event in ("push", "pull_request"):
@@ -290,36 +291,32 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         cls.visual = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.workflow = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
 
-    def test_release_tooling_changes_trigger_every_exact_sha_gate(self):
+    def test_release_tooling_changes_trigger_exact_sha_gates_on_main_only(self):
         release_paths = (
             "'tools/prepare-verified-downloads.py'",
             "'tools/publish-verified-downloads.py'",
             "'tools/tests/test_verified_downloads.py'",
             "'tools/tests/test_publish_verified_downloads.py'",
-            "'tools/verify-website.py'",
-            "'tools/tests/test_website_security_contract.py'",
         )
-        for event in ("push", "pull_request"):
-            with self.subTest(event=event):
-                android_section = workflow_event_section(self.android, event)
-                archive_section = workflow_event_section(self.archive, event)
-                visual_section = workflow_event_section(self.visual, event)
-                package_section = workflow_event_section(self.workflow, event)
-                self.assertIn("'tools/**'", android_section)
-                self.assertIn("branches: [main]", self.android)
-                self.assertNotIn("branches: ['**']", self.android)
+        for workflow_name, source in (("android", self.android),
+                                      ("archive", self.archive),
+                                      ("walkthrough", self.visual)):
+            push = workflow_event_section(source, "push")
+            pull_request = workflow_event_section(source, "pull_request")
+            with self.subTest(workflow=workflow_name):
                 for path in release_paths:
-                    self.assertIn(path, archive_section)
-                    self.assertIn(path, visual_section)
-                    self.assertIn(path, package_section)
-                for path in (
-                    "'.github/workflows/android-validation.yml'",
-                    "'.github/workflows/ios-runtime-artifacts.yml'",
-                    "'.github/workflows/ios-visual-walkthrough.yml'",
-                    "'.github/workflows/verified-downloads.yml'",
-                ):
-                    for section in (android_section, archive_section, visual_section, package_section):
-                        self.assertIn(path, section)
+                    self.assertIn(path, push)
+                    self.assertNotIn(path, pull_request)
+        for event in ("push", "pull_request"):
+            package_section = workflow_event_section(self.workflow, event)
+            for path in release_paths + (
+                "'tools/verify-website.py'",
+                "'tools/tests/test_website_security_contract.py'",
+                "'.github/workflows/**'",
+                "'tools/tests/test_workflow_path_ownership.py'",
+            ):
+                self.assertIn(path, package_section)
+
 
     def test_successful_main_unsigned_archive_automatically_starts_packaging(self):
         self.assertIn("workflow_run:", self.workflow)

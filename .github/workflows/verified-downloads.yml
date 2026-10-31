@@ -19,6 +19,10 @@ on:
       - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/**'
+      - 'tools/tests/test_workflow_path_ownership.py'
+      - 'tools/check-documentation-sync.py'
+      - 'tools/tests/test_documentation_sync.py'
 
   pull_request:
     types: [opened, synchronize, reopened]
@@ -33,6 +37,8 @@ on:
       - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/**'
+      - 'tools/tests/test_workflow_path_ownership.py'
 
   workflow_run:
     workflows: ["KANTA iOS unsigned artifacts"]
@@ -52,11 +58,23 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+      - name: Enforce documentation synchronization before packaging
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
+
       - name: Check exact-SHA artifact and release-gate contracts
         run: |
           python3 -m unittest discover -s tools/tests -p 'test_verified_downloads.py'
           python3 -m unittest discover -s tools/tests -p 'test_publish_verified_downloads.py'
+          python3 -m unittest tools.tests.test_workflow_path_ownership tools.tests.test_documentation_sync
   package:
     permissions:
       contents: write

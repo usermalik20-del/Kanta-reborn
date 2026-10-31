@@ -5,33 +5,26 @@ on:
     branches: [main]
     paths:
       - 'apps/ios/**'
+      - '!apps/ios/PRIVACY.md'
+      - '!apps/ios/README.md'
+      - '!apps/ios/AGENTS.md'
+      - '!apps/ios/Docs/**'
+      - '!apps/ios/PublicSite/**'
       - 'apps/android/**'
       - 'tools/prepare-verified-downloads.py'
       - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - 'tools/tests/test_publish_verified_downloads.py'
-      - 'tools/verify-website.py'
-      - 'tools/tests/test_website_security_contract.py'
-      - '.github/workflows/android-validation.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
-      - '.github/workflows/verified-downloads.yml'
 
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'apps/ios/**'
-      - 'apps/android/**'
-      - 'tools/prepare-verified-downloads.py'
-      - 'tools/publish-verified-downloads.py'
-      - 'tools/tests/test_verified_downloads.py'
-      - 'tools/tests/test_publish_verified_downloads.py'
-      - 'tools/verify-website.py'
-      - 'tools/tests/test_website_security_contract.py'
-      - '.github/workflows/android-validation.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
-      - '.github/workflows/verified-downloads.yml'
+      - '!apps/ios/PRIVACY.md'
+      - '!apps/ios/README.md'
+      - '!apps/ios/AGENTS.md'
+      - '!apps/ios/Docs/**'
+      - '!apps/ios/PublicSite/**'
 
 permissions:
   contents: read
@@ -51,8 +44,19 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          fetch-depth: 0
           persist-credentials: false
           ref: ${{ github.sha }}
+      - name: Enforce documentation synchronization before release
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
+
       - name: Validate resources and generate project
         run: |
           python3 ../../tools/verify-test-layout.py

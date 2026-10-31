@@ -2,7 +2,7 @@ KANTA Android privacy — reconstruction preview
 
 Your library stays under your control. Selected MIDI/KAR, MP3/WAV, SF2, photos and videos are copied into app-private storage without rewriting the originals. Copies retain their original metadata. Song titles, singer names, reservations, saved sets and visual selections are stored locally. Android backup is disabled for this preview.
 
-The app has no KANTA account, advertising SDK or analytics service. Its manifest requests INTERNET for explicitly enabled private companion sockets, and no broad shared-storage permission. Normal local playback and library search work offline.
+The app has no KANTA account, advertising SDK or analytics service. Google Analytics and Google AdSense are optional integrations on the public KANTA website only; they are not bundled with or executed by this Android app. Website visitors can reject those optional technologies. The private website Songbook excludes them. Its manifest requests INTERNET for explicitly enabled private companion sockets, and no broad shared-storage permission. Normal local playback and library search work offline.
 
 Front camera is optional. KANTA requests CAMERA permission only after you choose to turn on the front-camera stage. Only a live preview is bound: there is no capture, analysis or recording use case, and no camera frames are saved or uploaded. Leaving the foreground turns it off; returning does not turn it back on. You may revoke camera permission in Android Settings. The camera view can move between the primary and fullscreen stage; an external display uses a still background.
 

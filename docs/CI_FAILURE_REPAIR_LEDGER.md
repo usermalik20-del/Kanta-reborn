@@ -823,6 +823,34 @@ PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/K
 
 **Repair:** commit [f318a13](https://github.com/usermalik20-del/Kanta-reborn/commit/f318a13b0dd97f2efda0c220e8718b113d0fa9ea) aligned the assertion with the explicit rejection message. The subsequent exact-SHA publisher/contract run [#41095375672](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41095375672) passed. The least-privilege permission refinement was included in that successful contract run. Subsequent polling, packaged-artifact checksum, and legacy-to-new website-manifest compatibility refinements are being revalidated on the latest PR head.
 
+## PR #121 — documentation guard and workflow ownership repair (2026-10-31)
+
+**Scope:** website consent/AdSense nonce candidate plus independent platform workflow routing and a fail-closed documentation synchronization gate.
+
+**Failures found and repaired on the PR branch:**
+- The first documentation-sync unit run could not import the hyphenated CLI filename as a Python module. The tests now load the CLI through `runpy.run_path`, while production execution remains a direct script invocation.
+- The initial documentation matrix omitted `docs/RECONSTRUCTION.md` from the web owner set and one negative test still expected the older, shorter matrix. The matrix and test expectations were aligned; the guard now requires the root README, web README, architecture, testing and reconstruction ledger for web implementation changes.
+- The workflow contract test initially searched for a literal backslash-n rather than the actual YAML newline. The assertion was corrected.
+- A broad trigger edit accidentally altered the Vercel validation/deploy job conditions and broke the existing manual domain-dispatch contract. The validate job now runs on its declared push/manual events, production deploy remains main-only, and explicit domain configuration remains manual-dispatch-only. The regression test covers these conditions.
+- The documentation check was first added as a new workflow file, which cannot provide a PR check until that workflow exists on the base branch. It was consolidated into the already-established `website-validation.yml` workflow: one lightweight PR-wide documentation job, plus a path-classified website job. This avoids an extra workflow run and keeps native builds independent.
+
+**Current verified evidence:** on PR head `c7564c3d73de8c6aaf3425dda6a693154b0a8dc8`, the documentation-sync job and full website validation (site verifier, privacy/legal contracts, Node syntax and nonce handler tests) passed [run #41165515126](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515126). Workflow and exact-SHA release contract tests passed [run #41165515053](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515053). Android validation remains pending [run #41165515041](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515041) because the bundled Android `privacy.txt` asset changed; this is an intentional Android package input, not a web-only false trigger. No iOS archive/walkthrough or Vercel production deployment was started for the PR.
+
+**Recurrence rules:** keep the documentation gate in the established PR workflow until a base-branch workflow can be safely introduced; compare full PR base/head, require substantive diffs in all owner docs, and update the mapping tests with every new source category. Do not broaden Android to `tools/**`, do not run iOS release gates on Android PRs, and do not change Vercel dispatch conditions without preserving the manual-domain and main-production tests. PR #121 was marked ready for review after exact-head validation passed; merge remains pending.
+
+
+## Website — eager Analytics bypasses consent (2026-10-31)
+
+**Fingerprint:** PR #121 Vercel preview `kanta-public-la107ai6r-gelo-tech.vercel.app`; homepage HTML contained `<script nonce="…" defer src="/analytics.js"></script>` before the consent manager, and the served `analytics.js` immediately initialized `gtag` and appended Google's tag loader.
+
+**Cause (confirmed):** the request-time renderer added a nonce to every existing script but did not remove the legacy static Analytics tag in `index.html`. A CSP nonce authorizes a script; it does not represent visitor consent. This allowed Analytics to start before a consent choice and duplicated the post-acceptance loader path.
+
+**Fix:** `apps/web/api/page.js` removes legacy static `/analytics.js` script elements before nonce decoration. `tools/tests/test_site_page_handler.test.js` asserts that the rendered response contains no eager Analytics tag and retains the consent manager's accept/reject controls.
+
+**Validation:** exact-head website validation #41167460457 passed; preview inspection verified the rendered homepage, nonce/CSP response and consent accept/reject/revocation flow. Packet-level third-party network capture remains unavailable.
+
+**Recurrence rule:** never treat a nonce as consent. Search every page/template and renderer for direct Analytics/AdSense script tags; only the consent manager may create third-party script elements after explicit acceptance. Keep Songbook excluded.
+
 
 ## Android multi-file import cancellation left durable partial state — 2026-10-31
 
@@ -834,4 +862,4 @@ PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/K
 
 **Regression protection:** Android runtime instrumentation now reloads the durable catalog after a cancelled batch and requires the original starter-only catalog with every referenced media file present.
 
-**Validation:** pending exact-head Android build, lint, framework-free regression, and API 35 runtime instrumentation.
+**Validation:** exact merged-source Android validation #41168859914 passed, including build, lint, domain regression and API 35 emulator runtime checks.
