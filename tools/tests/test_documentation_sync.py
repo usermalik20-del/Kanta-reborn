@@ -1,7 +1,7 @@
 """Regression tests for the implementation-to-documentation guard."""
 import unittest
 
-from tools.check_documentation_sync import required_docs, validate
+from tools.check_documentation_sync import is_website_change, required_docs, validate
 
 
 class DocumentationSyncTests(unittest.TestCase):
@@ -54,6 +54,13 @@ class DocumentationSyncTests(unittest.TestCase):
             "README.md", "apps/web/README.md",
             "docs/ARCHITECTURE.md", "docs/TESTING.md",
         })
+
+    def test_website_job_is_selected_only_for_website_and_disclosure_paths(self):
+        self.assertTrue(is_website_change("apps/web/site-consent.js"))
+        self.assertTrue(is_website_change("apps/ios/PublicSite/privacy.html"))
+        self.assertTrue(is_website_change("apps/android/app/src/main/assets/privacy.txt"))
+        self.assertFalse(is_website_change("apps/android/app/src/main/java/example/Player.java"))
+        self.assertFalse(is_website_change("apps/ios/Sources/App/App.swift"))
 
     def test_missing_docs_fail_and_complete_docs_pass(self):
         changed = {"apps/web/site-consent.js", "apps/web/README.md", "docs/ARCHITECTURE.md"}
