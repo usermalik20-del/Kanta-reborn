@@ -12,6 +12,13 @@ ROOT_DOCS = {
 }
 WORKFLOW_DOCS = {"AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md"}
 TOOL_DOCS = {"docs/TESTING.md"}
+WEBSITE_PATHS = (
+    "apps/web/", "apps/ios/PRIVACY.md", "apps/ios/PublicSite/",
+    "apps/android/app/src/main/assets/privacy.txt", "tools/verify-website.py",
+    "tools/tests/test_vercel_deploy_workflow.py",
+    "tools/tests/test_website_security_contract.py",
+    "tools/tests/test_site_page_handler.test.js",
+)
 PRIVACY_DOCS = {
     "apps/web/privacy.html",
     "apps/android/app/src/main/assets/privacy.txt",
@@ -58,6 +65,10 @@ def changed_paths(base: str, head: str) -> set[str]:
     return {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
 
+def is_website_change(path: str) -> bool:
+    return any(path == prefix or path.startswith(prefix) for prefix in WEBSITE_PATHS)
+
+
 def validate(changed: set[str]) -> tuple[set[str], set[str]]:
     required = required_docs(changed)
     updated_docs = changed & required
@@ -66,14 +77,18 @@ def validate(changed: set[str]) -> tuple[set[str], set[str]]:
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("Usage: check-documentation-sync.py BASE_SHA HEAD_SHA", file=sys.stderr)
+    if len(sys.argv) not in (3, 4):
+        print("Usage: check-documentation-sync.py BASE_SHA HEAD_SHA [GITHUB_OUTPUT]", file=sys.stderr)
         return 2
     try:
         changed = changed_paths(sys.argv[1], sys.argv[2])
     except subprocess.CalledProcessError as exc:
         print(exc.stderr or "Unable to compare the requested Git revisions.", file=sys.stderr)
         return 2
+
+    if len(sys.argv) == 4:
+        with open(sys.argv[3], "a", encoding="utf-8") as output:
+            output.write(f"website_changed={str(any(is_website_change(p) for p in changed)).lower()}\\n")
 
     required, missing = validate(changed)
     if not required:
