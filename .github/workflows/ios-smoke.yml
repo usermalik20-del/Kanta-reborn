@@ -5,6 +5,11 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'apps/ios/**'
+      - '!apps/ios/PRIVACY.md'
+      - '!apps/ios/README.md'
+      - '!apps/ios/AGENTS.md'
+      - '!apps/ios/Docs/**'
+      - '!apps/ios/PublicSite/**'
       - 'tools/check-ios-presentation-contract.py'
       - 'tools/verify-ios-smoke-results.py'
       - 'tools/verify-test-layout.py'
