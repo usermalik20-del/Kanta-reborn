@@ -70,8 +70,8 @@ class DocumentationSyncTests(unittest.TestCase):
     def test_missing_docs_fail_and_complete_docs_pass(self):
         changed = {"apps/web/site-consent.js", "apps/web/README.md", "docs/ARCHITECTURE.md"}
         _, missing = validate(changed)
-        self.assertEqual(missing, {"README.md", "docs/TESTING.md"})
-        complete = changed | {"README.md", "docs/TESTING.md"}
+        self.assertEqual(missing, {"README.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"})
+        complete = changed | {"README.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"}
         _, missing = validate(complete)
         self.assertEqual(missing, set())
 
