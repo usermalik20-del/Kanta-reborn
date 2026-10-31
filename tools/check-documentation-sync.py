@@ -57,6 +57,46 @@ def required_docs(changed_paths: set[str]) -> set[str]:
     return required
 
 
+def commit_exists(revision: str) -> bool:
+    """True when the revision resolves to a commit in this checkout."""
+    if not revision:
+        return False
+    return subprocess.run(
+        ["git", "cat-file", "-e", f"{revision}^{{commit}}"],
+        capture_output=True, text=True,
+    ).returncode == 0
+
+
+def resolve_base(base: str, head: str) -> str:
+    """Return a base revision that exists locally.
+
+    A force-push makes the previously recorded tip unreachable and the runner only
+    fetches reachable history, so ``github.event.before`` can name an object that is
+    not present. Diffing from an absent object aborts the job with a raw git error
+    instead of a verdict, so fall back to the head commit's parent and report it.
+    Fail closed if there is no parent to compare against.
+    """
+    if commit_exists(base):
+        return base
+    parent = subprocess.run(
+        ["git", "rev-parse", f"{head}^"], capture_output=True, text=True,
+    )
+    if parent.returncode == 0:
+        fallback = parent.stdout.strip()
+        print(
+            f"Documentation sync: base {base or '<empty>'} is not available in this checkout "
+            f"(a force-push removes the previous tip); comparing {fallback}...{head} instead.",
+            file=sys.stderr,
+        )
+        return fallback
+    print(
+        f"Documentation sync: base {base or '<empty>'} is not available and {head} has no "
+        "parent, so the change cannot be classified.",
+        file=sys.stderr,
+    )
+    return base
+
+
 def changed_paths(base: str, head: str) -> set[str]:
     result = subprocess.run(
         ["git", "diff", "--name-only", "--no-renames", "--ignore-all-space", "--ignore-blank-lines", f"{base}...{head}"],
@@ -81,7 +121,7 @@ def main() -> int:
         print("Usage: check-documentation-sync.py BASE_SHA HEAD_SHA [GITHUB_OUTPUT]", file=sys.stderr)
         return 2
     try:
-        changed = changed_paths(sys.argv[1], sys.argv[2])
+        changed = changed_paths(resolve_base(sys.argv[1], sys.argv[2]), sys.argv[2])
     except subprocess.CalledProcessError as exc:
         print(exc.stderr or "Unable to compare the requested Git revisions.", file=sys.stderr)
         return 2

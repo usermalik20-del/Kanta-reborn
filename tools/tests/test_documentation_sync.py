@@ -1,4 +1,5 @@
 """Regression tests for the implementation-to-documentation guard."""
+import subprocess
 import unittest
 from pathlib import Path
 from runpy import run_path
@@ -7,6 +8,7 @@ SYNC = run_path(str(Path(__file__).resolve().parents[2] / "tools/check-documenta
 is_website_change = SYNC["is_website_change"]
 required_docs = SYNC["required_docs"]
 validate = SYNC["validate"]
+resolve_base = SYNC["resolve_base"]
 
 
 class DocumentationSyncTests(unittest.TestCase):
@@ -74,6 +76,24 @@ class DocumentationSyncTests(unittest.TestCase):
         complete = changed | {"README.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"}
         _, missing = validate(complete)
         self.assertEqual(missing, set())
+
+
+    def test_available_base_is_kept_unchanged(self):
+        self.assertEqual(resolve_base("HEAD", "HEAD"), "HEAD")
+
+    def test_absent_base_falls_back_to_the_head_parent(self):
+        # A force-push leaves github.event.before naming an unreachable object; the
+        # checkout does not contain it, and diffing from it must not abort the job.
+        unrelated = subprocess.run(
+            ["git", "rev-parse", "HEAD^"], check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        self.assertEqual(resolve_base("0" * 40, "HEAD"), unrelated)
+
+    def test_empty_base_falls_back_instead_of_comparing_nothing(self):
+        unrelated = subprocess.run(
+            ["git", "rev-parse", "HEAD^"], check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        self.assertEqual(resolve_base("", "HEAD"), unrelated)
 
 
 if __name__ == "__main__":
