@@ -18,7 +18,8 @@ on:
       - 'tools/tests/test_vercel_deploy_workflow.py'
       - 'tools/tests/test_website_security_contract.py'
       - '.github/workflows/vercel-deploy.yml'
-      - '.github/workflows/website-validation.yml'
+      - '.github/workflows/**'
+      - 'tools/tests/test_workflow_path_ownership.py'
 permissions:
   contents: read
 concurrency:
