@@ -13,7 +13,6 @@ on:
       - 'tools/check-ios-presentation-contract.py'
       - 'tools/verify-ios-smoke-results.py'
       - 'tools/verify-test-layout.py'
-      - '.github/workflows/ios-smoke.yml'
 permissions:
   contents: read
 concurrency:
