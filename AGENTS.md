@@ -167,7 +167,7 @@ No per-run approval, label, actor or run-count gate applies.
 
 The root workflow triggers are intentionally scoped by ownership and source paths:
 - `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
-- `ios-validation.yml`: iOS source on pull requests and main pushes. Feature branches use the pull-request event only; do not add a duplicate all-branches push trigger.
+- `ios-validation.yml`: iOS build inputs, resources and tests on pull requests and main pushes. Exclude documentation-only `PRIVACY.md`, `PublicSite/**`, `Docs/**`, README and AGENTS paths; feature branches use the pull-request event only.
 - `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
 - `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on native iOS/Android source and exact-SHA release-packaging inputs, plus its own workflow and manual dispatch. Website-only tools are excluded.
 - `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on relevant iOS/Android/tool changes, plus weekly schedule, tags and manual dispatch. Website-only verifier/test edits are excluded.
