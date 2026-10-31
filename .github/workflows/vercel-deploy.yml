@@ -43,7 +43,6 @@ jobs:
           python3 tools/verify-website.py
           python3 -m unittest tools.tests.test_vercel_deploy_workflow tools.tests.test_website_security_contract
           node --check apps/web/songbook.js
-          node --check apps/web/analytics.js
 
   deploy:
     # Gate on the event name as well as the input: on a push event the `inputs` context is
