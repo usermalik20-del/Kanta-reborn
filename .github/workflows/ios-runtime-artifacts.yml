@@ -15,10 +15,6 @@ on:
       - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - 'tools/tests/test_publish_verified_downloads.py'
-      - '.github/workflows/android-validation.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
-      - '.github/workflows/verified-downloads.yml'
 
   pull_request:
     types: [opened, synchronize, reopened]
@@ -33,7 +29,6 @@ on:
       - 'tools/publish-verified-downloads.py'
       - 'tools/tests/test_verified_downloads.py'
       - 'tools/tests/test_publish_verified_downloads.py'
-      - '.github/workflows/verified-downloads.yml'
 
 permissions:
   contents: read
