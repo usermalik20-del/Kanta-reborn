@@ -93,7 +93,7 @@ def main() -> int:
         print(f"  - {path}")
     if len(sys.argv) == 4:
         with open(sys.argv[3], "a", encoding="utf-8") as output:
-            output.write(f"website_changed={str(website_changed).lower()}\\n")
+            output.write(f"website_changed={str(website_changed).lower()}\n")
 
     required, missing = validate(changed)
     if not required:
