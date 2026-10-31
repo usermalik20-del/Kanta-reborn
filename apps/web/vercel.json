@@ -13,46 +13,6 @@
           "value": "strict-origin-when-cross-origin"
         }
       ]
-    },
-    {
-      "source": "/",
-      "headers": []
-    },
-    {
-      "source": "/ios-download",
-      "headers": []
-    },
-    {
-      "source": "/android",
-      "headers": []
-    },
-    {
-      "source": "/guide",
-      "headers": []
-    },
-    {
-      "source": "/features",
-      "headers": []
-    },
-    {
-      "source": "/privacy",
-      "headers": []
-    },
-    {
-      "source": "/legal",
-      "headers": []
-    },
-    {
-      "source": "/licenses",
-      "headers": []
-    },
-    {
-      "source": "/support",
-      "headers": []
-    },
-    {
-      "source": "/songbook",
-      "headers": []
     }
   ],
   "routes": [
@@ -61,43 +21,43 @@
       "dest": "/api/page?route=%2F"
     },
     {
-      "src": "^/ios-download(?:\\\\.html)?$",
+      "src": "^/ios-download$",
       "dest": "/api/page?route=%2Fios-download"
     },
     {
-      "src": "^/android(?:\\\\.html)?$",
+      "src": "^/android$",
       "dest": "/api/page?route=%2Fandroid"
     },
     {
-      "src": "^/guide(?:\\\\.html)?$",
+      "src": "^/guide$",
       "dest": "/api/page?route=%2Fguide"
     },
     {
-      "src": "^/features(?:\\\\.html)?$",
+      "src": "^/features$",
       "dest": "/api/page?route=%2Ffeatures"
     },
     {
-      "src": "^/privacy(?:\\\\.html)?$",
+      "src": "^/privacy$",
       "dest": "/api/page?route=%2Fprivacy"
     },
     {
-      "src": "^/legal(?:\\\\.html)?$",
+      "src": "^/legal$",
       "dest": "/api/page?route=%2Flegal"
     },
     {
-      "src": "^/licenses(?:\\\\.html)?$",
+      "src": "^/licenses$",
       "dest": "/api/page?route=%2Flicenses"
     },
     {
-      "src": "^/support(?:\\\\.html)?$",
+      "src": "^/support$",
       "dest": "/api/page?route=%2Fsupport"
     },
     {
-      "src": "^/songbook(?:\\\\.html)?$",
+      "src": "^/songbook$",
       "dest": "/api/page?route=%2Fsongbook"
     },
     {
-      "src": "^/index\\\\.html$",
+      "src": "^/index\\.html$",
       "dest": "/api/page?route=%2F"
     }
   ],
