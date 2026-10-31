@@ -35,14 +35,14 @@ class WorkflowOwnershipTests(unittest.TestCase):
 
     def test_website_validation_owns_website_contracts(self):
         source = workflow("website-validation.yml")
-        for event in ("push", "pull_request"):
-            section = event_section(source, event)
-            self.assertIn("'apps/web/**'", section)
-            self.assertIn("'tools/verify-website.py'", section)
-            self.assertIn("'apps/ios/PRIVACY.md'", section)
-            self.assertIn("'apps/ios/PublicSite/**'", section)
-            self.assertIn("'apps/android/app/src/main/assets/privacy.txt'", section)
-            self.assertIn("'tools/tests/test_website_security_contract.py'", section)
+        push = event_section(source, "push")
+        for path in ("'apps/web/**'", "'tools/verify-website.py'",
+                     "'apps/ios/PRIVACY.md'", "'apps/ios/PublicSite/**'",
+                     "'apps/android/app/src/main/assets/privacy.txt'",
+                     "'tools/tests/test_website_security_contract.py'"):
+            self.assertIn(path, push)
+        pull_request = event_section(source, "pull_request")
+        self.assertNotIn("paths:", pull_request)
 
     def test_native_release_gates_ignore_website_only_tooling(self):
         for name in ("ios-runtime-artifacts.yml", "ios-visual-walkthrough.yml"):
@@ -83,6 +83,7 @@ class WorkflowOwnershipTests(unittest.TestCase):
             section = event_section(source, event)
             self.assertIn("'.github/workflows/**'", section)
             self.assertIn("'tools/tests/test_workflow_path_ownership.py'", section)
+        self.assertIn("if: github.event_name == 'push'", source)
 
     def test_website_workflow_owns_one_lightweight_pr_documentation_gate(self):
         source = workflow("website-validation.yml")
