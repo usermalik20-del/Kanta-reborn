@@ -84,6 +84,16 @@ class WorkflowOwnershipTests(unittest.TestCase):
             self.assertIn("'.github/workflows/**'", section)
             self.assertIn("'tools/tests/test_workflow_path_ownership.py'", section)
 
+    def test_documentation_sync_is_one_lightweight_required_pr_workflow(self):
+        source = workflow("documentation-sync.yml")
+        self.assertIn("  pull_request:", source)
+        self.assertIn("  push:", source)
+        self.assertIn("branches: [main]", source)
+        self.assertIn("runs-on: ubuntu-latest", source)
+        self.assertIn("timeout-minutes: 5", source)
+        self.assertNotIn("runs-on: macos", source)
+        self.assertIn("tools/check-documentation-sync.py", source)
+
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
         source = workflow("vercel-deploy.yml")
         self.assertNotIn("\n  pull_request:", source)
