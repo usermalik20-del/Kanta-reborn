@@ -16,93 +16,94 @@
     },
     {
       "source": "/",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; connect-src https://www.google-analytics.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/ios-download",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/android",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/guide",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/features",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/privacy",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/legal",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/licenses",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/support",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     },
     {
       "source": "/songbook",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
+      "headers": []
     }
-  ]
+  ],
+  "routes": [
+    {
+      "src": "^/$",
+      "dest": "/api/page?route=%2F"
+    },
+    {
+      "src": "^/ios-download(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Fios-download"
+    },
+    {
+      "src": "^/android(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Fandroid"
+    },
+    {
+      "src": "^/guide(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Fguide"
+    },
+    {
+      "src": "^/features(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Ffeatures"
+    },
+    {
+      "src": "^/privacy(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Fprivacy"
+    },
+    {
+      "src": "^/legal(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Flegal"
+    },
+    {
+      "src": "^/licenses(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Flicenses"
+    },
+    {
+      "src": "^/support(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Fsupport"
+    },
+    {
+      "src": "^/songbook(?:\\\\.html)?$",
+      "dest": "/api/page?route=%2Fsongbook"
+    },
+    {
+      "src": "^/index\\\\.html$",
+      "dest": "/api/page?route=%2F"
+    }
+  ],
+  "functions": {
+    "api/page.js": {
+      "includeFiles": "*.html"
+    }
+  }
 }
