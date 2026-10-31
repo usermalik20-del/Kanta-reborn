@@ -85,6 +85,14 @@ class WorkflowOwnershipTests(unittest.TestCase):
             self.assertIn("'tools/tests/test_workflow_path_ownership.py'", section)
         self.assertIn("if: github.event_name == 'push'", source)
 
+    def test_native_validation_reruns_do_not_cancel_other_attempts(self):
+        for name, prefix in (("android-validation.yml", "android-"),
+                             ("ios-validation.yml", "ios-")):
+            source = workflow(name)
+            self.assertIn("group: " + prefix, source)
+            self.assertIn("${{ github.run_attempt }}", source)
+            self.assertIn("cancel-in-progress: true", source)
+
     def test_website_workflow_owns_one_lightweight_pr_documentation_gate(self):
         source = workflow("website-validation.yml")
         self.assertIn("  pull_request:\n    types:", source)
