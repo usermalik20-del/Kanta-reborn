@@ -1,5 +1,13 @@
 # KANTA Reborn architecture
 
+## Website privacy and third-party integrations
+
+The public website keeps Google Analytics and Google AdSense behind explicit optional consent. `apps/web/api/page.js` owns request-time HTML delivery, per-response nonce generation and the matching CSP; `apps/web/site-consent.js` owns the visitor choice and loads `analytics.js` plus AdSense only after acceptance. The persistent choice can be changed or revoked. The private `/songbook` route is deliberately excluded from the consent injection and third-party integrations. Native iOS and Android builds remain isolated from website scripts and ad SDKs. Actual ad delivery depends on Google publisher approval, account-side Auto Ads configuration and applicable consent-platform requirements. Do not treat code deployment as proof of account approval or live ads.
+
+## Documentation and workflow ownership
+
+`documentation-sync.yml` runs one lightweight check for every pull request. `tools/check-documentation-sync.py` compares the PR's changed paths with the required documentation matrix: web changes require the root and web README plus architecture/testing; Android changes require the root and Android README plus architecture/testing/reconstruction; iOS changes require the root README, iOS engineering instructions and the same engineering docs; workflow edits require `AGENTS.md`, architecture and testing; tooling changes require testing documentation. Privacy-sensitive edits also require the relevant platform disclosure. Missing required docs fail the check. The same guard is executed inside existing main-branch build/deploy workflows, so release checks do not need a second documentation runner.
+
 ## Repository boundaries
 
 `apps/ios` retains the original Swift app structure, project.yml, Package.swift, Sources, Resources and Tests. The original stage-ui snapshot is the selected baseline because it includes the latest recovered stage implementation; missing paths have been restored individually and absent infrastructure reconstructed; hosted Swift tests and unsigned simulator compilation have passed; device/release acceptance remains open. Original Apple bundle identities and iOS 17 minimum remain subject to the recovered project configuration.
