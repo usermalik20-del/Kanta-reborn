@@ -37,6 +37,18 @@ jobs:
         working-directory: apps/ios
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Enforce documentation synchronization before release
+        if: github.event_name != 'pull_request'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
+
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
