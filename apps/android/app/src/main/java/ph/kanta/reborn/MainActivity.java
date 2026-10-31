@@ -604,6 +604,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     VIDEO)));
   }
 
+  /** Controls accessory: settings, companion control, Kanta-Connect host, fullscreen. */
   /** Controls accessory: pitch settings, pitch practice, voice coach, companion control, Kanta-Connect host, fullscreen. */
   private void controlsAccessory(LinearLayout target) {
     target.addView(
@@ -661,6 +662,74 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
    * single-session code to leak.
    */
   private void kantaConnect() {
+    session.startKantaConnectHost();
+    String code = session.kantaConnectHost.pairingCode();
+    if (code == null) {
+      Toast.makeText(this, "Kanta-Connect could not start hosting here.", Toast.LENGTH_LONG).show();
+      return;
+    }
+    String host = KantaConnectInfo.chooseHost(localPrivateAddresses());
+    if (host == null) {
+      session.stopKantaConnectHost();
+      Toast.makeText(this, "Join a Wi-Fi network first: Kanta-Connect needs a local address.", Toast.LENGTH_LONG).show();
+      return;
+    }
+
+    final KantaConnectInfo info = KantaConnectInfo.of(host, code);
+    LinearLayout content = column();
+    int pad = dp(20);
+    content.setPadding(pad, pad, pad, pad);
+
+    TextView heading = text("Kanta-Connect", 20, GOLD);
+    heading.setTypeface(null, android.graphics.Typeface.BOLD);
+    content.addView(heading);
+    content.addView(text(info.endpoint(), 15, Color.WHITE));
+
+    QrEncoder.Symbol symbol = null;
+    try {
+      symbol = QrEncoder.encode(info.link());
+    } catch (RuntimeException tooLong) {
+      symbol = null;
+    }
+    if (symbol != null) {
+      QrCodeView qr = new QrCodeView(this);
+      qr.setSymbol(symbol);
+      LinearLayout.LayoutParams qrParams = new LinearLayout.LayoutParams(dp(232), dp(232));
+      qrParams.gravity = Gravity.CENTER_HORIZONTAL;
+      qrParams.topMargin = dp(10);
+      qrParams.bottomMargin = dp(10);
+      content.addView(qr, qrParams);
+    }
+
+    for (String step : info.instructions()) {
+      content.addView(text("\u2022 " + step, 13, 0xFFAFB8D0));
+    }
+    content.addView(
+        text("Scan the code with the Kanta-Connect phone app, or type the address and code.", 12, 0xFFAFB8D0));
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(content);
+    new AlertDialog.Builder(this)
+        .setView(scroll)
+        .setPositiveButton(
+            "Copy code",
+            (dialog, which) -> copyToClipboard("Kanta-Connect code", info.code))
+        .setNeutralButton(
+            "Copy address",
+            (dialog, which) -> copyToClipboard("Kanta-Connect address", info.endpoint()))
+        .setNegativeButton("Done", null)
+        .show();
+    render();
+  }
+
+  /** Copies a value to the clipboard without ever logging it. */
+  private void copyToClipboard(String label, String value) {
+    ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+        .setPrimaryClip(ClipData.newPlainText(label, value));
+    Toast.makeText(this, label + " copied", Toast.LENGTH_SHORT).show();
+  }
+
+  /** The device's non-loopback IPv4 addresses, in interface order. */
 
   /** Shows pitch settings dialog (sensitivity, target pitch). */
   private void showPitchSettings() {
@@ -801,74 +870,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         .setPositiveButton("Close", null)
         .show();
   }
-    session.startKantaConnectHost();
-    String code = session.kantaConnectHost.pairingCode();
-    if (code == null) {
-      Toast.makeText(this, "Kanta-Connect could not start hosting here.", Toast.LENGTH_LONG).show();
-      return;
-    }
-    String host = KantaConnectInfo.chooseHost(localPrivateAddresses());
-    if (host == null) {
-      session.stopKantaConnectHost();
-      Toast.makeText(this, "Join a Wi-Fi network first: Kanta-Connect needs a local address.", Toast.LENGTH_LONG).show();
-      return;
-    }
-
-    final KantaConnectInfo info = KantaConnectInfo.of(host, code);
-    LinearLayout content = column();
-    int pad = dp(20);
-    content.setPadding(pad, pad, pad, pad);
-
-    TextView heading = text("Kanta-Connect", 20, GOLD);
-    heading.setTypeface(null, android.graphics.Typeface.BOLD);
-    content.addView(heading);
-    content.addView(text(info.endpoint(), 15, Color.WHITE));
-
-    QrEncoder.Symbol symbol = null;
-    try {
-      symbol = QrEncoder.encode(info.link());
-    } catch (RuntimeException tooLong) {
-      symbol = null;
-    }
-    if (symbol != null) {
-      QrCodeView qr = new QrCodeView(this);
-      qr.setSymbol(symbol);
-      LinearLayout.LayoutParams qrParams = new LinearLayout.LayoutParams(dp(232), dp(232));
-      qrParams.gravity = Gravity.CENTER_HORIZONTAL;
-      qrParams.topMargin = dp(10);
-      qrParams.bottomMargin = dp(10);
-      content.addView(qr, qrParams);
-    }
-
-    for (String step : info.instructions()) {
-      content.addView(text("\u2022 " + step, 13, 0xFFAFB8D0));
-    }
-    content.addView(
-        text("Scan the code with the Kanta-Connect phone app, or type the address and code.", 12, 0xFFAFB8D0));
-
-    ScrollView scroll = new ScrollView(this);
-    scroll.addView(content);
-    new AlertDialog.Builder(this)
-        .setView(scroll)
-        .setPositiveButton(
-            "Copy code",
-            (dialog, which) -> copyToClipboard("Kanta-Connect code", info.code))
-        .setNeutralButton(
-            "Copy address",
-            (dialog, which) -> copyToClipboard("Kanta-Connect address", info.endpoint()))
-        .setNegativeButton("Done", null)
-        .show();
-    render();
-  }
-
-  /** Copies a value to the clipboard without ever logging it. */
-  private void copyToClipboard(String label, String value) {
-    ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
-        .setPrimaryClip(ClipData.newPlainText(label, value));
-    Toast.makeText(this, label + " copied", Toast.LENGTH_SHORT).show();
-  }
-
-  /** The device's non-loopback IPv4 addresses, in interface order. */
   private java.util.List<String> localPrivateAddresses() {
     java.util.List<String> addresses = new java.util.ArrayList<>();
     try {
