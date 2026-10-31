@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths:
       - 'apps/ios/**'
+      - 'apps/android/app/src/main/java/ph/kanta/reborn/core/CompanionProtocol.java'
       - '!apps/ios/PRIVACY.md'
       - '!apps/ios/README.md'
       - '!apps/ios/AGENTS.md'
       - '!apps/ios/Docs/**'
       - '!apps/ios/PublicSite/**'
-      - '.github/workflows/ios-validation.yml'
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
@@ -20,11 +20,10 @@ on:
       - '!apps/ios/AGENTS.md'
       - '!apps/ios/Docs/**'
       - '!apps/ios/PublicSite/**'
-      - '.github/workflows/ios-validation.yml'
 permissions:
   contents: read
 concurrency:
-  group: ios-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
+  group: ios-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
   ios:
