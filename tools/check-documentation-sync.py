@@ -14,20 +14,32 @@ ROOT_DOCS = {
 WORKFLOW_DOCS = {"AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md"}
 TOOL_DOCS = {"docs/TESTING.md"}
 PRIVACY_DOCS = {
-    "apps/web": {"apps/web/privacy.html"},
-    "apps/android": {"apps/android/app/src/main/assets/privacy.txt"},
-    "apps/ios": {"apps/ios/PRIVACY.md", "apps/ios/PublicSite/privacy.html"},
+    "apps/web/privacy.html",
+    "apps/android/app/src/main/assets/privacy.txt",
+    "apps/ios/PRIVACY.md",
+    "apps/ios/PublicSite/privacy.html",
 }
+DOC_ONLY_PATHS = {
+    "apps/web/README.md", "apps/web/privacy.html",
+    "apps/android/README.md", "apps/android/app/src/main/assets/privacy.txt",
+    "apps/ios/PRIVACY.md", "apps/ios/README.md", "apps/ios/AGENTS.md",
+}
+
+
+def is_implementation_path(path: str) -> bool:
+    if path in DOC_ONLY_PATHS or path.startswith(("apps/ios/Docs/", "apps/ios/PublicSite/")):
+        return False
+    return path.startswith(("apps/web/", "apps/android/", "apps/ios/"))
 
 
 def required_docs(changed_paths: set[str]) -> set[str]:
     required: set[str] = set()
     for path in changed_paths:
-        if path.startswith("apps/web/"):
+        if is_implementation_path(path) and path.startswith("apps/web/"):
             required.update(ROOT_DOCS["apps/web"])
-        elif path.startswith("apps/android/"):
+        elif is_implementation_path(path) and path.startswith("apps/android/"):
             required.update(ROOT_DOCS["apps/android"])
-        elif path.startswith("apps/ios/"):
+        elif is_implementation_path(path) and path.startswith("apps/ios/"):
             required.update(ROOT_DOCS["apps/ios"])
         elif path.startswith(".github/workflows/"):
             required.update(WORKFLOW_DOCS)
@@ -35,9 +47,7 @@ def required_docs(changed_paths: set[str]) -> set[str]:
             required.update(TOOL_DOCS)
 
         if "privacy" in path.lower() or path.endswith("PrivacyInfo.xcprivacy"):
-            for platform, docs in PRIVACY_DOCS.items():
-                if path.startswith(platform + "/"):
-                    required.update(docs)
+            required.update(PRIVACY_DOCS)
     return required
 
 
