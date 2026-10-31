@@ -32,9 +32,6 @@ on:
       - 'tools/tests/test_prompt_bank.py'
       - 'tools/tests/test_android_*.py'
       - 'tools/tests/test_companion_*.py'
-      - 'tools/prepare-verified-downloads.py'
-      - 'tools/publish-verified-downloads.py'
-      - 'tools/tests/test_verified_downloads.py'
       - 'tools/tests/test_publish_verified_downloads.py'
 
 permissions:
