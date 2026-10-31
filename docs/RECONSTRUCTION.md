@@ -32,8 +32,9 @@ older SHA cannot cancel the current acceptance run.
   SEO meta/title strings. The pages are rebranded and `tools/check-product-branding.py`
   is 4/4 again.
 
-**Pull requests (2026-10-29).** #112 (AdSense deferred until a nonce-capable CSP exists) is
-merged to main. #113 (iOS More-menu destinations pushed through the `NavigationStack` path)
+**Pull requests (2026-10-29).** #112 (AdSense deferred until a nonce-capable CSP existed) was
+merged to main; that historical restriction is now superseded by the nonce-capable,
+consent-gated candidate in open PR #121, which remains unmerged and requires preview acceptance. #113 (iOS More-menu destinations pushed through the `NavigationStack` path)
 was merged and then **reverted**: the iOS visual walkthrough was green on `d3e34f95`,
 `24e091b1` and `37f7ace1`, and failed on both devices on the `80ae286` merge and on
 `2a01654f`. The revert restores a `RootView.swift` byte-identical to the green builds;
