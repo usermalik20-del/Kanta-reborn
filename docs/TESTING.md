@@ -69,6 +69,8 @@ Workflow ownership is enforced by `tools/tests/test_workflow_path_ownership.py`,
 
 Android runtime fixtures live in the test APK behind a signature permission declared only by debug builds. The read-only provider exposes synthetic/original starter bytes and a bounded cyclic SAF tree; no user storage is exposed. Instrumentation checks nested traversal, partial failure, cancellation rollback/reopen, byte integrity, real controller import, custom pad decode/reset and idle intermission gating. Fixture code is excluded from release builds.
 
+Pitch Settings UI test coverage added to `RuntimeChecks`: workspace accessory activation for `ACCESSORY_PITCH_GAME` and `ACCESSORY_LEARNING_ASSISTANT` from Controls; `showPitchSettings()` dialog renders sensitivity slider, note spinner, custom Hz input with validation; `SettingsStore` persistence verified for `pitch.assistantSensitivity`, `pitch.targetHz`, `pitch.targetName`; `LearningAssistant.setSensitivity()` threshold scaling verified via synthetic pitch vectors.
+
 
 
 Android emulator startup uses an explicit shared AVD directory for avdmanager and emulator. The helper detects early process exits, bounds boot/ADB/instrumentation, always collects diagnostics and retires the emulator. Use `owner-approved-android-validation` for Android-only repairs; `owner-approved-validation` still runs both native platforms. No source tests are skipped by the focused label.

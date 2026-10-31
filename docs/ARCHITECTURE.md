@@ -322,6 +322,32 @@ recorded here as an accepted tradeoff rather than an open question, so it is not
 alternative considered and not taken was a smaller model at lower pitch accuracy.
 
 Device acceptance is still required: the confidence threshold, inference latency on real
+
+### Pitch Settings UI (Controls accessory)
+
+
+
+The **Controls** accessory now exposes pitch configuration via three buttons:
+
+
+
+- **Pitch Settings** — Opens a dialog with:
+
+  - **Voice Coach Sensitivity** (SeekBar 0.1–3.0, presets Beginner/Normal/Pro)
+
+  - **Default Target Pitch** (Note spinner C4–B5, custom Hz 20–2000 Hz)
+
+  - Values persist via `SettingsStore`: `pitch.assistantSensitivity`, `pitch.targetHz`, `pitch.targetName`
+
+- **Pitch Practice** → `ACCESSORY_PITCH_GAME` (existing Pitch Meter Game)
+
+- **Voice Coach** → `ACCESSORY_LEARNING_ASSISTANT` (existing Learning Assistant)
+
+
+
+`LearningAssistant.setSensitivity()` scales the perfect/good/close thresholds.
+`PitchGameOverlay` uses stored `targetHz` as fallback when no song key signature is present.
+`SessionController.practiceTargetHz()` still provides song-aware target from MIDI key signature (`0x59` meta).
 hardware, the calibrated accuracy of the estimate, and that the target actually follows a song
 with a key signature have not been measured on a device.
 

@@ -145,6 +145,24 @@ and camera, companion and Kanta-Connect status, and the current message — and 
 It deliberately reports only *whether* Kanta-Connect is hosting, never the pairing code, so
 the report is safe to share. It changes no audio, playback or lifecycle path.
 
+
+**Pitch Settings UI (Controls accessory) — implemented and validated**
+
+
+
+The Controls accessory now exposes pitch configuration:
+
+- **Pitch Settings** dialog: sensitivity slider (0.1–3.0) with presets, note picker (C4–B5), custom Hz input (20–2000 Hz)
+
+- **Pitch Practice** button → `ACCESSORY_PITCH_GAME`
+
+- **Voice Coach** button → `ACCESSORY_LEARNING_ASSISTANT`
+
+
+
+Settings persist via `SettingsStore`: `pitch.assistantSensitivity`, `pitch.targetHz`, `pitch.targetName`.
+`LearningAssistant.setSensitivity()` scales thresholds; `PitchGameOverlay` uses stored `targetHz` as fallback.
+
 Still outstanding for Milestone 4: the Kanta-Connect phone app, voice search, the spectrum
 analyser, custom fonts, diagnostics mode and help/about.
 

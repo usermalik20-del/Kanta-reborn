@@ -53,6 +53,55 @@ PR #30 merged as `0a11058b2d70182b2956d57b2f320edbe19762ee`. Production deployme
 Android companion implementation, automated acceptance, original-byte packaging and website publication are complete. This is an experimental Android-to-Android milestone, not cross-platform or independently audited security acceptance. The recovered iOS plaintext protocol remains incompatible; encrypted iOS interoperability is the next companion milestone, followed by the queued official YouTube integration. Physical two-device networking, audio quality/feedback/latency, scoring calibration, camera/external displays and production app signing remain open. Final handover updates are Markdown only and introduce no runtime, workflow, dependency or asset change.
 
 
+
+## Pitch Settings UI — Controls accessory integration
+
+
+
+The **Controls** accessory now includes three pitch-related entries:
+
+
+
+| Button | Action |
+
+| --- | --- |
+
+| **Pitch Settings** | Opens dialog with sensitivity slider, presets, note picker, custom Hz input |
+
+| **Pitch Practice** | Opens existing Pitch Meter Game accessory (`ACCESSORY_PITCH_GAME`) |
+
+| **Voice Coach** | Opens existing Learning Assistant accessory (`ACCESSORY_LEARNING_ASSISTANT`) |
+
+
+
+### Pitch Settings dialog
+
+
+
+- **Voice Coach Sensitivity** — SeekBar (0.1–3.0, default 1.0) with live value display; presets: Beginner (0.5), Normal (1.0), Pro (2.0). Scales `LearningAssistant` advice thresholds: higher = stricter.
+
+- **Default Target Pitch** — Note spinner (C4–B5, 24 semitones) showing Hz; custom Hz input (20–2000 Hz) with validation.
+
+- All values persist via `SettingsStore` keys:
+
+  - `pitch.assistantSensitivity` (float, default 1.0)
+
+  - `pitch.targetHz` (float, default 440.0)
+
+  - `pitch.targetName` (String, default "A4")
+
+
+
+### Integration
+
+
+
+- `LearningAssistant.setSensitivity()` scales perfect/good/close thresholds.
+
+- `PitchGameOverlay.startGame()` falls back to stored `targetHz` when no song key signature.
+
+- `SessionController.practiceTargetHz()` still provides song-aware target from MIDI key signature (`0x59` meta).
+
 ## PR #51 foreground player lifetime repair — October 18, 2026
 
 The online preview uses a distinct transient UUID per selection and idempotent terminal WebView release. Replacement detaches/destroys the previous player before mounting another. Activity pause clears online and link-entry dialogs; foreground return requires explicit reopen. Main-frame errors/renderer loss retire the preview without local transport/FIFO commands. Domain and native runtime checks cover replace/repeat/background/reopen/stale callbacks; changed-head cloud validation is pending. Audio-focus arbitration and real-device embeds/ads remain open. See ../../docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md.
