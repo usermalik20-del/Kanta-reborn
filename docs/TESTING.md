@@ -25,6 +25,12 @@ Tests and production source must describe the same behavior. Keep recovered test
 
 The website validation job runs `tools/verify-website.py` and `tools/tests/test_website_security_contract.py`. These checks cover all ten public routes, local links and anchors, route-specific CSP, verified download provenance, the shared six-link primary navigation, visible wrapping behavior at narrow viewports, adjacent duplicate feature headings, and stylesheet source hygiene. After a production deployment, inspect the canonical Vercel alias and affected routes; a successful build/deploy alone does not prove mobile usability.
 
+## Documentation synchronization gate
+
+Every pull request runs the lightweight `documentation-sync.yml` workflow. It compares the full PR diff against `tools/check-documentation-sync.py` and fails when required documentation was not changed in the same PR. Web implementation requires `README.md`, `apps/web/README.md`, `docs/ARCHITECTURE.md` and `docs/TESTING.md`; Android requires the root and Android README plus architecture, testing and reconstruction; iOS requires the root README, `apps/ios/AGENTS.md` plus architecture, testing and reconstruction; workflow edits require `AGENTS.md`, architecture and testing; tooling changes require testing documentation. Privacy-related changes also require the platform privacy disclosure. The check verifies that each required file has a real diff, not merely that it exists.
+
+The same guard runs as a step inside existing main-branch platform and deployment jobs. It adds no extra Android, Xcode or simulator jobs. Pull requests get one small Ubuntu documentation check regardless of platform; platform build workflows retain their independent path filters. A documentation-only PR runs the documentation check without allocating native runners.
+
 ## Validation order
 
 1. Run `python3 tools/verify-test-layout.py` to reject orphaned Swift test files, absent target directories and unknown local `@testable` imports. This checks wiring, not Swift types or behavior.
