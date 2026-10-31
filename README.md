@@ -26,6 +26,10 @@ The Compact Workspace redesign implements an **"Always on Stage"** architecture:
 
 Download pages under `apps/web/` (`ios-download.html`, `android.html`, `downloads.json`) link to the verified GitHub Actions artifacts and to the GitHub Release, with matching SHA-256 checksums and artifact IDs.
 
+## Website privacy and advertising
+
+The public website retains Google Analytics (`G-L0QV01MWR4`) and Google AdSense (`ca-pub-6290349358884298`) behind an explicit optional-consent choice. Visitors can accept, reject or later change their choice. The private browser Songbook is excluded. These integrations are website-only: neither native app bundles the website scripts or loads website ads. Ad delivery remains subject to Google's publisher approval and account configuration; see [website operations](apps/web/README.md) and [privacy](apps/web/privacy.html).
+
 ## Repository layout
 
 | Location | Purpose |
@@ -42,22 +46,9 @@ Download pages under `apps/web/` (`ios-download.html`, `android.html`, `download
 - iOS: `apps/ios/Sources/Features/RootView.swift` instantiates `KantaWorkspace(services:presentationState:)` as the root view body.
 - Android: `apps/android/app/src/main/java/ph/kanta/reborn/KantaWorkspace.java` is the root container; `MainActivity.java` sets it as the content view and routes toolbar buttons through `workspace.activateAccessory(...)`.
 
-## CI status
+## CI ownership and release gates
 
-All eight workflows on `main` (`2b5e078`) are green:
-
-| Workflow | Result |
-| --- | --- |
-| iOS unsigned artifacts | Green |
-| iOS visual walkthrough (iPhone) | Green |
-| iOS visual walkthrough (iPad) | Green |
-| Reconstruction validation (iOS) | Green |
-| Reconstruction validation (Android) | Green |
-| Verified-downloads packaging | Green |
-| Website validation | Green |
-| Vercel deploy | Green |
-
-The Android reconstruction job's private-network assertion is environmental flakiness on the emulator; it was confirmed green on re-run.
+GitHub Actions is partitioned by source ownership. Website changes run website validation; Android changes run Android validation; iOS changes run iOS validation. The lightweight documentation-sync check runs on every pull request and fails when an implementation or workflow change is missing its required owner documentation. Cross-platform iOS archive and iPhone/iPad simulator release evidence for Android-only changes is collected on `main` after merge, not on every Android pull request. Vercel production deployment is separate from pull-request validation and runs only from `main` or an explicit dispatch. See [workflow ownership and testing](docs/TESTING.md). CI status is commit-specific; a green result on an earlier SHA is not evidence for a later commit.
 
 ## Open release gates
 
