@@ -61,6 +61,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Enforce documentation synchronization before packaging
+        if: github.event_name == 'push'
         working-directory: .
         env:
           DOC_SYNC_BASE: ${{ github.event.before }}
