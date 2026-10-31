@@ -21,7 +21,6 @@ concurrency:
   cancel-in-progress: false
 jobs:
   validate:
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -29,6 +28,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Enforce documentation synchronization before production deployment
+        if: github.event_name == 'push'
         working-directory: .
         env:
           DOC_SYNC_BASE: ${{ github.event.before }}
@@ -51,7 +51,7 @@ jobs:
     # Gate on the event name as well as the input: on a push event the `inputs` context is
     # null rather than an empty string, so `inputs.configure_domain != ''` alone would be
     # true and would run the domain step (or skip the deploy steps) on a normal release.
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.configure_domain != ''))
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.configure_domain != '')
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
