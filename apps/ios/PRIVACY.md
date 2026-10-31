@@ -39,7 +39,7 @@ Optional iCloud Save prepares selected settings and files for your Apple iCloud 
 
 ## Website hosting and beta feedback
 
-The website is served by Vercel, which may receive IP, browser and request information to operate and secure the website. The current static pages have no advertising trackers, analytics scripts or tracking cookies. Website access records are distinct from the app's local songs and microphone use.
+The website is served by Vercel, which may receive IP, browser and request information to operate and secure the website. The public website (not either native app) offers Google Analytics (G-L0QV01MWR4) and Google AdSense (publisher ca-pub-6290349358884298) only after a visitor accepts optional website technologies. Rejecting prevents both from loading. If accepted, Google may receive IP address, browser/device identifiers, page and interaction events, cookie or similar-technology data and ad-request information for measurement and advertising. Google processes this information under its own privacy terms. The private website Songbook excludes both integrations. The iOS app does not bundle or run these website scripts; this website disclosure does not describe app tracking. Website access records are distinct from the app's local songs and microphone use.
 
 If you submit feedback through TestFlight, Apple may share your comments and related testing information with the developer. Please avoid sharing private songs, codes or passwords.
 
