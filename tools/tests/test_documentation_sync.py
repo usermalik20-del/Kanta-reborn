@@ -14,7 +14,7 @@ class DocumentationSyncTests(unittest.TestCase):
         required = required_docs({"apps/web/site-consent.js"})
         self.assertEqual(required, {
             "README.md", "apps/web/README.md",
-            "docs/ARCHITECTURE.md", "docs/TESTING.md",
+            "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md",
         })
 
     def test_android_changes_require_android_release_docs(self):
