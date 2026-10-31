@@ -27,72 +27,21 @@ PUBLIC_ROUTES = {
 }
 SITEMAP_CHANGEFREQS = {"always", "hourly", "daily", "weekly", "monthly", "yearly", "never"}
 
-STRICT_CSP_DIRECTIVES = {
-    "default-src": frozenset({"'none'"}),
-    "img-src": frozenset({"'self'"}),
-    "script-src": frozenset({"'self'"}),
-    "style-src": frozenset({"'self'", "'unsafe-inline'"}),
-    "connect-src": frozenset({"'none'"}),
-    "base-uri": frozenset({"'none'"}),
-    "form-action": frozenset({"'none'"}),
-    "frame-ancestors": frozenset({"'none'"}),
-}
-HOMEPAGE_CSP_DIRECTIVES = {
-    "default-src": frozenset({"'none'"}),
-    "img-src": frozenset({"'self'"}),
-    "script-src": frozenset({"'self'", "https://www.googletagmanager.com"}),
-    "style-src": frozenset({"'self'", "'unsafe-inline'"}),
-    "connect-src": frozenset({"https://www.google-analytics.com"}),
-    "base-uri": frozenset({"'none'"}),
-    "form-action": frozenset({"'none'"}),
-    "frame-ancestors": frozenset({"'none'"}),
-}
-
-
-def parse_csp(policy):
-    directives = {}
-    for segment in policy.split(";"):
-        tokens = segment.strip().split()
-        if not tokens:
-            continue
-        name, *sources = tokens
-        if name in directives:
-            raise ValueError("Duplicate Content-Security-Policy directive: " + name)
-        directives[name] = frozenset(sources)
-    return directives
-
-
 def validate_csp_config(config):
-    rules = config.get("headers", [])
-    csp_key = "content-security-policy"
-    csp_rules = [
-        rule for rule in rules
-        if any(header.get("key", "").lower() == csp_key for header in rule.get("headers", []))
-    ]
-    assert len(csp_rules) == len(PUBLIC_ROUTES), (
-        "Every public route must have exactly one explicit CSP rule",
-        [rule.get("source") for rule in csp_rules],
-    )
-    sources = [rule.get("source") for rule in csp_rules]
-    assert len(sources) == len(set(sources)), ("Duplicate route-specific CSP rules", sources)
-    assert set(sources) == set(PUBLIC_ROUTES), ("CSP routes differ from the public route map", sources)
-
-    wildcard_rules = [rule for rule in rules if rule.get("source") == "/(.*)"]
-    assert len(wildcard_rules) == 1, "Expected one wildcard rule for non-CSP security headers"
+    routes = {rule.get("src"): rule.get("dest") for rule in config.get("routes", [])}
+    assert routes.get("^/$") == "/api/page?route=%2F"
+    for route in PUBLIC_ROUTES:
+        if route == "/":
+            continue
+        assert routes.get("^" + route + "$") == "/api/page?route=%2F" + route.lstrip("/")
+    assert config.get("functions", {}).get("api/page.js", {}).get("includeFiles") == "*.html"
     assert not any(
-        header.get("key", "").lower() == csp_key
-        for header in wildcard_rules[0].get("headers", [])
-    ), "The wildcard rule must not broaden the Content-Security-Policy"
-
-    for rule in csp_rules:
-        policy_values = [
-            header["value"] for header in rule.get("headers", [])
-            if header.get("key", "").lower() == csp_key
-        ]
-        assert len(policy_values) == 1, ("Route must have one CSP value", rule.get("source"))
-        expected = HOMEPAGE_CSP_DIRECTIVES if rule["source"] == "/" else STRICT_CSP_DIRECTIVES
-        parsed = parse_csp(policy_values[0])
-        assert parsed == expected, ("Unexpected Content-Security-Policy", rule["source"], parsed)
+        header.get("key", "").lower() == "content-security-policy"
+        for rule in config.get("headers", []) for header in rule.get("headers", [])
+    ), "CSP must be generated per request by the page function"
+    renderer = (WEB / "api/page.js").read_text(encoding="utf-8")
+    assert "randomBytes(18)" in renderer and "'strict-dynamic'" in renderer
+    assert 'route === "/songbook"' in renderer
 
 
 class Page(HTMLParser):
@@ -292,9 +241,9 @@ def main():
 
     config = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))
     validate_csp_config(config)
-    assert "/analytics.js" in pages["index.html"].scripts, "Homepage analytics must use the same-origin script"
-    assert all(pages["index.html"].scripts), "Homepage inline scripts bypass the route-specific CSP"
     assert (WEB / "analytics.js").is_file(), "Missing same-origin analytics initializer"
+    assert (WEB / "site-consent.js").is_file(), "Missing website consent controller"
+    assert (WEB / "site-consent.css").is_file(), "Missing website consent styles"
 
     manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
     assert manifest["repository"] == "usermalik20-del/Kanta-reborn"
