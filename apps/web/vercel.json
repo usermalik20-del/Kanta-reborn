@@ -11,11 +11,26 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noai, noimageai"
         }
       ]
     }
   ],
   "routes": [
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(gptbot|claudebot|anthropic-ai|ccbot|bytespider|meta-externalagent|meta-webindexer|amazonbot|cohere-ai|cohere-training-data-crawler|diffbot|imagesiftbot|omgilibot|timpibot|webzio-extended|youbot|dataforseobot|scrapy).*"
+        }
+      ],
+      "status": 403
+    },
     {
       "src": "^/$",
       "dest": "/api/page?route=%2F"

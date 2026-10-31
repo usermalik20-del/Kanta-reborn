@@ -1,6 +1,6 @@
 # Unfinished work
 
-**Last updated:** 2026-10-29 · **main:** `9a6177e` · **public release source:** `41c8ddde`
+**Last updated:** 2026-10-31 · **main:** `8210b26` · **public release source:** `6a5db6b`
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
@@ -74,6 +74,12 @@ These must never be presented as working. They are deliberately out of scope or 
   TestFlight.
 - **iOS ↔ Android companion interoperability.**
 - **Any correctness claim about a Meg payload's contents**, because the format is undocumented.
+- **Any claim that the website is unscrapable, or that the declared AI-training opt-out is
+  enforced against a non-compliant crawler.** `robots.txt` constrains only crawlers that choose
+  to honor it, and a browser-impersonating client behind residential proxies is
+  indistinguishable from a visitor at the HTTP layer. The accurate statement is that the site
+  declares an opt-out, refuses the declared crawler user agents at the edge and in the
+  renderer, and keeps search-engine indexing intact.
 
 ## G. From review mining (2026-10-29)
 
@@ -112,6 +118,24 @@ after Android validation failed three times. What is left:
 | H6 | **Relocate `AchievementSystem` out of `core/`** | It needs `SharedPreferences` and `Color`, so it is excluded from `compileCoreRegression`. `core/` is meant to be framework-free, and the exclusion list is growing instead of the boundary being enforced. | It lives beside the other Android-facing classes (`MicrophoneInput`, `PartyAudio`) and the exclusion entry is removed. | S |
 | H7 | **Persist pitch settings** | Preferred target pitch and assistant sensitivity reset every session; listed in the owner's enhancement set. | Both survive an app restart through `SettingsStore`. | S |
 | H8 | **Shortcut access to the pitch features** | They are reachable only from the workspace accessory bar. | Reachable from the Controls menu as well, without adding a second entry point that bypasses the single-accessory rule. | S |
+
+## I. Website crawler and scraping defense (2026-10-31)
+
+Implemented locally on `feat/website-scraping-defense` (based on `8210b26`): the declared
+policy in `apps/web/robots.txt`, the `X-Robots-Tag` preference and the `routes` refusal in
+`apps/web/vercel.json`, and the `isBlockedCrawler()` gate in `apps/web/api/page.js`, with the
+cross-file consistency contract in `tools/verify-website.py` and
+`tools/tests/test_website_security_contract.py`. Full rationale and effectiveness limits:
+[docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md).
+
+| ID | Item | Why it matters | Acceptance criterion | Effort |
+| --- | --- | --- | --- | --- |
+| I1 | **Verify the refusal on a real deployment** | Nothing in this change has run in production. The `has`/`status` route semantics come from Vercel's published configuration schema, not from an observed deployment, and the local JavaScript assertions are unexecuted because `node` scripts do not run in the authoring environment. | On a deployed revision: a declared crawler user agent receives `403` on both an HTML route and a static asset such as `/style.css`; `Googlebot` receives `200` with rendered HTML; `/robots.txt` serves the new policy with the canonical sitemap line. Recorded with the response headers, not the status alone. | S |
+| I2 | **Rate limiting on the renderer path** | A stateless serverless function holds no counters, so neither the function gate nor a `vercel.json` rule can limit request rate. Bulk collection at a low, crawler-like rate is currently unlimited. | A shared-state limiter (edge counter, Vercel Firewall rule or an upstream proxy) returns `429` past a documented threshold, and a normal visitor is unaffected. Requires the I5 decision first. | M |
+| I3 | **Per-request gating of static assets** | `style.css`, `songbook.js`, `downloads.json` and the image assets are served by Vercel without invoking `api/page.js`. The edge user-agent rule is the only layer covering them, and a UA-spoofing client bypasses it. | An edge layer refuses non-browser clients on static paths without breaking normal asset delivery, evidenced by a deployed check plus a browser acceptance pass on all ten public routes. | M |
+| I4 | **Legal clause for automated collection** | The site's terms do not yet state that automated collection for model training is not permitted, so the policy has no contractual backstop. | The owner approves wording and it is published in `apps/web/legal.html`; no clause is added without that approval, because the wording is an owner decision, not an engineering one. | S |
+| I5 | **Edge/WAF layer decision (Vercel Firewall vs Cloudflare in front of Vercel)** | Both I2 and I3 need an edge layer, and both options carry non-code consequences: Vercel Firewall needs the applicable plan tier, Cloudflare changes DNS ownership of the domain and interacts with the pending is-a.bot registration (A2). | The owner decides; the chosen layer is configured, its tier requirement recorded, and the decision written into `docs/WEBSITE_SCRAPING_DEFENSE.md` with what it does and does not cover. | M |
+| I6 | **Fold the canonical hostname into the domain sweep** | `apps/web/robots.txt` pins `https://kanta-public.vercel.app` in its `Sitemap:` line, exactly like the sitemap and the verifier's `PUBLIC_BASE_URL`. A half-moved domain would leave `robots.txt` advertising a stale sitemap host. | `robots.txt` changes in the same commit as the rest of A5, and `tools/verify-website.py` already fails if the `Sitemap:` line stops matching `PUBLIC_BASE_URL`. | S |
 
 ## F. Recently closed
 
