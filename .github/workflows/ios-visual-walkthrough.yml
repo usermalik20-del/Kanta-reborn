@@ -33,7 +33,6 @@ on:
       - '!apps/ios/PublicSite/**'
       - 'tools/capture-ios-runtime.py'
       - 'tools/verify-android-companion-interface.py'
-      - 'tools/tests/test_publish_verified_downloads.py'
 
 permissions:
   contents: read
