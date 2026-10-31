@@ -43,6 +43,9 @@ jobs:
           python3 tools/verify-website.py
           python3 -m unittest tools.tests.test_vercel_deploy_workflow tools.tests.test_website_security_contract
           node --check apps/web/songbook.js
+          node --check apps/web/api/page.js
+          node --check apps/web/site-consent.js
+          node --test tools/tests/test_site_page_handler.test.js
           node --check apps/web/analytics.js
 
   deploy:
