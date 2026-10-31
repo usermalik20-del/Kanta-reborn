@@ -94,6 +94,8 @@ class WorkflowOwnershipTests(unittest.TestCase):
         self.assertIn("website_changed:", source)
         self.assertIn("tools/check-documentation-sync.py", source)
         self.assertIn("needs: documentation-sync", source)
+        self.assertIn("DOC_SYNC_BASE: ${{ github.event.pull_request.base.sha }}", source)
+        self.assertIn("DOC_SYNC_HEAD: ${{ github.event.pull_request.head.sha }}", source)
         self.assertTrue((WORKFLOWS / "documentation-sync.yml").exists() is False)
 
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
