@@ -16,7 +16,6 @@ const PAGES = {
   "/support": "support.html",
   "/songbook": "songbook.html"
 };
-const ADSENSE_CLIENT = "ca-pub-6290349358884298";
 const CONSENT_UI = `
 <div id="kanta-cookie-consent" class="kanta-cookie-consent" role="region" aria-label="Website privacy choices" hidden>
   <div class="kanta-cookie-copy"><strong>Privacy choices</strong><p>KANTA uses Google Analytics and Google AdSense on this website only. With your permission, Google may use cookies or similar technologies to measure visits and show ads. These tools are not part of the KANTA iOS or Android apps. Read our <a href="/privacy#website">website privacy notice</a>.</p></div>
