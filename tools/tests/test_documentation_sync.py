@@ -35,10 +35,17 @@ class DocumentationSyncTests(unittest.TestCase):
         self.assertEqual(required_docs({"tools/verify-website.py"}), {"docs/TESTING.md"})
 
     def test_privacy_changes_require_platform_disclosure(self):
-        self.assertIn("apps/web/privacy.html", required_docs({"apps/web/privacy.html"}))
-        self.assertIn("apps/android/app/src/main/assets/privacy.txt",
-                      required_docs({"apps/android/app/src/main/assets/privacy.txt"}))
-        self.assertIn("apps/ios/PRIVACY.md", required_docs({"apps/ios/PRIVACY.md"}))
+        required = required_docs({"apps/web/privacy.html"})
+        self.assertEqual(required, {
+            "apps/web/privacy.html", "apps/android/app/src/main/assets/privacy.txt",
+            "apps/ios/PRIVACY.md", "apps/ios/PublicSite/privacy.html",
+        })
+
+    def test_privacy_copy_edits_do_not_allocate_native_documentation_sets(self):
+        required = required_docs({"apps/ios/PRIVACY.md", "apps/ios/PublicSite/privacy.html",
+                                 "apps/android/app/src/main/assets/privacy.txt"})
+        self.assertNotIn("apps/ios/AGENTS.md", required)
+        self.assertNotIn("docs/RECONSTRUCTION.md", required)
 
     def test_missing_docs_fail_and_complete_docs_pass(self):
         changed = {"apps/web/site-consent.js", "apps/web/README.md", "docs/ARCHITECTURE.md"}
