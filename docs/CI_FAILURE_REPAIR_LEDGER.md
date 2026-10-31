@@ -822,3 +822,16 @@ so they are closed as superseded rather than merged.
 PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41094983755) failed in `test_rejects_mixed_source_revisions`. The publisher correctly rejected an Android/iOS source-SHA mismatch with the message `Android and iOS artifacts must share one exact source SHA`, while the new test expected the different phrase `same exact source SHA`. This was a stale assertion string, not a release-gate or publisher behavior defect.
 
 **Repair:** commit [f318a13](https://github.com/usermalik20-del/Kanta-reborn/commit/f318a13b0dd97f2efda0c220e8718b113d0fa9ea) aligned the assertion with the explicit rejection message. The subsequent exact-SHA publisher/contract run [#41095375672](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41095375672) passed. The least-privilege permission refinement was included in that successful contract run. Subsequent polling, packaged-artifact checksum, and legacy-to-new website-manifest compatibility refinements are being revalidated on the latest PR head.
+
+
+## Android multi-file import cancellation left durable partial state — 2026-10-31
+
+**Finding:** `LibraryRepository.importBatch` previously called `persist()` from each successful song or SoundFont import before the batch completed. If a later item was cancelled or the batch failed, the catch path restored the in-memory catalog and deleted staged files but did not restore the already-written metadata. A fresh repository instance could therefore reload an imported song row whose media file had been deleted, or a SoundFont selection that no longer existed.
+
+**Root cause:** per-item persistence bypassed the batch's existing rollback boundary. The batch's final `persist()` was not the only durable commit.
+
+**Repair:** skip per-item persistence while `batching` is true. The batch performs one atomic `AtomicFile` commit after all items have completed; cancellation or commit failure restores the prior state and deletes staged files without publishing partial metadata.
+
+**Regression protection:** Android runtime instrumentation now reloads the durable catalog after a cancelled batch and requires the original starter-only catalog with every referenced media file present.
+
+**Validation:** pending exact-head Android build, lint, framework-free regression, and API 35 runtime instrumentation.
