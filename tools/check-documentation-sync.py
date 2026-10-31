@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from pathlib import PurePosixPath
 
 ROOT_DOCS = {
     "apps/web": {"README.md", "apps/web/README.md", "docs/ARCHITECTURE.md", "docs/TESTING.md"},
@@ -61,9 +60,7 @@ def changed_paths(base: str, head: str) -> set[str]:
 
 def validate(changed: set[str]) -> tuple[set[str], set[str]]:
     required = required_docs(changed)
-    updated_docs = {path for path in changed if path in required or
-                    path == "README.md" or path.startswith(("docs/", "apps/")) and
-                    (path.endswith(".md") or path.endswith(".html") or path.endswith(".txt"))}
+    updated_docs = changed & required
     missing = required - updated_docs
     return required, missing
 
