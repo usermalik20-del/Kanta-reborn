@@ -310,7 +310,9 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(
               () ->
-                  contains(activity.getWindow().getDecorView(), "Wired / USB monitoring")
+                  contains(
+                          activity.getWindow().getDecorView(),
+                          "Wired / USB / Bluetooth monitoring")
                       && contains(activity.getWindow().getDecorView(), "Turn on microphone")),
           "Voice settings did not expand from Control");
       check(
@@ -334,7 +336,11 @@ public final class RuntimeChecks extends Instrumentation {
                   .findViewWithTag("kanta.voice.settings")
                   .performClick());
       check(
-          state(() -> !contains(activity.getWindow().getDecorView(), "Wired / USB monitoring")),
+          state(
+              () ->
+                  !contains(
+                      activity.getWindow().getDecorView(),
+                      "Wired / USB / Bluetooth monitoring")),
           "Collapsed voice settings still occupied Control");
       check(
           state(

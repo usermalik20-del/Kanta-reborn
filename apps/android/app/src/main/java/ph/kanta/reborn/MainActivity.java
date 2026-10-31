@@ -1044,16 +1044,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
     body.addView(
         button(
-            session.monitor.enabled() ? "Turn off monitoring" : "Wired / USB monitoring",
+            session.monitor.enabled()
+                ? "Turn off monitoring"
+                : "Wired / USB / Bluetooth monitoring",
             this::toggleMonitoring));
     monitorReading = text("", 13, CYAN);
     body.addView(monitorReading);
     refreshMicrophoneReading();
     body.addView(
         text(
-            "Optional voice output for connected wired or USB equipment. Use headphones, start"
-                + " quietly and check your equipment volume. Speaker and Bluetooth monitoring are"
-                + " blocked when reported by Android. Older Android reports only one output. This"
+            "Optional voice output for connected wired, USB or Bluetooth headset equipment. Use"
+                + " headphones, start quietly and check your equipment volume. Bluetooth headsets"
+                + " use Android communication audio, so sound is mono call quality with higher"
+                + " delay and needs Android 12 or newer. Speaker, Bluetooth-speaker and unknown"
+                + " reported routes are blocked. Older Android reports only one output. This"
                 + " experimental feature still needs device testing for sound and delay.",
             12,
             Color.WHITE));
@@ -1497,8 +1501,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     List<android.media.AudioDeviceInfo> outputs = session.monitor.outputs();
     if (outputs.isEmpty()) {
       session.message =
-          "Connect wired or USB headphones or an audio interface. Speaker and Bluetooth monitoring"
-              + " are unavailable.";
+          "Connect wired or USB headphones, an audio interface or a Bluetooth headset. Speaker"
+              + " and Bluetooth-speaker monitoring are unavailable.";
       session.publish();
       return;
     }
@@ -1507,10 +1511,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       String label =
           outputs.get(i).getProductName().toString().replaceAll("[\\p{Cntrl}]", " ").trim();
       labels[i] =
-          label.isEmpty() ? "Wired / USB output" : label.substring(0, Math.min(80, label.length()));
+          label.isEmpty()
+              ? "Wired / USB / Bluetooth output"
+              : label.substring(0, Math.min(80, label.length()));
     }
     new AlertDialog.Builder(this)
-        .setTitle("Select wired / USB output")
+        .setTitle("Select wired / USB / Bluetooth output")
         .setItems(labels, (dialog, selected) -> session.startMonitor(outputs.get(selected)))
         .setNegativeButton("Cancel", null)
         .show();
