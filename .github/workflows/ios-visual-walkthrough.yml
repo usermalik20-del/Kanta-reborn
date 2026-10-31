@@ -54,7 +54,28 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Enforce documentation synchronization before release
+        if: github.event_name != 'pull_request'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
+
+      - name: Enforce documentation synchronization before release
+        if: github.event_name != 'pull_request'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
       - name: Validate resources and generate project
         run: |
           python3 ../../tools/verify-test-layout.py
@@ -103,6 +124,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - name: Validate resources and generate project
         run: |
