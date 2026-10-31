@@ -206,3 +206,11 @@ public-review mining pass.
   on a device, so the port is not device-accepted.
 - `KantaConnectHost` has no on-device two-host test; only the request/response contract is
   unit-shaped.
+
+## Website consent and AdSense nonce candidate — 2026-10-31
+
+PR #121 is an open draft candidate on `feat/website-consent-adsense-nonce-20261031`. It preserves the existing Google Analytics measurement ID and adds consent-gated AdSense using a request-time Vercel renderer with a fresh per-response CSP nonce. The visitor can accept, reject or later change/revoke optional consent. The private browser Songbook is excluded, and the native app binaries remain isolated from website analytics/ads. The website README, root README, architecture, testing, privacy disclosures and this reconstruction ledger are updated in the same PR.
+
+**CI topology:** one lightweight documentation-sync job is embedded in `website-validation.yml` and runs on every PR; it compares the complete PR base/head diff, requires substantive changes in owner docs, and classifies website paths so website tests run only when website/privacy paths changed. Android and iOS build workflows retain independent source filters. Android privacy asset changes still trigger Android validation because the disclosure ships inside the APK. iOS PublicSite/privacy documentation does not allocate Xcode runners. The main-branch release/deploy workflows run the same documentation guard inside their existing jobs, without creating another platform runner. No production deployment or merge is authorized by this candidate.
+
+**Status:** the documentation-sync job and workflow/release contract tests have passed on the current candidate; website route/nonce preview acceptance and the current Android validation run remain separate checks. Do not treat the code path as live ads: Google publisher approval, Auto Ads account settings and applicable consent-platform requirements remain external.
