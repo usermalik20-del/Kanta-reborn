@@ -271,13 +271,15 @@ final class LibraryRepository {
       while (codes.contains(String.valueOf(reference))) reference++;
       Song song = new Song(id, title, "", String.valueOf(reference), destination.getName(), false);
       songs.add(song);
-      try {
-        persist();
-      } catch (Exception e) {
-        notifyComplete(false, e.getMessage());
-        songs.remove(song);
-        if (created) destination.delete();
-        throw e;
+      if (!batching) {
+        try {
+          persist();
+        } catch (Exception e) {
+          notifyComplete(false, e.getMessage());
+          songs.remove(song);
+          if (created) destination.delete();
+          throw e;
+        }
       }
       notifyProgress(fileSize, fileSize, "Import complete");
       notifyComplete(true, "Import complete");
@@ -353,7 +355,7 @@ final class LibraryRepository {
         if (c != null && c.moveToFirst() && !c.isNull(0))
           bankName = c.getString(0).substring(0, Math.min(120, c.getString(0).length()));
       }
-      persist();
+      if (!batching) persist();
       if (created && batching) batchFiles.add(destination);
     } catch (Exception | LinkageError e) {
       notifyComplete(false, e.getMessage());
