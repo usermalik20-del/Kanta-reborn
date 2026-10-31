@@ -43,8 +43,8 @@ function makeCsp(nonce) {
 }
 
 function renderHtml(source, nonce, includeGoogleTools) {
-  let html = source.replace(/<script\\b([^>]*)>/gi, (tag, attrs) =>
-    /\\bnonce\\s*=/i.test(attrs) ? tag : '<script nonce="' + nonce + '"' + attrs + ">"
+  let html = source.replace(/<script\b([^>]*)>/gi, (tag, attrs) =>
+    /\bnonce\s*=/i.test(attrs) ? tag : '<script nonce="' + nonce + '"' + attrs + ">"
   );
   if (includeGoogleTools) {
     html = html.replace("</body>", CONSENT_UI.replace("<script defer src=\"/site-consent.js\"></script>", '<script nonce="' + nonce + '" defer src="/site-consent.js"></script>') + "</body>");
