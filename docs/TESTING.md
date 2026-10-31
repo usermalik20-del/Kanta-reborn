@@ -23,7 +23,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 
 ## Website route and responsive navigation contract
 
-The website validation job runs `tools/verify-website.py` and `tools/tests/test_website_security_contract.py`. These checks cover all ten public routes, local links and anchors, route-specific CSP, verified download provenance, the shared six-link primary navigation, visible wrapping behavior at narrow viewports, adjacent duplicate feature headings, and stylesheet source hygiene. After a production deployment, inspect the canonical Vercel alias and affected routes; a successful build/deploy alone does not prove mobile usability.
+The website validation job runs `tools/verify-website.py` and `tools/tests/test_website_security_contract.py`. These checks cover all ten public routes, local links and anchors, identical restrictive route-specific CSP, absence of third-party analytics/advertising scripts, verified download provenance, the shared six-link primary navigation, visible wrapping behavior at narrow viewports, adjacent duplicate feature headings, and stylesheet source hygiene. After a production deployment, inspect the canonical Vercel alias and affected routes; a successful build/deploy alone does not prove mobile usability.
 
 ## Validation order
 
