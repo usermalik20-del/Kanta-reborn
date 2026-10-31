@@ -15,6 +15,7 @@ on:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/ios/**'
+      - 'apps/android/app/src/main/java/ph/kanta/reborn/core/CompanionProtocol.java'
       - '!apps/ios/PRIVACY.md'
       - '!apps/ios/README.md'
       - '!apps/ios/AGENTS.md'
