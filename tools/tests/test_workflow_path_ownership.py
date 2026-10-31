@@ -74,8 +74,8 @@ class WorkflowOwnershipTests(unittest.TestCase):
         pr = event_section(source, "pull_request")
         self.assertIn("'apps/android/app/src/main/java/ph/kanta/reborn/core/CompanionProtocol.java'", pr)
 
-    def test_workflow_contracts_have_their_own_lightweight_trigger(self):
-        source = workflow("workflow-contract-validation.yml")
+    def test_release_contract_workflow_checks_every_workflow_edit(self):
+        source = workflow("verified-downloads.yml")
         for event in ("push", "pull_request"):
             section = event_section(source, event)
             self.assertIn("'.github/workflows/**'", section)
