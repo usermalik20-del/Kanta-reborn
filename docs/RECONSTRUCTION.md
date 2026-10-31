@@ -163,6 +163,8 @@ The Controls accessory now exposes pitch configuration:
 Settings persist via `SettingsStore`: `pitch.assistantSensitivity`, `pitch.targetHz`, `pitch.targetName`.
 `LearningAssistant.setSensitivity()` scales thresholds; `PitchGameOverlay` uses stored `targetHz` as fallback.
 
+**Compile repair after the first landing.** The Android build rejected this source: `showPitchSettings()` had been inserted over the body of `copyToClipboard(String, String)`, four section comments used `#` instead of `//`, and `SettingsStore` was used without an import. The missing import stayed hidden because `javac` reports parse errors first and never reaches symbol resolution. All three are repaired, and the diff against the last validated baseline now contains only the intended additions.
+
 Still outstanding for Milestone 4: the Kanta-Connect phone app, voice search, the spectrum
 analyser, custom fonts, diagnostics mode and help/about.
 

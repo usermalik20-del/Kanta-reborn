@@ -17,6 +17,43 @@ Every failed CI job with an engineering fix must receive a record containing:
 
 After a relevant CI run becomes green, update this ledger **in a separate docs-only commit** recording the actual run ID and SHA, then confirm the documentation commit did not alter production behavior. If a docs-only commit triggers a new workflow, don't imply the prior green result validated the new SHA's source; state the distinction. If validation fails, retain the candidate record and continue the repair. Never rewrite a historical failure as though it never occurred.
 
+## All workflows — documentation-sync guard aborted on an unreachable base (2026-10-31)
+
+**Fingerprint:** every job of `android-validation.yml`, `ios-validation.yml`, `ios-runtime-artifacts.yml` and `ios-visual-walkthrough.yml`; step `Enforce documentation synchronization before release`; log phrase `fatal: Invalid symmetric difference expression <sha>...<sha>` immediately followed by `##[error]Process completed with exit code 2.` The whole job dies in under 35 s and the artifact is the empty 234-byte bundle, because no build step ever runs.
+
+**Affected SHA / first observed run:** introduced with `661e640` (Android run [#374](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41177031732)) and continuing through `3b62b2f`, `09e2b12`, `3688225`, `f6fcebe` and `076e2b0`. Confirmed on all four workflows at `076e2b0`.
+
+**Cause (confirmed, two distinct defects):**
+1. The step derives its base from `github.event.before`, which names the branch tip that a push replaces. A force-push makes that commit unreachable, and `actions/checkout` with `fetch-depth: 0` fetches reachable history only, so the object is absent from the runner. `git diff <absent>...<head>` aborts the process, so the guard surfaced a raw git crash instead of a documentation verdict and failed the job before any build, lint or emulator step. Reproduced exactly by passing a bogus base SHA to the checker.
+2. The commits that landed the pitch feature genuinely omitted the owner documents the guard requires, which is the guard's intended verdict and was fixed by including them.
+
+**Fix:** [`4ffe9e0`](https://github.com/usermalik20-del/Kanta-reborn/commit/4ffe9e0) — `tools/check-documentation-sync.py` now resolves the base itself: an available revision is used unchanged, an unavailable one falls back to the head commit's parent with an explicit notice on stderr, and a head commit with no parent fails closed. `docs/TESTING.md` records the behaviour and the rule that the guard must never be satisfied by force-pushing again or by widening its path filters.
+
+**Regression coverage:** `tools/tests/test_documentation_sync.py` gains three cases — available base kept unchanged, absent base falls back to the head parent, empty base falls back. The tool always prints the fallback, so the weakened comparison is visible rather than silent.
+
+**Validation:** `4ffe9e0` — `KANTA website validation` and `Verified download packaging` both green on the push, and Android validation advanced past this step into `Build, lint and domain regression tests`. Locally the exact failing input now exits 0 with the fallback notice where it previously exited 2.
+
+**Recurrence rule:** never compare against `github.event.before` without verifying the object exists in the checkout, and never force-push a main-branch release path. Read the FIRST failing step before editing source: six consecutive commits were spent changing Java for a failure that occurred before any compiler ran.
+
+## Android — pitch-settings source did not compile (2026-10-31)
+
+**Fingerprint:** Android job, step `Build, lint and domain regression tests`; `Execution failed for task ':app:compileDebugJavaWithJavac'`; `MainActivity.java:727: error: illegal start of expression`, `:737/:771/:790/:826: error: illegal character: '#'`.
+
+**Affected SHA / first observed run:** `4ffe9e0` (run [#41185625711](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41185625711)) — the first run in which this step executed at all, because every earlier run died in the documentation-sync step above.
+
+**Cause (confirmed, three defects in one file):**
+1. `showPitchSettings()` was inserted over the body of `copyToClipboard(String, String)`, truncating that method — `illegal start of expression`.
+2. Four section comments were written with `#` instead of `//` (Python comment syntax in Java source) — `illegal character: '#'`.
+3. `ph.kanta.reborn.settings.SettingsStore` was used without an import. This was masked because `javac` reports parse errors and never reaches symbol resolution, so it would have been the *next* failure after the syntax errors were cleared.
+
+**Fix:** repaired on main; the diff of `MainActivity.java` against the last validated baseline (`fc6bb7a`, Android run #373) now contains only the intended additions — a `SettingsStore` import, the pitch buttons in `controlsAccessory`, and the new `showPitchSettings()` method. Nothing else in the file changed.
+
+**Regression coverage:** the Android `Build, lint and domain regression tests` step itself, which now receives the source because the documentation-sync step no longer aborts. Brace-balance and string-aware scanners can detect structure only and never prove a file compiles.
+
+**Validation:** pending the next Android validation run on the repaired SHA.
+
+**Recurrence rule:** treat the first clean parse as an unverified compile — after clearing syntax errors, re-check every type the change introduces against its import. Never generate Java source through a Python string builder that also emits Python comments, and never insert a method by line index without re-reading the method it lands in.
+
 ## Android — predictive-back lint regression (2026-10-27)
 
 **Fingerprint:** reconstruction [run #40485807248](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40485807248), Android job `android`, step `Build, lint and domain regression tests`; `GestureBackNavigation` at `apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java:177`.

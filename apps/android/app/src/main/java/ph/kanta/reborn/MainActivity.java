@@ -25,6 +25,7 @@ import ph.kanta.reborn.stage.StagePresenterImpl;
 import ph.kanta.reborn.core.connect.KantaConnectInfo;
 import ph.kanta.reborn.core.connect.QrEncoder;
 import ph.kanta.reborn.stage.QrCodeView;
+import ph.kanta.reborn.settings.SettingsStore;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
@@ -604,7 +605,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     VIDEO)));
   }
 
-
   /** Controls accessory: pitch settings, pitch practice, voice coach, companion control, Kanta-Connect host, fullscreen. */
   private void controlsAccessory(LinearLayout target) {
     target.addView(
@@ -722,6 +722,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   /** Copies a value to the clipboard without ever logging it. */
   private void copyToClipboard(String label, String value) {
+    ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+        .setPrimaryClip(ClipData.newPlainText(label, value));
+    Toast.makeText(this, label + " copied", Toast.LENGTH_SHORT).show();
+  }
 
   /** Shows pitch settings dialog (sensitivity, target pitch). */
   private void showPitchSettings() {
@@ -734,7 +738,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     title.setGravity(android.view.Gravity.CENTER);
     content.addView(title);
 
-    # Sensitivity
+    // Sensitivity
     TextView sensLabel = text("Voice Coach Sensitivity", 16, Color.WHITE);
     sensLabel.setPadding(0, dp(16), 0, dp(4));
     content.addView(sensLabel);
@@ -768,7 +772,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       }
     });
 
-    # Preset buttons
+    // Preset buttons
     LinearLayout presets = row();
     presets.setOrientation(LinearLayout.HORIZONTAL);
     presets.setPadding(0, dp(8), 0, dp(8));
@@ -787,7 +791,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     content.addView(presets);
 
-    # Target Pitch
+    // Target Pitch
     TextView targetLabel = text("Default Target Pitch", 16, Color.WHITE);
     targetLabel.setPadding(0, dp(16), 0, dp(4));
     content.addView(targetLabel);
@@ -823,7 +827,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       public void onNothingSelected(AdapterView<?> parent) {}
     });
 
-    # Manual Hz input
+    // Manual Hz input
     LinearLayout hzRow = row();
     hzRow.setOrientation(LinearLayout.HORIZONTAL);
     hzRow.setPadding(0, dp(8), 0, dp(8));

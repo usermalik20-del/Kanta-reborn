@@ -348,6 +348,8 @@ The **Controls** accessory now exposes pitch configuration via three buttons:
 `LearningAssistant.setSensitivity()` scales the perfect/good/close thresholds.
 `PitchGameOverlay` uses stored `targetHz` as fallback when no song key signature is present.
 `SessionController.practiceTargetHz()` still provides song-aware target from MIDI key signature (`0x59` meta).
+
+Ownership: `SettingsStore` (`ph.kanta.reborn.settings`) is the single persisted store for the pitch keys. `MainActivity` owns the dialog and writes through it, `PitchGameOverlay` reads the fallback target, and `LearningAssistant` holds no persistence of its own. `AchievementSystem` moved to `ph.kanta.reborn.feature.achievement` so the framework-free `core/` boundary and its empty-classpath `coreRegression` compile stay intact.
 hardware, the calibrated accuracy of the estimate, and that the target actually follows a song
 with a key signature have not been measured on a device.
 
