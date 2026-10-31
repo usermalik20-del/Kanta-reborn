@@ -1110,6 +1110,7 @@ public final class CoreRegressionTests {
     checks += MkmdDecoderRegressionTests.run();
     checks += SpicePitchRegressionTests.run();
     checks += MidiKeyRegressionTests.run();
+    checks += LyricWordAnimationRegressionTests.run();
     checks += QrEncoderRegressionTests.run();
     checks += KantaConnectInfoRegressionTests.run();
     checks += ScoreCelebrationRegressionTests.run();

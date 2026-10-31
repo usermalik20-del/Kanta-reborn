@@ -134,7 +134,7 @@ public final class SettingsStore {
   public boolean getAutoReserve() { return prefs.getBoolean(KEY_AUTO_RESERVE, false); }
   public void setAutoReserve(boolean v) { prefs.edit().putBoolean(KEY_AUTO_RESERVE, v).apply(); }
 
-  public int getCountdownLength() { return prefs.getInt(KEY_COUNTDOWN_LENGTH, 3); }
+  public int getCountdownLength() { return prefs.getInt(KEY_COUNTDOWN_LENGTH, 4); }
   public void setCountdownLength(int v) { prefs.edit().putInt(KEY_COUNTDOWN_LENGTH, v).apply(); }
 
   public boolean getShowIntroCard() { return prefs.getBoolean(KEY_SHOW_INTRO_CARD, true); }

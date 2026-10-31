@@ -7,41 +7,58 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
-import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.Shader;
+import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
-import java.util.Locale;
-
 /**
- * Full-screen countdown (3-2-1-GO) with animated ring.
+ * Full-screen fun countdown: "Ready ⏱️" -> 1 -> 2 -> ... -> N -> "Kanta 🎤".
  *
- * <p>Per {@link replica/design/components.md} CountdownStage spec.
+ * <p>The count is source-free presentation only; playback still starts exactly when the owner
+ * reports the last cue complete. Reduced-motion shows the same sequence without the pop/orbit.
  */
 public final class CountdownStage extends View {
 
-  private static final int RING_STROKE_DP = 8;
-  private static final int ANIM_DURATION_MS = 250; // per number
-  private static final int GO_FLASH_DURATION_MS = 300;
+  private static final int RING_STROKE_DP = 10;
+  private static final int STEP_DURATION_MS = 800;
+  private static final int REDUCED_STEP_MS = 500;
+  private static final int ORBIT_DOTS = 12;
 
-  private final Paint ringPaint;
   private final Paint ringTrackPaint;
+  private final Paint ringProgressPaint;
   private final Paint textPaint;
-  private final Paint goFlashPaint;
+  private final Paint subTextPaint;
+  private final Paint glowPaint;
+  private final Paint dotPaint;
   private final int ringStrokePx;
-  private final int centerX;
-  private final int centerY;
-  private final int radius;
+  private final Typeface numberTypeface = Typeface.create("sans-serif-black", Typeface.BOLD);
+  private final Typeface labelTypeface = Typeface.DEFAULT;
 
   private ValueAnimator currentAnimator;
-  private int currentNumber = 3;
-  private float ringProgress = 0f;
-  private boolean isGoFlash = false;
-  private float goFlashScale = 1f;
   private CountdownListener listener;
   private boolean reducedMotion = false;
+  private boolean running = false;
+  private boolean completed = false;
+
+  private int maxSeconds = 4;
+  private int currentStep = 0; // 0 = Ready, 1..N = numbers, N+1 = Kanta
+  private float stepProgress = 0f;
+
+  private final Runnable reducedStep =
+      new Runnable() {
+        @Override
+        public void run() {
+          if (!running) return;
+          currentStep++;
+          stepProgress = 0f;
+          scheduleStep();
+        }
+      };
 
   public CountdownStage(Context context) {
     this(context, null);
@@ -54,131 +71,108 @@ public final class CountdownStage extends View {
     float density = context.getResources().getDisplayMetrics().density;
     ringStrokePx = (int) (RING_STROKE_DP * density);
 
-    // Ring track
     ringTrackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     ringTrackPaint.setStyle(Paint.Style.STROKE);
     ringTrackPaint.setStrokeWidth(ringStrokePx);
-    ringTrackPaint.setColor(0x4D1A1A1A); // hairline at 0.3 alpha
+    ringTrackPaint.setColor(0x4D1A1A1A);
     ringTrackPaint.setStrokeCap(Paint.Cap.ROUND);
 
-    // Ring progress
-    ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    ringPaint.setStyle(Paint.Style.STROKE);
-    ringPaint.setStrokeWidth(ringStrokePx);
-    ringPaint.setColor(0xFFA24BFF); // karaoke_countdown_ring
-    ringPaint.setStrokeCap(Paint.Cap.ROUND);
+    ringProgressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    ringProgressPaint.setStyle(Paint.Style.STROKE);
+    ringProgressPaint.setStrokeWidth(ringStrokePx);
+    ringProgressPaint.setStrokeCap(Paint.Cap.ROUND);
 
-    // Countdown number text
     textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    textPaint.setTextSize(72 * density); // 72sp per design tokens
-    textPaint.setColor(0xFFFFFFFF); // karaoke_countdown_number
-    textPaint.setFakeBoldText(true);
     textPaint.setTextAlign(Paint.Align.CENTER);
-    textPaint.setTextScaleX(1.0f);
+    textPaint.setFakeBoldText(true);
 
-    // GO flash
-    goFlashPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    goFlashPaint.setTextSize(72 * density);
-    goFlashPaint.setColor(0xFF3DE0A8); // live color
-    goFlashPaint.setFakeBoldText(true);
-    goFlashPaint.setTextAlign(Paint.Align.CENTER);
+    subTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    subTextPaint.setTextSize(20 * density);
+    subTextPaint.setColor(0xFFE9FFFF);
+    subTextPaint.setTextAlign(Paint.Align.CENTER);
 
-    centerX = 0; // will be set in onSizeChanged
-    centerY = 0;
-    radius = 0;
+    glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    glowPaint.setStyle(Paint.Style.FILL);
+
+    dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    dotPaint.setStyle(Paint.Style.FILL);
 
     reducedMotion = isReducedMotionEnabled(context);
   }
 
   private boolean isReducedMotionEnabled(Context context) {
-    float scale = android.provider.Settings.Global.getFloat(
-        context.getContentResolver(),
-        android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f);
+    float scale =
+        android.provider.Settings.Global.getFloat(
+            context.getContentResolver(),
+            android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f);
     return scale == 0f;
   }
 
-  @Override
-  protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-    super.onSizeChanged(w, h, oldw, oldh);
-    // Center and radius will be computed in onDraw
-  }
-
-  /** Starts the countdown. */
+  /** Starts the countdown. A non-positive request falls back to the KANTA default of four. */
   public void start(int countdownSeconds, CountdownListener listener) {
+    cancel();
     this.listener = listener;
-    this.currentNumber = countdownSeconds;
-    this.ringProgress = 0f;
-    this.isGoFlash = false;
-    this.goFlashScale = 1f;
+    this.maxSeconds =
+        countdownSeconds <= 0 ? 4 : Math.min(9, Math.max(1, countdownSeconds));
+    this.currentStep = 0;
+    this.stepProgress = 0f;
+    this.running = true;
+    this.completed = false;
     setVisibility(VISIBLE);
-    animateNumber();
+    invalidate();
+    scheduleStep();
   }
 
-  private void animateNumber() {
-    if (currentNumber <= 0) {
-      // Show "GO"
-      showGoFlash();
+  private void scheduleStep() {
+    if (!running) return;
+    if (currentStep > maxSeconds + 1) {
+      finish();
       return;
     }
-
-    if (listener != null) {
-      listener.onTick(currentNumber);
+    if (currentStep >= 1 && currentStep <= maxSeconds && listener != null) {
+      // Contract keeps "remaining" semantics while the visible label counts up 1..N.
+      listener.onTick(maxSeconds - currentStep + 1);
     }
-
     if (reducedMotion) {
-      // Skip animation, just tick
-      currentNumber--;
-      animateNumber();
+      invalidate();
+      postDelayed(reducedStep, REDUCED_STEP_MS);
       return;
     }
 
+    if (currentAnimator != null) {
+      currentAnimator.cancel();
+      currentAnimator = null;
+    }
     currentAnimator = ValueAnimator.ofFloat(0f, 1f);
-    currentAnimator.setDuration(ANIM_DURATION_MS);
+    currentAnimator.setDuration(STEP_DURATION_MS);
     currentAnimator.setInterpolator(new DecelerateInterpolator());
-    currentAnimator.addUpdateListener(animation -> {
-      ringProgress = (float) animation.getAnimatedValue();
-      invalidate();
-    });
-    currentAnimator.addListener(new AnimatorListenerAdapter() {
-      @Override
-      public void onAnimationEnd(Animator animation) {
-        ringProgress = 1f;
-        currentNumber--;
-        animateNumber();
-      }
-    });
+    currentAnimator.addUpdateListener(
+        animation -> {
+          stepProgress = (float) animation.getAnimatedValue();
+          invalidate();
+        });
+    currentAnimator.addListener(
+        new AnimatorListenerAdapter() {
+          @Override
+          public void onAnimationEnd(Animator animation) {
+            if (!running) return;
+            currentAnimator = null;
+            currentStep++;
+            stepProgress = 0f;
+            scheduleStep();
+          }
+        });
     currentAnimator.start();
   }
 
-  private void showGoFlash() {
-    isGoFlash = true;
-    if (listener != null) {
+  private void finish() {
+    running = false;
+    setVisibility(GONE);
+    if (!completed && listener != null) {
+      completed = true;
       listener.onComplete();
     }
-
-    if (reducedMotion) {
-      // Just show GO briefly
-      postDelayed(() -> {
-        setVisibility(GONE);
-        if (listener != null) listener.onComplete();
-      }, 500);
-      invalidate();
-      return;
-    }
-
-    ValueAnimator flash = ValueAnimator.ofFloat(1f, 1.2f, 1f);
-    flash.setDuration(GO_FLASH_DURATION_MS);
-    flash.addUpdateListener(animation -> {
-      goFlashScale = (float) animation.getAnimatedValue();
-      invalidate();
-    });
-    flash.addListener(new AnimatorListenerAdapter() {
-      @Override
-      public void onAnimationEnd(Animator animation) {
-        setVisibility(GONE);
-      }
-    });
-    flash.start();
   }
 
   @Override
@@ -187,40 +181,120 @@ public final class CountdownStage extends View {
 
     int w = getWidth();
     int h = getHeight();
-    int cx = w / 2;
-    int cy = h / 2;
-    int r = Math.min(w, h) / 3;
+    if (w <= 0 || h <= 0) return;
 
-    // Draw semi-transparent background
-    canvas.drawColor(0xEB0A0614); // canvas at 0.92 alpha
+    float density = getResources().getDisplayMetrics().density;
+    float cx = w / 2f;
+    float cy = h / 2f;
+    float radius = Math.min(w, h) * 0.28f;
 
-    if (isGoFlash) {
-      // Draw GO with flash scale
-      canvas.save();
-      canvas.translate(cx, cy);
-      canvas.scale(goFlashScale, goFlashScale);
-      Rect bounds = new Rect();
-      goFlashPaint.getTextBounds("GO", 0, 2, bounds);
-      canvas.drawText("GO", 0, -bounds.top, goFlashPaint);
-      canvas.restore();
-    } else if (currentNumber > 0) {
-      // Draw ring track
-      canvas.drawCircle(cx, cy, r, ringTrackPaint);
+    canvas.drawColor(0xF00A0614);
 
-      // Draw ring progress (0 to 360 degrees)
-      float sweepAngle = ringProgress * 360f;
-      canvas.drawArc(cx - r, cy - r, cx + r, cy + r, -90, sweepAngle, false, ringPaint);
+    RectF ring = new RectF(cx - radius, cy - radius, cx + radius, cy + radius);
 
-      // Draw number
-      String text = String.valueOf(currentNumber);
-      Rect bounds = new Rect();
-      textPaint.getTextBounds(text, 0, text.length(), bounds);
-      canvas.drawText(text, cx, cy - bounds.top, textPaint);
+    float total = maxSeconds + 2f;
+    float overall = Math.min(1f, (currentStep + stepProgress) / total);
+    float pop = 0.62f + 0.38f * stepProgress;
+    boolean finalStep = currentStep > maxSeconds;
+
+    glowPaint.setShader(
+        new LinearGradient(
+            ring.left,
+            ring.top,
+            ring.right,
+            ring.bottom,
+            new int[] {0x55A24BFF, 0x3300F0FF},
+            null,
+            Shader.TileMode.CLAMP));
+    canvas.drawCircle(cx, cy, radius * 1.12f, glowPaint);
+    glowPaint.setShader(null);
+
+    canvas.drawArc(ring, 0f, 360f, false, ringTrackPaint);
+
+    ringProgressPaint.setShader(
+        new LinearGradient(
+            ring.left,
+            ring.top,
+            ring.right,
+            ring.bottom,
+            new int[] {0xFFFF3D8B, 0xFFA24BFF, 0xFF00F0FF},
+            null,
+            Shader.TileMode.CLAMP));
+    canvas.drawArc(ring, -90f, overall * 360f, false, ringProgressPaint);
+    ringProgressPaint.setShader(null);
+
+    drawOrbitDots(canvas, cx, cy, radius, overall, density);
+    if (finalStep) drawConfetti(canvas, cx, cy, radius, stepProgress, density);
+
+    String label;
+    String sub;
+    int color;
+    if (currentStep == 0) {
+      label = "Ready \u23F1\uFE0F";
+      sub = "GET SET";
+      color = 0xFFFFD24A;
+    } else if (currentStep <= maxSeconds) {
+      label = String.valueOf(currentStep);
+      sub = "GET READY";
+      color = 0xFFFFFFFF;
+    } else {
+      label = "Kanta \uD83C\uDFA4";
+      sub = "SING!";
+      color = 0xFF00F0FF;
+    }
+
+    boolean glyphLabel = currentStep == 0 || finalStep;
+    textPaint.setTypeface(glyphLabel ? labelTypeface : numberTypeface);
+    textPaint.setTextSize((glyphLabel ? 58f : 96f) * density);
+    textPaint.setColor(color);
+    subTextPaint.setColor(finalStep ? 0xFF00F0FF : 0xFFE9FFFF);
+
+    Paint.FontMetrics metrics = textPaint.getFontMetrics();
+    float baseline = cy - (metrics.ascent + metrics.descent) / 2f;
+
+    canvas.save();
+    canvas.translate(cx, baseline);
+    canvas.scale(pop, pop);
+    canvas.drawText(label, 0f, 0f, textPaint);
+    if (currentStep == 0 || currentStep <= maxSeconds || finalStep) {
+      canvas.drawText(sub, 0f, 46f * density, subTextPaint);
+    }
+    canvas.restore();
+  }
+
+  private void drawOrbitDots(
+      Canvas canvas, float cx, float cy, float radius, float overall, float density) {
+    dotPaint.setColor(0x99FFFFFF);
+    for (int i = 0; i < ORBIT_DOTS; i++) {
+      double angle = overall * Math.PI * 2 + i * (Math.PI * 2 / ORBIT_DOTS);
+      float sx = cx + (float) Math.cos(angle) * radius * 1.35f;
+      float sy = cy + (float) Math.sin(angle) * radius * 1.35f;
+      float r = (2.5f + 2.5f * stepProgress) * density;
+      canvas.drawCircle(sx, sy, r, dotPaint);
+    }
+  }
+
+  private void drawConfetti(
+      Canvas canvas, float cx, float cy, float radius, float progress, float density) {
+    int[] colors = {0xFFFF3D8B, 0xFF00F0FF, 0xFFFFD24A, 0xFFA24BFF};
+    float eased = (float) Math.sin(progress * Math.PI / 2f);
+    for (int i = 0; i < 24; i++) {
+      double angle = i * (Math.PI * 2 / 24);
+      float distance = radius * (0.35f + 1.15f * eased);
+      float x = cx + (float) Math.cos(angle) * distance;
+      float y = cy + (float) Math.sin(angle) * distance;
+      int alpha = (int) (235 * (1f - progress));
+      int color = colors[i % colors.length];
+      dotPaint.setColor((alpha << 24) | (color & 0x00FFFFFF));
+      canvas.drawCircle(x, y, (2.5f + 2.5f * (1f - progress)) * density, dotPaint);
     }
   }
 
   /** Cancels any running animation. */
   public void cancel() {
+    running = false;
+    completed = false;
+    removeCallbacks(reducedStep);
     if (currentAnimator != null) {
       currentAnimator.cancel();
       currentAnimator = null;

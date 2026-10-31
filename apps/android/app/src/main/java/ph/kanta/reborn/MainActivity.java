@@ -21,6 +21,7 @@ import ph.kanta.reborn.content.ContentScanner;
 import ph.kanta.reborn.core.catalog.SongCatalog;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.stage.StagePresenter;
 import ph.kanta.reborn.stage.StagePresenterImpl;
 import ph.kanta.reborn.core.connect.KantaConnectInfo;
 import ph.kanta.reborn.core.connect.QrEncoder;
@@ -255,6 +256,38 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     row.addView(view, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
   }
 
+  /**
+   * Starts a new reservation through the fun Ready/1-4/Kanta countdown. Resuming an already
+   * prepared song, or a request with no reservation, keeps the existing single-owner transport
+   * path and does not delay playback.
+   */
+  private void playWithCountdown() {
+    if (session.playing || !session.ready || session.loading) {
+      session.toggle();
+      return;
+    }
+    if (session.player != null || stagePresenter == null || session.queue.peek() == null) {
+      session.toggle();
+      return;
+    }
+    int seconds = new SettingsStore(this).getCountdownLength();
+    if (seconds <= 0) {
+      session.toggle();
+      return;
+    }
+    stagePresenter.startCountdown(
+        seconds,
+        new StagePresenter.CountdownListener() {
+          @Override
+          public void onTick(int remaining) {}
+
+          @Override
+          public void onComplete() {
+            session.toggle();
+          }
+        });
+  }
+
   private void render() {
     if (isFinishing() || isDestroyed()) return;
     reconcileOnlinePreviewWithLocalPlayback();
@@ -352,7 +385,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             Color.WHITE);
     stagePane.addView(nowPlaying);
     LinearLayout transport = row();
-    playButton = button("Play", session::toggle);
+    playButton = button("Play", this::playWithCountdown);
     addWeighted(transport, playButton);
     nextButton = button("Next", session::next);
     addWeighted(transport, nextButton);
