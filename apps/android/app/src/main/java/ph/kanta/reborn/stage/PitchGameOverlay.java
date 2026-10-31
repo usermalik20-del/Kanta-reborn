@@ -12,6 +12,7 @@ import ph.kanta.reborn.core.AudioService;
 import ph.kanta.reborn.core.AudioServiceImpl;
 import ph.kanta.reborn.core.PitchData;
 import ph.kanta.reborn.core.PitchSource;
+import ph.kanta.reborn.settings.SettingsStore;
 
 /**
  * Overlay for the Pitch Meter Game feature.
@@ -31,6 +32,7 @@ public class PitchGameOverlay extends FrameLayout {
     private KaraokeGameManager gameManager;
     private AudioService audioService;
     private PitchSource pitchSource;
+    private SettingsStore settingsStore;
     private boolean isVisible = false;
     private PitchGameListener listener;
 
@@ -123,6 +125,15 @@ public class PitchGameOverlay extends FrameLayout {
     }
 
     public void startGame(float targetPitchHz) {
+        // If no explicit target provided (0 or negative), use stored default
+        if (targetPitchHz <= 0 && settingsStore != null) {
+            targetPitchHz = settingsStore.getPitchTargetHz();
+        }
+        // Default to A4 if still not set
+        if (targetPitchHz <= 0) {
+            targetPitchHz = 440.0f;
+        }
+
         if (gameManager == null) {
             gameManager = new KaraokeGameManager();
             gameManager.setListener(new KaraokeGameManager.GameListener() {
@@ -176,6 +187,11 @@ public class PitchGameOverlay extends FrameLayout {
         pitchMeterView.setTargetPitch(targetPitchHz);
         pitchMeterView.setScore(0);
         pitchMeterView.setStreak(0);
+
+        // Initialize settings store if needed
+        if (settingsStore == null) {
+            settingsStore = new SettingsStore(getContext());
+        }
 
         // Setup audio service
         if (audioService == null) {
@@ -260,8 +276,9 @@ public class PitchGameOverlay extends FrameLayout {
         if (audioService instanceof AudioServiceImpl) {
             ((AudioServiceImpl) audioService).setTargetPitch(targetPitchHz);
         }
-        if (gameManager != null && !gameManager.isGameActive()) {
-            // Only update if not actively playing
+        // Also persist if user explicitly sets a new target
+        if (settingsStore != null && targetPitchHz > 0) {
+            settingsStore.setPitchTargetHz(targetPitchHz);
         }
     }
 

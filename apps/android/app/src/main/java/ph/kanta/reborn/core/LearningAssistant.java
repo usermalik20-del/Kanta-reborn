@@ -11,10 +11,11 @@ import java.util.Random;
  */
 public class LearningAssistant {
 
-    private static final float PERFECT_THRESHOLD = 0.9f;
-    private static final float GOOD_THRESHOLD = 0.7f;
-    private static final float CLOSE_THRESHOLD = 0.4f;
+    private static final float BASE_PERFECT_THRESHOLD = 0.9f;
+    private static final float BASE_GOOD_THRESHOLD = 0.7f;
+    private static final float BASE_CLOSE_THRESHOLD = 0.4f;
 
+    private float sensitivity = 1.0f; // 1.0 = normal, >1.0 = stricter, <1.0 = forgiving
     private String currentSongKey = "C major";
     private List<String> adviceHistory = new ArrayList<>();
     private final Random random = new Random();
@@ -65,6 +66,18 @@ public class LearningAssistant {
 
     public LearningAssistant() {}
 
+    /**
+     * Sets the sensitivity for pitch evaluation.
+     * @param sensitivity 1.0 = normal, >1.0 = stricter thresholds, <1.0 = more forgiving
+     */
+    public void setSensitivity(float sensitivity) {
+        this.sensitivity = Math.max(0.1f, Math.min(3.0f, sensitivity)); // clamp 0.1-3.0
+    }
+
+    public float getSensitivity() {
+        return sensitivity;
+    }
+
     public void setSongKey(String songKey) {
         this.currentSongKey = songKey;
     }
@@ -81,9 +94,19 @@ public class LearningAssistant {
         float accuracy = pitchData.accuracy;
         int cents = pitchData.centsOffset;
 
-        if (accuracy >= PERFECT_THRESHOLD) {
+        // Apply sensitivity to thresholds
+        float perfectThreshold = BASE_PERFECT_THRESHOLD * sensitivity;
+        float goodThreshold = BASE_GOOD_THRESHOLD * sensitivity;
+        float closeThreshold = BASE_CLOSE_THRESHOLD * sensitivity;
+
+        // Clamp thresholds to valid range
+        perfectThreshold = Math.min(1.0f, Math.max(0.1f, perfectThreshold));
+        goodThreshold = Math.min(1.0f, Math.max(0.1f, goodThreshold));
+        closeThreshold = Math.min(1.0f, Math.max(0.1f, closeThreshold));
+
+        if (accuracy >= perfectThreshold) {
             advice = getRandomAdvice(PITCH_PERFECT_ADVICE);
-        } else if (accuracy >= GOOD_THRESHOLD) {
+        } else if (accuracy >= goodThreshold) {
             advice = getRandomAdvice(PITCH_CLOSE_ADVICE);
         } else if (cents < 0 && Math.abs(cents) > 20) {
             advice = getRandomAdvice(PITCH_TOO_LOW_ADVICE);
@@ -117,10 +140,15 @@ public class LearningAssistant {
         int perfect = 0, good = 0, close = 0, off = 0;
         int sharpCount = 0, flatCount = 0;
 
+        // Use sensitivity-adjusted thresholds
+        float perfectThreshold = Math.min(1.0f, BASE_PERFECT_THRESHOLD * sensitivity);
+        float goodThreshold = Math.min(1.0f, BASE_GOOD_THRESHOLD * sensitivity);
+        float closeThreshold = Math.min(1.0f, BASE_CLOSE_THRESHOLD * sensitivity);
+
         for (PitchData pd : recentPitches) {
-            if (pd.accuracy >= PERFECT_THRESHOLD) perfect++;
-            else if (pd.accuracy >= GOOD_THRESHOLD) good++;
-            else if (pd.accuracy >= CLOSE_THRESHOLD) close++;
+            if (pd.accuracy >= perfectThreshold) perfect++;
+            else if (pd.accuracy >= goodThreshold) good++;
+            else if (pd.accuracy >= closeThreshold) close++;
             else off++;
 
             if (pd.centsOffset > 20) sharpCount++;
@@ -170,7 +198,7 @@ public class LearningAssistant {
         for (PitchData pd : recentPitches) {
             if (pd.centsOffset > 30) sharpCount++;
             else if (pd.centsOffset < -30) flatCount++;
-            if (pd.accuracy < CLOSE_THRESHOLD) offCount++;
+            if (pd.accuracy < BASE_CLOSE_THRESHOLD) offCount++;
         }
 
         if (offCount > recentPitches.size() * 0.4) {

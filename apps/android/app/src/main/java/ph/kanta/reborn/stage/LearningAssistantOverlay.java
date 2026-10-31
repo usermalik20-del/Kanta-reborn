@@ -15,6 +15,7 @@ import ph.kanta.reborn.core.LearningAssistant;
 import ph.kanta.reborn.core.PitchData;
 import ph.kanta.reborn.core.PitchSource;
 import ph.kanta.reborn.feature.achievement.AchievementSystem;
+import ph.kanta.reborn.settings.SettingsStore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,7 @@ public class LearningAssistantOverlay extends FrameLayout {
     private AchievementSystem achievementSystem;
     private AudioService audioService;
     private PitchSource pitchSource;
+    private SettingsStore settingsStore;
     private boolean isVisible = false;
     private LearningAssistantListener listener;
 
@@ -182,6 +184,11 @@ public class LearningAssistantOverlay extends FrameLayout {
 
         pitchHistory.clear();
 
+        // Load pitch settings (sensitivity)
+        if (settingsStore == null) {
+            settingsStore = new SettingsStore(getContext());
+        }
+
         // Setup audio service
         if (audioService == null) {
             if (pitchSource == null) {
@@ -225,6 +232,9 @@ public class LearningAssistantOverlay extends FrameLayout {
 
     private void updateAdvice(PitchData pitchData) {
         if (learningAssistant == null) return;
+        // Apply sensitivity from settings
+        float sensitivity = settingsStore != null ? settingsStore.getAssistantSensitivity() : 1.0f;
+        learningAssistant.setSensitivity(sensitivity);
 
         String advice = learningAssistant.generateAdvice(pitchData);
         adviceTextView.setText(advice);
