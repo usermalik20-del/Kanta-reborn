@@ -37,17 +37,6 @@ STRICT_CSP_DIRECTIVES = {
     "form-action": frozenset({"'none'"}),
     "frame-ancestors": frozenset({"'none'"}),
 }
-HOMEPAGE_CSP_DIRECTIVES = {
-    "default-src": frozenset({"'none'"}),
-    "img-src": frozenset({"'self'"}),
-    "script-src": frozenset({"'self'", "https://www.googletagmanager.com"}),
-    "style-src": frozenset({"'self'", "'unsafe-inline'"}),
-    "connect-src": frozenset({"https://www.google-analytics.com"}),
-    "base-uri": frozenset({"'none'"}),
-    "form-action": frozenset({"'none'"}),
-    "frame-ancestors": frozenset({"'none'"}),
-}
-
 
 def parse_csp(policy):
     directives = {}
@@ -90,7 +79,7 @@ def validate_csp_config(config):
             if header.get("key", "").lower() == csp_key
         ]
         assert len(policy_values) == 1, ("Route must have one CSP value", rule.get("source"))
-        expected = HOMEPAGE_CSP_DIRECTIVES if rule["source"] == "/" else STRICT_CSP_DIRECTIVES
+        expected = STRICT_CSP_DIRECTIVES
         parsed = parse_csp(policy_values[0])
         assert parsed == expected, ("Unexpected Content-Security-Policy", rule["source"], parsed)
 
@@ -292,9 +281,13 @@ def main():
 
     config = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))
     validate_csp_config(config)
-    assert "/analytics.js" in pages["index.html"].scripts, "Homepage analytics must use the same-origin script"
+    assert "/analytics.js" not in pages["index.html"].scripts, "Homepage must not load undisclosed analytics"
     assert all(pages["index.html"].scripts), "Homepage inline scripts bypass the route-specific CSP"
-    assert (WEB / "analytics.js").is_file(), "Missing same-origin analytics initializer"
+    assert not (WEB / "analytics.js").exists(), "Remove the unused analytics initializer"
+    for name in PUBLIC_ROUTES.values():
+        source = (WEB / name).read_text(encoding="utf-8").lower()
+        assert "googletagmanager.com" not in source, name + " loads an external analytics script"
+        assert "google-analytics.com" not in source, name + " connects to an analytics endpoint"
 
     manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
     assert manifest["repository"] == "usermalik20-del/Kanta-reborn"
