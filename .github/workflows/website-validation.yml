@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'apps/web/**'
+      - 'apps/ios/PRIVACY.md'
+      - 'apps/ios/PublicSite/**'
+      - 'apps/android/app/src/main/assets/privacy.txt'
       - 'tools/verify-website.py'
       - 'tools/tests/test_vercel_deploy_workflow.py'
       - 'tools/tests/test_website_security_contract.py'
@@ -29,6 +32,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - run: python3 tools/verify-website.py
       - run: python3 -m unittest tools.tests.test_vercel_deploy_workflow tools.tests.test_website_security_contract
+      - run: python3 -m unittest discover -s apps/ios/Tests/ReleaseToolingTests -p 'test_customer_legal_copy.py'
       - run: node --check apps/web/songbook.js
       - run: node --check apps/web/api/page.js
       - run: node --check apps/web/site-consent.js
