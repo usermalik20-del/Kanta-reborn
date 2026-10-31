@@ -13,96 +13,57 @@
           "value": "strict-origin-when-cross-origin"
         }
       ]
-    },
-    {
-      "source": "/",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; connect-src https://www.google-analytics.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/ios-download",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/android",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/guide",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/features",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/privacy",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/legal",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/licenses",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/support",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
-    },
-    {
-      "source": "/songbook",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-        }
-      ]
     }
-  ]
+  ],
+  "routes": [
+    {
+      "src": "^/$",
+      "dest": "/api/page?route=%2F"
+    },
+    {
+      "src": "^/ios-download$",
+      "dest": "/api/page?route=%2Fios-download"
+    },
+    {
+      "src": "^/android$",
+      "dest": "/api/page?route=%2Fandroid"
+    },
+    {
+      "src": "^/guide$",
+      "dest": "/api/page?route=%2Fguide"
+    },
+    {
+      "src": "^/features$",
+      "dest": "/api/page?route=%2Ffeatures"
+    },
+    {
+      "src": "^/privacy$",
+      "dest": "/api/page?route=%2Fprivacy"
+    },
+    {
+      "src": "^/legal$",
+      "dest": "/api/page?route=%2Flegal"
+    },
+    {
+      "src": "^/licenses$",
+      "dest": "/api/page?route=%2Flicenses"
+    },
+    {
+      "src": "^/support$",
+      "dest": "/api/page?route=%2Fsupport"
+    },
+    {
+      "src": "^/songbook$",
+      "dest": "/api/page?route=%2Fsongbook"
+    },
+    {
+      "src": "^/index\\.html$",
+      "dest": "/api/page?route=%2F"
+    }
+  ],
+  "functions": {
+    "api/page.js": {
+      "includeFiles": "*.html"
+    }
+  }
 }

@@ -5,21 +5,33 @@ on:
     branches: [main]
     paths:
       - 'apps/android/**'
-      - 'tools/**'
-      - '.github/workflows/android-validation.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
-      - '.github/workflows/verified-downloads.yml'
+      - 'tools/check-product-branding.py'
+      - 'tools/verify-android-runtime-package.py'
+      - 'tools/verify-companion-browser.mjs'
+      - 'tools/verify-songbook-browser-interop.mjs'
+      - 'tools/verify-android-companion-interface.py'
+      - 'tools/run-android-runtime.py'
+      - 'tools/tests/test_prompt_bank.py'
+      - 'tools/tests/test_android_*.py'
+      - 'tools/tests/test_companion_*.py'
+      - 'tools/prepare-verified-downloads.py'
+      - 'tools/publish-verified-downloads.py'
+      - 'tools/tests/test_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'
 
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/android/**'
-      - 'tools/**'
-      - '.github/workflows/android-validation.yml'
-      - '.github/workflows/ios-runtime-artifacts.yml'
-      - '.github/workflows/ios-visual-walkthrough.yml'
-      - '.github/workflows/verified-downloads.yml'
+      - 'tools/check-product-branding.py'
+      - 'tools/verify-android-runtime-package.py'
+      - 'tools/verify-companion-browser.mjs'
+      - 'tools/verify-songbook-browser-interop.mjs'
+      - 'tools/verify-android-companion-interface.py'
+      - 'tools/run-android-runtime.py'
+      - 'tools/tests/test_prompt_bank.py'
+      - 'tools/tests/test_android_*.py'
+      - 'tools/tests/test_companion_*.py'
 
 permissions:
   contents: read
@@ -32,6 +44,18 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Enforce documentation synchronization before release
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
+
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin

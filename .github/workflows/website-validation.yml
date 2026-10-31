@@ -5,33 +5,68 @@ on:
     branches: [main]
     paths:
       - 'apps/web/**'
+      - 'apps/ios/PRIVACY.md'
+      - 'apps/ios/PublicSite/**'
+      - 'apps/android/app/src/main/assets/privacy.txt'
       - 'tools/verify-website.py'
       - 'tools/tests/test_vercel_deploy_workflow.py'
       - 'tools/tests/test_website_security_contract.py'
-      - '.github/workflows/vercel-deploy.yml'
-      - '.github/workflows/website-validation.yml'
+      - 'tools/check-documentation-sync.py'
+      - 'tools/tests/test_documentation_sync.py'
+      - 'tools/tests/test_workflow_path_ownership.py'
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'apps/web/**'
-      - 'tools/verify-website.py'
-      - 'tools/tests/test_vercel_deploy_workflow.py'
-      - 'tools/tests/test_website_security_contract.py'
-      - '.github/workflows/vercel-deploy.yml'
-      - '.github/workflows/website-validation.yml'
 permissions:
   contents: read
 concurrency:
   group: website-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  documentation-sync:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      website_changed: ${{ steps.sync.outputs.website_changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check documentation synchronization and classify website changes
+        id: sync
+        env:
+          DOC_SYNC_BASE: ${{ github.event.pull_request.base.sha }}
+          DOC_SYNC_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -m unittest tools.tests.test_documentation_sync
+          python3 tools/check-documentation-sync.py "$DOC_SYNC_BASE" "$DOC_SYNC_HEAD" "$GITHUB_OUTPUT"
+
   website:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    needs: documentation-sync
+    if: always() && (github.event_name != 'pull_request' || (needs.documentation-sync.outputs.website_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Enforce documentation synchronization before website release
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
+
       - run: python3 tools/verify-website.py
       - run: python3 -m unittest tools.tests.test_vercel_deploy_workflow tools.tests.test_website_security_contract
+      - run: python3 -m unittest discover -s apps/ios/Tests/ReleaseToolingTests -p 'test_customer_legal_copy.py'
       - run: node --check apps/web/songbook.js
+      - run: node --check apps/web/api/page.js
+      - run: node --check apps/web/site-consent.js
+      - run: node --test tools/tests/test_site_page_handler.test.js
       - run: node --check apps/web/analytics.js

@@ -90,3 +90,7 @@ legacy phone remote application, and the legacy screens themselves. The engine
 decision in `docs/ARCHITECTURE.md` stands: KANTA keeps its own synthesis and scoring
 path and does not integrate BASS. Evidence and open items are recorded in
 `replica/meg-format.md` and `replica/architecture.md`.
+
+## Multi-file import durability
+
+Multi-file song and SoundFont imports stage metadata until the complete batch succeeds. The repository performs one atomic metadata commit after all items finish; cancellation or commit failure restores the prior catalog and removes staged media. Regression coverage reloads the durable catalog after cancellation and verifies that only the original starter entries remain, with every referenced media file present. Single-file imports retain their immediate persistence behavior.

@@ -32,8 +32,9 @@ older SHA cannot cancel the current acceptance run.
   SEO meta/title strings. The pages are rebranded and `tools/check-product-branding.py`
   is 4/4 again.
 
-**Pull requests (2026-10-29).** #112 (AdSense deferred until a nonce-capable CSP exists) is
-merged to main. #113 (iOS More-menu destinations pushed through the `NavigationStack` path)
+**Pull requests (2026-10-29).** #112 (AdSense deferred until a nonce-capable CSP existed) was
+merged to main; that historical restriction is now superseded by the nonce-capable,
+consent-gated candidate in open PR #121, which remains unmerged and requires preview acceptance. #113 (iOS More-menu destinations pushed through the `NavigationStack` path)
 was merged and then **reverted**: the iOS visual walkthrough was green on `d3e34f95`,
 `24e091b1` and `37f7ace1`, and failed on both devices on the `80ae286` merge and on
 `2a01654f`. The revert restores a `RootView.swift` byte-identical to the green builds;
@@ -206,3 +207,16 @@ public-review mining pass.
   on a device, so the port is not device-accepted.
 - `KantaConnectHost` has no on-device two-host test; only the request/response contract is
   unit-shaped.
+
+## Website consent and AdSense nonce candidate — 2026-10-31
+
+PR #121 is an open draft candidate on `feat/website-consent-adsense-nonce-20261031`. It preserves the existing Google Analytics measurement ID and adds consent-gated AdSense using a request-time Vercel renderer with a fresh per-response CSP nonce. The visitor can accept, reject or later change/revoke optional consent. The private browser Songbook is excluded, and the native app binaries remain isolated from website analytics/ads. The website README, root README, architecture, testing, privacy disclosures and this reconstruction ledger are updated in the same PR.
+
+**CI topology:** one lightweight documentation-sync job is embedded in `website-validation.yml` and runs on every PR; it compares the complete PR base/head diff, requires substantive changes in owner docs, and classifies website paths so website tests run only when website/privacy paths changed. Android and iOS build workflows retain independent source filters. Android privacy asset changes still trigger Android validation because the disclosure ships inside the APK. iOS PublicSite/privacy documentation does not allocate Xcode runners. The main-branch release/deploy workflows run the same documentation guard inside their existing jobs, without creating another platform runner. No production deployment or merge is authorized by this candidate.
+
+**Status on PR head `c7564c3d73de8c6aaf3425dda6a693154b0a8dc8`:** documentation synchronization and the complete website validation suite passed [run #41165515126](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515126); workflow/release contract tests passed [run #41165515053](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515053). Android validation is still pending [run #41165515041](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41165515041) because its bundled privacy asset changed. Preview routing/nonce acceptance and Google's publisher approval, Auto Ads account settings and applicable consent-platform requirements remain separate gates; code is not proof of live ads.
+
+
+### PR #121 — preview acceptance finding (2026-10-31)
+
+The Vercel API was used to create a preview deployment for exact candidate SHA `f8aa9daaf89769b45752acc2ab870f0fec86702b` after no matching preview was returned by the deployment listing. The preview returned HTTP 200, a fresh response nonce matching the CSP, and `Cache-Control: private, no-store`. Remote inspection then found that the recovered homepage still contained a static `/analytics.js` tag: nonce decoration made it CSP-authorized, but it bypassed the consent manager and initialized Analytics before consent. The request-time renderer now strips that legacy tag, and a regression test protects the invariant. This repair is on the open PR branch; it is not yet validated by CI or a rebuilt preview. The Songbook preview returned HTTP 200 with its separate restrictive CSP and no Analytics/AdSense integration in its HTML. Do not merge until the new candidate is green and the rebuilt preview passes browser-level consent acceptance, rejection and revocation.
