@@ -76,7 +76,7 @@ class WebsiteSecurityContractTests(unittest.TestCase):
 
         html = (WEB / "index.html").read_text(encoding="utf-8")
         self.assertNotIn("/analytics.js", html)
-        self.assertIsNone(re.search(r"<script\\b(?![^>]*\\bsrc\\s*=)[^>]*>", html, re.IGNORECASE))
+        self.assertIsNone(re.search(r"<script\b(?![^>]*\bsrc\s*=)[^>]*>", html, re.IGNORECASE))
         self.assertFalse((WEB / "analytics.js").exists())
 
         for route in sorted(PUBLIC_ROUTES):
