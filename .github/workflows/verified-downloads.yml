@@ -21,6 +21,8 @@ on:
       - '.github/workflows/verified-downloads.yml'
       - '.github/workflows/**'
       - 'tools/tests/test_workflow_path_ownership.py'
+      - 'tools/check-documentation-sync.py'
+      - 'tools/tests/test_documentation_sync.py'
 
   pull_request:
     types: [opened, synchronize, reopened]
@@ -71,7 +73,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tools/tests -p 'test_verified_downloads.py'
           python3 -m unittest discover -s tools/tests -p 'test_publish_verified_downloads.py'
-          python3 -m unittest tools.tests.test_workflow_path_ownership
+          python3 -m unittest tools.tests.test_workflow_path_ownership tools.tests.test_documentation_sync
   package:
     permissions:
       contents: write
