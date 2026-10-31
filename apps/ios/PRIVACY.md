@@ -23,7 +23,7 @@ If you export a Songbook CSV or a saved setlist, it contains song information ra
 
 ## Microphone, scores and voice search
 
-Optional scoring and live vocal effects process microphone sound on the device. KANTA does not store recordings of singing or upload that audio to a KANTA server. Vocal monitoring starts off and is intended for compatible wired/USB audio equipment.
+Optional scoring and live vocal effects process microphone sound on the device. KANTA does not store recordings of singing or upload that audio to a KANTA server. Vocal monitoring starts off and is intended for compatible wired/USB or Bluetooth headset audio equipment.
 
 The optional Filipino/Taglish voice pack is downloaded from an external provider only on request; the provider can see normal download request information. A temporary, short recording is used on the device to turn speech into search text, then deleted. You can remove the downloaded pack. The separate English voice option uses Apple's speech service and may send speech to Apple for recognition when on-device recognition is unavailable. Voice search does not automatically reserve or play a song. Real-device language accuracy is still under evaluation.
 

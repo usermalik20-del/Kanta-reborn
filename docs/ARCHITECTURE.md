@@ -128,6 +128,14 @@ Dry/Room/Hall/Echo are first-party monitor-only effects with finite input saniti
 
 Routing limit: before API 36, AudioRouting exposes only getRoutedDevice; this implementation can verify that single reported route but cannot categorically exclude an additional unreported output. API 36 uses the complete AudioTrack.getRoutedDevices list. The privacy/UI text discloses this limit and the monitor remains experimental/default-off. Preferred-device selection is never treated as proof of actual routing.
 
+## Android Bluetooth headset monitoring candidate
+
+Bluetooth SCO and BLE headsets are accepted as monitored outputs next to wired headphones, USB audio and analog/aux line-out, because the microphone belongs to the same worn device. Speaker-class routes (built-in speaker, Bluetooth A2DP speakers, HDMI/ARC) stay rejected: the microphone hears them, so monitoring there is a feedback loop.
+
+A Bluetooth activation asks the platform for the communication route (`AudioManager.setMode(MODE_IN_COMMUNICATION)` plus `AudioManager.setCommunicationDevice`, API 31 and newer) and then plays with `USAGE_VOICE_COMMUNICATION`; without that request a media track keeps playing from the built-in speaker. The activation owns the request only while it runs and clears it, restoring `MODE_NORMAL`, when it stops. Communication routing replaced the SCO broadcasts in API 31, so platforms below API 31 are not offered a Bluetooth output at all.
+
+The link negotiates in one to three seconds, so a Bluetooth activation uses a six-second readiness bound and a 2.5-second write no-progress bound instead of the wired 1.5 s and 500 ms bounds; route identity, mute-before-verify, retirement and re-opt-in rules are otherwise unchanged. Bluetooth SCO carries mono call-quality audio with more delay than a wired route, so no acoustic-safety, quality or latency claim is made for it. Capturing the Bluetooth device's own microphone into the app is not implemented: `MicrophoneInput` still opens the built-in microphone with `UNPROCESSED`/`VOICE_RECOGNITION` at 48 kHz.
+
 ## Android optional pitch-following scoring (0.8.0 accepted source)
 
 The existing bounded SMF parser now retains track index, note-channel masks, bounded track/instrument labels and real lyric evidence without changing event timing, MIDI rendering or imported bytes. MelodyTarget requires exactly one lyric-bearing or explicitly vocal/melody-labelled track with one non-drum note-bearing channel. It rejects ambiguous candidates, overlapping or incomplete note lifetimes and noncentral channel pitch bends (including bends from another track). No target is invented for MP3/WAV or unlabelled high notes. Extraction runs with MIDI preparation off-main.

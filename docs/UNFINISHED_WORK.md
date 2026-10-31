@@ -1,6 +1,6 @@
 # Unfinished work
 
-**Last updated:** 2026-10-29 · **main:** `9a6177e` · **public release source:** `41c8ddde`
+**Last updated:** 2026-10-31 · **main:** `8210b26` · **public release source:** `41c8ddde`
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
@@ -60,6 +60,7 @@ elsewhere never change meaning.
 | D6 | **iOS `InAppControlCenterView` is still unrestyled** | The last iOS surface not on the current visual style. | 43 `GeloVisualStyle` references remain in `apps/ios/Sources`, 14 of them in `Features/Host/InAppControlCenterView.swift`. | The view uses the current design system and `tools/check-ios-presentation-contract.py` still passes. | M |
 | D7 | **Companion control is experimental** | Users could reasonably assume it is finished. | `README.md`: Android-to-Android only, no forward secrecy, no independent security review, no iOS interoperability. | Either the limitations stay prominent in user-facing copy, or they are closed by work (forward secrecy, a security review, an iOS client). | L |
 | D8 | **The melody and guide volume sliders do nothing** | A control that appears to work but changes nothing is worse than no control; users of other apps report exactly this class of betrayal over backing vocals. | `StagePresenterImpl` handles `onMelodyVolumeChange`/`onGuideVolumeChange` with empty bodies (≈ lines 137–142), and `SoundFontPlayback` exposes only a master `volume` with no per-voice mixing. | Either the sliders change the rendered mix audibly and the value persists, or the sliders are removed and the removal is recorded here. | M |
+| D9 | **Bluetooth monitoring has no hardware evidence, and a Bluetooth microphone is still not captured** (planned work: [§I](#i-bluetooth-microphone-capture-planned-not-implemented)) | The monitor now accepts Bluetooth SCO/BLE headsets and claims the communication route on API 31 and newer, but no handset or Android TV has run it. The Bluetooth device's own microphone is still never captured: `MicrophoneInput` reads the phone's built-in microphone, so the Bluetooth route carries the processed voice out only. | `MicrophoneMonitor.supported`/`communication`, `MonitorRouteGuard(int,long,long)` with the extended readiness bound, and the monitoring paragraph in `apps/android/app/src/main/assets/privacy.txt`. | A Bluetooth headset on one phone and one Android TV plays the effect chain with no feedback, survives a disconnect/reconnect cycle, and the captured source is stated honestly in the UI, the privacy text and the docs. | M |
 
 ## E. Explicitly not claimed
 
@@ -112,6 +113,31 @@ after Android validation failed three times. What is left:
 | H6 | **Relocate `AchievementSystem` out of `core/`** | It needs `SharedPreferences` and `Color`, so it is excluded from `compileCoreRegression`. `core/` is meant to be framework-free, and the exclusion list is growing instead of the boundary being enforced. | It lives beside the other Android-facing classes (`MicrophoneInput`, `PartyAudio`) and the exclusion entry is removed. | S |
 | H7 | **Persist pitch settings** | Preferred target pitch and assistant sensitivity reset every session; listed in the owner's enhancement set. | Both survive an app restart through `SettingsStore`. | S |
 | H8 | **Shortcut access to the pitch features** | They are reachable only from the workspace accessory bar. | Reachable from the Controls menu as well, without adding a second entry point that bypasses the single-accessory rule. | S |
+
+## I. Bluetooth microphone capture (planned, not implemented)
+
+Phase 2 of the Bluetooth work. Phase 1 — Bluetooth headsets as a monitored **output** with the
+Android communication route — is the candidate on `feature/bluetooth-headset-monitoring`, which
+has **no hardware evidence yet**. Nothing in this section is claimed as working, and the
+captured source stays honest until it is: `MicrophoneInput` still opens the phone's built-in
+microphone with `UNPROCESSED`/`VOICE_RECOGNITION` at 48 kHz.
+
+| ID | Item | Why it matters | Acceptance criterion | Effort |
+| --- | --- | --- | --- | --- |
+| I1 | **Input device selection** | The app has exactly one capture owner and no way to say *which* microphone it uses, so a Bluetooth or USB microphone cannot become the singing input. | `MicrophoneInput` stays the single `AudioRecord` owner but takes a chosen device (built-in, Bluetooth SCO/BLE headset, USB/wired headset); the picker offers only capturable devices; the run exposes which device it settled on; removal of that device stops the run with one actionable message; the type policy is framework-free and unit-tested. | M |
+| I2 | **Communication-source capture** | `UNPROCESSED`/`VOICE_RECOGNITION` stay on the built-in microphone and can even prevent the Bluetooth link from coming up, so selecting the device is not enough on its own. | Capture uses `VOICE_COMMUNICATION` plus the platform communication route for a Bluetooth device; on API 29+ `getActiveRecordingConfiguration().getRoutedDevices()` names that device while dry frames flow; the UI states the captured source. | M |
+| I3 | **Rate bridge and reframing** | SCO carries 8 kHz (CVSD) or 16 kHz (mSBC) mono, not 48 kHz, while `MonitorBuffer`, `VocalMonitorEffects`, `ChromaticPitchCorrector` and `DryPitchDetector` assume 48 kHz; the 4096-sample analysis frame would become 512 ms at 8 kHz. | A framework-free bridge plus framer sits next to `SpicePitch.Resampler` (SPICE takes 16 kHz directly); golden-vector tests cover both 8 kHz and 16 kHz input; the analysis frame stays time-bounded; a synthetic 16 kHz tone produces the same pitch as the 48 kHz path. | M |
+| I4 | **Per-route scoring and pitch alignment** | The 86 ms frame, the −43 ms alignment and the manual timing offset were tuned on a 48 kHz built-in microphone; a Bluetooth link adds 100–300 ms of round-trip delay, so reusing those constants would quietly worsen every score. | Alignment derives from the measured frame interval and a per-route latency, or the score panel states that Bluetooth input is uncalibrated; a documented calibration procedure exists; the wired constants are not silently reused. | M |
+| I5 | **Honest source disclosure and feedback policy** | A user must know which microphone is being read, and the effect chain must never be sent back into a room-filling device that is also capturing. | Picker, privacy text, README and website name the captured device and say Bluetooth capture is mono call quality; the monitor still allows headset-class capture devices and still rejects speaker-class ones; the rule is covered by a framework-free policy test. | S |
+
+**Platform limits, so they are not re-litigated:** an A2DP-only Bluetooth speaker has no
+microphone to capture and Android exposes no app-accessible loopback of what a Bluetooth device
+plays; a microphone plugged into a speaker's analogue jack is mixed inside that speaker and never
+reaches the phone. A Bluetooth speaker can therefore never be the singing input — only a
+headset-class or mic-bearing HFP device can.
+
+Total effort **L**, blocked on hardware acceptance: one phone and one Android TV box, each with a
+Bluetooth headset and one mic-bearing Bluetooth device.
 
 ## F. Recently closed
 
