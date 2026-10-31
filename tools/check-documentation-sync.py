@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 ROOT_DOCS = {
-    "apps/web": {"README.md", "apps/web/README.md", "docs/ARCHITECTURE.md", "docs/TESTING.md"},
+    "apps/web": {"README.md", "apps/web/README.md", "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"},
     "apps/android": {"README.md", "apps/android/README.md", "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"},
     "apps/ios": {"README.md", "apps/ios/AGENTS.md", "docs/ARCHITECTURE.md", "docs/TESTING.md", "docs/RECONSTRUCTION.md"},
 }
