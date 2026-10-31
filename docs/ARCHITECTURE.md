@@ -470,11 +470,9 @@ fails CI when legacy product branding reappears under `apps/` or the Android app
 id changes. Evidence, open items and the rejected alternatives are recorded in
 `replica/meg-format.md`.
 
-## AdSense and the static-site CSP boundary
+## AdSense nonce and consent security contract
 
-Keep the route-specific Content Security Policy strict. Google's [AdSense CSP guidance](https://support.google.com/adsense/answer/16283098) requires a nonce-based strict policy and a nonce on every script tag; a static HTML page and fixed `vercel.json` header cannot safely mint a fresh per-response nonce. Do not add the AdSense loader or widen the policy with `unsafe-inline`, `unsafe-eval`, broad third-party source lists, or a fixed nonce as a workaround.
-
-AdSense remains disabled until a nonce-capable response architecture is implemented and reviewed. In particular, never run third-party advertising JavaScript on the client-side private Songbook, where the decrypted song list is present in the page. Any future ad integration must preserve the explicit Help, Legal, Privacy, and private-Songbook exclusions, update the privacy notice, and pass route-specific CSP tests.
+The old static-site limitation is addressed by the request-time Vercel renderer described above. Every public HTML response receives a fresh nonce and a matching strict CSP; every inline or dynamically injected script must carry that response nonce. Do not replace this with a fixed nonce or a rolling host allowlist. Analytics and AdSense remain optional and load only after affirmative visitor consent. Rejection and later revocation must prevent or stop third-party loading. The private Songbook remains outside the consent injection and never executes third-party advertising JavaScript. The implementation is a candidate until preview routing, nonce/CSP matching, consent behavior and Songbook isolation pass on the exact PR head; publisher approval and Auto Ads account configuration remain separate external gates.
 
 ## Dim-3 catalog ownership (Option 3b, accepted 2026-10-28)
 
