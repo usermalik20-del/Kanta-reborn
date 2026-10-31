@@ -93,6 +93,7 @@ class WorkflowOwnershipTests(unittest.TestCase):
         self.assertIn("timeout-minutes: 5", source)
         self.assertNotIn("runs-on: macos", source)
         self.assertIn("tools/check-documentation-sync.py", source)
+        self.assertNotIn("head.repo.full_name == github.repository", source)
 
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
         source = workflow("vercel-deploy.yml")
