@@ -35,6 +35,8 @@ on:
       - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/**'
+      - 'tools/tests/test_workflow_path_ownership.py'
 
   workflow_run:
     workflows: ["KANTA iOS unsigned artifacts"]
