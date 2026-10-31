@@ -107,6 +107,18 @@ class WorkflowOwnershipTests(unittest.TestCase):
         self.assertIn("DOC_SYNC_HEAD: ${{ github.event.pull_request.head.sha }}", source)
         self.assertTrue((WORKFLOWS / "documentation-sync.yml").exists() is False)
 
+    def test_main_release_workflows_embed_docs_guard_in_existing_jobs(self):
+        names = ("android-validation.yml", "ios-validation.yml",
+                 "ios-runtime-artifacts.yml", "ios-visual-walkthrough.yml",
+                 "website-validation.yml", "vercel-deploy.yml",
+                 "verified-downloads.yml")
+        for name in names:
+            source = workflow(name)
+            self.assertIn("Enforce documentation synchronization", source, name)
+            self.assertIn("if: github.event_name == 'push'", source, name)
+        walkthrough = workflow("ios-visual-walkthrough.yml")
+        self.assertEqual(walkthrough.count("Enforce documentation synchronization"), 2)
+
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
         source = workflow("vercel-deploy.yml")
         self.assertNotIn("\n  pull_request:", source)
