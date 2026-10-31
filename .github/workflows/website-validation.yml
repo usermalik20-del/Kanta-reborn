@@ -33,6 +33,16 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Enforce documentation synchronization before website release
+        if: github.event_name != 'pull_request'
+        working-directory: .
+        env:
+          DOC_SYNC_BASE: ${{ github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.sha }}
+        run: |
+          base="${DOC_SYNC_BASE:-$(git rev-parse "${DOC_SYNC_HEAD}^")}"
+          python3 tools/check-documentation-sync.py "$base" "$DOC_SYNC_HEAD"
+
       - run: python3 tools/verify-website.py
       - run: python3 -m unittest tools.tests.test_vercel_deploy_workflow tools.tests.test_website_security_contract
       - run: python3 -m unittest discover -s apps/ios/Tests/ReleaseToolingTests -p 'test_customer_legal_copy.py'
