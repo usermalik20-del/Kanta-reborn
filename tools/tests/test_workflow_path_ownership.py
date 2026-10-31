@@ -87,8 +87,7 @@ class WorkflowOwnershipTests(unittest.TestCase):
     def test_documentation_sync_is_one_lightweight_required_pr_workflow(self):
         source = workflow("documentation-sync.yml")
         self.assertIn("  pull_request:", source)
-        self.assertIn("  push:", source)
-        self.assertIn("branches: [main]", source)
+        self.assertNotIn("  push:", source)
         self.assertIn("runs-on: ubuntu-latest", source)
         self.assertIn("timeout-minutes: 5", source)
         self.assertNotIn("runs-on: macos", source)
