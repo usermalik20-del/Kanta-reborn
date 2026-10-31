@@ -14,6 +14,12 @@ public final class SettingsStore {
   private static final String PREFS_FILE = "kanta_settings";
 
   // Group: audio
+  // Group: pitch (new group for H7)
+  public static final String KEY_PITCH_TARGET_HZ = "pitch.targetHz";
+  public static final String KEY_PITCH_TARGET_NAME = "pitch.targetName";
+  public static final String KEY_ASSISTANT_SENSITIVITY = "pitch.assistantSensitivity";
+
+  // Group: audio (existing)
   public static final String KEY_MASTER_VOLUME = "audio.masterVolume";
   public static final String KEY_TEMPO = "audio.tempo";
   public static final String KEY_PITCH = "audio.pitch";
@@ -65,6 +71,16 @@ public final class SettingsStore {
 
   public int getPitch() { return prefs.getInt(KEY_PITCH, 0); }
   public void setPitch(int v) { prefs.edit().putInt(KEY_PITCH, v).apply(); }
+
+  // Pitch (song-aware target + assistant sensitivity)
+  public float getPitchTargetHz() { return prefs.getFloat(KEY_PITCH_TARGET_HZ, 440.0f); }
+  public void setPitchTargetHz(float v) { prefs.edit().putFloat(KEY_PITCH_TARGET_HZ, v).apply(); }
+
+  public String getPitchTargetName() { return prefs.getString(KEY_PITCH_TARGET_NAME, "A4"); }
+  public void setPitchTargetName(String v) { prefs.edit().putString(KEY_PITCH_TARGET_NAME, v).apply(); }
+
+  public float getAssistantSensitivity() { return prefs.getFloat(KEY_ASSISTANT_SENSITIVITY, 1.0f); }
+  public void setAssistantSensitivity(float v) { prefs.edit().putFloat(KEY_ASSISTANT_SENSITIVITY, v).apply(); }
 
   public float getMelodyVolume() { return prefs.getFloat(KEY_MELODY_VOLUME, 0.8f); }
   public void setMelodyVolume(float v) { prefs.edit().putFloat(KEY_MELODY_VOLUME, v).apply(); }

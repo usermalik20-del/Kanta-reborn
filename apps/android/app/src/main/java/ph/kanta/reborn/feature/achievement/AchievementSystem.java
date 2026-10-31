@@ -1,4 +1,4 @@
-package ph.kanta.reborn.core;
+package ph.kanta.reborn.feature.achievement;
 
 import android.content.Context;
 import android.content.SharedPreferences;

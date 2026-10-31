@@ -14,7 +14,7 @@ import ph.kanta.reborn.core.AudioServiceImpl;
 import ph.kanta.reborn.core.LearningAssistant;
 import ph.kanta.reborn.core.PitchData;
 import ph.kanta.reborn.core.PitchSource;
-import ph.kanta.reborn.core.AchievementSystem;
+import ph.kanta.reborn.feature.achievement.AchievementSystem;
 
 import java.util.ArrayList;
 import java.util.List;
