@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
 
       - name: Enforce documentation synchronization before release
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push'
         working-directory: .
         env:
           DOC_SYNC_BASE: ${{ github.event.before }}
@@ -117,7 +117,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Enforce documentation synchronization before release
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push'
         working-directory: .
         env:
           DOC_SYNC_BASE: ${{ github.event.before }}
