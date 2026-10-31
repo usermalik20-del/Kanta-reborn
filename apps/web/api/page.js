@@ -43,7 +43,10 @@ function makeCsp(nonce) {
 }
 
 function renderHtml(source, nonce, includeGoogleTools) {
-  let html = source.replace(/<script\b([^>]*)>/gi, (tag, attrs) =>
+  // Legacy static pages may still contain the old eager Analytics tag. Remove it
+  // before adding nonces; only the consent manager may load Analytics after opt-in.
+  const consentSafeSource = source.replace(/<script\b(?=[^>]*\bsrc=["'][^"']*\/?analytics\.js(?:[?#][^"']*)?["'])[^>]*>\s*<\/script>/gi, "");
+  let html = consentSafeSource.replace(/<script\b([^>]*)>/gi, (tag, attrs) =>
     /\bnonce\s*=/i.test(attrs) ? tag : '<script nonce="' + nonce + '"' + attrs + ">"
   );
   if (includeGoogleTools) {
