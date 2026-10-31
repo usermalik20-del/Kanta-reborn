@@ -25,7 +25,6 @@ on:
       - '!apps/ios/AGENTS.md'
       - '!apps/ios/Docs/**'
       - '!apps/ios/PublicSite/**'
-      - 'tools/tests/test_publish_verified_downloads.py'
 
 permissions:
   contents: read
