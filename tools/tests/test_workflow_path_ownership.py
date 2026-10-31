@@ -52,6 +52,18 @@ class WorkflowOwnershipTests(unittest.TestCase):
                 # Preserve same-SHA native release evidence for Android changes.
                 self.assertIn("'apps/android/**'", section)
 
+    def test_ios_documentation_changes_do_not_allocate_native_runners(self):
+        for name in ("ios-validation.yml", "ios-runtime-artifacts.yml",
+                     "ios-visual-walkthrough.yml", "ios-smoke.yml"):
+            source = workflow(name)
+            for event in ("push", "pull_request"):
+                if event not in source.split("\\njobs:", 1)[0]:
+                    continue
+                section = event_section(source, event)
+                self.assertIn("'!apps/ios/PRIVACY.md'", section)
+                self.assertIn("'!apps/ios/PublicSite/**'", section)
+                self.assertIn("'!apps/ios/Docs/**'", section)
+
     def test_ios_feature_branches_use_pull_request_event_once(self):
         source = workflow("ios-validation.yml")
         push = event_section(source, "push")
