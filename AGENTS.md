@@ -165,14 +165,15 @@ Owner authorization (updated 2026-10-23) grants Astra unrestricted use of CI for
 any workflow, any branch, any trigger, workflow dispatch, reruns, labels and PR-triggered runs.
 No per-run approval, label, actor or run-count gate applies.
 
-The root workflow triggers are intentionally scoped by source paths:
-- `android-validation.yml`: Android source, shared tooling and release-workflow changes on main pushes and pull requests. Feature-branch validation runs through the pull-request event rather than a duplicate branch-push run.
-- `ios-validation.yml`: iOS source changes on pushes and pull requests.
-- `ios-smoke.yml`: focused iOS native/UI smoke on pull requests and manual dispatch.
-- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on main pushes, pull requests, and manual dispatch when iOS/Android source changes.
-- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on relevant iOS/Android/tool changes, plus weekly schedule, tags and manual dispatch.
-- `website-validation.yml` and `vercel-deploy.yml`: website validation and deployment on website changes.
-- `verified-downloads.yml`: exact-SHA release-contract tests on packaging changes; actual packaging is a main-branch manual dispatch after all required same-SHA runs pass.
+The root workflow triggers are intentionally scoped by ownership and source paths:
+- `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
+- `ios-validation.yml`: iOS source on pull requests and main pushes. Feature branches use the pull-request event only; do not add a duplicate all-branches push trigger.
+- `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
+- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on native iOS/Android source and exact-SHA release-packaging inputs, plus its own workflow and manual dispatch. Website-only tools are excluded.
+- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on relevant iOS/Android/tool changes, plus weekly schedule, tags and manual dispatch. Website-only verifier/test edits are excluded.
+- `website-validation.yml`: website source and website tooling, plus lightweight workflow-ownership contracts whenever any workflow definition changes.
+- `vercel-deploy.yml`: production deployment on main pushes or explicit dispatch; no pull-request validation trigger.
+- `verified-downloads.yml`: exact-SHA release-contract tests on packaging changes; actual packaging is gated by successful same-SHA release runs or an explicit main-branch dispatch.
 
 The verified-download packager binds to the exact workflow names in the root workflow files. Its Android artifact source is `KANTA Android validation`, not a separately named reconstruction workflow. Keep workflow names, packager constants and contract tests synchronized. Owner-approval labels and the retired `kanta-gelo` actor gate have been removed; they blocked work without adding safety.
 
