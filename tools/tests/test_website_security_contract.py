@@ -22,17 +22,6 @@ STRICT_CSP = {
     "form-action": frozenset({"'none'"}),
     "frame-ancestors": frozenset({"'none'"}),
 }
-HOMEPAGE_CSP = {
-    "default-src": frozenset({"'none'"}),
-    "img-src": frozenset({"'self'"}),
-    "script-src": frozenset({"'self'", "https://www.googletagmanager.com"}),
-    "style-src": frozenset({"'self'", "'unsafe-inline'"}),
-    "connect-src": frozenset({"https://www.google-analytics.com"}),
-    "base-uri": frozenset({"'none'"}),
-    "form-action": frozenset({"'none'"}),
-    "frame-ancestors": frozenset({"'none'"}),
-}
-
 
 def parse_csp(policy):
     directives = {}
@@ -81,18 +70,21 @@ class WebsiteSecurityContractTests(unittest.TestCase):
             for header in wildcard[0].get("headers", [])
         ))
 
-    def test_homepage_uses_allowlisted_google_origins_without_inline_scripts(self):
-        self.assertEqual(policy_for("/"), HOMEPAGE_CSP)
-        self.assertNotIn("'unsafe-inline'", policy_for("/")["script-src"])
+    def test_homepage_uses_strict_csp_without_analytics(self):
+        self.assertEqual(policy_for("/"), STRICT_CSP)
+        self.assertNotIn("'unsafe-inline'", policy_for("/")[ "script-src" ])
 
         html = (WEB / "index.html").read_text(encoding="utf-8")
-        self.assertIn('<script defer src="/analytics.js"></script>', html)
-        self.assertIsNone(re.search(r"<script\b(?![^>]*\bsrc\s*=)[^>]*>", html, re.IGNORECASE))
+        self.assertNotIn("/analytics.js", html)
+        self.assertIsNone(re.search(r"<script\\b(?![^>]*\\bsrc\\s*=)[^>]*>", html, re.IGNORECASE))
+        self.assertFalse((WEB / "analytics.js").exists())
 
-        analytics = (WEB / "analytics.js").read_text(encoding="utf-8")
-        self.assertIn("G-L0QV01MWR4", analytics)
-        self.assertIn("https://www.googletagmanager.com/gtag/js", analytics)
-        self.assertNotIn("eval(", analytics)
+        for route in sorted(PUBLIC_ROUTES):
+            filename = "index.html" if route == "/" else route.lstrip("/") + ".html"
+            source = (WEB / filename).read_text(encoding="utf-8").lower()
+            with self.subTest(route=route):
+                self.assertNotIn("googletagmanager.com", source)
+                self.assertNotIn("google-analytics.com", source)
 
     def test_adsense_stays_disabled_until_nonce_csp_is_available(self):
         # AdSense documents nonce-based strict CSP and a nonce on every script.
