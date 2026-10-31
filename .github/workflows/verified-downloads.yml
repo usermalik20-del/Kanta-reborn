@@ -19,6 +19,8 @@ on:
       - '.github/workflows/ios-runtime-artifacts.yml'
       - '.github/workflows/ios-visual-walkthrough.yml'
       - '.github/workflows/verified-downloads.yml'
+      - '.github/workflows/**'
+      - 'tools/tests/test_workflow_path_ownership.py'
 
   pull_request:
     types: [opened, synchronize, reopened]
@@ -57,6 +59,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tools/tests -p 'test_verified_downloads.py'
           python3 -m unittest discover -s tools/tests -p 'test_publish_verified_downloads.py'
+          python3 -m unittest tools.tests.test_workflow_path_ownership
   package:
     permissions:
       contents: write
