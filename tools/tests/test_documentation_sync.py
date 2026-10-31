@@ -47,6 +47,14 @@ class DocumentationSyncTests(unittest.TestCase):
         self.assertNotIn("apps/ios/AGENTS.md", required)
         self.assertNotIn("docs/RECONSTRUCTION.md", required)
 
+    def test_application_pages_cannot_masquerade_as_documentation_updates(self):
+        changed = {"apps/web/site-consent.js", "apps/web/index.html"}
+        _, missing = validate(changed)
+        self.assertEqual(missing, {
+            "README.md", "apps/web/README.md",
+            "docs/ARCHITECTURE.md", "docs/TESTING.md",
+        })
+
     def test_missing_docs_fail_and_complete_docs_pass(self):
         changed = {"apps/web/site-consent.js", "apps/web/README.md", "docs/ARCHITECTURE.md"}
         _, missing = validate(changed)
