@@ -101,7 +101,11 @@ public final class RuntimeChecks extends Instrumentation {
       LibraryRepository afterCancel =
           new LibraryRepository(getTargetContext().createDeviceProtectedStorageContext());
       afterCancel.load();
-      check(afterCancel.songs().size() == 3, "Cancelled batch changed durable catalog");
+      check(
+          afterCancel.songs().size() == 3
+              && afterCancel.songs().stream().allMatch(
+                  value -> value.starter && new File(afterCancel.media, value.fileName).isFile()),
+          "Cancelled batch left imported metadata or missing media in durable catalog");
       int[] imported = isolated.importBatch(files, () -> false);
       check(
           imported[0] == 3 && imported[1] == 1 && isolated.songs().size() == 5,
