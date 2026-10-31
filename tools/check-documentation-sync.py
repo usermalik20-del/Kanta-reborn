@@ -86,9 +86,14 @@ def main() -> int:
         print(exc.stderr or "Unable to compare the requested Git revisions.", file=sys.stderr)
         return 2
 
+    website_changed = any(is_website_change(path) for path in changed)
+    print(f"Website validation required: {str(website_changed).lower()}")
+    print("Changed paths:")
+    for path in sorted(changed):
+        print(f"  - {path}")
     if len(sys.argv) == 4:
         with open(sys.argv[3], "a", encoding="utf-8") as output:
-            output.write(f"website_changed={str(any(is_website_change(p) for p in changed)).lower()}\\n")
+            output.write(f"website_changed={str(website_changed).lower()}\\n")
 
     required, missing = validate(changed)
     if not required:
