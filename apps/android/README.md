@@ -142,6 +142,14 @@ decision in `docs/ARCHITECTURE.md` stands: KANTA keeps its own synthesis and sco
 path and does not integrate BASS. Evidence and open items are recorded in
 `replica/meg-format.md` and `replica/architecture.md`.
 
+## Lyric-stage animation and fun countdown candidate
+
+`stage/LyricStage.java` and the fullscreen `StageView` keep the existing scrolling window, but the active line now fills continuously across each source-timed MIDI lyric fragment instead of switching a whole word at a fragment boundary. `core/LyricWordAnimation.java` holds the framework-free interpolation and pitch-energy math: a fragment boundary remains the hard source event, the span between boundaries is interpolated for a smooth fill, and only the fragment currently being sung receives a small per-letter wave plus orbit sparks from the single microphone owner's `PitchSource` estimate. Pitch is visual energy only; it never changes cue timing, the playback clock or scoring, and the stage still renders when the microphone is off.
+
+`stage/CountdownStage.java` now runs `Ready ⏱️ → 1 → 2 → 3 → 4 → Kanta 🎤` with a gradient ring, pop text, orbit dots and a final confetti burst, plus a reduced-motion path that shows the same labels without the motion. `SettingsStore.getCountdownLength()` defaults to four, and `MainActivity.playWithCountdown()` starts a new reservation through the countdown before calling the single playback owner; resuming an already-prepared song or requesting playback with no reservation skips it.
+
+Validation state: `LyricWordAnimationRegressionTests` is wired into the existing `coreRegression` JavaExec task and covers fragment interpolation, active-fragment selection and pitch-energy decay. The authoring environment has no working local JVM (`getcpu(2) system call not supported by kernel`), so the Gradle APK/lint/emulator and device acceptance for this candidate are still required.
+
 ## Multi-file import durability
 
 Multi-file song and SoundFont imports stage metadata until the complete batch succeeds. The repository performs one atomic metadata commit after all items finish; cancellation or commit failure restores the prior catalog and removes staged media. Regression coverage reloads the durable catalog after cancellation and verifies that only the original starter entries remain, with every referenced media file present. Single-file imports retain their immediate persistence behavior.

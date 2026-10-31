@@ -89,6 +89,7 @@ public final class StagePresenterImpl extends FrameLayout
 
     // Initialize stage overlays
     lyricStage = new LyricStage(context);
+    lyricStage.setPitchSource(session);
     countdownStage = new CountdownStage(context);
     scoreOverlay = new ScoreOverlay(context);
     celebration = new ScoreCelebrationView(context);

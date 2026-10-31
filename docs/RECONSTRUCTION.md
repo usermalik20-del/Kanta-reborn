@@ -118,6 +118,26 @@ that one records what has not.
 - `stage/StagePresenterImpl.java` — owns the persistent stage layer
   (tag `kanta.stage.primary`) and binds the ten stage overlays to `SessionController`.
 
+### Milestone 4 detail — lyric-stage animation and fun countdown (2026-10-31)
+
+Candidate source on `feature/fun-lyrics-and-countdown` (local commit `3379caa`) adds
+`core/LyricWordAnimation.java`, a framework-free helper for source-fragment interpolation,
+active-fragment selection and pitch-energy decay. `stage/LyricStage.java` and the fullscreen
+`StageView` keep their existing scrolling window and cached `StaticLayout` text, but the active
+line now fills continuously across a source fragment instead of flipping a whole word, and the
+fragment being sung receives a per-letter wave driven by the existing `PitchSource` estimate.
+`stage/CountdownStage.java` becomes `Ready ⏱️ → 1 → 2 → 3 → 4 → Kanta 🎤` with a gradient ring,
+orbit dots and confetti, and `SettingsStore.getCountdownLength()` defaults to four.
+`MainActivity.playWithCountdown()` starts a new reservation through the countdown and still
+reaches playback only through `SessionController.toggle()`; prepared songs and empty queues skip
+the countdown. No word timings are invented, pitch cannot change cue timing or scoring, and the
+stage still renders with the microphone off.
+
+`LyricWordAnimationRegressionTests` is wired into the existing `coreRegression` task. The
+authoring environment has no working local JVM (`getcpu(2) system call not supported by
+kernel`), so this candidate is reconstructed and statically checked only; Gradle compilation,
+lint, emulator runtime and device acceptance remain open.
+
 ### Milestone 4 detail — score celebration (2026-10-29)
 
 `core/score/ScoreCelebrationPlan.java` holds the whole choreography as framework-free,
