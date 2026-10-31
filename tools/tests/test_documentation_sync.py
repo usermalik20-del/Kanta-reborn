@@ -1,7 +1,12 @@
 """Regression tests for the implementation-to-documentation guard."""
 import unittest
+from pathlib import Path
+from runpy import run_path
 
-from tools.check_documentation_sync import is_website_change, required_docs, validate
+SYNC = run_path(str(Path(__file__).resolve().parents[2] / "tools/check-documentation-sync.py"))
+is_website_change = SYNC["is_website_change"]
+required_docs = SYNC["required_docs"]
+validate = SYNC["validate"]
 
 
 class DocumentationSyncTests(unittest.TestCase):
