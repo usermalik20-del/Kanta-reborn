@@ -293,8 +293,8 @@ public final class RuntimeChecks extends Instrumentation {
           "Fullscreen camera stage was not created");
       stableStage.set((View) field(activity, "fullscreenStage"));
       await(
-          () -> activity.cameraStreaming() && !((StageSurface) stableStage.get()).isCameraVisible(),
-          "Front camera did not move to fullscreen");
+          () -> activity.cameraStreaming() && ((StageSurface) stableStage.get()).isCameraVisible(),
+          "Front camera did not render on the fullscreen stage");
       runOnMainSync(activity::closeFullscreen);
       stableStage.set(primaryStage);
       await(
