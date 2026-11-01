@@ -416,3 +416,5 @@ Visuals now renders thumbnails from the ten existing `assets/scenic/*.png` image
 ## Mic & Voice and Visuals runtime acceptance — 2026-11-01
 
 Android instrumentation now captures the mounted Mic & Voice and Visuals destinations in addition to Home, Search, Queue and Pitch & Tempo. It selects the existing Bamboo Mist scenic asset and asserts the selection reaches SessionController, then selects the Room vocal-monitor processor mode and asserts the existing MicrophoneMonitor owner receives it. The test does not request microphone/camera permissions or fabricate input/coach readings. Both named screenshots are required by the Android runtime collector and artifact allowlist.
+
+The Android runtime screenshot artifact allowlist is updated in lockstep with the required capture collector: `visuals_screen.png` and `mic_voice_screen.png` are mandatory captures, not optional files.

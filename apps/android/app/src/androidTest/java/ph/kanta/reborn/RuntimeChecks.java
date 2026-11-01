@@ -63,6 +63,7 @@ public final class RuntimeChecks extends Instrumentation {
       activity = (MainActivity) startActivitySync(launch);
       session = ((KantaApplication) activity.getApplication()).session;
       await(() -> session.ready, "Library did not open");
+      await(() -> session.stageReady, "Stage media store did not become ready");
       capture("library_ready.png");
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "Music brings people together.")),
@@ -172,6 +173,8 @@ public final class RuntimeChecks extends Instrumentation {
       });
       await(() -> session.monitor.mode() == ph.kanta.reborn.core.VocalMonitorEffects.Mode.ROOM,
           "Mic & Voice effect selection did not reach the existing monitor processor");
+      session.monitor.mode(ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY);
+      session.publish();
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice.back");
         if (back != null) back.performClick();

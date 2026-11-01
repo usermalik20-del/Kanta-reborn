@@ -129,6 +129,8 @@ jobs:
             files/search_screen.png
             files/queue_screen.png
             files/pitch_tempo_screen.png
+            files/visuals_screen.png
+            files/mic_voice_screen.png
             files/fixture_loaded.png
             files/ui_rendered.png
             files/youtube_loaded.png

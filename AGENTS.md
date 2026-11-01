@@ -312,3 +312,5 @@ The primary stage in `MainActivity` is `ph.kanta.reborn.stage.StagePresenterImpl
 ## Platform release ownership
 
 Keep native build and public download publication independent. Android APK publishing is triggered only by successful main-branch Android validation and consumes that exact run's APK artifact. iOS unsigned IPA publishing is triggered only by successful main-branch iOS archive completion and must additionally pass the iPhone and iPad simulator walkthrough on the same SHA. Never require Android validation for iOS publication or iOS archive/walkthrough for Android publication. Each publisher may update only its own platform download page and manifest entry; preserve the peer platform's current published entry. The shared website deployment follows successful metadata publication.
+
+The Android runtime screenshot artifact allowlist is updated in lockstep with the required capture collector: `visuals_screen.png` and `mic_voice_screen.png` are mandatory captures, not optional files.
