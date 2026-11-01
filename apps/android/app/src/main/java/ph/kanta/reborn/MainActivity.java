@@ -1849,7 +1849,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         d -> {
           fullscreenStage = null;
           if (stagePresenter != null) stagePresenter.setVisualActive(true);
-          camera.moveTo(stagePresenter.getCameraPreview());
+          camera.moveTo(stagePresenter);
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
     fullscreen.show();
