@@ -89,9 +89,8 @@ def main() -> int:
         # Live UI screenshot capture via adb screencap (captures emulator display)
         try:
             result_capture = subprocess.run(
-                ["adb", "shell", "screencap", "-p"],
-                capture_output=True, timeout=30,
-                env={**os.environ, "ANDROID_ADB_SERVER_PORT": "5037"}
+                [str(adb), "shell", "screencap", "-p"],
+                capture_output=True, timeout=30
             )
             if result_capture.returncode == 0 and result_capture.stdout:
                 with (ROOT / "android-runtime-stage.png").open("wb") as f:
