@@ -594,6 +594,46 @@ Every named UI walkthrough screenshot is required evidence. The runner copies it
 `MainActivity` owns the primary stage as `StagePresenterImpl`; `StageSurface` is a separate lifecycle-bound renderer used for fullscreen and external-display surfaces. These are not interchangeable types. `CameraStage` binds its preview to the primary presenter's `BackgroundStage` preview when the primary stage is active, and mounts a dedicated preview into `StageSurface` for fullscreen/external output. On fullscreen transitions, camera ownership moves to the new target and returns to the primary preview on dismissal. The primary presenter exposes the prepared camera preview and its actual streaming state. Instrumentation must resolve the concrete stage target rather than cast the primary presenter to the legacy surface class.
 
 
-### Camera preview ownership across stage transitions
+### KANTA design-system UI — 2026-11-01
+
+The Android application uses a dedicated presentation layer under `ph.kanta.reborn.ui` that implements
+the KANTA dark entertainment design system. This layer is purely presentational; all playback, queue,
+persistence, sensor, companion and playback logic remains owned by `SessionController` and
+`StagePresenterImpl`, which are unchanged.
+
+### Design tokens (`KantaTheme`)
+
+A single token source defines the KANTA visual language:
+
+- Background `#050B18`, elevated `#081426`, surface `#0D1930`, surface elevated `#12203A`, border `#203459`
+- Primary cyan `#29D9FF`, primary blue `#2589FF`, primary purple `#7657FF`, accent magenta `#D946EF`
+- Text primary `#F7F9FF`, secondary `#A7B1C7`, muted `#6F7990`
+- Success `#36E394`, warning `#F5C451`, danger `#FF5277`
+- Radii: small controls 10-12dp, buttons 12-14dp, cards 16-20dp, hero containers 22-26dp, circular controls fully round
+- Gradients (cyan -> blue -> violet -> magenta) reserved for emphasis only
+
+### Reusable components (`ph.kanta.reborn.ui.components`)
+
+`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`, `KantaProgressBar`, `KantaStepper`,
+`KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`.
+
+### Screens (`ph.kanta.reborn.ui`)
+
+`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
+`KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`.
+Each screen exposes a `Listener` interface that callbacks into `MainActivity`, which in turn calls
+the existing `SessionController` / `StagePresenterImpl` backend methods. No backend behavior is
+duplicated or replaced.
+
+### Browser remote
+
+The browser companion (`apps/android/app/src/main/assets/companion/`) is restyled with the same KANTA
+design system: `#050B18` background, `#0D1930`/`#12203A` surfaces, `#203459` borders, cyan active
+states, responsive 3-column desktop layout collapsing to a single column below 1000px. The wire
+protocol, action allowlist, pairing flow and fingerprint verification are unchanged; controls not in
+the protocol allowlist (Key -, Key +, Slower, Faster, Fullscreen, Previous) are rendered as honestly
+disabled with explanatory tooltips.
+
+## Camera preview ownership across stage transitions
 
 `MainActivity` owns the primary camera preview through `StagePresenterImpl` and creates a dedicated `StageSurface` for fullscreen/external presentation. `CameraStage.moveTo(...)` must bind the preview to the currently visible stage owner, and the CameraX `PreviewView.StreamState.STREAMING` callback must update that owner's visible-camera state. Emulator acceptance covers primary → fullscreen → primary transitions, then explicit disable and foreground-loss cleanup. A successful transfer is proven by the fullscreen `StageSurface.isCameraVisible()` signal, not by the absence of that signal.

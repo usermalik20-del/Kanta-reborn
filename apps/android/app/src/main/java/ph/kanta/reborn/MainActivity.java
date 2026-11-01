@@ -60,6 +60,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private Presentation presentation;
   private DisplayManager displays;
   private String tab = "Control", query = "", singer = "";
+
+  // New KANTA design-system screens (presentation layer only; backend logic
+  // is unchanged and owned by SessionController / StagePresenterImpl).
+  private LinearLayout contentContainer;
+  private HomeScreen homeScreen;
+  private KantaNowPlayingScreen nowPlayingScreen;
+  private KantaSearchScreen searchScreen;
+  private KantaQueueScreen queueScreen;
+  private KantaPitchTempoScreen pitchTempoScreen;
+  private KantaMicVoiceScreen micVoiceScreen;
+  private KantaVisualsScreen visualsScreen;
+  private KantaFullscreenStage fullscreenStageView;
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
@@ -295,29 +307,35 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     queryInput = null;
     results = null;
     if (root == null) buildWindow();
-    nowPlaying.setText(
-        session.current == null
-            ? "Ready for your next song"
-            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer));
-    playButton.setText(session.playing ? "Pause" : "Play");
-    playButton.setEnabled(session.ready && !session.loading);
-    nextButton.setEnabled(session.ready && !session.loading);
-    for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
-      entry.getValue().setSelected(entry.getKey().equals(tab));
-      entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
+    // Update the active design-system screen with current session state
+    if (session.current != null) {
+      String nowPlayingText = session.current.title +
+          (session.singer.isEmpty() ? "" : " · " + session.singer);
+      if (nowPlayingScreen != null) nowPlayingScreen.setSongInfo(session.current.title, session.singer);
+      if (fullscreenStageView != null) fullscreenStageView.setSongInfo(session.current.title, session.singer);
     }
-    body.removeAllViews();
-    renderPanel();
+    if (nowPlayingScreen != null) nowPlayingScreen.setPlaying(session.playing);
+    if (fullscreenStageView != null) fullscreenStageView.setPlaying(session.playing);
+    if (nowPlayingScreen != null) {
+      nowPlayingScreen.setTimes(String.valueOf(session.position()), "0:00");
+    }
+    if (fullscreenStageView != null) {
+      fullscreenStageView.setTimes(String.valueOf(session.position()), "0:00");
+    }
+    if (queueScreen != null) {
+      refreshQueue();
+    }
+    // Keep the backend stage layer in sync
     if (stagePresenter != null) stagePresenter.refresh();
   }
 
   private void buildWindow() {
-    root = column();
-    root.setBackgroundColor(NAVY);
+    root = new FrameLayout(this);
+    root.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
     root.setPadding(dp(12), 0, dp(12), 0);
     root.setOnApplyWindowInsetsListener(
         (v, insets) -> {
-          v.setPadding(
+          ((View) v).setPadding(
               dp(12),
               insets.getSystemWindowInsetTop(),
               dp(12),
@@ -331,15 +349,21 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     mark.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
     mark.setContentDescription("KANTA");
     header.addView(mark, new LinearLayout.LayoutParams(dp(40), dp(40)));
-    TextView brand = text("KANTA · ᜃᜈ᜔ᜆ", 22, GOLD);
+    TextView brand = text("KANTA · \u1703\u1708\u1714\u1706", 22, GOLD);
     brand.setTypeface(null, android.graphics.Typeface.BOLD);
     header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-    header.addView(button("Help", this::help));
-    root.addView(header);
+    header.addView(button("Settings", this::help));
+    root.addView(header, new FrameLayout.LayoutParams(-1, -2));
+
+    // Content container for design-system screens (overlay on top of existing UI)
+    contentContainer = new FrameLayout(this);
+    contentContainer.setVisibility(View.GONE);
+    root.addView(contentContainer, new FrameLayout.LayoutParams(-1, -1));
+
     LinearLayout main = new LinearLayout(this);
     boolean wide = getResources().getConfiguration().screenWidthDp >= 700;
     main.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
-    root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
+    root.addView(main, new FrameLayout.LayoutParams(-1, -1));
     LinearLayout stagePane = column();
     // Compact Workspace: the stage is the persistent base layer. Utilities are
     // transient accessories presented above it, so the player is never lost.
@@ -385,10 +409,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             Color.WHITE);
     stagePane.addView(nowPlaying);
     LinearLayout transport = row();
-    // Primary: Play gets higher visual weight
     playButton = button("Play", this::playWithCountdown);
-    addWeighted(transport, playButton, 2f);  // primary - double weight
-    // Secondary: Next and Fullscreen
+    addWeighted(transport, playButton);
     nextButton = button("Next", session::next);
     addWeighted(transport, nextButton);
     addWeighted(transport, button("Fullscreen", this::fullscreen));
@@ -427,7 +449,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       navigationButtons.put(name, b);
       tabs.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
     }
-    root.addView(tabs);
+    root.addView(tabs, new FrameLayout.LayoutParams(-1, -2));
     if (stagePresenter != null) stagePresenter.refresh();
   }
 
