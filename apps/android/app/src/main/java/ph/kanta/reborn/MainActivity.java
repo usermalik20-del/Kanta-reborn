@@ -43,7 +43,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       CYAN = 0xFF6FE5E8,
       GOLD = 0xFFF6CE77;
   private SessionController session;
-  private LinearLayout root, body, results;
+  private LinearLayout root, body, results, stagePane, navigationTabs;
+  private View appHeader;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -303,6 +304,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     playButton.setText(session.playing ? "Pause" : "Play");
     playButton.setEnabled(session.ready && !session.loading);
     nextButton.setEnabled(session.ready && !session.loading);
+    boolean home = "Home".equals(tab);
+    if (appHeader != null) appHeader.setVisibility(home ? View.GONE : View.VISIBLE);
+    if (stagePane != null) stagePane.setVisibility(home ? View.GONE : View.VISIBLE);
+    if (navigationTabs != null) navigationTabs.setVisibility(home ? View.GONE : View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
       entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
@@ -328,6 +333,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     setContentView(root);
     root.requestApplyInsets();
     LinearLayout header = row();
+    appHeader = header;
     ImageView mark = new ImageView(this);
     mark.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
     mark.setContentDescription("KANTA");
@@ -341,7 +347,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     boolean wide = getResources().getConfiguration().screenWidthDp >= 700;
     main.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
     root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
-    LinearLayout stagePane = column();
+    stagePane = column();
     // Compact Workspace: the stage is the persistent base layer. Utilities are
     // transient accessories presented above it, so the player is never lost.
     workspace = new KantaWorkspace(this, null);
@@ -407,6 +413,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (wide) main.addView(scroll, new LinearLayout.LayoutParams(0, -1, 1));
     else main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout tabs = row();
+    navigationTabs = tabs;
     for (String name : new String[] {"Home", "My Set", "Loop", "Scenic", "Realm", "Control"}) {
       Button b =
           button(
@@ -923,8 +930,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     microphoneReading = null;
     monitorReading = null;
     scoreReading = null;
-    body.addView(text(session.message, 13, CYAN));
-    body.addView(button("YouTube video (online)", this::openYouTubeVideo));
+    if (!"Home".equals(tab)) {
+      body.addView(text(session.message, 13, CYAN));
+      body.addView(button("YouTube video (online)", this::openYouTubeVideo));
+    }
 
     switch (tab) {
       case "Home":
