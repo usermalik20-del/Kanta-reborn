@@ -55,7 +55,7 @@ def publish():
              "artifactName": "KANTA-" + ("Android-preview-download" if platform == "android" else "iOS-personal-unsigned-download"),
              "signed": info["signed"], "sha256": digest,
          **({"apkSha256": info["sha256"]} if platform == "android" else {"ipaSha256": info["sha256"]}),
-             "bytes": int(info["bytes"]), "retentionDays": days}
+             "bytes": int(info["bytes"])}
     if platform == "ios":
         entry.update({"personalSigningRequired": True, "icloudAvailable": False,
                       "walkthroughRun": int(info["walkthroughRun"])})
