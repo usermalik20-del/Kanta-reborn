@@ -225,18 +225,20 @@ class ExactShaWorkflowTriggerContracts(unittest.TestCase):
         cls.walkthrough = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
 
-    def test_android_source_changes_trigger_ios_release_gates_on_main_only(self):
+    def test_android_source_changes_never_trigger_ios_release_gates(self):
         for workflow_name, source in (("walkthrough", self.walkthrough), ("archive", self.archive)):
-            with self.subTest(workflow=workflow_name):
-                push = workflow_event_section(source, "push")
-                pull_request = workflow_event_section(source, "pull_request")
-                self.assertIn("'apps/android/**'", push)
-                self.assertNotIn("'apps/android/**'", pull_request)
+            for event in ("push", "pull_request"):
+                with self.subTest(workflow=workflow_name, event=event):
+                    section = workflow_event_section(source, event)
+                    self.assertNotIn("'apps/android/**'", section)
+                    self.assertNotIn("'tools/verify-android-companion-interface.py'", section)
 
-    def test_android_companion_guard_changes_trigger_both_device_walkthroughs(self):
+    def test_android_companion_guard_is_owned_by_android_validation(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        android = (root / ".github/workflows/android-validation.yml").read_text(encoding="utf-8")
         for event in ("push", "pull_request"):
             with self.subTest(event=event):
-                section = workflow_event_section(self.walkthrough, event)
+                section = workflow_event_section(android, event)
                 self.assertIn("'tools/verify-android-companion-interface.py'", section)
 
 
@@ -291,7 +293,7 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         cls.visual = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.workflow = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
 
-    def test_release_tooling_changes_trigger_exact_sha_gates_on_main_only(self):
+    def test_release_tooling_does_not_trigger_native_platform_builds(self):
         release_paths = (
             "'tools/prepare-verified-downloads.py'",
             "'tools/publish-verified-downloads.py'",
@@ -301,12 +303,11 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         for workflow_name, source in (("android", self.android),
                                       ("archive", self.archive),
                                       ("walkthrough", self.visual)):
-            push = workflow_event_section(source, "push")
-            pull_request = workflow_event_section(source, "pull_request")
-            with self.subTest(workflow=workflow_name):
-                for path in release_paths:
-                    self.assertIn(path, push)
-                    self.assertNotIn(path, pull_request)
+            for event in ("push", "pull_request"):
+                section = workflow_event_section(source, event)
+                with self.subTest(workflow=workflow_name, event=event):
+                    for path in release_paths:
+                        self.assertNotIn(path, section)
         for event in ("push", "pull_request"):
             package_section = workflow_event_section(self.workflow, event)
             for path in release_paths + (
