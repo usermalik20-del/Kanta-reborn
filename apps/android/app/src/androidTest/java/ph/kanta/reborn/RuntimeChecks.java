@@ -65,6 +65,15 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> session.ready, "Library did not open");
       capture("library_ready.png");
       check(
+          state(() -> contains(activity.getWindow().getDecorView(), "Music brings people together.")),
+          "Reference-led Home dashboard was not mounted at launch");
+      runOnMainSync(
+          () -> {
+            View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
+            check(more != null, "Home dashboard More destination missing");
+            more.performClick();
+          });
+      check(
           state(
               () -> !session.scoringEnabled && session.score == null && session.lastScore == null),
           "Fresh session enabled scoring or restored a completion");
@@ -231,7 +240,7 @@ public final class RuntimeChecks extends Instrumentation {
                           .getDecorView()
                           .findViewWithTag("kanta.stage.primary")),
           "Controller update detached the stage subtree");
-      await(() -> stableStage.get().getWidth() > 0, "Stage layout never became visible");
+      await(() -> stableStage.get().getWidth() > 0, "Stage layout never became visible after leaving Home");
       workspaceBackNavigationChecks();
       check(
           state(
