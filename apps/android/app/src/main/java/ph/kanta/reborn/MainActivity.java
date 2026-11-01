@@ -2260,7 +2260,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     long position = session.position();
     if (fullscreenProgress != null)
       fullscreenProgress.setProgress(duration > 0
-          ? (int) Math.max(0, Math.min(1000, position * 1000L / duration)) : 0);
+          ? (int) Math.max(0, Math.min(1000, Math.round(position * 1000.0 / duration))) : 0);
     if (fullscreenTime != null)
       fullscreenTime.setText(stageTime(position) + " / " + (duration > 0 ? stageTime(duration) : "--:--"));
     if (fullscreenKeyTempo != null)
@@ -2311,6 +2311,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     fullscreenProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
     fullscreenProgress.setMax(1000);
     fullscreenProgress.setProgress(0);
+    fullscreenProgress.setProgressTintList(ColorStateList.valueOf(KantaTheme.PRIMARY_CYAN));
+    fullscreenProgress.setProgressBackgroundTintList(ColorStateList.valueOf(KantaTheme.BORDER));
     fullscreenProgress.setTag("kanta.fullscreen.progress");
     LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(-1, dp(6));
     progressParams.topMargin = dp(12);
