@@ -25,8 +25,13 @@ import ph.kanta.reborn.core.MonitorRouteGuard;
 import ph.kanta.reborn.core.VocalMonitorEffects;
 
 /** Optional voice output. Actual routing, not device availability, controls audibility. */
+@android.annotation.SuppressLint("InlinedApi")
 final class MicrophoneMonitor {
   private static final int RATE = 48000;
+  /** Bluetooth link settling bound: SCO negotiation takes one to three seconds. */
+  private static final long COMMUNICATION_READY_MS = 6000;
+  /** Wired outputs stall briefly; a Bluetooth link can stall while it reconfigures. */
+  private static final long WRITE_STALL_MS = 500, COMMUNICATION_WRITE_STALL_MS = 2500;
   private final AudioManager audio;
   private final Handler main = new Handler(Looper.getMainLooper());
   private final Consumer<String> notice;
@@ -48,13 +53,21 @@ final class MicrophoneMonitor {
     final AudioDeviceInfo device;
     final MonitorBuffer buffer = new MonitorBuffer();
     final MonitorRouteGuard guard;
+    final boolean communication;
+    volatile boolean communicationRouted;
     volatile boolean cancelled, audible, ready;
     volatile CorrectionChoice correction = CorrectionChoice.OFF;
     AudioTrack track;
 
     Run(AudioDeviceInfo device) {
       this.device = device;
-      guard = new MonitorRouteGuard(device.getId(), SystemClock.elapsedRealtime());
+      communication = MicrophoneMonitor.communication(device);
+      // A Bluetooth activation needs the longer readiness bound; wired keeps the 1.5 s one.
+      guard =
+          new MonitorRouteGuard(
+              device.getId(),
+              SystemClock.elapsedRealtime(),
+              communication ? COMMUNICATION_READY_MS : MonitorRouteGuard.READY_MS);
     }
   }
 
@@ -80,24 +93,48 @@ final class MicrophoneMonitor {
     this.readings = readings;
   }
 
+  /**
+   * Accepted monitor outputs: headset-class and line-out sinks only.
+   *
+   * <p>Speaker-class routes (built-in speaker, Bluetooth A2DP speakers, HDMI/ARC) stay rejected:
+   * the microphone hears them, so monitoring there is a feedback loop. Bluetooth SCO and BLE
+   * headsets are accepted because the microphone belongs to the same worn device.
+   */
   static boolean supported(AudioDeviceInfo device) {
-    if (device == null || !device.isSink()) return false;
+    if (device == null) return false;
     switch (device.getType()) {
       case AudioDeviceInfo.TYPE_WIRED_HEADSET:
       case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
       case AudioDeviceInfo.TYPE_USB_DEVICE:
       case AudioDeviceInfo.TYPE_USB_HEADSET:
       case AudioDeviceInfo.TYPE_LINE_ANALOG:
+      case AudioDeviceInfo.TYPE_AUX_LINE:
+        return device.isSink();
+      case AudioDeviceInfo.TYPE_BLUETOOTH_SCO:
+      case AudioDeviceInfo.TYPE_BLE_HEADSET:
         return true;
       default:
         return false;
     }
   }
 
+  /**
+   * Bluetooth headsets route through the platform communication path. A plain media track would
+   * keep playing from the built-in speaker, so the selection is not enough on its own.
+   */
+  static boolean communication(AudioDeviceInfo device) {
+    return device != null
+        && (device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+            || device.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET);
+  }
+
   List<AudioDeviceInfo> outputs() {
     ArrayList<AudioDeviceInfo> devices = new ArrayList<>();
     for (AudioDeviceInfo device : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS))
-      if (supported(device)) devices.add(device);
+      // Communication routing replaced the SCO broadcasts in API 31, so older platforms are
+      // not offered a Bluetooth output they cannot route.
+      if (supported(device) && (Build.VERSION.SDK_INT >= 31 || !communication(device)))
+        devices.add(device);
     return devices;
   }
 
@@ -156,6 +193,7 @@ final class MicrophoneMonitor {
 
   boolean start(AudioDeviceInfo selected) {
     if (enabled() || !supported(selected)) return false;
+    if (communication(selected) && Build.VERSION.SDK_INT < 31) return false;
     boolean connected = outputs().stream().anyMatch(d -> d.getId() == selected.getId());
     if (!connected) return false;
     gain = .1f;
@@ -262,15 +300,37 @@ final class MicrophoneMonitor {
     AudioTrack track = null;
     try {
       if (!current(run)) return;
+      // A Bluetooth headset only becomes an output once the platform is asked for the
+      // communication route; a plain media track would keep playing from the built-in speaker.
+      boolean communicationRouted = false;
+      if (run.communication && Build.VERSION.SDK_INT >= 31) {
+        try {
+          audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
+          communicationRouted = audio.setCommunicationDevice(run.device);
+        } catch (RuntimeException refused) {
+          communicationRouted = false;
+        }
+        if (!communicationRouted) {
+          try {
+            audio.setMode(AudioManager.MODE_NORMAL);
+          } catch (RuntimeException ignored) {
+          }
+        }
+        run.communicationRouted = communicationRouted;
+      }
       int minimum =
           AudioTrack.getMinBufferSize(
               RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_FLOAT);
-      if (minimum <= 0 || minimum > RATE / 5 * 4) throw new IllegalStateException();
+      long bufferLimit = communicationRouted ? (long) RATE * 2 : RATE / 5 * 4;
+      if (minimum <= 0 || minimum > bufferLimit) throw new IllegalStateException();
       track =
           new AudioTrack.Builder()
               .setAudioAttributes(
                   new AudioAttributes.Builder()
-                      .setUsage(AudioAttributes.USAGE_MEDIA)
+                      .setUsage(
+                          communicationRouted
+                              ? AudioAttributes.USAGE_VOICE_COMMUNICATION
+                              : AudioAttributes.USAGE_MEDIA)
                       .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                       .build())
               .setAudioFormat(
@@ -295,7 +355,8 @@ final class MicrophoneMonitor {
       callbackRegistered = true;
       // Only zeroes are queued before actual routing has been verified.
       int warmupFrames = track.getBufferSizeInFrames();
-      if (warmupFrames <= 0 || warmupFrames > RATE / 5) throw new IllegalStateException();
+      if (warmupFrames <= 0 || warmupFrames > (communicationRouted ? RATE / 2 : RATE / 5))
+        throw new IllegalStateException();
       float[] warmup = new float[warmupFrames];
       track.write(warmup, 0, warmup.length, AudioTrack.WRITE_NON_BLOCKING);
       track.play();
@@ -304,7 +365,10 @@ final class MicrophoneMonitor {
         MonitorRouteGuard.Decision decision =
             run.guard.verify(routed(track), SystemClock.elapsedRealtime());
         if (decision == MonitorRouteGuard.Decision.STOP) {
-          fail(run, "Monitoring stopped: wired or USB output could not be verified.");
+          fail(
+              run,
+              "Monitoring stopped: the selected wired, USB or Bluetooth output could not be"
+                  + " verified.");
           return;
         }
         if (decision == MonitorRouteGuard.Decision.ALLOW) {
@@ -370,7 +434,8 @@ final class MicrophoneMonitor {
           if (written < 0) throw new IllegalStateException();
           offset += written;
           if (written > 0) lastWrite = SystemClock.elapsedRealtime();
-          else if (SystemClock.elapsedRealtime() - lastWrite > 500)
+          else if (SystemClock.elapsedRealtime() - lastWrite
+              > (communicationRouted ? COMMUNICATION_WRITE_STALL_MS : WRITE_STALL_MS))
             throw new IllegalStateException();
         }
         SystemClock.sleep(2);
@@ -406,6 +471,17 @@ final class MicrophoneMonitor {
       effects.reset();
       corrector.reset();
       java.util.Arrays.fill(block, 0);
+      if (run.communicationRouted) {
+        run.communicationRouted = false;
+        try {
+          audio.clearCommunicationDevice();
+        } catch (RuntimeException ignored) {
+        }
+        try {
+          audio.setMode(AudioManager.MODE_NORMAL);
+        } catch (RuntimeException ignored) {
+        }
+      }
       outputOwner = null;
     }
   }

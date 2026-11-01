@@ -21,6 +21,7 @@ import ph.kanta.reborn.content.ContentScanner;
 import ph.kanta.reborn.core.catalog.SongCatalog;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.stage.StagePresenter;
 import ph.kanta.reborn.stage.StagePresenterImpl;
 import ph.kanta.reborn.core.connect.KantaConnectInfo;
 import ph.kanta.reborn.core.connect.QrEncoder;
@@ -255,6 +256,38 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     row.addView(view, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
   }
 
+  /**
+   * Starts a new reservation through the fun Ready/1-4/Kanta countdown. Resuming an already
+   * prepared song, or a request with no reservation, keeps the existing single-owner transport
+   * path and does not delay playback.
+   */
+  private void playWithCountdown() {
+    if (session.playing || !session.ready || session.loading) {
+      session.toggle();
+      return;
+    }
+    if (session.player != null || stagePresenter == null || session.queue.peek() == null) {
+      session.toggle();
+      return;
+    }
+    int seconds = new SettingsStore(this).getCountdownLength();
+    if (seconds <= 0) {
+      session.toggle();
+      return;
+    }
+    stagePresenter.startCountdown(
+        seconds,
+        new StagePresenter.CountdownListener() {
+          @Override
+          public void onTick(int remaining) {}
+
+          @Override
+          public void onComplete() {
+            session.toggle();
+          }
+        });
+  }
+
   private void render() {
     if (isFinishing() || isDestroyed()) return;
     reconcileOnlinePreviewWithLocalPlayback();
@@ -352,7 +385,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             Color.WHITE);
     stagePane.addView(nowPlaying);
     LinearLayout transport = row();
-    playButton = button("Play", session::toggle);
+    playButton = button("Play", this::playWithCountdown);
     addWeighted(transport, playButton);
     nextButton = button("Next", session::next);
     addWeighted(transport, nextButton);
@@ -1011,16 +1044,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
     body.addView(
         button(
-            session.monitor.enabled() ? "Turn off monitoring" : "Wired / USB monitoring",
+            session.monitor.enabled()
+                ? "Turn off monitoring"
+                : "Wired / USB / Bluetooth monitoring",
             this::toggleMonitoring));
     monitorReading = text("", 13, CYAN);
     body.addView(monitorReading);
     refreshMicrophoneReading();
     body.addView(
         text(
-            "Optional voice output for connected wired or USB equipment. Use headphones, start"
-                + " quietly and check your equipment volume. Speaker and Bluetooth monitoring are"
-                + " blocked when reported by Android. Older Android reports only one output. This"
+            "Optional voice output for connected wired, USB or Bluetooth headset equipment. Use"
+                + " headphones, start quietly and check your equipment volume. Bluetooth headsets"
+                + " use Android communication audio, so sound is mono call quality with higher"
+                + " delay and needs Android 12 or newer. Speaker, Bluetooth-speaker and unknown"
+                + " reported routes are blocked. Older Android reports only one output. This"
                 + " experimental feature still needs device testing for sound and delay.",
             12,
             Color.WHITE));
@@ -1464,8 +1501,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     List<android.media.AudioDeviceInfo> outputs = session.monitor.outputs();
     if (outputs.isEmpty()) {
       session.message =
-          "Connect wired or USB headphones or an audio interface. Speaker and Bluetooth monitoring"
-              + " are unavailable.";
+          "Connect wired or USB headphones, an audio interface or a Bluetooth headset. Speaker"
+              + " and Bluetooth-speaker monitoring are unavailable.";
       session.publish();
       return;
     }
@@ -1474,10 +1511,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       String label =
           outputs.get(i).getProductName().toString().replaceAll("[\\p{Cntrl}]", " ").trim();
       labels[i] =
-          label.isEmpty() ? "Wired / USB output" : label.substring(0, Math.min(80, label.length()));
+          label.isEmpty()
+              ? "Wired / USB / Bluetooth output"
+              : label.substring(0, Math.min(80, label.length()));
     }
     new AlertDialog.Builder(this)
-        .setTitle("Select wired / USB output")
+        .setTitle("Select wired / USB / Bluetooth output")
         .setItems(labels, (dialog, selected) -> session.startMonitor(outputs.get(selected)))
         .setNegativeButton("Cancel", null)
         .show();

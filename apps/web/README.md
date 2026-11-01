@@ -12,6 +12,14 @@ Run `python3 tools/verify-website.py`, `python3 -m unittest tools.tests.test_web
 
 The recovery evidence in `docs/evidence/website/2026-10-15` remains immutable. Original legal and software notices are retained; current Android implementation and signing statements supersede unavailable-repository feature claims.
 
+## Crawler policy
+
+The public site declares an AI-training opt-out in `apps/web/robots.txt` and enforces the declared user agents in two places: a `routes` refusal with a `has` user-agent condition in `apps/web/vercel.json`, which is evaluated before the page rewrites and therefore also covers static assets, and `isBlockedCrawler()` in `apps/web/api/page.js`, which refuses the request before the page is read from disk. Refusals are `403` with `X-Robots-Tag: noai, noimageai`. Crawler user agents are refused by the edge rule, so in production they receive Vercel's own 403 page rather than the renderer's text body; the renderer's plain-text refusal is the layer behind it. Live verification on 2026-11-01 showed the `headers` rule reaches static responses (`/style.css`, `/robots.txt`, `/downloads.json`) but **not** the rewritten HTML routes, because the function's response replaces them — so the renderer sets `X-Robots-Tag` on its own response, and `tools/verify-website.py` fails if that line is removed.
+
+Three deliberate constraints hold this policy in place. Search-engine and unfurler user agents must stay crawlable, so the `User-agent: *` group allows crawling and no search-engine token may appear in the handler block list. Live-user AI fetchers stay allowed as a product decision. `X-Robots-Tag` must never carry `noindex`, because that would remove the site from organic search rather than protect it. The token list is intentionally duplicated across the three files with different syntaxes, and `tools/verify-website.py` plus `tools/tests/test_website_security_contract.py` fail when the lists disagree, when a refusal rule loses its user-agent condition, or when a group starts disallowing all crawling.
+
+`robots.txt` is a declared preference, not a control, and this work is not claimed to make the site unscrapable. The edge rule and header only take effect on the next production deployment and their live behavior is unverified; see [scraping defense](../../docs/WEBSITE_SCRAPING_DEFENSE.md) for the effectiveness limits and the edge/WAF follow-ups.
+
 
 
 **Consent loading invariant:** `api/page.js` strips the legacy static `/analytics.js` script tag from recovered HTML before rendering. Do not reintroduce an eager Analytics tag in any source page: `site-consent.js` is the sole loader and may inject Analytics and AdSense only after the saved consent value is `accepted`. `tools/tests/test_site_page_handler.test.js` covers removal of the legacy tag from rendered output. This is important because adding a CSP nonce to an eager script does not make its execution consent-gated.

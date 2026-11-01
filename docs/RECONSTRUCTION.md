@@ -1,5 +1,41 @@
 # Reconstruction evidence and work ledger
 
+## Website crawler and scraping defense — merged and deployed (2026-11-01)
+
+Branch `feat/website-scraping-defense`, PR [#125](https://github.com/usermalik20-del/Kanta-reborn/pull/125),
+**merge commit `ccd09fd`** on `main`. Website validation [run 41262424926](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41262424926),
+verified-download packaging [run 41262424946](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41262424946)
+and the production Vercel deploy [run 41262424955](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41262424955)
+all succeeded on that SHA. The pull-request head `1d85d73` passed the full website job, which
+includes `node --test tools/tests/test_site_page_handler.test.js` — the JavaScript assertions
+that could not be executed in the authoring environment did run in CI and passed.
+
+Three enforcement points express one crawler policy. `apps/web/robots.txt` declares it: an
+allow group for search engines and unfurlers, a `Disallow: /` group for AI training and
+data-mining crawlers, a separate allow group for live-user AI fetchers, an allow-by-default
+fallback group that disallows only `/api/`, the canonical `Sitemap:` line and a
+`Content-Signal: search=yes, ai-train=no, ai-input=no` preference. `apps/web/vercel.json`
+publishes `X-Robots-Tag: noai, noimageai` and a `routes` entry that refuses the declared user
+agents with `403` before the page rewrites. `apps/web/api/page.js` adds `isBlockedCrawler()`,
+exported for tests, plus a fail-open `crawlerGate()` applied before `fs.readFile`.
+
+**Production verification measured on that deployment.** `/robots.txt` returns `200` with the
+policy, the `Content-Signal` line and the canonical sitemap. A `GPTBot` user agent receives
+`403` on `/`, on `/style.css` and on `/downloads.json`; `Googlebot` and an iPhone Safari user
+agent receive `200` with rendered HTML. `X-Robots-Tag: noai, noimageai` is present on static
+responses and was **absent on the ten HTML routes**, because a `routes` rewrite replaces the
+response and the `headers` rule does not reach it. That gap is repaired on branch
+`fix/website-robots-tag-rendered-pages` (the renderer now sets the header itself) and both the
+verifier and the contract test fail if the line is removed; the verifier scopes its search to
+the handler body because the refusal path sets the same header text and an unscoped search
+passed with the rendered-page header deleted.
+
+**Deployed and verified: the declared-agent refusal, the policy file and the static-asset
+header. Not verified: the rendered-page header on a production response after the follow-up
+fix, and anything about a browser-impersonating client.** Rate limiting and rate-based
+protection remain unimplemented; see [docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md)
+and section J of `docs/UNFINISHED_WORK.md`.
+
 ## Current checkpoint — 2026-10-29 (main `2a01654`; public release source `41c8ddde`)
 
 Main head is [`2a01654`](https://github.com/usermalik20-del/Kanta-reborn/commit/2a01654).
@@ -118,6 +154,26 @@ that one records what has not.
 - `stage/StagePresenterImpl.java` — owns the persistent stage layer
   (tag `kanta.stage.primary`) and binds the ten stage overlays to `SessionController`.
 
+### Milestone 4 detail — lyric-stage animation and fun countdown (2026-10-31)
+
+Candidate source on `feature/fun-lyrics-and-countdown` (local commit `3379caa`) adds
+`core/LyricWordAnimation.java`, a framework-free helper for source-fragment interpolation,
+active-fragment selection and pitch-energy decay. `stage/LyricStage.java` and the fullscreen
+`StageView` keep their existing scrolling window and cached `StaticLayout` text, but the active
+line now fills continuously across a source fragment instead of flipping a whole word, and the
+fragment being sung receives a per-letter wave driven by the existing `PitchSource` estimate.
+`stage/CountdownStage.java` becomes `Ready ⏱️ → 1 → 2 → 3 → 4 → Kanta 🎤` with a gradient ring,
+orbit dots and confetti, and `SettingsStore.getCountdownLength()` defaults to four.
+`MainActivity.playWithCountdown()` starts a new reservation through the countdown and still
+reaches playback only through `SessionController.toggle()`; prepared songs and empty queues skip
+the countdown. No word timings are invented, pitch cannot change cue timing or scoring, and the
+stage still renders with the microphone off.
+
+`LyricWordAnimationRegressionTests` is wired into the existing `coreRegression` task. The
+authoring environment has no working local JVM (`getcpu(2) system call not supported by
+kernel`), so this candidate is reconstructed and statically checked only; Gradle compilation,
+lint, emulator runtime and device acceptance remain open.
+
 ### Milestone 4 detail — score celebration (2026-10-29)
 
 `core/score/ScoreCelebrationPlan.java` holds the whole choreography as framework-free,
@@ -144,6 +200,12 @@ counts, playback state, audio settings, microphone/monitor/scoring flags, stage 
 and camera, companion and Kanta-Connect status, and the current message — and offers Copy.
 It deliberately reports only *whether* Kanta-Connect is hosting, never the pairing code, so
 the report is safe to share. It changes no audio, playback or lifecycle path.
+
+`MicrophoneMonitor` now also accepts Bluetooth SCO and BLE headsets as monitored outputs and
+routes them through the Android communication path on API 31 and newer, with a longer readiness
+bound for the slower link. The microphone input itself is unchanged: it still comes from the
+phone's own built-in microphone, so a Bluetooth headset's microphone is not yet captured by the
+app and the Bluetooth route carries the processed voice out only.
 
 
 **Pitch Settings UI (Controls accessory) — implemented and validated**

@@ -129,6 +129,18 @@ public final class CoreRegressionTests {
     check(
         fresh.verify(new int[] {7}, 302) == MonitorRouteGuard.Decision.STOP,
         "Closed route reopened");
+    check(
+        new MonitorRouteGuard(7, 100, 6000).verify(new int[] {7}, 2000)
+            == MonitorRouteGuard.Decision.ALLOW,
+        "Bluetooth readiness bound rejected a late route");
+    check(
+        new MonitorRouteGuard(7, 100, 6000).verify(new int[0], 6200)
+            == MonitorRouteGuard.Decision.STOP,
+        "Extended readiness bound never expired");
+    check(
+        new MonitorRouteGuard(7, 100, 6000).verify(new int[] {7}, 99)
+            == MonitorRouteGuard.Decision.STOP,
+        "Extended readiness bound accepted invalid time");
 
     MonitorBuffer buffer = new MonitorBuffer();
     float[] output = new float[480];
@@ -1110,6 +1122,7 @@ public final class CoreRegressionTests {
     checks += MkmdDecoderRegressionTests.run();
     checks += SpicePitchRegressionTests.run();
     checks += MidiKeyRegressionTests.run();
+    checks += LyricWordAnimationRegressionTests.run();
     checks += QrEncoderRegressionTests.run();
     checks += KantaConnectInfoRegressionTests.run();
     checks += ScoreCelebrationRegressionTests.run();
