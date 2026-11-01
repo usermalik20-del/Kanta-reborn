@@ -492,7 +492,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
    */
   private void presentAccessory(String accessoryId) {
     if (workspace == null) return;
-    if (workspace.activeAccessory() != null) returnToHomeAfterAccessory = false;
+    if (workspace.activeAccessory() != null
+        && !workspace.activeAccessory().equals(accessoryId)) returnToHomeAfterAccessory = false;
     workspaceSearchGeneration++;
     workspace.activateAccessory(accessoryId);
     LinearLayout target = workspace.accessoryContent();
