@@ -592,3 +592,8 @@ Every named UI walkthrough screenshot is required evidence. The runner copies it
 ## Android stage presenter and camera target contract — 2026-11-01
 
 `MainActivity` owns the primary stage as `StagePresenterImpl`; `StageSurface` is a separate lifecycle-bound renderer used for fullscreen and external-display surfaces. These are not interchangeable types. `CameraStage` binds its preview to the primary presenter's `BackgroundStage` preview when the primary stage is active, and mounts a dedicated preview into `StageSurface` for fullscreen/external output. On fullscreen transitions, camera ownership moves to the new target and returns to the primary preview on dismissal. The primary presenter exposes the prepared camera preview and its actual streaming state. Instrumentation must resolve the concrete stage target rather than cast the primary presenter to the legacy surface class.
+
+
+### Camera preview ownership across stage transitions
+
+`MainActivity` owns the primary camera preview through `StagePresenterImpl` and creates a dedicated `StageSurface` for fullscreen/external presentation. `CameraStage.moveTo(...)` must bind the preview to the currently visible stage owner, and the CameraX `PreviewView.StreamState.STREAMING` callback must update that owner's visible-camera state. Emulator acceptance covers primary → fullscreen → primary transitions, then explicit disable and foreground-loss cleanup. A successful transfer is proven by the fullscreen `StageSurface.isCameraVisible()` signal, not by the absence of that signal.
