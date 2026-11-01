@@ -94,8 +94,9 @@ public class KantaQueueScreen extends LinearLayout {
           isPlaying ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED,
           12, ph.kanta.reborn.ui.KantaTheme.BORDER, 1, density));
       row.setClickable(true);
+      final int itemIdx = i;
       row.setOnClickListener(v -> {
-        if (listener != null) listener.onItemClicked(i);
+        if (listener != null) listener.onItemClicked(itemIdx);
       });
       TextView pos = new TextView(context);
       pos.setText(position);
