@@ -50,7 +50,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       CYAN = 0xFF6FE5E8,
       GOLD = 0xFFF6CE77;
   private SessionController session;
-  private FrameLayout root, body, results;
+  private FrameLayout root, contentContainer;
+  private LinearLayout body, results;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -1362,7 +1363,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     int token = ++searchGeneration;
     String requested = query;
     String[] terms = Song.searchTerms(requested);
-    LinearLayout target = results;
+    FrameLayout target = results;
     int limit = resultLimit;
     List<Song> catalog = session.songs;
     searchWorker.execute(
