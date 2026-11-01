@@ -19,7 +19,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 | Android lyric animation | Source-fragment interpolation, active-fragment range and freshness-bounded pitch energy for the stage views | `coreRegression` JavaExec (`LyricWordAnimationRegressionTests`) |
 | Android Bluetooth monitor routing | Route-identity rules, the extended readiness bound used for Bluetooth links, and its expiry | `coreRegression` JavaExec (`CoreRegressionTests.monitorChecks`); device acceptance still open |
 | Android native SoundFont | Validated SF2 references, bounded allocations, audible pitch, truncation and mutation handling | C11 ASan/UBSan host harness |
-| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, Home dashboard launch and Home → Search accessory → Back → Home navigation with named launch/restoration screenshots collected and uploaded as part of the CI artifact, persistent-stage rendering, dispatcher-based workspace back dismissal, and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
+| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, Home/Search/Queue/Pitch & Tempo/Visuals/Mic & Voice navigation and screenshots, live pitch reset, scenic selection, monitor-mode routing, persistent-stage rendering, dispatcher-based workspace back dismissal and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
 | Android adaptive UI resources | Native vector drawable XML, WebP resource decoding/packaging, and resource references used by Home, fullscreen and persistent stage views | `assembleDebug` + `lintDebug`; visual composition remains a separate screenshot/emulator acceptance gate |
 | Browser interoperability | Fresh Android export through the captured browser decrypt function | Node after Android regression fixture generation |
 | Prompt bank contract | Pinned upstream metadata, cache boundary outside the repository, no vendored upstream text | Python unittest in the Android validation job |
@@ -376,7 +376,7 @@ owned by `SessionController` and `StagePresenterImpl`.
 - Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`,
   `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`,
   `KantaMediaRow`, `KantaTransportControls`) instantiate with correct colors, radii and states
-- - The production Home dashboard is mounted by `MainActivity`; its navigation callbacks route into existing workspace and session owners. The other design-system screen classes are not considered integrated until a real navigation route and live-state callback test exists.
+- The production Home dashboard and Search, Queue, Pitch & Tempo, Mic & Voice and Visuals destinations are mounted by `MainActivity`; their callbacks route into existing workspace, session, queue, microphone, monitor, camera and media-import owners. Runtime instrumentation captures each destination and verifies representative live-state mutations.
 - Browser remote validation preserves all 22 element IDs queried by `remote.js`, validates the pairing/command protocol and fingerprint checks, and does not imply desktop-layout or visual acceptance.
 
 ### What is NOT tested by these checks

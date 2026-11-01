@@ -1019,22 +1019,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onBackgroundSelected(String name) {
                 if (!session.stageReady) return;
                 camera.stop();
-                for (int i = 0; i < new String[] {
-                    "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
-                    "indigoHorizon", "mangoGlow", "moonlitBay", "orchidNight", "pearlSky"
-                }.length; i++) {
-                  String[] labels = {
-                    "Bayan Dawn", "Bamboo Mist", "Coral Haze", "Deep Lagoon", "Ember Sunset",
-                    "Indigo Horizon", "Mango Glow", "Moonlit Bay", "Orchid Night", "Pearl Sky"
-                  };
-                  String[] scenes = {
-                    "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
-                    "indigoHorizon", "mangoGlow", "moonlitBay", "orchidNight", "pearlSky"
-                  };
-                  if (labels[i].equals(name)) {
-                    session.scene(scenes[i]);
-                    return;
-                  }
+                switch (name) {
+                  case "Bayan Dawn": session.scene("bayanDawn"); break;
+                  case "Bamboo Mist": session.scene("bambooMist"); break;
+                  case "Coral Haze": session.scene("coralHaze"); break;
+                  case "Deep Lagoon": session.scene("deepLagoon"); break;
+                  case "Ember Sunset": session.scene("emberSunset"); break;
+                  case "Indigo Horizon": session.scene("indigoHorizon"); break;
+                  case "Mango Glow": session.scene("mangoGlow"); break;
+                  case "Moonlit Bay": session.scene("moonlitBay"); break;
+                  case "Orchid Night": session.scene("orchidNight"); break;
+                  case "Pearl Sky": session.scene("pearlSky"); break;
+                  default: return;
                 }
               }
               @Override public void onCameraToggle(boolean enabled) {

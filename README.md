@@ -6,7 +6,7 @@ Native Android and iOS karaoke applications built around the **Compact Workspace
 
 ## Android reference assets — safe-branch integration
 
-The in-progress Android reference-led UI branch now includes selected native VectorDrawable icons and optimized phone/landscape stage artwork from the owner-supplied adaptive asset pack. Home uses the supplied icons and portrait artwork; the fullscreen stage selects portrait or landscape artwork from the current orientation. This is a source integration milestone, not a released APK or completed visual acceptance. See [the Android asset manifest](docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md). The Android runtime artifact includes named launch and restored Home dashboard captures for visual review; the runtime collector explicitly pulls both captures from the emulator and the Android workflow upload allowlist preserves both files in the downloadable ZIP.
+The in-progress Android reference-led UI branch includes selected native VectorDrawable icons and optimized phone/landscape stage artwork from the owner-supplied adaptive asset pack. Home, Search, Queue, Pitch & Tempo, Mic & Voice and Visuals are mounted as real destinations backed by existing session, queue, microphone, camera and media-import owners. The browser remote has a responsive desktop sidebar/library/Now Playing layout. This remains source integration, not a released APK or completed visual acceptance. See [the Android asset manifest](docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md). CI instrumentation captures all six destinations, and the runtime collector plus Android workflow artifact allowlist preserve each named screenshot.
 
 ## What shipped
 
