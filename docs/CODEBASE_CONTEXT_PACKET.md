@@ -6,7 +6,7 @@
 
 **Browser companion:** `index.html`, `remote.css` and `remote.js` now provide a desktop sidebar/library/Now Playing layout and narrow-screen single-column reflow. The pinned transport, pairing, certificate verification, command allowlist, host-owned state and session expiry remain unchanged. Unsupported host controls remain disabled rather than issuing invented protocol commands.
 
-**Acceptance still pending:** current-head Android build/lint/core regression/emulator workflow; screenshot comparison of all six mounted destinations and the browser remote; visual verification at controlled handset/tablet/desktop widths; functional Now Playing/fullscreen refinement; APK artifact inspection. No visual-fidelity, emulator, device or release claim is made until those checks pass.
+**Acceptance still pending:** current-head Android build/lint/core regression/emulator workflow; screenshot comparison of all six mounted destinations and the browser remote; visual verification at controlled handset/tablet/desktop widths; remaining Now Playing and fullscreen visual comparison; APK artifact inspection. No visual-fidelity, emulator, device or release claim is made until those checks pass.
 
 ---
 
@@ -389,3 +389,7 @@ The Android and iOS apps package the same browser companion files from `apps/and
 ## Fullscreen Now Playing stage integration — 2026-11-01
 
 The Android fullscreen surface now keeps the real `StageSurface` as the full-bleed background/lyric owner and adds a live metadata/transport overlay. Song title, artist, playback time, MIDI duration when available, queue count, key and tempo are projected from `SessionController`; Play/Pause, Next, key and tempo commands delegate to that owner. The overlay does not add Previous, seek, shuffle or repeat controls that are absent from the active Android contract. Runtime instrumentation captures `fullscreen_stage.png`, exercises key increment/reset through the live session and verifies dismissal; the runner and Android workflow require the screenshot in the artifact. Audio formats without an available source duration display `--:--` rather than an invented duration.
+
+## Fullscreen stage acceptance — 2026-11-01
+
+The active fullscreen player is the existing `StageSurface` (lyrics/background/camera/video owner) with a live `SessionController` projection for title, artist, source time, MIDI duration when known, queue count, key and tempo. Play/Pause, Next, key and tempo controls delegate to the existing session. Previous and seeking remain absent; unsupported duration is shown as unknown. The runtime walkthrough opens the actual Dialog window, captures the fullscreen stage, exercises key increment/reset and verifies dismissal. `fullscreen_stage.png` is mandatory in the runner collector and CI artifact.
