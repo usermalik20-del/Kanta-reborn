@@ -86,8 +86,8 @@ public class HomeScreen extends LinearLayout {
     hero.setOrientation(VERTICAL);
     hero.setGravity(Gravity.CENTER_VERTICAL);
     hero.setPadding(dp(20), dp(16), dp(20), dp(16));
-    hero.setBackground(KantaTheme.backgroundDrawable(
-        KantaTheme.BG_ELEVATED, 20, KantaTheme.BORDER, 1, density));
+    hero.setBackground(KantaTheme.stageBackground(context, false));
+    hero.setElevation(dp(2));
     TextView greeting = KantaTheme.bodyText(context, "Good evening", 13);
     greeting.setTextColor(KantaTheme.TEXT_SECONDARY);
     TextView headline = KantaTheme.titleText(context, "Music brings\npeople together.", 27);
