@@ -572,7 +572,7 @@ The exact-SHA packaging contract resolves the Android preview APK from `KANTA An
 
 ## Exact-SHA download publication automation
 
-A successful KANTA iOS unsigned artifacts run on main is the release-pipeline completion signal. The Verified download packaging workflow then resolves the Android validation artifact, unsigned iPhoneOS IPA and both-device simulator walkthrough from the same exact main-branch SHA. It waits for in-flight exact-SHA gates instead of accepting an older successful artifact.
+Android and iOS download publication are independent release paths. Android publication resolves only the successful Android validation artifact from its exact main-branch SHA. iOS publication resolves only the unsigned iPhoneOS IPA from its exact main-branch SHA and additionally requires the iPhone and iPad simulator walkthrough on that same SHA. Neither platform waits for or rewrites the peer platform's provenance.
 
 Only after all three gates pass does packaging create up-to-30-day, provenance-bearing Android and unsigned iOS bundles. The publication helper verifies that both builds share the same full source SHA, validates the expected debug/unsigned signing states, and writes apps/web/downloads.json plus the two platform download sections. The workflow commits those generated website files with its narrowly scoped GitHub Actions token and dispatches the existing Vercel production deployment workflow.
 
