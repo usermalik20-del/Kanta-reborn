@@ -251,6 +251,13 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> !session.importing && session.stageKind.equals("video"),
           "Controller video import failed");
+      // The primary UI is StagePresenterImpl; StageSurface is the dedicated fullscreen renderer.
+      View primaryStage = stableStage.get();
+      runOnMainSync(activity::fullscreen);
+      await(
+          () -> field(activity, "fullscreenStage") instanceof StageSurface,
+          "Fullscreen stage surface was not created");
+      stableStage.set((View) field(activity, "fullscreenStage"));
       await(
           () -> ((StageSurface) stableStage.get()).isVideoVisible(),
           "Muted video did not render under lyrics");
@@ -262,6 +269,8 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> ((StageSurface) stableStage.get()).isVideoVisible(),
           "Video did not resume after reactivation");
+      runOnMainSync(activity::closeFullscreen);
+      stableStage.set(primaryStage);
       runOnMainSync(() -> session.scene("bayanDawn"));
       check(state(() -> session.stageVideo == null), "Scenic selection retained video playback");
       check(
@@ -274,15 +283,24 @@ public final class RuntimeChecks extends Instrumentation {
       shell("pm grant ph.kanta.reborn android.permission.CAMERA");
       runOnMainSync(activity::toggleCamera);
       await(
-          () -> activity.cameraStreaming() && ((StageSurface) stableStage.get()).isCameraVisible(),
-          "Opt-in front camera never rendered");
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+          "Opt-in front camera never rendered on the primary stage");
       runOnMainSync(activity::fullscreen);
+      await(
+          () -> field(activity, "fullscreenStage") instanceof StageSurface,
+          "Fullscreen camera stage was not created");
+      stableStage.set((View) field(activity, "fullscreenStage"));
       await(
           () -> activity.cameraStreaming() && !((StageSurface) stableStage.get()).isCameraVisible(),
           "Front camera did not move to fullscreen");
       runOnMainSync(activity::closeFullscreen);
+      stableStage.set(primaryStage);
       await(
-          () -> activity.cameraStreaming() && ((StageSurface) stableStage.get()).isCameraVisible(),
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
           "Front camera did not return to the primary stage");
       runOnMainSync(activity::toggleCamera);
       check(
@@ -290,7 +308,7 @@ public final class RuntimeChecks extends Instrumentation {
               () ->
                   !session.cameraPreviewEnabled
                       && !activity.cameraStreaming()
-                      && !((StageSurface) stableStage.get()).isCameraVisible()),
+                      && !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible()),
           "Disabling the camera retained its preview");
       runOnMainSync(activity::toggleCamera);
       await(activity::cameraStreaming, "Camera did not reopen after explicit opt-in");
