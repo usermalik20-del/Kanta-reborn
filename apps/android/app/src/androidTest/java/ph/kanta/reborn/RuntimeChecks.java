@@ -292,9 +292,10 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> field(activity, "fullscreenStage") instanceof StageSurface,
           "Fullscreen camera stage was not created");
-      stableStage.set((View) field(activity, "fullscreenStage"));
+      cameraStageRef.set((StageSurface) field(activity, "fullscreenStage"));
+      stableStage.set(cameraStageRef.get());
       await(
-          () -> activity.cameraStreaming() && ((StageSurface) stableStage.get()).isCameraVisible(),
+          () -> activity.cameraStreaming() && cameraStageRef.get().isCameraVisible(),
           "Front camera did not render on the fullscreen stage");
       runOnMainSync(activity::closeFullscreen);
       stableStage.set(primaryStage);
@@ -303,14 +304,16 @@ public final class RuntimeChecks extends Instrumentation {
               activity.cameraStreaming()
                   && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
           "Front camera did not return to the primary stage");
+      await(
+          () -> !cameraStageRef.get().isCameraVisible(),
+          "Fullscreen stage retained its camera preview after ownership moved away");
       runOnMainSync(activity::toggleCamera);
-      check(
-          state(
-              () ->
-                  !session.cameraPreviewEnabled
-                      && !activity.cameraStreaming()
-                      && !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible()),
-          "Disabling the camera retained its preview");
+      await(
+          () ->
+              !session.cameraPreviewEnabled
+                  && !activity.cameraStreaming()
+                  && !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+          "Disabling the camera did not release the primary preview");
       runOnMainSync(activity::toggleCamera);
       await(activity::cameraStreaming, "Camera did not reopen after explicit opt-in");
       capture("camera_optin.png");
