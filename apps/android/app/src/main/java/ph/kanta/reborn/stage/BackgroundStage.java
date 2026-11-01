@@ -134,9 +134,35 @@ public final class BackgroundStage extends FrameLayout {
     return videoView;
   }
 
+  /** Returns the currently selected background source. */
+  public Source getSource() {
+    return currentSource;
+  }
+
   /** Sets the camera preview. */
   public PreviewView getCameraPreview() {
     return cameraView;
+  }
+
+  /**
+   * Detaches the CameraX view and restores the background that was active before camera opt-in.
+   * The controller owns the CameraX binding; this view owns only stage presentation.
+   */
+  public void releaseCameraPreview(Source fallback) {
+    Source restore = fallback == null || fallback == Source.CAMERA ? Source.SOLID : fallback;
+    if (currentSource == Source.CAMERA) setSource(restore);
+    if (cameraView != null) {
+      if (cameraView.getParent() == this) removeView(cameraView);
+      cameraView = null;
+    }
+  }
+
+  /** True only while the active camera background owns a streaming, attached preview. */
+  public boolean isCameraVisible() {
+    return currentSource == Source.CAMERA
+        && cameraView != null
+        && cameraView.getParent() == this
+        && cameraView.getPreviewStreamState().getValue() == PreviewView.StreamState.STREAMING;
   }
 
   @Override
