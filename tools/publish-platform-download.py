@@ -68,6 +68,10 @@ def publish():
     other_platform = "ios" if platform == "android" else "android"
     if other_platform in manifest["platforms"]:
         manifest["platforms"][other_platform]["source"] = source
+    # The verifier and existing website consumers read the legacy top-level
+    # platform entries, so keep those source revisions aligned as well.
+    if other_platform in manifest:
+        manifest[other_platform]["source"] = source
     manifest["source"] = source
     manifest["packagingRun"] = run_id
     manifest["packagingRunUrl"] = f"https://github.com/{REPO}/actions/runs/{run_id}"
