@@ -10,6 +10,16 @@ const root=path.resolve(import.meta.dirname,'..');
 const native=path.join(root,'apps/android/app/src/main/assets/companion');
 const ios=path.join(root,'apps/ios/Resources/CompanionRemote');
 for(const name of ['index.html','remote.js','remote.css'])assert.deepEqual(await readFile(path.join(native,name)),await readFile(path.join(ios,name)),`Platform asset drift: ${name}`);
+let coverBytes=0;
+for(let index=1;index<=8;index++){
+  const name=`${String(index).padStart(2,'0')}.webp`;
+  const androidCover=await readFile(path.join(native,'art','covers',name));
+  const iosCover=await readFile(path.join(ios,'art','covers',name));
+  assert.ok(androidCover.length>0&&androidCover.length<=160000,`Invalid Android cover size: ${name}`);
+  assert.deepEqual(androidCover,iosCover,`Platform cover-art drift: ${name}`);
+  coverBytes+=androidCover.length;
+}
+assert.ok(coverBytes<=1500000,'Bundled cover artwork exceeds the companion byte budget');
 const protocol=require(path.join(native,'remote.js'));
 assert.throws(()=>protocol.encodeRequest('bad','reserve','fixture'));
 assert.throws(()=>protocol.encodeRequest(crypto.randomUUID(),'search',''));
