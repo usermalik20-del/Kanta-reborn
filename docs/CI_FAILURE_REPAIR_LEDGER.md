@@ -916,3 +916,15 @@ PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/K
 **Validation:** candidate; no fixed-head hosted run is yet available. Static source correction is not compilation or emulator acceptance.
 
 **Recurrence rule:** do not put required steps after a raise in the same conditional branch. Review indentation in the full runner, not only changed lines. Keep workflow event declarations at the YAML root and keep artifact paths identical to the paths written by the runner.
+
+## Android — stage presenter type mismatch and camera target gap (2026-11-01)
+
+**Affected run:** Android validation run [#41273249978](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41273249978), run number 400, job `android`, step `Android emulator runtime checks`. All preceding steps passed: branding, prompt bank, runtime-runner regression, SDK install, native SoundFont sanitizer, Gradle build/lint/domain regressions, camera permission/offline notices, real Chrome companion, captured browser interoperability and private IPv4 interface selection. Emulator instrumentation then returned `INSTRUMENTATION_RESULT: shortMsg=Process crashed`.
+
+**Root cause:** captured `android-logcat.log` records `FATAL EXCEPTION: main` and `ClassCastException: ph.kanta.reborn.stage.StagePresenterImpl cannot be cast to ph.kanta.reborn.StageSurface` at `RuntimeChecks.java:255`. `MainActivity` uses `StagePresenterImpl` as its primary stage and creates `StageSurface` only for fullscreen/external output. The runtime test treated them as the same concrete type. Review also found `CameraStage.start()` accepted only `PreviewView` or `StageSurface`; its primary-stage call with `StagePresenterImpl` silently returned, leaving camera acceptance incomplete even after the cast was fixed.
+
+**Repair candidate:** `RuntimeChecks` now uses fullscreen `StageSurface` for video lifecycle checks and retains the primary presenter for primary-stage checks. `StagePresenterImpl.getCameraPreview()` ensures the presenter's `BackgroundStage` has a real `PreviewView` and exposes its streaming state. `CameraStage` accepts the primary presenter as a target and forwards stream state to fullscreen `StageSurface`. The test checks primary camera startup, transfer to fullscreen and return to primary. No application test was removed or skipped.
+
+**Regression coverage:** exact-head Android validation must run the complete emulator suite. Required assertions: primary-stage camera reaches `PreviewView.StreamState.STREAMING`; fullscreen video becomes visible, deactivates and resumes; camera moves to fullscreen and returns to primary; camera disable releases preview. Static source checks and successful compilation are not emulator acceptance.
+
+**Validation:** candidate source repair committed to the existing PR branch; awaiting the next hosted Android run. The failed run remains a real failure and must not be overwritten in the ledger.
