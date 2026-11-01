@@ -9,7 +9,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: platform-download-${{ github.event.workflow_run.head_sha }}
+  group: platform-download-publishing
   cancel-in-progress: false
 jobs:
   publish:
