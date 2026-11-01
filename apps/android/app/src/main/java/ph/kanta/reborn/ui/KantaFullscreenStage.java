@@ -60,7 +60,10 @@ public class KantaFullscreenStage extends LinearLayout {
     LinearLayout stage = new LinearLayout(context);
     stage.setOrientation(VERTICAL);
     stage.setGravity(Gravity.CENTER);
-    stage.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED);
+    boolean wide = getResources().getConfiguration().orientation
+        == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        || getResources().getConfiguration().smallestScreenWidthDp >= 600;
+    stage.setBackground(KantaTheme.stageBackground(context, wide));
     LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
     stageParams.weight = 1;
     stage.setLayoutParams(stageParams);
