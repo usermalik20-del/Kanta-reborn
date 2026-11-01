@@ -47,6 +47,7 @@ public final class StagePresenterImpl extends FrameLayout
   private final ScoreOverlay scoreOverlay;
   private final ScoreCelebrationView celebration;
   private final BackgroundStage backgroundStage;
+  private BackgroundStage.Source cameraFallbackSource = BackgroundStage.Source.SOLID;
   private final AdjustmentOverlay adjustmentOverlay;
   private final IntroCard introCard;
   private final SearchOverlay searchOverlay;
@@ -498,19 +499,23 @@ public final class StagePresenterImpl extends FrameLayout
     // BackgroundStage doesn't have this, but we can track it
   }
 
-  /** Returns the camera PreviewView from BackgroundStage. */
+  /** Prepares and returns the primary stage's CameraX preview, preserving its prior background. */
   public androidx.camera.view.PreviewView getCameraPreview() {
-    if (backgroundStage.getCameraPreview() == null)
-      backgroundStage.setSource(BackgroundStage.Source.CAMERA);
+    if (backgroundStage.getSource() != BackgroundStage.Source.CAMERA)
+      cameraFallbackSource = backgroundStage.getSource();
+    backgroundStage.setSource(BackgroundStage.Source.CAMERA);
     return backgroundStage.getCameraPreview();
   }
 
-  /** Reports whether the primary stage camera preview has reached its streaming state. */
+  /** Releases the primary preview and restores the background selected before camera opt-in. */
+  public void releaseCameraPreview() {
+    backgroundStage.releaseCameraPreview(cameraFallbackSource);
+    cameraFallbackSource = BackgroundStage.Source.SOLID;
+  }
+
+  /** Reports only an attached preview belonging to the active camera background. */
   public boolean isCameraVisible() {
-    androidx.camera.view.PreviewView preview = backgroundStage.getCameraPreview();
-    return preview != null
-        && preview.getPreviewStreamState().getValue()
-            == androidx.camera.view.PreviewView.StreamState.STREAMING;
+    return backgroundStage.isCameraVisible();
   }
 
   @Override
