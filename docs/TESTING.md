@@ -354,3 +354,8 @@ The runner must retrieve all eight named walkthrough screenshots from app-privat
 ## Android stage runtime integration — 2026-11-01
 
 The hosted runtime suite must test the primary `StagePresenterImpl` and fullscreen `StageSurface` according to their actual ownership. Video rendering and visual-active lifecycle assertions use the fullscreen `StageSurface` created by `MainActivity.fullscreen()`. Primary camera acceptance asserts the presenter's `PreviewView` has reached `STREAMING`; fullscreen camera acceptance asserts the fullscreen surface camera visibility, and closing fullscreen must return a streaming preview to the primary presenter. The runtime test must not cast the primary stage to `StageSurface`.
+
+
+### Fullscreen camera handoff acceptance
+
+The Android emulator runtime test must prove that the opted-in CameraX preview is visible on the primary `StagePresenterImpl`, transfers to the fullscreen `StageSurface`, and returns to the primary stage when fullscreen closes. For fullscreen, require both `CameraStage.streaming()` and `StageSurface.isCameraVisible()`; do not invert this predicate or infer success merely from the camera remaining enabled. The stream observer drives the surface visibility signal. Camera disable and backgrounding must still release the preview, and foregrounding must not silently re-enable it.
