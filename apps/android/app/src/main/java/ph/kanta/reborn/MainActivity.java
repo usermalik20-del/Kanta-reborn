@@ -1221,7 +1221,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private int artworkResourceForSong(Song song) {
-    int index = Math.floorMod(song.id.hashCode(), 8);
+    int index = (song.id.hashCode() & 0x7fffffff) % 8;
     switch (index) {
       case 0: return ph.kanta.reborn.R.drawable.kanta_art_01;
       case 1: return ph.kanta.reborn.R.drawable.kanta_art_02;

@@ -174,11 +174,13 @@ public final class KantaVisualsScreen extends LinearLayout {
     tile.setGravity(Gravity.CENTER);
     tile.setPadding(dp(5), dp(5), dp(5), dp(7));
     tile.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 13, KantaTheme.BORDER, 1, density));
-    ImageView icon = new ImageView(context);
-    icon.setImageResource(R.drawable.kanta_song_code_outline);
-    icon.setColorFilter(KantaTheme.TEXT_PRIMARY);
+    TextView icon = new TextView(context);
+    icon.setText("↑");
+    icon.setTextSize(36);
+    icon.setTypeface(null, Typeface.BOLD);
+    icon.setTextColor(KantaTheme.PRIMARY_CYAN);
+    icon.setGravity(Gravity.CENTER);
     icon.setContentDescription("Import custom background");
-    icon.setPadding(dp(28), dp(18), dp(28), dp(18));
     tile.addView(icon, new LayoutParams(LayoutParams.MATCH_PARENT, dp(92)));
     TextView label = new TextView(context);
     label.setText("Custom");
