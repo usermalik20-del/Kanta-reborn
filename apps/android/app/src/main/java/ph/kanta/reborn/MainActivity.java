@@ -72,7 +72,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   // New KANTA design-system screens (presentation layer only; backend logic
   // is unchanged and owned by SessionController / StagePresenterImpl).
-  private FrameLayout contentContainer;
   private HomeScreen homeScreen;
   private KantaNowPlayingScreen nowPlayingScreen;
   private KantaSearchScreen searchScreen;
@@ -365,7 +364,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     root.addView(header, new FrameLayout.LayoutParams(-1, -2));
 
     // Content container for design-system screens (overlay on top of existing UI)
-    contentContainer = new FrameLayout(this);
     contentContainer.setVisibility(View.GONE);
     root.addView(contentContainer, new FrameLayout.LayoutParams(-1, -1));
 
@@ -460,6 +458,293 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     root.addView(tabs, new FrameLayout.LayoutParams(-1, -2));
     if (stagePresenter != null) stagePresenter.refresh();
+  }
+
+
+  /* =========================================================================
+   * KANTA design-system screen management
+   * Each screen is a pure presentation layer. All backend logic (playback,
+   * queue, local files, YouTube, pitch/tempo, mic, camera, visuals, coach,
+   * remote) stays owned by SessionController / StagePresenterImpl.
+   * ========================================================================= */
+
+  private void showHomeScreen() {
+    contentContainer.removeAllViews();
+    if (homeScreen == null) {
+      homeScreen = new HomeScreen(this, new HomeScreen.Listener() {
+        @Override public void onSearch() { showSearchScreen(); }
+        @Override public void onQueue() { showQueueScreen(); }
+        @Override public void onYouTube() { openYouTubeVideo(); }
+        @Override public void onVisuals() { showVisualsScreen(); }
+        @Override public void onMicVoice() { showMicVoiceScreen(); }
+        @Override public void onPitchTempo() { showPitchTempoScreen(); }
+        @Override public void onMySet() { tab = "My Set"; render(); }
+        @Override public void onFavorites() { tab = "Control"; render(); }
+        @Override public void onRecent() { tab = "Control"; render(); }
+        @Override public void onMore() { showMoreOptions(); }
+        @Override public void onScenic() { scenic(); }
+        @Override public void onRealm() { realm(); }
+      });
+    }
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(homeScreen,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void showNowPlayingScreen() {
+    contentContainer.removeAllViews();
+    if (nowPlayingScreen == null) {
+      nowPlayingScreen = new KantaNowPlayingScreen(this,
+          new KantaNowPlayingScreen.Listener() {
+            @Override public void onBack() { showHomeScreen(); }
+            @Override public void onFullscreen() { fullscreen(); }
+            @Override public void onPlayPause() { playWithCountdown(); }
+            @Override public void onPrevious() { /* previous not in protocol */ }
+            @Override public void onNext() { session.next(); }
+            @Override public void onShuffle() { /* shuffle handled by session */ }
+            @Override public void onRepeat() { /* repeat handled by session */ }
+            @Override public void onQueue() { showQueueScreen(); }
+            @Override public void onEffects() { showVisualsScreen(); }
+            @Override public void onCoach() { showMicVoiceScreen(); }
+            @Override public void onKeyDown() { session.setPitch(session.pitch - 1); }
+            @Override public void onKeyUp() { session.setPitch(session.pitch + 1); }
+            @Override public void onTempoDown() { session.setTempo(Math.max(0.5f, session.tempo - 0.05f)); }
+            @Override public void onTempoUp() { session.setTempo(Math.min(2.0f, session.tempo + 0.05f)); }
+            @Override public void onFavorite() { /* favorite toggle handled by session */ }
+            @Override public void onOverflow() { /* overflow menu */ }
+          });
+    }
+    if (session.current != null) {
+      nowPlayingScreen.setSongInfo(session.current.title, session.singer);
+    }
+    nowPlayingScreen.setPlaying(session.playing);
+    nowPlayingScreen.setTimes(
+        String.valueOf(session.position()), "0:00");
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(nowPlayingScreen,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void showSearchScreen() {
+    contentContainer.removeAllViews();
+    if (searchScreen == null) {
+      searchScreen = new KantaSearchScreen(this, new KantaSearchScreen.Listener() {
+        @Override public void onBack() { showHomeScreen(); }
+        @Override public void onSearchTextChanged(String query) {
+          MainActivity.this.query = query;
+          renderWorkspaceSearchResults(query);
+        }
+        @Override public void onTabSelected(int index, String label) {}
+        @Override public void onSing(String title, String artist) {
+          for (Song s : session.songs) {
+            if (s.title.equals(title)) {
+              session.reserve(s, singer);
+              session.saveQueue();
+              showNowPlayingScreen();
+              return;
+            }
+          }
+        }
+        @Override public void onSourceAll() {}
+        @Override public void onSourceKanta() {}
+        @Override public void onSourceYouTube() {}
+        @Override public void onSourceLocal() {}
+      });
+    }
+    searchScreen.setQuery(query);
+    java.util.List<String[]> rows = new java.util.ArrayList<>();
+    for (Song s : session.songs) {
+      if (query == null || query.isEmpty() ||
+          s.title.toLowerCase().contains(query.toLowerCase()) ||
+          s.artist.toLowerCase().contains(query.toLowerCase()) ||
+          s.code.toLowerCase().contains(query.toLowerCase())) {
+        rows.add(new String[]{s.code, s.title, s.artist, "#203459"});
+      }
+    }
+    String[][] results = rows.toArray(new String[0][0]);
+    if (results.length == 0) searchScreen.showEmpty();
+    else searchScreen.showResults(results);
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(searchScreen,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void renderWorkspaceSearchResults(String queryText) {
+    if (searchScreen == null) return;
+    java.util.List<String[]> rows = new java.util.ArrayList<>();
+    for (Song s : session.songs) {
+      if (queryText == null || queryText.isEmpty() ||
+          s.title.toLowerCase().contains(queryText.toLowerCase()) ||
+          s.artist.toLowerCase().contains(queryText.toLowerCase()) ||
+          s.code.toLowerCase().contains(queryText.toLowerCase())) {
+        rows.add(new String[]{s.code, s.title, s.artist, "#203459"});
+      }
+    }
+    String[][] results = rows.toArray(new String[0][0]);
+    if (results.length == 0) searchScreen.showEmpty();
+    else searchScreen.showResults(results);
+  }
+
+  private void showQueueScreen() {
+    contentContainer.removeAllViews();
+    if (queueScreen == null) {
+      queueScreen = new KantaQueueScreen(this, new KantaQueueScreen.Listener() {
+        @Override public void onBack() { showHomeScreen(); }
+        @Override public void onClear() { session.queue.clear(); session.saveQueue(); refreshQueue(); }
+        @Override public void onAddSongs() { showSearchScreen(); }
+        @Override public void onRemove(int position) {
+          java.util.List<ReservationQueue.Entry> entries = session.queue.snapshot();
+          if (position >= 0 && position < entries.size()) {
+            session.queue.remove(entries.get(position).id);
+            session.saveQueue();
+            refreshQueue();
+          }
+        }
+        @Override public void onItemClicked(int position) {
+          java.util.List<ReservationQueue.Entry> entries = session.queue.snapshot();
+          if (position >= 0 && position < entries.size()) {
+            ReservationQueue.Entry e = entries.get(position);
+            session.reserve(e.song, singer);
+            session.saveQueue();
+            showNowPlayingScreen();
+          }
+        }
+      });
+    }
+    refreshQueue();
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(queueScreen,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void refreshQueue() {
+    if (queueScreen == null) return;
+    queueScreen.setCount(session.queue.snapshot().size());
+    java.util.List<ReservationQueue.Entry> entries = session.queue.snapshot();
+    String[][] items = new String[entries.size()][5];
+    int i = 0;
+    for (ReservationQueue.Entry e : entries) {
+      items[i][0] = String.valueOf(i + 1);
+      items[i][1] = e.song.title;
+      items[i][2] = e.song.artist;
+      items[i][3] = "false";
+      items[i][4] = "#203459";
+      i++;
+    }
+    queueScreen.setItems(items);
+  }
+
+  private void showPitchTempoScreen() {
+    contentContainer.removeAllViews();
+    if (pitchTempoScreen == null) {
+      pitchTempoScreen = new KantaPitchTempoScreen(this,
+          new KantaPitchTempoScreen.Listener() {
+            @Override public void onBack() { showHomeScreen(); }
+            @Override public void onReset() {
+              session.setPitch(0);
+              session.setTempo(1.0f);
+              refreshPitchTempo();
+            }
+            @Override public void onKeyDown() {
+              session.setPitch(session.pitch - 1);
+              refreshPitchTempo();
+            }
+            @Override public void onKeyUp() {
+              session.setPitch(session.pitch + 1);
+              refreshPitchTempo();
+            }
+            @Override public void onTempoDown() {
+              session.setTempo(Math.max(0.5f, session.tempo - 0.05f));
+              refreshPitchTempo();
+            }
+            @Override public void onTempoUp() {
+              session.setTempo(Math.min(2.0f, session.tempo + 0.05f));
+              refreshPitchTempo();
+            }
+          });
+    }
+    refreshPitchTempo();
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(pitchTempoScreen,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void refreshPitchTempo() {
+    if (pitchTempoScreen == null) return;
+    pitchTempoScreen.setKey(session.pitch);
+    pitchTempoScreen.setTempo(session.tempo);
+  }
+
+  private void showMicVoiceScreen() {
+    contentContainer.removeAllViews();
+    if (micVoiceScreen == null) {
+      micVoiceScreen = new KantaMicVoiceScreen(this,
+          new KantaMicVoiceScreen.Listener() {
+            @Override public void onBack() { showHomeScreen(); }
+            @Override public void onMicToggle(boolean enabled) {
+              toggleMicrophone();
+            }
+            @Override public void onReverbChanged(float value) {}
+            @Override public void onEchoChanged(float value) {}
+            @Override public void onFxSelected(String fx) {}
+          });
+    }
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(micVoiceScreen,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void showVisualsScreen() {
+    contentContainer.removeAllViews();
+    if (visualsScreen == null) {
+      visualsScreen = new KantaVisualsScreen(this, new KantaVisualsScreen.Listener() {
+        @Override public void onBack() { showHomeScreen(); }
+        @Override public void onTabSelected(int index, String label) {}
+        @Override public void onBackgroundSelected(String name) {
+          session.scene(name);
+        }
+        @Override public void onCameraToggle(boolean enabled) { toggleCamera(); }
+        @Override public void onEffectSelected(String name) {}
+        @Override public void onCustomImport() {}
+      });
+    }
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(visualsScreen,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void showMoreOptions() {
+    contentContainer.removeAllViews();
+    LinearLayout more = new LinearLayout(this);
+    more.setOrientation(VERTICAL);
+    more.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
+    more.setPadding(dp(16), dp(16), dp(16), dp(16));
+    more.addView(button("Diagnostics", this::diagnostics));
+    more.addView(button("Help", this::help));
+    more.addView(button("Exit Fullscreen", v -> { /* no-op on handset */ }));
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(more,
+        new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void showFullscreenStageView() {
+    contentContainer.removeAllViews();
+    if (fullscreenStageView == null) {
+      fullscreenStageView = new KantaFullscreenStage(this,
+          new KantaFullscreenStage.Listener() {
+            @Override public void onExitFullscreen() { showNowPlayingScreen(); }
+            @Override public void onPlayPause() { playWithCountdown(); }
+            @Override public void onPrevious() { /* previous not in protocol */ }
+            @Override public void onNext() { session.next(); }
+          });
+    }
+    if (session.current != null) {
+      fullscreenStageView.setSongInfo(session.current.title, session.singer);
+    }
+    fullscreenStageView.setPlaying(session.playing);
+    contentContainer.setVisibility(VISIBLE);
+    contentContainer.addView(fullscreenStageView,
+        new FrameLayout.LayoutParams(-1, -1));
   }
 
   /**
@@ -1363,7 +1648,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     int token = ++searchGeneration;
     String requested = query;
     String[] terms = Song.searchTerms(requested);
-    FrameLayout target = results;
+    LinearLayout target = results;
     int limit = resultLimit;
     List<Song> catalog = session.songs;
     searchWorker.execute(
