@@ -224,7 +224,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
       b.setLayoutParams(navParams);
       switch (n[2]) {
         case "onQueue": b.setOnClickListener(v -> { if (listener != null) listener.onQueue(); }); break;
-        case "onLyrics": b.setOnClickListener(v -> { if (listener != null) listener.onLyrics(); }); break;
+        case "onLyrics": /* already active */ break;
         case "onEffects": b.setOnClickListener(v -> { if (listener != null) listener.onEffects(); }); break;
         case "onCoach": b.setOnClickListener(v -> { if (listener != null) listener.onCoach(); }); break;
       }

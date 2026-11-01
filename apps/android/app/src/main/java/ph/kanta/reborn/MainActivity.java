@@ -486,7 +486,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         @Override public void onRealm() { realm(); }
       });
     }
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(homeScreen,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -520,7 +520,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     nowPlayingScreen.setPlaying(session.playing);
     nowPlayingScreen.setTimes(
         String.valueOf(session.position()), "0:00");
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(nowPlayingScreen,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -564,7 +564,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     String[][] results = rows.toArray(new String[0][0]);
     if (results.length == 0) searchScreen.showEmpty();
     else searchScreen.showResults(results);
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(searchScreen,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -612,7 +612,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       });
     }
     refreshQueue();
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(queueScreen,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -664,7 +664,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           });
     }
     refreshPitchTempo();
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(pitchTempoScreen,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -689,7 +689,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             @Override public void onFxSelected(String fx) {}
           });
     }
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(micVoiceScreen,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -708,7 +708,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         @Override public void onCustomImport() {}
       });
     }
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(visualsScreen,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -716,13 +716,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void showMoreOptions() {
     contentContainer.removeAllViews();
     LinearLayout more = new LinearLayout(this);
-    more.setOrientation(VERTICAL);
+    more.setOrientation(LinearLayout.VERTICAL);
     more.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
     more.setPadding(dp(16), dp(16), dp(16), dp(16));
     more.addView(button("Diagnostics", this::diagnostics));
     more.addView(button("Help", this::help));
-    more.addView(button("Exit Fullscreen", v -> { /* no-op on handset */ }));
-    contentContainer.setVisibility(VISIBLE);
+    more.addView(button("Exit Fullscreen", (Runnable) () -> { /* no-op on handset */ }));
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(more,
         new FrameLayout.LayoutParams(-1, -1));
   }
@@ -742,7 +742,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       fullscreenStageView.setSongInfo(session.current.title, session.singer);
     }
     fullscreenStageView.setPlaying(session.playing);
-    contentContainer.setVisibility(VISIBLE);
+    contentContainer.setVisibility(View.VISIBLE);
     contentContainer.addView(fullscreenStageView,
         new FrameLayout.LayoutParams(-1, -1));
   }
