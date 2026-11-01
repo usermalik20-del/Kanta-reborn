@@ -63,6 +63,7 @@ public final class RuntimeChecks extends Instrumentation {
       activity = (MainActivity) startActivitySync(launch);
       session = ((KantaApplication) activity.getApplication()).session;
       await(() -> session.ready, "Library did not open");
+      capture("library_ready.png");
       check(
           state(
               () -> !session.scoringEnabled && session.score == null && session.lastScore == null),
@@ -72,10 +73,13 @@ public final class RuntimeChecks extends Instrumentation {
               () -> !session.monitor.correctionEnabled() && !session.monitor.correctionAvailable()),
           "Fresh session enabled pitch correction or exposed an unverified output");
       check(state(() -> session.songs.size() == 3), "Clean install starter catalog");
+      capture("fixture_loaded.png");
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "KANTA")),
           "Native activity did not render");
+      capture("ui_rendered.png");
       youtubeLifecycleChecks();
+      capture("youtube_loaded.png");
       companionChecks();
       browserCompanionChecks();
       Song song = session.songs.get(0);
@@ -202,6 +206,7 @@ public final class RuntimeChecks extends Instrumentation {
               && visualStore.select("photo").photo.equals(photo.photo),
           "Switching visual kinds discarded saved media");
       await(() -> session.stageReady, "Visual storage did not become ready");
+      capture("stage_ready.png");
       runOnMainSync(() -> session.importStage(FixtureProvider.file("photo"), false));
       await(
           () ->
@@ -289,6 +294,7 @@ public final class RuntimeChecks extends Instrumentation {
           "Disabling the camera retained its preview");
       runOnMainSync(activity::toggleCamera);
       await(activity::cameraStreaming, "Camera did not reopen after explicit opt-in");
+      capture("camera_optin.png");
       shell("input keyevent KEYCODE_HOME");
       await(() -> !session.foreground, "Home did not background KANTA");
       check(
@@ -315,6 +321,7 @@ public final class RuntimeChecks extends Instrumentation {
                           "Wired / USB / Bluetooth monitoring")
                       && contains(activity.getWindow().getDecorView(), "Turn on microphone")),
           "Voice settings did not expand from Control");
+      capture("voice_settings.png");
       check(
           state(
               () -> {
@@ -718,8 +725,9 @@ public final class RuntimeChecks extends Instrumentation {
           () -> {
             session.remove(session.queue.peek().id);
             session.stopParty();
-            activity.finish();
           });
+      capture("final_ui.png");
+      activity.finish();
       result.putString(
           "stream",
           "KANTA runtime: "

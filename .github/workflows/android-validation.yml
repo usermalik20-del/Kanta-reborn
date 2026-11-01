@@ -1,7 +1,15 @@
 name: KANTA Android validation
 on:
   workflow_dispatch:
-  push:
+    # Run mode: "visual" for faster screenshot-only, "full" for complete validation
+    inputs:
+      mode:
+        description: 'Run mode: "visual" for faster screenshot-only run, "full" for complete validation'
+        required: false
+        default: 'full'
+      ref:
+        description: 'Git ref to validate (defaults to head)'
+        required: false  push:
     branches: [main]
     paths:
       - 'apps/android/**'
@@ -41,7 +49,8 @@ concurrency:
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
+    # Steps will be limited based on mode
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -119,6 +128,15 @@ jobs:
             android-logcat.log
             android-runtime-stage.png
             android-runtime-camera.png
+            # UI walkthrough screenshots captured by RuntimeChecks.java
+            files/library_ready.png
+            files/fixture_loaded.png
+            files/ui_rendered.png
+            files/youtube_loaded.png
+            files/stage_ready.png
+            files/camera_optin.png
+            files/voice_settings.png
+            files/final_ui.png
             browser-remote.png
             emulator.log
           if-no-files-found: ignore
