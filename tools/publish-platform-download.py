@@ -73,7 +73,7 @@ def publish():
       f'<p class="release-note">Verified CI artifact · GitHub sign-in required · {days}-day retention.</p>'
       f'<p>Source <code>{source[:8]}</code> · Validated build run <a href="https://github.com/{REPO}/actions/runs/{int(info["run"])}">#{int(info["run"])}</a>.</p>'
       + ('<p>Debug-signed APK testing preview; not a Google Play release.</p>' if platform == "android" else '<p><strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable.</p><p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/' + REPO + '/actions/runs/' + str(int(info["walkthroughRun"])) + '">run #' + str(int(info["walkthroughRun"])) + '</a>. Simulator results do not establish physical-device acceptance.</p>')
-      + f'<p>Artifact ZIP SHA-256: <code>{digest}</code>. Application SHA-256: <code>{info["sha256"]}</code>.</p></section>')
+      + f'<p>Artifact ZIP SHA-256: <code>{digest}</code>. {"APK SHA-256" if platform == "android" else "IPA SHA-256"}: <code>{info["sha256"]}</code>.</p></section>')
     import re as regex
     updated, count = regex.subn(r'<section class="section" id="download">.*?</section>', lambda _: section, page, count=1, flags=regex.S)
     if count != 1:
