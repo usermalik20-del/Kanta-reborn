@@ -67,6 +67,7 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "Music brings people together.")),
           "Reference-led Home dashboard was not mounted at launch");
+      capture("home_dashboard.png");
       KantaWorkspace homeWorkspace = (KantaWorkspace) field(activity, "workspace");
       runOnMainSync(
           () -> {
@@ -82,6 +83,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Home dashboard did not return after dismissing Search");
+      capture("home_dashboard_restored.png");
       runOnMainSync(
           () -> {
             View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");

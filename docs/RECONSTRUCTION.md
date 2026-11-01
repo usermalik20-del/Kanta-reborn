@@ -48,6 +48,7 @@ The earlier UI refactor added a dark design token set, reusable Android Views co
 - The other new screen classes remain unintegrated candidates until their routes, real state bindings and functional callbacks are verified.
 - Browser companion is still the existing secure single-column controller; desktop three-column visual acceptance has not been implemented.
 - Selected owner-supplied adaptive assets are now integrated: ten vector icons are used by Home navigation/actions, and optimized phone/landscape stage WebP artwork is used by the Home hero, fullscreen stage and persistent-stage fallback. The source pack's duplicate generic empty-state SVGs were not installed; the pack's alternative palette and launcher XML were not copied because they conflict with the active reference-led theme and existing KANTA launcher resource. See `docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md`.
+- The runtime artifact now contains `files/home_dashboard.png` and `files/home_dashboard_restored.png`, captured from the real app window at launch and after workspace Back. These captures are the visual review inputs; passing instrumentation alone is not a pixel-fidelity sign-off.
 - No visual acceptance, emulator screenshot comparison, APK production, device acceptance or release is claimed for this safe-branch work yet.
 
 ### Files changed in the first integration batch
