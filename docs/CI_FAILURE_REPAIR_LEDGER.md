@@ -990,3 +990,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** add `files/home_dashboard.png` and `files/home_dashboard_restored.png` to the Android workflow's upload-artifact paths. Add an operating rule requiring both the collector and workflow allowlist to be updated when runtime screenshots are added.
 
 **Validation:** rerun the Android-owned workflow on the exact repaired head, download its artifact and verify both file entries and image contents. A green job alone does not prove the new captures were uploaded.
+
+
+## Android Now Playing integration — duplicate playback duration accessor (2026-11-01)
+
+**Affected run:** [Android validation #41323703605](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41323703605), exact head `984bf94195921236d7a0552b680de01f8ecefdba`. The archived `android-build-failure-log` artifact records a Java compiler error at `SessionController.java:1315`: `method duration() is already defined in class SessionController`.
+
+**Root cause:** the branch already had a package-private `duration()` accessor returning the parsed MIDI duration. The Now Playing integration added a public accessor that also delegates to `PlaybackBackend.duration()` so audio and MIDI durations can both be displayed. Both methods had the same signature.
+
+**Repair:** retain the public backend-aware accessor and remove the older package-private duplicate. The retained implementation returns the active backend duration when a player exists and falls back to the parsed MIDI duration otherwise. No playback state or duration source is discarded.
+
+**Validation:** current-head Android validation must pass compilation, lint, domain regression and emulator runtime checks. The original failed compile remains recorded and is not treated as a flaky test.
