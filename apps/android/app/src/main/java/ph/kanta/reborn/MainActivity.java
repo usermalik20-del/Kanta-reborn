@@ -72,6 +72,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private final ExecutorService searchWorker = Executors.newSingleThreadExecutor();
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
+  private int referenceSearchGeneration = 0;
+  private String searchSource = "All";
   private boolean preparingExport = false;
   private byte[] exportBytes;
   private String exportCode;
@@ -306,9 +308,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     playButton.setEnabled(session.ready && !session.loading);
     nextButton.setEnabled(session.ready && !session.loading);
     boolean home = "Home".equals(tab);
-    if (appHeader != null) appHeader.setVisibility(home ? View.GONE : View.VISIBLE);
-    if (stagePane != null) stagePane.setVisibility(home ? View.GONE : View.VISIBLE);
-    if (navigationTabs != null) navigationTabs.setVisibility(home ? View.GONE : View.VISIBLE);
+    boolean referenceDestination = isReferenceDestination(tab);
+    if (appHeader != null) appHeader.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
+    if (stagePane != null) stagePane.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
+    if (navigationTabs != null) navigationTabs.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
       entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
@@ -937,7 +940,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     microphoneReading = null;
     monitorReading = null;
     scoreReading = null;
-    if (!"Home".equals(tab)) {
+    if (!"Home".equals(tab) && !isReferenceDestination(tab)) {
       body.addView(text(session.message, 13, CYAN));
       body.addView(button("YouTube video (online)", this::openYouTubeVideo));
     }
@@ -945,6 +948,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     switch (tab) {
       case "Home":
         homeDashboard();
+        break;
+      case "Search":
+        searchScreen();
+        break;
+      case "Queue":
+        queueScreen();
+        break;
+      case "Pitch & Tempo":
+        pitchTempoScreen();
         break;
       case "My Set":
         mySet();
@@ -975,6 +987,210 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     returnToHomeAfterAccessory = true;
   }
 
+  private boolean isReferenceDestination(String destination) {
+    return "Search".equals(destination)
+        || "Queue".equals(destination)
+        || "Pitch & Tempo".equals(destination);
+  }
+
+  private void navigateHome() {
+    tab = "Home";
+    render();
+  }
+
+  /** Search projects the current catalog; it does not claim unsupported YouTube discovery. */
+  private void searchScreen() {
+    final java.util.ArrayList<Song> visibleSongs = new java.util.ArrayList<>();
+    final ph.kanta.reborn.ui.KantaSearchScreen[] screenRef =
+        new ph.kanta.reborn.ui.KantaSearchScreen[1];
+    ph.kanta.reborn.ui.KantaSearchScreen screen =
+        new ph.kanta.reborn.ui.KantaSearchScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaSearchScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onSearchTextChanged(String value) {
+                query = value == null ? "" : value;
+                renderSearchResults(screenRef[0], visibleSongs);
+              }
+              @Override public void onTabSelected(int index, String label) {
+                searchSource = label;
+                renderSearchResults(screenRef[0], visibleSongs);
+              }
+              @Override public void onSing(String title, String artist) {
+                for (Song song : visibleSongs) {
+                  if (song.title.equals(title)
+                      && (song.artist.isEmpty() ? "Unknown artist" : song.artist).equals(artist)) {
+                    session.reserve(song, singer);
+                    Toast.makeText(MainActivity.this,
+                        "Added " + song.title + " to Queue", Toast.LENGTH_SHORT).show();
+                    return;
+                  }
+                }
+              }
+              @Override public void onSourceAll() {}
+              @Override public void onSourceKanta() {}
+              @Override public void onSourceYouTube() {
+                screenRef[0].showEmpty();
+                Toast.makeText(MainActivity.this,
+                    "YouTube discovery is not enabled. Paste a video link to open the official player.",
+                    Toast.LENGTH_LONG).show();
+                openYouTubeVideo();
+              }
+              @Override public void onSourceLocal() {}
+            });
+    screenRef[0] = screen;
+    screen.setTag("kanta.screen.search");
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+    screen.setQuery(query);
+    renderSearchResults(screen, visibleSongs);
+  }
+
+  private void renderSearchResults(
+      ph.kanta.reborn.ui.KantaSearchScreen screen,
+      java.util.ArrayList<Song> visibleSongs) {
+    if (screen == null || !"Search".equals(tab)) return;
+    final int token = ++referenceSearchGeneration;
+    final String requested = query;
+    final String source = searchSource;
+    if ("YouTube".equals(source)) {
+      visibleSongs.clear();
+      screen.showEmpty();
+      return;
+    }
+    final java.util.List<Song> catalog = new java.util.ArrayList<>(session.songs);
+    screen.showLoading();
+    searchWorker.execute(() -> {
+      java.util.ArrayList<Song> matches = new java.util.ArrayList<>();
+      String[] terms = Song.searchTerms(requested);
+      for (Song song : catalog) {
+        if (Thread.currentThread().isInterrupted()) return;
+        if ("KANTA".equals(source) && !song.starter) continue;
+        if ("Local".equals(source) && song.starter) continue;
+        if (song.matchesTerms(terms)) matches.add(song);
+        if (matches.size() >= 50) break;
+      }
+      handler.post(() -> {
+        if (token != referenceSearchGeneration || !"Search".equals(tab)
+            || isFinishing() || isDestroyed()) return;
+        visibleSongs.clear();
+        visibleSongs.addAll(matches);
+        String[][] rows = new String[matches.size()][3];
+        for (int i = 0; i < matches.size(); i++) {
+          Song song = matches.get(i);
+          rows[i][0] = song.title;
+          rows[i][1] = song.artist.isEmpty() ? "Unknown artist" : song.artist;
+          rows[i][2] = song.starter ? "#30245B" : "#17334A";
+        }
+        screen.showResults(rows);
+      });
+    });
+  }
+
+  /** Queue is a projection of the single authoritative reservation FIFO. */
+  private void queueScreen() {
+    java.util.List<ReservationQueue.Entry> entries = session.queue.snapshot();
+    String[][] rows = new String[entries.size()][5];
+    for (int i = 0; i < entries.size(); i++) {
+      ReservationQueue.Entry entry = entries.get(i);
+      rows[i][0] = String.valueOf(i + 1);
+      rows[i][1] = entry.song.title;
+      rows[i][2] = entry.youtube == null
+          ? (entry.singer.isEmpty() ? entry.song.artist : entry.singer)
+          : "YouTube video";
+      rows[i][3] = "false";
+      rows[i][4] = entry.youtube == null ? "#30245B" : "#17334A";
+    }
+    ph.kanta.reborn.ui.KantaQueueScreen screen =
+        new ph.kanta.reborn.ui.KantaQueueScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaQueueScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onClear() {
+                session.queue.clear();
+                session.saveQueue();
+                session.publish();
+                render();
+              }
+              @Override public void onAddSongs() {
+                tab = "Search";
+                searchSource = "All";
+                render();
+              }
+              @Override public void onRemove(int position) {
+                java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
+                if (position < 0 || position >= current.size()) return;
+                session.remove(current.get(position).id);
+                render();
+              }
+              @Override public void onItemClicked(int position) {
+                java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
+                if (position < 0 || position >= current.size()) return;
+                ReservationQueue.Entry selected = current.get(position);
+                if (selected.youtube != null) {
+                  Toast.makeText(MainActivity.this,
+                      "Host-controlled YouTube queue playback is not available yet.",
+                      Toast.LENGTH_LONG).show();
+                  return;
+                }
+                session.move(selected.id, 0);
+                session.next();
+                render();
+              }
+            });
+    screen.setTag("kanta.screen.queue");
+    screen.setCount(entries.size());
+    screen.setItems(rows);
+    screen.showAddSongsCTA();
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  /** All pitch and tempo changes are delegated to SessionController. */
+  private void pitchTempoScreen() {
+    final ph.kanta.reborn.ui.KantaPitchTempoScreen[] screenRef =
+        new ph.kanta.reborn.ui.KantaPitchTempoScreen[1];
+    ph.kanta.reborn.ui.KantaPitchTempoScreen screen =
+        new ph.kanta.reborn.ui.KantaPitchTempoScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaPitchTempoScreen.Listener() {
+              private void refreshValues() {
+                if (screenRef[0] != null) {
+                  screenRef[0].setKey(session.pitch);
+                  screenRef[0].setTempo(session.tempo);
+                }
+              }
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onReset() {
+                session.controls(session.volume, 1.0f, 0);
+                refreshValues();
+              }
+              @Override public void onKeyDown() {
+                session.controls(session.volume, session.tempo, Math.max(-12, session.pitch - 1));
+                refreshValues();
+              }
+              @Override public void onKeyUp() {
+                session.controls(session.volume, session.tempo, Math.min(12, session.pitch + 1));
+                refreshValues();
+              }
+              @Override public void onTempoDown() {
+                session.controls(session.volume, Math.max(0.5f, session.tempo - 0.05f), session.pitch);
+                refreshValues();
+              }
+              @Override public void onTempoUp() {
+                session.controls(session.volume, Math.min(2.0f, session.tempo + 0.05f), session.pitch);
+                refreshValues();
+              }
+              @Override public void onTempoChanged(float value) {
+                session.controls(session.volume, value, session.pitch);
+                refreshValues();
+              }
+            });
+    screenRef[0] = screen;
+    screen.setTag("kanta.screen.pitch-tempo");
+    screen.setKey(session.pitch);
+    screen.setTempo(session.tempo);
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
   /** Reference-led home dashboard. Existing playback and workspace owners remain authoritative. */
   private void homeDashboard() {
     body.addView(
@@ -989,12 +1205,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 tab = "Control";
                 render();
               }
-              @Override public void onSearch() { openHomeAccessory(KantaWorkspace.ACCESSORY_SEARCH); }
-              @Override public void onQueue() { openHomeAccessory(KantaWorkspace.ACCESSORY_QUEUE); }
+              @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
+              @Override public void onQueue() { tab = "Queue"; render(); }
               @Override public void onYouTube() { openYouTubeVideo(); }
-              @Override public void onVisuals() { openHomeAccessory(KantaWorkspace.ACCESSORY_VISUALS); }
-              @Override public void onMicVoice() { openHomeAccessory(KantaWorkspace.ACCESSORY_MORE); }
-              @Override public void onPitchTempo() { openHomeAccessory(KantaWorkspace.ACCESSORY_MORE); }
+              @Override public void onVisuals() { tab = "Scenic"; render(); }
+              @Override public void onMicVoice() { tab = "Control"; voiceExpanded = true; render(); }
+              @Override public void onPitchTempo() { tab = "Pitch & Tempo"; render(); }
               @Override public void onMySet() { tab = "My Set"; render(); }
               @Override public void onFavorites() { tab = "My Set"; render(); }
               @Override public void onRecent() { tab = "My Set"; render(); }

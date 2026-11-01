@@ -32,6 +32,7 @@ public class KantaStepper extends LinearLayout {
     vp.leftMargin = (int)(8*density); vp.rightMargin = (int)(8*density);
     valueView.setLayoutParams(vp);
     KantaIconButton increment = new KantaIconButton(context);
+    increment.setTag("kanta.stepper.increment");
     increment.setText("+");
     increment.setTextSize(18);
     increment.setOnClickListener(v -> { if (listener != null) listener.onIncrement(); });

@@ -68,28 +68,76 @@ public final class RuntimeChecks extends Instrumentation {
           state(() -> contains(activity.getWindow().getDecorView(), "Music brings people together.")),
           "Reference-led Home dashboard was not mounted at launch");
       capture("home_dashboard.png");
-      KantaWorkspace homeWorkspace = (KantaWorkspace) field(activity, "workspace");
-      runOnMainSync(
-          () -> {
-            View search = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onSearch");
-            check(search != null, "Home dashboard Search feature missing");
-            search.performClick();
-          });
+      runOnMainSync(() -> {
+        View search = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onSearch");
+        check(search != null, "Home dashboard Search feature missing");
+        search.performClick();
+      });
       await(
-          () -> KantaWorkspace.ACCESSORY_SEARCH.equals(homeWorkspace.activeAccessory()),
-          "Home Search did not open the existing workspace search");
-      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-      await(homeWorkspace::isStageOnly, "Home Search did not dismiss through workspace back");
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.search") != null,
+          "Home Search did not open the reference Search destination");
+      capture("search_screen.png");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.search.back");
+        check(back != null, "Search back control missing");
+        back.performClick();
+      });
       await(
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
-          "Home dashboard did not return after dismissing Search");
+          "Search did not return to Home");
       capture("home_dashboard_restored.png");
-      runOnMainSync(
-          () -> {
-            View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
-            check(more != null, "Home dashboard More destination missing");
-            more.performClick();
-          });
+      runOnMainSync(() -> {
+        View queue = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onQueue");
+        check(queue != null, "Home Queue feature missing");
+        queue.performClick();
+      });
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue") != null,
+          "Home Queue did not open the reference Queue destination");
+      capture("queue_screen.png");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue.back");
+        check(back != null, "Queue back control missing");
+        back.performClick();
+      });
+      await(
+          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          "Queue did not return to Home");
+      runOnMainSync(() -> {
+        View pitch = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onPitchTempo");
+        check(pitch != null, "Home Pitch & Tempo feature missing");
+        pitch.performClick();
+      });
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.pitch-tempo") != null,
+          "Home Pitch & Tempo did not open its reference destination");
+      capture("pitch_tempo_screen.png");
+      runOnMainSync(() -> {
+        View increment = activity.getWindow().getDecorView().findViewWithTag("kanta.pitch.key.increment");
+        check(increment != null, "Pitch increment control missing");
+        increment.performClick();
+      });
+      await(() -> session.pitch == 1, "Pitch screen did not update the active session key");
+      runOnMainSync(() -> {
+        View reset = activity.getWindow().getDecorView().findViewWithTag("kanta.pitch.reset");
+        check(reset != null, "Pitch reset control missing");
+        reset.performClick();
+      });
+      await(() -> session.pitch == 0 && Math.abs(session.tempo - 1.0f) < 0.001f,
+          "Pitch reset did not restore the original key and tempo");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.pitch-tempo.back");
+        check(back != null, "Pitch & Tempo back control missing");
+        back.performClick();
+      });
+      await(
+          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          "Pitch & Tempo did not return to Home");
+      runOnMainSync(() -> {
+        View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
+        check(more != null, "Home dashboard More destination missing");
+        more.performClick();
+      });
       check(
           state(
               () -> !session.scoringEnabled && session.score == null && session.lastScore == null),

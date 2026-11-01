@@ -111,6 +111,9 @@ def main() -> int:
         for screenshot_name in [
             "home_dashboard.png",
             "home_dashboard_restored.png",
+            "search_screen.png",
+            "queue_screen.png",
+            "pitch_tempo_screen.png",
             "library_ready.png",
             "fixture_loaded.png",
             "ui_rendered.png",
