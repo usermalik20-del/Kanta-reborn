@@ -338,7 +338,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void buildWindow() {
-    root = new FrameLayout(this);
+    root = column();
     root.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
     root.setPadding(dp(12), 0, dp(12), 0);
     root.setOnApplyWindowInsetsListener(
@@ -361,16 +361,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     brand.setTypeface(null, android.graphics.Typeface.BOLD);
     header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(button("Settings", this::help));
-    root.addView(header, new FrameLayout.LayoutParams(-1, -2));
+    root.addView(header, new LinearLayout.LayoutParams(-1, -2));
 
     // Content container for design-system screens (overlay on top of existing UI)
     contentContainer.setVisibility(View.GONE);
-    root.addView(contentContainer, new FrameLayout.LayoutParams(-1, -1));
+    root.addView(contentContainer, new LinearLayout.LayoutParams(-1, 0, 1));
 
     LinearLayout main = new LinearLayout(this);
     boolean wide = getResources().getConfiguration().screenWidthDp >= 700;
     main.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
-    root.addView(main, new FrameLayout.LayoutParams(-1, -1));
+    root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout stagePane = column();
     // Compact Workspace: the stage is the persistent base layer. Utilities are
     // transient accessories presented above it, so the player is never lost.
@@ -456,7 +456,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       navigationButtons.put(name, b);
       tabs.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
     }
-    root.addView(tabs, new FrameLayout.LayoutParams(-1, -2));
+    root.addView(tabs, new LinearLayout.LayoutParams(-1, -2));
     if (stagePresenter != null) stagePresenter.refresh();
   }
 
