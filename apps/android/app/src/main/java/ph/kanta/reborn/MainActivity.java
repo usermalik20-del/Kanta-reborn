@@ -92,6 +92,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           refreshMicrophoneReading();
           refreshNowPlayingScreen();
           if (stagePresenter != null) stagePresenter.refresh();
+          if (nowPlayingStage != null) nowPlayingStage.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
           refreshFullscreenControls();
           if (externalStage != null) externalStage.refresh();
