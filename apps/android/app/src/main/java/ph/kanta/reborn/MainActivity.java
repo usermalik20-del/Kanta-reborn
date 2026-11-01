@@ -1075,7 +1075,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onTempoUp(){session.controls(session.volume,Math.min(2f,session.tempo+.05f),session.pitch);}
       @Override public void onFavorite(){}
       @Override public void onOverflow(){}
-    });
+    }, nowPlayingStage);
+
     nowPlayingScreen.setTag("kanta.screen.now-playing");
     body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-1));
     refreshNowPlayingScreen();
@@ -1094,11 +1095,21 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     java.util.List<ph.kanta.reborn.core.MidiLyrics.Cue> cues=session.lyrics;
     if(current==null)nowPlayingScreen.setLyrics("","No song is playing","Reserve a song to begin","");
     else if(cues==null||cues.isEmpty())nowPlayingScreen.setLyrics("","No timed lyrics available","","");
-    else{
-      int active=0;for(int i=0;i<cues.size();i++){if(cues.get(i).milliseconds<=position)active=i;else break;}
-      String previous=active>0?cues.get(active-1).line:"",line=cues.get(active).line;
-      String next=active+1<cues.size()?cues.get(active+1).line:"",following=active+2<cues.size()?cues.get(active+2).line:"";
-      nowPlayingScreen.setLyrics(previous,line,next,following,cues.get(active).highlightedCharacters(position));
+    else {
+      int active = ph.kanta.reborn.core.MidiLyrics.activeIndex(cues, position);
+      if (active < 0) {
+        String first = cues.get(0).line;
+        String second = cues.size() > 1 ? cues.get(1).line : "";
+        nowPlayingScreen.setLyrics("", "Get ready to sing…", first, second, 0);
+      } else {
+        String previous = active > 0 ? cues.get(active - 1).line : "";
+        String line = cues.get(active).line;
+        String next = active + 1 < cues.size() ? cues.get(active + 1).line : "";
+        String following = active + 2 < cues.size() ? cues.get(active + 2).line : "";
+        nowPlayingScreen.setLyrics(
+            previous, line, next, following,
+            ph.kanta.reborn.core.LyricWordAnimation.highlightedCharacters(cues.get(active), position));
+      }
     }
   }
   private String formatPlaybackTime(long ms){long seconds=Math.max(0,ms/1000);return String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60);}
