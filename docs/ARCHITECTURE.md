@@ -597,3 +597,14 @@ Every named UI walkthrough screenshot is required evidence. The runner copies it
 ### Camera preview ownership across stage transitions
 
 `MainActivity` owns the primary camera preview through `StagePresenterImpl` and creates a dedicated `StageSurface` for fullscreen/external presentation. `CameraStage.moveTo(...)` must bind the preview to the currently visible stage owner, and the CameraX `PreviewView.StreamState.STREAMING` callback must update that owner's visible-camera state. Emulator acceptance covers primary → fullscreen → primary transitions, then explicit disable and foreground-loss cleanup. A successful transfer is proven by the fullscreen `StageSurface.isCameraVisible()` signal, not by the absence of that signal.
+
+
+## Independent platform artifact publication
+
+Android APK publication is owned by the successful `KANTA Android validation` workflow completion. It accepts only the APK artifact from that exact successful main-branch SHA; it does not wait for or require iOS archive, iPhone/iPad simulator walkthrough, or iOS signing state.
+
+iOS IPA publication is owned by the successful `KANTA iOS unsigned artifacts` workflow completion. It accepts only the unsigned IPA artifact from that exact successful main-branch SHA and additionally requires the iPhone and iPad simulator walkthrough to pass on that same SHA. It never rebuilds or republishes the Android APK.
+
+Both publishers write only their own platform download page and platform entry in `apps/web/downloads.json`. The publisher reads the latest main branch after acquiring a shared publication concurrency group, merges its platform entry, and preserves the other platform's current metadata. It then validates the website and dispatches the existing Vercel production deployment. A failed validation or rejected non-fast-forward push leaves the previous live download unchanged.
+
+The combined `verified-downloads.yml` workflow is now a contract-only workflow; it must not package or publish either platform. Shared website deployment is downstream of a successful platform-specific metadata publication, not a reason to run both native build pipelines.

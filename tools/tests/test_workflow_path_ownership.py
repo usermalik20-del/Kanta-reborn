@@ -133,6 +133,19 @@ class WorkflowOwnershipTests(unittest.TestCase):
         walkthrough = workflow("ios-visual-walkthrough.yml")
         self.assertEqual(walkthrough.count("Enforce documentation synchronization"), 2)
 
+    def test_platform_download_publisher_has_independent_completion_ownership(self):
+        source = workflow("platform-download-publishing.yml")
+        self.assertIn("KANTA Android validation", source)
+        self.assertIn("KANTA iOS unsigned artifacts", source)
+        self.assertIn("group: platform-download-publishing", source)
+        self.assertIn("tools/prepare-platform-download.py", source)
+        self.assertIn("tools/publish-platform-download.py", source)
+        self.assertIn("ref: main", source)
+        self.assertIn("git push origin HEAD:main", source)
+        contracts = workflow("verified-downloads.yml")
+        self.assertNotIn("workflow_run:", contracts)
+        self.assertNotIn("  package:", contracts)
+
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
         source = workflow("vercel-deploy.yml")
         self.assertNotIn("\n  pull_request:", source)
