@@ -22,11 +22,20 @@ final class StageView extends View {
   private int cachedWidth = -1;
   private float cachedSize;
   private boolean externalMedia;
+  private final Bitmap portraitArtwork;
+  private final Bitmap landscapeArtwork;
   private final float[] stars = new float[192];
 
   StageView(Context context, SessionController session) {
     super(context);
     this.session = session;
+    BitmapFactory.Options artworkOptions = new BitmapFactory.Options();
+    artworkOptions.inSampleSize = 2;
+    artworkOptions.inPreferredConfig = Bitmap.Config.RGB_565;
+    portraitArtwork = BitmapFactory.decodeResource(
+        getResources(), R.drawable.kanta_stage_phone, artworkOptions);
+    landscapeArtwork = BitmapFactory.decodeResource(
+        getResources(), R.drawable.kanta_stage_tv, artworkOptions);
     setMinimumHeight(dp(220));
     Random random = new Random(0x4b414e54);
     for (int i = 0; i < stars.length; i++) stars[i] = random.nextFloat();
@@ -64,7 +73,10 @@ final class StageView extends View {
     super.onDraw(canvas);
     float w = getWidth(), h = getHeight();
     if (!externalMedia) canvas.drawColor(Color.rgb(13, 18, 42));
-    Bitmap scene = session.scenic;
+    Bitmap selectedScene = session.scenic;
+    Bitmap scene = selectedScene != null && !selectedScene.isRecycled()
+        ? selectedScene
+        : (w >= h ? landscapeArtwork : portraitArtwork);
     if (!externalMedia && scene != null && !scene.isRecycled()) {
       float scale = Math.max(w / scene.getWidth(), h / scene.getHeight());
       float sw = w / scale, sh = h / scale;
