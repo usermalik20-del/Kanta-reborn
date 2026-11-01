@@ -54,6 +54,8 @@ class AndroidRuntimeRunnerContractTests(unittest.TestCase):
 
         self.assertIn('screenshots = ROOT / "files"', source)
         self.assertIn("screenshot_path = screenshots / screenshot_name", source)
+        self.assertIn("if screenshot_path.stat().st_size == 0:", source)
+        self.assertNotIn("if screenshot_path.exists()", source)
         self.assertIn('"am", "instrument"', source)
 
 
