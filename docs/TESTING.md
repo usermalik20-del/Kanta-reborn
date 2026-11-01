@@ -445,3 +445,5 @@ The existing drawable-nodpi art pack is now used by production UI rather than re
 The eight supplied WebP covers are packaged alongside the browser companion in Android `assets/companion/art/covers/` and mirrored byte-for-byte into iOS `Resources/CompanionRemote/art/covers/`. The Android `BrowserRemoteServer` and iOS `BrowserRemoteHost` serve only the exact `/assets/covers/01.webp` through `/assets/covers/08.webp` allowlist, with per-file and aggregate byte limits; no new remote commands or host-state authority are introduced.
 
 The real-Chrome companion check verifies that search-result covers and the Now Playing cover load successfully over the pinned HTTPS host. The browser host fixture uses the same bundled files, so a missing resource fails the browser contract instead of silently falling back to decorative placeholders.
+
+The companion browser gate also checks that all eight WebP cover assets are present in both platform bundles, byte-identical, within the per-file and aggregate budgets, and load successfully over the pinned HTTPS host.
