@@ -8,7 +8,14 @@ import java.util.*;
 public final class BrowserRemoteBrowserHost {
   public static void main(String[] args)throws Exception{
     Path assets=Paths.get(args[0]);List<String> ids=new ArrayList<>();boolean[] playing={false};
-    BrowserRemoteServer host=new BrowserRemoteServer("127.0.0.1",0,Files.readAllBytes(assets.resolve("index.html")),Files.readAllBytes(assets.resolve("remote.js")),Files.readAllBytes(assets.resolve("remote.css")),request->{
+    Map<String,byte[]> artwork=new HashMap<>();
+    for(int i=1;i<=8;i++){
+      String number=String.format(Locale.ROOT,"%02d",i);
+      artwork.put("/assets/covers/"+number+".webp",Files.readAllBytes(assets.resolve("art/covers/"+number+".webp")));
+    }
+    BrowserRemoteServer host=new BrowserRemoteServer("127.0.0.1",0,
+        Files.readAllBytes(assets.resolve("index.html")),Files.readAllBytes(assets.resolve("remote.js")),
+        Files.readAllBytes(assets.resolve("remote.css")),artwork,request->{
       switch(request.action){
         case "reserve":ids.add(UUID.randomUUID().toString());break;
         case "cancel":ids.remove(request.argument);break;

@@ -68,7 +68,9 @@ public final class BrowserRemoteHost: ObservableObject {
         guard !preparing, !active else { return }
         stop()
         guard (try? CompanionProtocol.privateAddress(localAddress)) != nil,
-              Set(assets.keys) == Set(["/", "/remote.js", "/remote.css"]), assets.values.allSatisfy({ $0.count <= 131072 }) else {
+              Set(assets.keys) == Set(["/", "/remote.js", "/remote.css"] + (1...8).map { String(format: "/assets/covers/%02d.webp", $0) }),
+              assets.values.allSatisfy({ $0.count <= 160000 }),
+              assets.values.reduce(0, { $0 + $1.count }) <= 1_500_000 else {
             status = "Select this device's private Wi-Fi IPv4 address."; return
         }
         let run = generation; self.assets = assets; status = "Preparing private HTTPS host…"
@@ -166,7 +168,9 @@ public final class BrowserRemoteHost: ObservableObject {
         if let site = request.headers["sec-fetch-site"], !["same-origin", "none"].contains(site) { reply(403, Data(), "text/plain", connection, id); return }
         if request.method == "GET", request.body.isEmpty {
             guard let asset = assets[request.path] else { reply(404, Data(), "text/plain", connection, id); return }
-            let type = request.path == "/" ? "text/html; charset=utf-8" : (request.path == "/remote.js" ? "text/javascript; charset=utf-8" : "text/css; charset=utf-8")
+            let type = request.path == "/" ? "text/html; charset=utf-8"
+                : request.path == "/remote.js" ? "text/javascript; charset=utf-8"
+                : request.path == "/remote.css" ? "text/css; charset=utf-8" : "image/webp"
             reply(200, asset, type, connection, id); return
         }
         guard request.method == "POST", request.headers["content-type"] == "application/octet-stream", origin == address else { reply(403, Data(), "text/plain", connection, id); return }

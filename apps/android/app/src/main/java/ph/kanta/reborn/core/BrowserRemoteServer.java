@@ -19,6 +19,7 @@ public final class BrowserRemoteServer implements AutoCloseable {
   private static final SecureRandom RANDOM=new SecureRandom();
   private final Handler handler;
   private final byte[] page,script,style;
+  private final Map<String,byte[]> staticAssets;
   private final SSLServerSocket server;
   private final ExecutorService worker=Executors.newSingleThreadExecutor();
   private final ScheduledExecutorService deadlines=Executors.newSingleThreadScheduledExecutor();
@@ -38,13 +39,32 @@ public final class BrowserRemoteServer implements AutoCloseable {
   public String address(){return origin;}
   public boolean active(){return !closed;}
   public BrowserRemoteServer(String address,byte[] page,byte[] script,byte[] style,Handler handler)throws Exception {
-    this(address,PORT,page,script,style,handler,false);
+    this(address,PORT,page,script,style,Collections.emptyMap(),handler,false);
+  }
+  public BrowserRemoteServer(String address,byte[] page,byte[] script,byte[] style,
+      Map<String,byte[]> staticAssets,Handler handler)throws Exception {
+    this(address,PORT,page,script,style,staticAssets,handler,false);
   }
   // Loopback and an ephemeral port are restricted to the JVM transport regression harness.
   BrowserRemoteServer(String address,int port,byte[] page,byte[] script,byte[] style,Handler handler,boolean test)throws Exception {
+    this(address,port,page,script,style,Collections.emptyMap(),handler,test);
+  }
+  BrowserRemoteServer(String address,int port,byte[] page,byte[] script,byte[] style,
+      Map<String,byte[]> staticAssets,Handler handler,boolean test)throws Exception {
     if(!test)CompanionProtocol.privateAddress(address);
     this.handler=Objects.requireNonNull(handler);this.page=page.clone();this.script=script.clone();this.style=style.clone();
     if(page.length>131072||script.length>131072||style.length>65536)throw new IOException("Asset limit");
+    if(staticAssets.size()>8)throw new IOException("Static asset count limit");
+    Map<String,byte[]> copiedAssets=new HashMap<>();int totalAssetBytes=0;
+    for(Map.Entry<String,byte[]> asset:staticAssets.entrySet()){
+      String path=asset.getKey();byte[] bytes=asset.getValue();
+      if(!path.matches("/assets/covers/0[1-8]\\.webp")||bytes==null||bytes.length==0||bytes.length>160000)
+        throw new IOException("Invalid static asset");
+      totalAssetBytes+=bytes.length;
+      if(totalAssetBytes>1500000)throw new IOException("Static asset byte limit");
+      copiedAssets.put(path,bytes.clone());
+    }
+    this.staticAssets=Collections.unmodifiableMap(copiedAssets);
     KeyPairGenerator generator=KeyPairGenerator.getInstance("RSA");generator.initialize(2048);
     KeyPair keys=generator.generateKeyPair();
     X509Certificate certificate=certificate(keys,InetAddress.getByName(address).getAddress());
@@ -101,7 +121,10 @@ public final class BrowserRemoteServer implements AutoCloseable {
         case "/":reply(peer,200,"text/html; charset=utf-8",page);return;
         case "/remote.js":reply(peer,200,"text/javascript; charset=utf-8",script);return;
         case "/remote.css":reply(peer,200,"text/css; charset=utf-8",style);return;
-        default:reply(peer,404,"text/plain",new byte[0]);return;
+        default:
+          byte[] asset=staticAssets.get(first[1]);
+          if(asset!=null){reply(peer,200,"image/webp",asset);return;}
+          reply(peer,404,"text/plain",new byte[0]);return;
       }
     }
     if(!first[0].equals("POST")||!"application/octet-stream".equals(headers.get("content-type"))||!origin.equals(requestOrigin)){

@@ -101,17 +101,26 @@
       if (epoch === run) disconnect("Connection lost or response rejected. A command may have completed; pair again and inspect the host queue before repeating it.");
     } finally { clearTimeout(timeout); if (epoch === run) {busy = false; active = null; controls();} }
   }
-  function row(title, detail, buttonText, action) {
+  function coverNumber(value) {
+    let hash = 0;
+    for (const character of String(value || "")) hash = (Math.imul(hash, 31) + character.charCodeAt(0)) | 0;
+    return String(((hash & 0x7fffffff) % 8) + 1).padStart(2, "0");
+  }
+  function row(title, detail, buttonText, action, coverKey) {
     const wrapper = root.document.createElement("div"); wrapper.className = "row";
+    const cover = root.document.createElement("img");
+    cover.className = "cover-art"; cover.alt = ""; cover.loading = "lazy"; cover.decoding = "async";
+    cover.src = "/assets/covers/" + coverNumber(coverKey || title) + ".webp";
     const text = root.document.createElement("div"), strong = root.document.createElement("strong"), description = root.document.createElement("p");
     strong.textContent = title; description.textContent = detail; text.append(strong, description);
     const button = root.document.createElement("button"); button.type = "button"; button.textContent = buttonText;
-    button.dataset.command = "true"; button.addEventListener("click", action); wrapper.append(text, button); return wrapper;
+    button.dataset.command = "true"; button.addEventListener("click", action); wrapper.append(cover, text, button); return wrapper;
   }
   function render() {
     $("current").textContent = state.current; $("transport-state").textContent = state.playing ? "Playing" : "Paused / stopped";
-    $("results").replaceChildren(...state.songs.map(song => row(song.title, [song.artist, song.code].filter(Boolean).join(" · "), "Reserve", () => command("reserve", song.id, $("singer").value))));
-    $("queue").replaceChildren(...state.queue.map(item => row(item.title, item.singer, "Cancel", () => command("cancel", item.id))));
+    $("now-art").src = "/assets/covers/" + coverNumber(state.current) + ".webp";
+    $("results").replaceChildren(...state.songs.map(song => row(song.title, [song.artist, song.code].filter(Boolean).join(" · "), "Reserve", () => command("reserve", song.id, $("singer").value), song.id || song.title)));
+    $("queue").replaceChildren(...state.queue.map(item => row(item.title, item.singer, "Cancel", () => command("cancel", item.id), item.title)));
     if (!state.queue.length) $("queue").textContent = "No queued songs";
     controls();
   }
