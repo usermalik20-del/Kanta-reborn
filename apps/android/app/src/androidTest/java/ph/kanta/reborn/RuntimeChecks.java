@@ -81,6 +81,15 @@ public final class RuntimeChecks extends Instrumentation {
       await(homeWorkspace::isStageOnly, "Home Search did not dismiss through workspace back");
       runOnMainSync(
           () -> {
+            View home = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Home");
+            check(home != null, "Home destination was not restored in legacy navigation");
+            home.performClick();
+          });
+      await(
+          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          "Home dashboard did not return after dismissing Search");
+      runOnMainSync(
+          () -> {
             View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
             check(more != null, "Home dashboard More destination missing");
             more.performClick();
