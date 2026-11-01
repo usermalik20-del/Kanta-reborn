@@ -437,7 +437,7 @@ public final class RuntimeChecks extends Instrumentation {
           () -> !session.importing && session.stageKind.equals("video"),
           "Controller video import failed");
       // The primary UI is StagePresenterImpl; StageSurface is the dedicated fullscreen renderer.
-      View primaryStage = stableStage.get();
+      check(stableStage.get() == primaryStage, "Persistent stage reference changed before fullscreen");
       runOnMainSync(activity::fullscreen);
       await(
           () -> field(activity, "fullscreenStage") instanceof StageSurface,

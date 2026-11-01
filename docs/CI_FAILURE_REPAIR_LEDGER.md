@@ -1023,3 +1023,13 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Regression coverage:** exact-head Android validation must compile, lint, run domain regressions, verify the browser companion over real Chrome and complete emulator instrumentation. The generated Stage Lights selection must publish the new bitmap, and all eight browser cover files must load through the pinned host. The original failed run remains recorded.
 
 **Validation:** repair commit `030bb38473a92e080a9d7342b9f875ead92e41fa`; candidate pending exact-head hosted validation.
+## Android PR #134 — duplicate primaryStage local in runtime instrumentation (2026-11-01)
+
+**Affected run:** Android validation [#41325541925](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41325541925), run number 511, exact head `3078d30f7ec05ec159a24d3b0a347b322bb745d5`. The `Build, lint and domain regression tests` step compiled the main app and completed all 65,402 core regression checks, then failed at `compileDebugAndroidTestJavaWithJavac`: `RuntimeChecks.onStart()` declared `View primaryStage` twice (the original persistent-stage reference at line 224 and a redundant second local at line 440).
+
+**Root cause:** the fullscreen lifecycle assertion re-declared the persistent `StagePresenterImpl` reference instead of checking the already-captured view. This was a Java local-variable scope conflict in instrumentation, not a production source or playback regression.
+
+**Repair candidate:** removed the redundant declaration and replaced it with an explicit identity assertion that `stableStage` still references the original `primaryStage` before entering fullscreen. The existing post-fullscreen restoration assertions continue to use that same authoritative view reference.
+
+**Validation:** rerun Android validation on the repair commit; instrumentation compilation, Chrome companion checks and emulator screenshots must all complete before acceptance.
+
