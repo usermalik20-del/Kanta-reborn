@@ -67,6 +67,18 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "Music brings people together.")),
           "Reference-led Home dashboard was not mounted at launch");
+      KantaWorkspace homeWorkspace = (KantaWorkspace) field(activity, "workspace");
+      runOnMainSync(
+          () -> {
+            View search = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onSearch");
+            check(search != null, "Home dashboard Search feature missing");
+            search.performClick();
+          });
+      await(
+          () -> KantaWorkspace.ACCESSORY_SEARCH.equals(homeWorkspace.activeAccessory()),
+          "Home Search did not open the existing workspace search");
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(homeWorkspace::isStageOnly, "Home Search did not dismiss through workspace back");
       runOnMainSync(
           () -> {
             View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
