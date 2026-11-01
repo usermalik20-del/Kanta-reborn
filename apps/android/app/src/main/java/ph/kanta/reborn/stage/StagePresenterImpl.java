@@ -500,7 +500,17 @@ public final class StagePresenterImpl extends FrameLayout
 
   /** Returns the camera PreviewView from BackgroundStage. */
   public androidx.camera.view.PreviewView getCameraPreview() {
+    if (backgroundStage.getCameraPreview() == null)
+      backgroundStage.setSource(BackgroundStage.Source.CAMERA);
     return backgroundStage.getCameraPreview();
+  }
+
+  /** Reports whether the primary stage camera preview has reached its streaming state. */
+  public boolean isCameraVisible() {
+    androidx.camera.view.PreviewView preview = backgroundStage.getCameraPreview();
+    return preview != null
+        && preview.getPreviewStreamState().getValue()
+            == androidx.camera.view.PreviewView.StreamState.STREAMING;
   }
 
   @Override

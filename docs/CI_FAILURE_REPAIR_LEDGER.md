@@ -900,3 +900,36 @@ PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/K
 **Regression protection:** Android runtime instrumentation now reloads the durable catalog after a cancelled batch and requires the original starter-only catalog with every referenced media file present.
 
 **Validation:** exact merged-source Android validation #41168859914 passed, including build, lint, domain regression and API 35 emulator runtime checks.
+
+## Android — malformed validation workflow and unreachable emulator acceptance (2026-11-01)
+
+**Fingerprint:** source SHA `2e0cc5c6d60ab175937c372d9ef9b244f52e8b64`; workflow `.github/workflows/android-validation.yml` contains `required: false  push:` on one line, so the event declaration is malformed. Runner `tools/run-android-runtime.py` places the APK-install and instrumentation sequence inside `if not network_ok`, immediately after an unconditional `raise RuntimeError`; the sequence is therefore unreachable. The camera-capture `with` statement is concatenated to a comment, and the UI screenshot output paths do not match the workflow artifact paths.
+
+**Affected run:** the GitHub connector's commit-run lookup returns only pull-request-triggered runs and returned no entries for the latest main-branch commits; the exact failing run ID and complete job log could not be retrieved through that endpoint. Do not invent a run ID or claim a log-based diagnosis. The source defects above are directly confirmed by the merged commit diff and full file contents.
+
+**Cause:** malformed YAML prevents reliable workflow event registration. Independently, the emulator runner's indentation makes the acceptance sequence unreachable after the private-network check, and the screenshot directory mismatch prevents the expected walkthrough captures from being retained at their configured artifact paths.
+
+**Repair candidate:** branch `fix/android-ci-workflow-runtime-20261101`. Workflow repair separates the manual-dispatch ref input from the push event and checks out the explicit ref or event SHA. Runtime repair restores the missing-network guard, places both APK installations and instrumentation after that guard, writes walkthrough captures under `files/`, and separates camera capture into a valid statement. Added `tools/tests/test_android_runtime_runner.py` and wired it into Android validation. Exact repair commit IDs are recorded in the branch history; the candidate must not be marked verified before the full hosted Android workflow passes on the PR head.
+
+**Regression coverage:** Python AST test requires the network guard to raise on missing private IPv4 while keeping both APK installation calls outside the guard; it also requires the screenshot directory and instrumentation call. Workflow YAML must be parsed/loaded by GitHub Actions on the PR head, then Android build, lint, domain/native checks, browser checks and emulator instrumentation must all complete.
+
+**Validation:** candidate; no fixed-head hosted run is yet available. Static source correction is not compilation or emulator acceptance.
+
+**Recurrence rule:** do not put required steps after a raise in the same conditional branch. Review indentation in the full runner, not only changed lines. Keep workflow event declarations at the YAML root and keep artifact paths identical to the paths written by the runner.
+
+## Android — stage presenter type mismatch and camera target gap (2026-11-01)
+
+**Affected run:** Android validation run [#41273249978](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41273249978), run number 400, job `android`, step `Android emulator runtime checks`. All preceding steps passed: branding, prompt bank, runtime-runner regression, SDK install, native SoundFont sanitizer, Gradle build/lint/domain regressions, camera permission/offline notices, real Chrome companion, captured browser interoperability and private IPv4 interface selection. Emulator instrumentation then returned `INSTRUMENTATION_RESULT: shortMsg=Process crashed`.
+
+**Root cause:** captured `android-logcat.log` records `FATAL EXCEPTION: main` and `ClassCastException: ph.kanta.reborn.stage.StagePresenterImpl cannot be cast to ph.kanta.reborn.StageSurface` at `RuntimeChecks.java:255`. `MainActivity` uses `StagePresenterImpl` as its primary stage and creates `StageSurface` only for fullscreen/external output. The runtime test treated them as the same concrete type. Review also found `CameraStage.start()` accepted only `PreviewView` or `StageSurface`; its primary-stage call with `StagePresenterImpl` silently returned, leaving camera acceptance incomplete even after the cast was fixed.
+
+**Repair candidate:** `RuntimeChecks` now uses fullscreen `StageSurface` for video lifecycle checks and retains the primary presenter for primary-stage checks. `StagePresenterImpl.getCameraPreview()` ensures the presenter's `BackgroundStage` has a real `PreviewView` and exposes its streaming state. `CameraStage` accepts the primary presenter as a target and forwards stream state to fullscreen `StageSurface`. The test checks primary camera startup, transfer to fullscreen and return to primary. No application test was removed or skipped.
+
+**Regression coverage:** exact-head Android validation must run the complete emulator suite. Required assertions: primary-stage camera reaches `PreviewView.StreamState.STREAMING`; fullscreen video becomes visible, deactivates and resumes; camera moves to fullscreen and returns to primary; camera disable releases preview. Static source checks and successful compilation are not emulator acceptance.
+
+**Validation:** candidate source repair committed to the existing PR branch; awaiting the next hosted Android run. The failed run remains a real failure and must not be overwritten in the ledger.
+
+
+## Android run #407 — inverted fullscreen camera acceptance assertion — 2026-11-01
+
+The repaired camera path reached a real CameraX `STREAMING` state on the emulator, but instrumentation failed at `RuntimeChecks.java:295`. The fullscreen-stage predicate was inverted: it required `!StageSurface.isCameraVisible()` while reporting that the camera had not moved to fullscreen. `StageSurface.cameraFrame(true)` is the authoritative visibility signal set by the CameraX stream-state observer, so the assertion rejected the expected successful handoff. The candidate now requires the fullscreen surface to report camera visibility and retains the separate primary-stage and return-to-primary assertions. This is a test correction, not a skipped gate; a new exact-head Android emulator run must still pass before the repair is considered verified.

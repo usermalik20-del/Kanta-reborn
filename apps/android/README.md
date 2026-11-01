@@ -157,3 +157,13 @@ The optional voice-output route accepts Bluetooth SCO and BLE headsets next to w
 ## Multi-file import durability
 
 Multi-file song and SoundFont imports stage metadata until the complete batch succeeds. The repository performs one atomic metadata commit after all items finish; cancellation or commit failure restores the prior catalog and removes staged media. Regression coverage reloads the durable catalog after cancellation and verifies that only the original starter entries remain, with every referenced media file present. Single-file imports retain their immediate persistence behavior.
+
+## Android emulator acceptance runner — 2026-11-01
+
+The hosted Android gate installs the debug APK and instrumentation APK only after the emulator has booted and acquired a private IPv4 address. A missing address is a terminal prerequisite failure; it must not contain or skip the acceptance sequence. After the prerequisite guard, the runner installs both APKs, executes `RuntimeChecks`, captures the stage and camera evidence, and copies the named UI walkthrough captures into the repository-root `files/` artifact directory. The CI workflow uploads that directory. The runner control-flow contract is covered by `tools/tests/test_android_runtime_runner.py` and is executed in Android validation. The repair is pending exact-head hosted acceptance.
+
+The runner treats all eight named UI walkthrough screenshots as required evidence. It retrieves each file from the app-private directory into `files/` and fails if a capture is absent or empty; it never silently skips a missing screenshot.
+
+## Stage presenter and camera runtime ownership — 2026-11-01
+
+The primary `kanta.stage.primary` view is `StagePresenterImpl`; fullscreen and external-display output use `StageSurface`. `CameraStage` supports both target types. The primary presenter's `BackgroundStage` owns its `PreviewView`, while fullscreen `StageSurface` receives a dedicated mounted preview and stream-state updates. Runtime instrumentation validates video on fullscreen `StageSurface` and validates camera start/transfer/return on the correct primary/fullscreen targets.

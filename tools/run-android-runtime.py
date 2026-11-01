@@ -76,58 +76,59 @@ def main() -> int:
             run(adb, "shell", "svc", "wifi", "enable", timeout=15)
         if not network_ok:
             raise RuntimeError(f"Emulator has no private IPv4 after Wi-Fi enable after retries")
-            run(adb, "shell", "input", "keyevent", "82", timeout=15)
-            run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/debug/app-debug.apk", timeout=60)
-            run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk", timeout=60)
-            with (ROOT / "android-runtime.log").open("wb") as output:
-                run(adb, "shell", "am", "instrument", "-w", "ph.kanta.reborn.test/ph.kanta.reborn.RuntimeChecks",
-                    stdout=output, stderr=subprocess.STDOUT, timeout=180)
-            result = (ROOT / "android-runtime.log").read_text(errors="replace")
-            print(result, flush=True)
-            if "KANTA runtime:" not in result or "checks passed" not in result:
-                raise RuntimeError("Runtime instrumentation did not report acceptance")
-            # Live UI screenshot capture via adb screencap (captures emulator display)
-            try:
-                result_capture = subprocess.run(
-                    ["adb", "shell", "screencap", "-p"],
-                    capture_output=True, timeout=30,
-                    env={**os.environ, "ANDROID_ADB_SERVER_PORT": "5037"}
-                )
-                if result_capture.returncode == 0 and result_capture.stdout:
-                    with (ROOT / "android-runtime-stage.png").open("wb") as f:
-                        f.write(result_capture.stdout)
-                    print("Stage screenshot captured via screencap", flush=True)
-                else:
-                    raise RuntimeError("screencap failed")
-            except Exception:
-                # Fallback: read from app private files (original behavior)
-                print("screencap failed, falling back to file-read", flush=True)
-                with (ROOT / "android-runtime-stage.png").open("wb") as output:
-                    run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-stage.png", stdout=output, timeout=20)
-            if (ROOT / "android-runtime-stage.png").stat().st_size == 0: raise RuntimeError("Missing real stage capture")
-            # Camera capture: fallback to app private file (screencap captures emulator display only)
-            # Read new UI walkthrough screenshots captured by RuntimeChecks.java
-            for screenshot_name in [
-                "library_ready.png",
-                "fixture_loaded.png",
-                "ui_rendered.png",
-                "youtube_loaded.png",
-                "stage_ready.png",
-                "camera_optin.png",
-                "voice_settings.png",
-                "final_ui.png",
-            ]:
-                screenshot_path = ROOT / screenshot_name
-                if screenshot_path.exists() and screenshot_path.stat().st_size > 0:
-                    print(f"Reading {screenshot_name} from app files", flush=True)
-                    with open(screenshot_path, "wb") as f:
-                        run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", f"files/{screenshot_name}", stdout=f, timeout=20)
-                else:
-                    print(f"{screenshot_name} not found or empty, skipping", flush=True)
-            
-            # Camera capture (existing behavior)            with (ROOT / "android-runtime-camera.png").open("wb") as output:
-                run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-camera.png", stdout=output, timeout=20)
-            if (ROOT / "android-runtime-camera.png").stat().st_size == 0: raise RuntimeError("Missing real camera capture")
+        run(adb, "shell", "input", "keyevent", "82", timeout=15)
+        run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/debug/app-debug.apk", timeout=60)
+        run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk", timeout=60)
+        with (ROOT / "android-runtime.log").open("wb") as output:
+            run(adb, "shell", "am", "instrument", "-w", "ph.kanta.reborn.test/ph.kanta.reborn.RuntimeChecks",
+                stdout=output, stderr=subprocess.STDOUT, timeout=180)
+        result = (ROOT / "android-runtime.log").read_text(errors="replace")
+        print(result, flush=True)
+        if "KANTA runtime:" not in result or "checks passed" not in result:
+            raise RuntimeError("Runtime instrumentation did not report acceptance")
+        # Live UI screenshot capture via adb screencap (captures emulator display)
+        try:
+            result_capture = subprocess.run(
+                [str(adb), "shell", "screencap", "-p"],
+                capture_output=True, timeout=30
+            )
+            if result_capture.returncode == 0 and result_capture.stdout:
+                with (ROOT / "android-runtime-stage.png").open("wb") as f:
+                    f.write(result_capture.stdout)
+                print("Stage screenshot captured via screencap", flush=True)
+            else:
+                raise RuntimeError("screencap failed")
+        except Exception:
+            # Fallback: read from app private files (original behavior)
+            print("screencap failed, falling back to file-read", flush=True)
+            with (ROOT / "android-runtime-stage.png").open("wb") as output:
+                run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-stage.png", stdout=output, timeout=20)
+        if (ROOT / "android-runtime-stage.png").stat().st_size == 0: raise RuntimeError("Missing real stage capture")
+        # Camera capture: fallback to app private file (screencap captures emulator display only)
+        # Read new UI walkthrough screenshots captured by RuntimeChecks.java
+        screenshots = ROOT / "files"
+        screenshots.mkdir(exist_ok=True)
+        for screenshot_name in [
+            "library_ready.png",
+            "fixture_loaded.png",
+            "ui_rendered.png",
+            "youtube_loaded.png",
+            "stage_ready.png",
+            "camera_optin.png",
+            "voice_settings.png",
+            "final_ui.png",
+        ]:
+            screenshot_path = screenshots / screenshot_name
+            print(f"Reading required UI capture {screenshot_name} from app files", flush=True)
+            with screenshot_path.open("wb") as output:
+                run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", f"files/{screenshot_name}", stdout=output, timeout=20)
+            if screenshot_path.stat().st_size == 0:
+                raise RuntimeError(f"Missing UI walkthrough screenshot: {screenshot_name}")
+        
+        # Camera capture remains a separate app-private runtime artifact.
+        with (ROOT / "android-runtime-camera.png").open("wb") as output:
+            run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-camera.png", stdout=output, timeout=20)
+        if (ROOT / "android-runtime-camera.png").stat().st_size == 0: raise RuntimeError("Missing real camera capture")
         return 0
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         print(f"Android runtime acceptance failed: {error}", flush=True)

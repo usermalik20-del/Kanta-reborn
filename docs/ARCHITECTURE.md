@@ -582,3 +582,18 @@ The iOS download remains an unsigned personal-signing input; this automation doe
 
 
 The request-time renderer also removes any legacy static `/analytics.js` script element from recovered page source before nonce decoration. A nonce only authorizes execution under CSP; it is not a consent decision. `site-consent.js` remains the sole runtime loader for Analytics and AdSense after explicit acceptance. Preserve this separation in future page/template changes.
+
+## Android validation runner ownership — 2026-11-01
+
+`android-validation.yml` owns the Android source/build/runtime gate. Its manual-dispatch input selects only the Git ref; the full acceptance suite remains mandatory and cannot be replaced by a screenshot-only mode. Push and pull-request triggers remain separate top-level workflow events. `tools/run-android-runtime.py` owns emulator provisioning, private-network readiness, APK installation, instrumentation execution and evidence collection. The private-IPv4 guard is a prerequisite boundary: only its missing-network failure is conditional; installation and instrumentation execute after the guard succeeds. UI screenshots are copied to the workspace's `files/` directory, matching the artifact upload paths. The workflow and runner do not own application playback, queue, persistence or sensor state.
+
+Every named UI walkthrough screenshot is required evidence. The runner copies it from app-private storage into `files/` and fails closed when retrieval is unsuccessful or the file is empty; the artifact path and runtime destination must remain identical.
+
+## Android stage presenter and camera target contract — 2026-11-01
+
+`MainActivity` owns the primary stage as `StagePresenterImpl`; `StageSurface` is a separate lifecycle-bound renderer used for fullscreen and external-display surfaces. These are not interchangeable types. `CameraStage` binds its preview to the primary presenter's `BackgroundStage` preview when the primary stage is active, and mounts a dedicated preview into `StageSurface` for fullscreen/external output. On fullscreen transitions, camera ownership moves to the new target and returns to the primary preview on dismissal. The primary presenter exposes the prepared camera preview and its actual streaming state. Instrumentation must resolve the concrete stage target rather than cast the primary presenter to the legacy surface class.
+
+
+### Camera preview ownership across stage transitions
+
+`MainActivity` owns the primary camera preview through `StagePresenterImpl` and creates a dedicated `StageSurface` for fullscreen/external presentation. `CameraStage.moveTo(...)` must bind the preview to the currently visible stage owner, and the CameraX `PreviewView.StreamState.STREAMING` callback must update that owner's visible-camera state. Emulator acceptance covers primary → fullscreen → primary transitions, then explicit disable and foreground-loss cleanup. A successful transfer is proven by the fullscreen `StageSurface.isCameraVisible()` signal, not by the absence of that signal.
