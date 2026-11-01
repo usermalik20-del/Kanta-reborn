@@ -61,13 +61,21 @@ final class CameraStage {
     if (target instanceof PreviewView) {
       view = (PreviewView) target;
     } else if (target instanceof StageSurface) {
-      // For StageSurface, create a new PreviewView and mount it
+      // Fullscreen and external stages own a dedicated preview surface.
       view = new PreviewView(owner);
       view.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
       view.setScaleType(PreviewView.ScaleType.FILL_CENTER);
       view.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
       ((StageSurface) target).mountCamera(view);
+    } else if (target instanceof ph.kanta.reborn.stage.StagePresenterImpl) {
+      // The primary stage presenter owns its PreviewView through BackgroundStage.
+      view = ((ph.kanta.reborn.stage.StagePresenterImpl) target).getCameraPreview();
+      if (view == null) {
+        unavailable("The primary stage could not prepare its camera preview.");
+        return;
+      }
     } else {
+      unavailable("The selected stage does not support a camera preview.");
       return;
     }
     streamObserver =
