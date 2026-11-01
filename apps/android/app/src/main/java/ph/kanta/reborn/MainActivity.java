@@ -60,7 +60,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean cameraPermissionPending, microphonePermissionPending, voiceExpanded;
   private Presentation presentation;
   private DisplayManager displays;
-  private String tab = "Control", query = "", singer = "";
+  private String tab = "Home", query = "", singer = "";
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
@@ -407,7 +407,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (wide) main.addView(scroll, new LinearLayout.LayoutParams(0, -1, 1));
     else main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout tabs = row();
-    for (String name : new String[] {"My Set", "Loop", "Scenic", "Realm", "Control"}) {
+    for (String name : new String[] {"Home", "My Set", "Loop", "Scenic", "Realm", "Control"}) {
       Button b =
           button(
               name,
@@ -927,6 +927,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(button("YouTube video (online)", this::openYouTubeVideo));
 
     switch (tab) {
+      case "Home":
+        homeDashboard();
+        break;
       case "My Set":
         mySet();
         break;
@@ -944,6 +947,35 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
+
+  /** Reference-led home dashboard. Existing playback and workspace owners remain authoritative. */
+  private void homeDashboard() {
+    body.addView(
+        new ph.kanta.reborn.ui.HomeScreen(
+            this,
+            new ph.kanta.reborn.ui.HomeScreen.Listener() {
+              @Override public void onHome() {
+                tab = "Home";
+                render();
+              }
+              @Override public void onSettings() {
+                tab = "Control";
+                render();
+              }
+              @Override public void onSearch() { presentAccessory(KantaWorkspace.ACCESSORY_SEARCH); }
+              @Override public void onQueue() { presentAccessory(KantaWorkspace.ACCESSORY_QUEUE); }
+              @Override public void onYouTube() { openYouTubeVideo(); }
+              @Override public void onVisuals() { presentAccessory(KantaWorkspace.ACCESSORY_VISUALS); }
+              @Override public void onMicVoice() { presentAccessory(KantaWorkspace.ACCESSORY_MORE); }
+              @Override public void onPitchTempo() { presentAccessory(KantaWorkspace.ACCESSORY_MORE); }
+              @Override public void onMySet() { tab = "My Set"; render(); }
+              @Override public void onFavorites() { tab = "My Set"; render(); }
+              @Override public void onRecent() { tab = "My Set"; render(); }
+              @Override public void onMore() { tab = "Control"; render(); }
+              @Override public void onScenic() { tab = "Scenic"; render(); }
+              @Override public void onRealm() { tab = "Realm"; render(); }
+            }));
+  }
 
   private void openYouTubeVideo() {
     if (!youtubeForeground || isFinishing() || isDestroyed()) return;
