@@ -447,3 +447,5 @@ The eight supplied WebP covers are packaged alongside the browser companion in A
 The real-Chrome companion check verifies that search-result covers and the Now Playing cover load successfully over the pinned HTTPS host. The browser host fixture uses the same bundled files, so a missing resource fails the browser contract instead of silently falling back to decorative placeholders.
 
 The companion browser gate also checks that all eight WebP cover assets are present in both platform bundles, byte-identical, within the per-file and aggregate budgets, and load successfully over the pinned HTTPS host.
+
+The same browser gate asserts that XcodeGen includes `Resources/CompanionRemote` in the iOS app bundle, preventing a correct source mirror from being omitted during packaging.

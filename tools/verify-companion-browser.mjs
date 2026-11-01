@@ -9,6 +9,8 @@ const require=createRequire(import.meta.url);
 const root=path.resolve(import.meta.dirname,'..');
 const native=path.join(root,'apps/android/app/src/main/assets/companion');
 const ios=path.join(root,'apps/ios/Resources/CompanionRemote');
+const iosProject=await readFile(path.join(root,'apps/ios/project.yml'),'utf8');
+assert.match(iosProject,/- path: Resources\/CompanionRemote/,'iOS project does not package the mirrored companion directory');
 for(const name of ['index.html','remote.js','remote.css'])assert.deepEqual(await readFile(path.join(native,name)),await readFile(path.join(ios,name)),`Platform asset drift: ${name}`);
 let coverBytes=0;
 for(let index=1;index<=8;index++){
