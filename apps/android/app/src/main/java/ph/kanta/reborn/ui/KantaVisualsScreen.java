@@ -32,8 +32,8 @@ public final class KantaVisualsScreen extends LinearLayout {
   private TextView cameraStatus;
 
   private static final String[] LABELS = {
-    "Default", "Stage Lights", "Galaxy", "Sunset", "Ocean",
-    "City", "Neon", "Particles", "Custom", "Forest"
+    "Bayan Dawn", "Bamboo Mist", "Coral Haze", "Deep Lagoon", "Ember Sunset",
+    "Indigo Horizon", "Mango Glow", "Moonlit Bay", "Orchid Night", "Pearl Sky"
   };
   private static final String[] SCENES = {
     "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
@@ -107,11 +107,11 @@ public final class KantaVisualsScreen extends LinearLayout {
 
   private void buildBackgroundGrid(LinearLayout parent) {
     parent.addView(KantaTheme.titleText(context, "Choose your stage", 15));
-    for (int row = 0; row < 5; row++) {
+    for (int row = 0; row < 4; row++) {
       LinearLayout line = new LinearLayout(context);
       line.setOrientation(HORIZONTAL);
-      for (int col = 0; col < 2; col++) {
-        int index = row * 2 + col;
+      for (int col = 0; col < 3; col++) {
+        int index = row * 3 + col;
         if (index >= LABELS.length) break;
         final String label = LABELS[index];
         final String scene = SCENES[index];
@@ -151,6 +151,12 @@ public final class KantaVisualsScreen extends LinearLayout {
       }
       parent.addView(line);
     }
+    Button custom = smallButton("＋  Custom background");
+    custom.setTag("kanta.visuals.custom-import");
+    custom.setOnClickListener(v -> { if (listener != null) listener.onCustomImport(); });
+    LayoutParams customParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(48));
+    customParams.topMargin = dp(4);
+    parent.addView(custom, customParams);
   }
 
   private Bitmap loadThumbnail(String scene) {
@@ -231,6 +237,16 @@ public final class KantaVisualsScreen extends LinearLayout {
   private void refresh() {
     removeAllViews();
     build();
+  }
+
+  public void setSelectedScene(String scene) {
+    if (scene == null) return;
+    for (int i = 0; i < SCENES.length; i++) {
+      if (SCENES[i].equals(scene)) {
+        selectedBackground = LABELS[i];
+        return;
+      }
+    }
   }
 
   public void setCameraState(boolean enabled, boolean streaming) {

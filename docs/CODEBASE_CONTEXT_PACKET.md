@@ -373,3 +373,7 @@ Visuals now renders thumbnails from the ten existing `assets/scenic/*.png` image
 
 
 **Current safe-branch integration:** Search, Queue, Pitch & Tempo, Mic & Voice and Visuals are mounted full-screen destinations. Mic & Voice uses live microphone/monitor/score status and verified headset-only monitor output; Visuals uses the existing ten scenic assets, CameraStage and stage-media import. Generated image assets are still pending and are not a blocker to the functional wiring. Now Playing/fullscreen presentation and desktop browser remote redesign remain open.
+
+## Mic & Voice and Visuals runtime acceptance — 2026-11-01
+
+Android instrumentation now captures the mounted Mic & Voice and Visuals destinations in addition to Home, Search, Queue and Pitch & Tempo. It selects the existing Bamboo Mist scenic asset and asserts the selection reaches SessionController, then selects the Room vocal-monitor processor mode and asserts the existing MicrophoneMonitor owner receives it. The test does not request microphone/camera permissions or fabricate input/coach readings. Both named screenshots are required by the Android runtime collector and artifact allowlist.

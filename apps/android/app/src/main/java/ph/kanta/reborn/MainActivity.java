@@ -1019,18 +1019,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onBackgroundSelected(String name) {
                 if (!session.stageReady) return;
                 camera.stop();
-                String[] ids = {
-                  "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
-                  "indigoHorizon", "mangoGlow", "moonlitBay", "orchidNight", "pearlSky"
-                };
-                String[] labels = {
-                  "Default", "Stage Lights", "Galaxy", "Sunset", "Ocean",
-                  "City", "Neon", "Particles", "Custom", "Forest"
-                };
-                for (int i = 0; i < labels.length; i++) {
+                for (int i = 0; i < new String[] {
+                    "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
+                    "indigoHorizon", "mangoGlow", "moonlitBay", "orchidNight", "pearlSky"
+                }.length; i++) {
+                  String[] labels = {
+                    "Bayan Dawn", "Bamboo Mist", "Coral Haze", "Deep Lagoon", "Ember Sunset",
+                    "Indigo Horizon", "Mango Glow", "Moonlit Bay", "Orchid Night", "Pearl Sky"
+                  };
+                  String[] scenes = {
+                    "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
+                    "indigoHorizon", "mangoGlow", "moonlitBay", "orchidNight", "pearlSky"
+                  };
                   if (labels[i].equals(name)) {
-                    if (i == 8) { chooseCustomStageMedia(); return; }
-                    session.scene(ids[i]);
+                    session.scene(scenes[i]);
                     return;
                   }
                 }
@@ -1047,6 +1049,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onCustomImport() { chooseCustomStageMedia(); }
             });
     screen.setTag("kanta.screen.visuals");
+    screen.setSelectedScene(session.scenicName);
     screen.setCameraState(camera.enabled(), camera.streaming());
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
   }

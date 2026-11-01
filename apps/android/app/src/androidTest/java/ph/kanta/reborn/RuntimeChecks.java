@@ -134,6 +134,57 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Pitch & Tempo did not return to Home");
       runOnMainSync(() -> {
+        View visuals = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onVisuals");
+        check(visuals != null, "Home Visuals feature missing");
+        visuals.performClick();
+      });
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.visuals") != null,
+          "Home Visuals did not open the reference destination");
+      capture("visuals_screen.png");
+      runOnMainSync(() -> {
+        View scene = activity.getWindow().getDecorView().findViewWithTag("kanta.visuals.background.bamboo-mist");
+        check(scene != null, "Existing scenic artwork thumbnail missing");
+        scene.performClick();
+      });
+      await(() -> "bambooMist".equals(session.scenicName), "Visual selection did not reach SessionController");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.visuals.back");
+        check(back != null, "Visuals back control missing");
+        back.performClick();
+      });
+      await(
+          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          "Visuals did not return to Home");
+      runOnMainSync(() -> {
+        View mic = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onMicVoice");
+        check(mic != null, "Home Mic & Voice feature missing");
+        mic.performClick();
+      });
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice") != null,
+          "Home Mic & Voice did not open the reference destination");
+      capture("mic_voice_screen.png");
+      runOnMainSync(() -> {
+        View room = activity.getWindow().getDecorView().findViewWithTag("kanta.monitor.mode.room");
+        check(room != null, "Room monitor effect control missing");
+        room.performClick();
+      });
+      await(() -> session.monitor.mode() == ph.kanta.reborn.core.VocalMonitorEffects.Mode.ROOM,
+          "Mic & Voice effect selection did not reach the existing monitor processor");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice.back");
+        if (back != null) back.performClick();
+        else {
+          View top = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice");
+          check(top != null, "Mic & Voice destination disappeared unexpectedly");
+          activity.getOnBackPressedDispatcher().onBackPressed();
+        }
+      });
+      await(
+          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          "Mic & Voice did not return to Home");
+      runOnMainSync(() -> {
         View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
         check(more != null, "Home dashboard More destination missing");
         more.performClick();
