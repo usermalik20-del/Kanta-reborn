@@ -31,12 +31,7 @@ final class BrowserCompanion {
         java.net.InetAddress local=java.net.InetAddress.getByAddress(CompanionProtocol.privateAddress(address));
         if(java.net.NetworkInterface.getByInetAddress(local)==null)throw new IOException("Not a local interface");
         byte[] page=asset("index.html"),script=asset("remote.js"),style=asset("remote.css");
-        Map<String,byte[]> artwork=new HashMap<>();
-        for(int i=1;i<=8;i++){
-          String number=String.format(Locale.ROOT,"%02d",i);
-          artwork.put("/assets/covers/"+number+".webp",asset("art/covers/"+number+".webp",160000));
-        }
-        candidate=new BrowserRemoteServer(address,page,script,style,artwork,request->apply(ticket,request));
+        candidate=new BrowserRemoteServer(address,page,script,style,request->apply(ticket,request));
         BrowserRemoteServer ready=candidate;
         session.main.post(()->{
           if(ticket!=generation||!session.foreground){ready.close();return;}
@@ -47,12 +42,10 @@ final class BrowserCompanion {
       }catch(Exception e){if(candidate!=null)candidate.close();session.main.post(()->{if(ticket==generation){stop();status="Could not start HTTPS hosting. Check the selected Wi-Fi address.";notifyChanged();}});}
     });
   }
-  private byte[] asset(String name)throws IOException { return asset(name,131072); }
-
-  private byte[] asset(String name,int maximumBytes)throws IOException {
+  private byte[] asset(String name)throws IOException {
     try(InputStream input=session.context.getAssets().open("companion/"+name)){
       ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int n;
-      while((n=input.read(buffer))!=-1){out.write(buffer,0,n);if(out.size()>maximumBytes)throw new IOException("Asset limit");}
+      while((n=input.read(buffer))!=-1){out.write(buffer,0,n);if(out.size()>131072)throw new IOException("Asset limit");}
       return out.toByteArray();
     }
   }

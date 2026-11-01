@@ -87,15 +87,8 @@ struct BrowserCompanionView: View {
         guard scenePhase == .active else { return }
         do {
             var assets: [String: Data] = [:]
-            let root = Bundle.main.url(forResource: "CompanionRemote", withExtension: nil)
             for (path, name) in [("/", "index.html"), ("/remote.js", "remote.js"), ("/remote.css", "remote.css")] {
-                guard let url = root?.appendingPathComponent(name) else { throw CompanionError.invalidInput }
-                assets[path] = try Data(contentsOf: url)
-            }
-            for index in 1...8 {
-                let number = String(format: "%02d", index)
-                let path = "/assets/covers/\(number).webp"
-                guard let url = root?.appendingPathComponent("art/covers/\(number).webp") else { throw CompanionError.invalidInput }
+                guard let url = Bundle.main.url(forResource: "CompanionRemote", withExtension: nil)?.appendingPathComponent(name) else { throw CompanionError.invalidInput }
                 assets[path] = try Data(contentsOf: url)
             }
             host.start(address: hostAddress, assets: assets); notice = ""
