@@ -82,7 +82,8 @@ final class CameraStage {
         state -> {
           if (token != generation || !enabled) return;
           streaming = state == PreviewView.StreamState.STREAMING;
-          // surface.cameraFrame(streaming) - handled by BackgroundStage
+          if (surface instanceof StageSurface)
+            ((StageSurface) surface).cameraFrame(streaming);
           if (streaming) handler.removeCallbacksAndMessages(null);
         };
     view.getPreviewStreamState().observe(owner, streamObserver);
