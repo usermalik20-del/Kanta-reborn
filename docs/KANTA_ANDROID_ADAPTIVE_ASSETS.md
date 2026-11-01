@@ -32,6 +32,20 @@ Optimized from the pack's original JPEGs and installed under `apps/android/app/s
 
 `KantaTheme.stageBackground(Context, wide)` applies the selected image plus a dark contrast layer. The Home hero uses portrait artwork. `KantaFullscreenStage` chooses portrait or landscape artwork from the active display orientation, not a device model.
 
+## Supplied cover, collection and scenic artwork
+
+Installed under `apps/android/app/src/main/res/drawable-nodpi/`:
+
+- `kanta_art_01.webp` through `kanta_art_08.webp` — eight deterministic song covers selected from the stable song ID, not random per-render artwork.
+- `kanta_collection_my_set.webp`, `kanta_collection_favorites.webp`, `kanta_collection_recent.webp` — Home quick-play collection cards.
+- `kanta_visual_stage_lights.webp`, `kanta_visual_galaxy.webp`, `kanta_visual_sunset.webp`, `kanta_visual_ocean.webp`, `kanta_visual_city.webp`, `kanta_visual_neon.webp`, `kanta_visual_particles.webp` — seven selectable Visuals backgrounds; `kanta_stage_phone.webp` remains the default stage artwork.
+
+`KantaVisualsScreen` presents the seven supplied scenes plus Default. `SessionController.sceneResource` decodes the selected drawable off the UI thread, limits the decoded dimensions, and uses the stage generation token to reject stale asynchronous results. The existing CameraStage and custom photo/video import owners remain unchanged.
+
+### Browser companion mirrors
+
+The eight song covers are mirrored byte-for-byte to `apps/android/app/src/main/assets/companion/art/covers/01.webp` through `08.webp` and `apps/ios/Resources/CompanionRemote/art/covers/01.webp` through `08.webp`. The pinned Android/iOS HTTPS hosts expose only the exact eight `/assets/covers/NN.webp` paths, with per-file and aggregate size limits. The real-Chrome companion test checks that search-result and Now Playing cover images load; the cross-platform asset test verifies byte parity and size budgets.
+
 ## Deliberate exclusions
 
 - The pack's seven empty-state SVG files are identical generic placeholder illustrations; they are not installed as if they were distinct, finished assets.
