@@ -385,10 +385,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             Color.WHITE);
     stagePane.addView(nowPlaying);
     LinearLayout transport = row();
-    // Primary: Play gets higher visual weight
     playButton = button("Play", this::playWithCountdown);
-    addWeighted(transport, playButton, 2f);  // primary - double weight
-    // Secondary: Next and Fullscreen
+    addWeighted(transport, playButton);
     nextButton = button("Next", session::next);
     addWeighted(transport, nextButton);
     addWeighted(transport, button("Fullscreen", this::fullscreen));
@@ -453,14 +451,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     Button controls = workspaceButton("Controls", KantaWorkspace.ACCESSORY_MORE);
     Button pitchGame = workspaceButton("Pitch", KantaWorkspace.ACCESSORY_PITCH_GAME);
     Button learning = workspaceButton("Coach", KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT);
-    // Normal mode essentials: Search and Queue
     addWeighted(bar, search);
     addWeighted(bar, queue);
-    // Performance: Pitch access
-    addWeighted(bar, pitchGame);
-    // Expanded controls: Visuals, Controls, Coach
     addWeighted(bar, visuals);
     addWeighted(bar, controls);
+    addWeighted(bar, pitchGame);
     addWeighted(bar, learning);
     return bar;
   }
