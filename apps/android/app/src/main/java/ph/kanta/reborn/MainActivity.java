@@ -50,8 +50,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       CYAN = 0xFF6FE5E8,
       GOLD = 0xFFF6CE77;
   private SessionController session;
-  private FrameLayout root, contentContainer;
-  private LinearLayout body, results;
+  private LinearLayout root, body, results;
+  private FrameLayout contentContainer;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
