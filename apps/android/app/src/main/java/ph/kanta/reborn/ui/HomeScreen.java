@@ -206,6 +206,7 @@ public class HomeScreen extends LinearLayout {
   }
   private Button featureCard(Context context, String label, String icon, String action) {
     Button card = new Button(context);
+    card.setTag("kanta.home.feature." + action);
     card.setText(icon + "\n" + label);
     card.setTextSize(12);
     card.setTypeface(null, Typeface.BOLD);
