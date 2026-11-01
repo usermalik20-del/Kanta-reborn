@@ -1,17 +1,16 @@
 package ph.kanta.reborn.ui;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Visual picker backed by the existing scenic assets, CameraX preview and import flow. */
+import ph.kanta.reborn.R;
+
+/** Visual picker wired to bundled KANTA artwork, CameraStage and the existing media import owner. */
 public final class KantaVisualsScreen extends LinearLayout {
   public interface Listener {
     void onBack();
@@ -32,12 +31,21 @@ public final class KantaVisualsScreen extends LinearLayout {
   private TextView cameraStatus;
 
   private static final String[] LABELS = {
-    "Bayan Dawn", "Bamboo Mist", "Coral Haze", "Deep Lagoon", "Ember Sunset",
-    "Indigo Horizon", "Mango Glow", "Moonlit Bay", "Orchid Night", "Pearl Sky"
+    "Default", "Stage Lights", "Galaxy", "Sunset",
+    "Ocean", "City", "Neon", "Particles"
   };
   private static final String[] SCENES = {
-    "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
-    "indigoHorizon", "mangoGlow", "moonlitBay", "orchidNight", "pearlSky"
+    "default", "stageLights", "galaxy", "sunset", "ocean", "city", "neon", "particles"
+  };
+  private static final int[] ARTWORK = {
+    R.drawable.kanta_stage_phone,
+    R.drawable.kanta_visual_stage_lights,
+    R.drawable.kanta_visual_galaxy,
+    R.drawable.kanta_visual_sunset,
+    R.drawable.kanta_visual_ocean,
+    R.drawable.kanta_visual_city,
+    R.drawable.kanta_visual_neon,
+    R.drawable.kanta_visual_particles
   };
 
   public KantaVisualsScreen(Context context, Listener listener) {
@@ -61,6 +69,7 @@ public final class KantaVisualsScreen extends LinearLayout {
         new ph.kanta.reborn.ui.components.KantaIconButton(context);
     back.setText("\u2190");
     back.setTextSize(18);
+    back.setTag("kanta.screen.visuals.back");
     back.setContentDescription("Back to Home");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
     top.addView(back);
@@ -107,31 +116,33 @@ public final class KantaVisualsScreen extends LinearLayout {
 
   private void buildBackgroundGrid(LinearLayout parent) {
     parent.addView(KantaTheme.titleText(context, "Choose your stage", 15));
-    for (int row = 0; row < 4; row++) {
+    for (int row = 0; row < 3; row++) {
       LinearLayout line = new LinearLayout(context);
       line.setOrientation(HORIZONTAL);
       for (int col = 0; col < 3; col++) {
         int index = row * 3 + col;
-        if (index >= LABELS.length) break;
+        if (index > LABELS.length) break;
+        if (index == LABELS.length) {
+          line.addView(customTile(), tileParams());
+          continue;
+        }
         final String label = LABELS[index];
-        final String scene = SCENES[index];
         LinearLayout tile = new LinearLayout(context);
         tile.setOrientation(VERTICAL);
+        boolean selected = selectedBackground.equals(label);
         tile.setBackground(KantaTheme.backgroundDrawable(
             KantaTheme.SURFACE, 13,
-            selectedBackground.equals(label) ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER,
-            selectedBackground.equals(label) ? 2 : 1, density));
+            selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER,
+            selected ? 2 : 1, density));
         tile.setPadding(dp(5), dp(5), dp(5), dp(7));
         ImageView image = new ImageView(context);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        image.setImageResource(ARTWORK[index]);
         image.setContentDescription(label + " background preview");
-        Bitmap preview = loadThumbnail(scene);
-        if (preview != null) image.setImageBitmap(preview);
-        else image.setBackgroundColor(KantaTheme.SURFACE_ELEVATED);
         tile.addView(image, new LayoutParams(LayoutParams.MATCH_PARENT, dp(92)));
         TextView name = new TextView(context);
-        name.setText(selectedBackground.equals(label) ? "\u2713  " + label : label);
-        name.setTextColor(selectedBackground.equals(label) ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_PRIMARY);
+        name.setText(selected ? "\u2713  " + label : label);
+        name.setTextColor(selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_PRIMARY);
         name.setTextSize(12);
         name.setTypeface(null, Typeface.BOLD);
         name.setGravity(Gravity.CENTER);
@@ -143,36 +154,42 @@ public final class KantaVisualsScreen extends LinearLayout {
           if (listener != null) listener.onBackgroundSelected(label);
           refresh();
         });
-        LayoutParams p = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
-        p.leftMargin = dp(4);
-        p.rightMargin = dp(4);
-        p.bottomMargin = dp(8);
-        line.addView(tile, p);
+        line.addView(tile, tileParams());
       }
       parent.addView(line);
     }
-    Button custom = smallButton("＋  Custom background");
-    custom.setTag("kanta.visuals.custom-import");
-    custom.setOnClickListener(v -> { if (listener != null) listener.onCustomImport(); });
-    LayoutParams customParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(48));
-    customParams.topMargin = dp(4);
-    parent.addView(custom, customParams);
   }
 
-  private Bitmap loadThumbnail(String scene) {
-    try (java.io.InputStream stream = context.getAssets().open("scenic/" + scene + ".png")) {
-      BitmapFactory.Options bounds = new BitmapFactory.Options();
-      bounds.inJustDecodeBounds = true;
-      BitmapFactory.decodeStream(stream, null, bounds);
-      if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
-      BitmapFactory.Options options = new BitmapFactory.Options();
-      options.inSampleSize = Math.max(1, Math.max(bounds.outWidth / 320, bounds.outHeight / 180));
-      try (java.io.InputStream image = context.getAssets().open("scenic/" + scene + ".png")) {
-        return BitmapFactory.decodeStream(image, null, options);
-      }
-    } catch (Exception ignored) {
-      return null;
-    }
+  private LayoutParams tileParams() {
+    LayoutParams p = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
+    p.leftMargin = dp(4);
+    p.rightMargin = dp(4);
+    p.bottomMargin = dp(8);
+    return p;
+  }
+
+  private LinearLayout customTile() {
+    LinearLayout tile = new LinearLayout(context);
+    tile.setOrientation(VERTICAL);
+    tile.setGravity(Gravity.CENTER);
+    tile.setPadding(dp(5), dp(5), dp(5), dp(7));
+    tile.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 13, KantaTheme.BORDER, 1, density));
+    ImageView icon = new ImageView(context);
+    icon.setImageResource(R.drawable.kanta_song_code_outline);
+    icon.setColorFilter(KantaTheme.TEXT_PRIMARY);
+    icon.setContentDescription("Import custom background");
+    icon.setPadding(dp(28), dp(18), dp(28), dp(18));
+    tile.addView(icon, new LayoutParams(LayoutParams.MATCH_PARENT, dp(92)));
+    TextView label = new TextView(context);
+    label.setText("Custom");
+    label.setTextColor(KantaTheme.TEXT_PRIMARY);
+    label.setTextSize(12);
+    label.setTypeface(null, Typeface.BOLD);
+    label.setGravity(Gravity.CENTER);
+    tile.addView(label);
+    tile.setTag("kanta.visuals.custom-import");
+    tile.setOnClickListener(v -> { if (listener != null) listener.onCustomImport(); });
+    return tile;
   }
 
   private void buildCameraPanel(LinearLayout parent) {
@@ -246,6 +263,11 @@ public final class KantaVisualsScreen extends LinearLayout {
 
   public void setSelectedScene(String scene) {
     if (scene == null) return;
+    if ("bayanDawn".equals(scene) || "default".equals(scene)) {
+      selectedBackground = "Default";
+      refresh();
+      return;
+    }
     for (int i = 0; i < SCENES.length; i++) {
       if (SCENES[i].equals(scene)) {
         selectedBackground = LABELS[i];

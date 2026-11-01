@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -106,6 +107,20 @@ public class KantaQueueScreen extends LinearLayout {
       pos.setPadding((int)(8*density), 0, (int)(8*density), 0);
       row.addView(pos);
       LinearLayout info = new LinearLayout(context);
+      ImageView artwork = new ImageView(context);
+      artwork.setScaleType(ImageView.ScaleType.CENTER_CROP);
+      int artworkResource = 0;
+      if (item.length > 5) {
+        try { artworkResource = Integer.parseInt(item[5]); } catch (NumberFormatException ignored) {}
+      }
+      if (artworkResource != 0) artwork.setImageResource(artworkResource);
+      artwork.setBackground(ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
+          ph.kanta.reborn.ui.KantaTheme.SURFACE, 9, ph.kanta.reborn.ui.KantaTheme.BORDER, 1, density));
+      artwork.setClipToOutline(true);
+      artwork.setContentDescription("Artwork for " + title);
+      LinearLayout.LayoutParams artParams = new LinearLayout.LayoutParams((int)(54*density), (int)(54*density));
+      artParams.leftMargin = (int)(8*density);
+      row.addView(artwork, artParams);
       info.setOrientation(VERTICAL);
       TextView titleView = new TextView(context);
       titleView.setText(title);

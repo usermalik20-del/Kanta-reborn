@@ -167,11 +167,11 @@ public class HomeScreen extends LinearLayout {
     LinearLayout quickRow = new LinearLayout(context);
     quickRow.setOrientation(HORIZONTAL);
     quickRow.setPadding(dp(12), 0, dp(12), dp(12));
-    Button mySet = featureCard("My Set", R.drawable.kanta_library_outline, 6);
-    Button favorites = featureCard("Favorites", R.drawable.kanta_home_filled, 7);
-    Button recent = featureCard("Recent", R.drawable.kanta_queue_outline, 8);
-    for (Button card : new Button[]{mySet, favorites, recent}) {
-      LinearLayout.LayoutParams params = new LayoutParams(0, dp(84), 1);
+    LinearLayout mySet = collectionCard("My Set", "Your collection", R.drawable.kanta_collection_my_set, 6);
+    LinearLayout favorites = collectionCard("Favorites", "Saved songs", R.drawable.kanta_collection_favorites, 7);
+    LinearLayout recent = collectionCard("Recent", "Recently played", R.drawable.kanta_collection_recent, 8);
+    for (LinearLayout card : new LinearLayout[]{mySet, favorites, recent}) {
+      LinearLayout.LayoutParams params = new LayoutParams(0, dp(96), 1);
       params.setMargins(dp(4), 0, dp(4), 0);
       quickRow.addView(card, params);
     }
@@ -216,6 +216,29 @@ public class HomeScreen extends LinearLayout {
     LayoutParams bottomParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
     bottomParams.setMargins(dp(12), dp(2), dp(12), dp(10));
     addView(bottom, bottomParams);
+  }
+
+  private LinearLayout collectionCard(String title, String detail, int artwork, int action) {
+    LinearLayout card = new LinearLayout(context);
+    card.setOrientation(VERTICAL);
+    card.setPadding(dp(6), dp(6), dp(6), dp(6));
+    card.setGravity(Gravity.CENTER_VERTICAL);
+    card.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE_ELEVATED, 13, KantaTheme.BORDER, 1, density));
+    card.setTag("kanta.home.collection." + title.toLowerCase(java.util.Locale.ROOT).replace(' ', '-'));
+    ImageView image = new ImageView(context);
+    image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+    image.setImageResource(artwork);
+    image.setContentDescription(title + " collection artwork");
+    card.addView(image, new LayoutParams(LayoutParams.MATCH_PARENT, dp(48)));
+    TextView name = KantaTheme.titleText(context, title, 12);
+    name.setPadding(dp(2), dp(5), dp(2), 0);
+    card.addView(name);
+    TextView subtitle = KantaTheme.bodyText(context, detail, 10);
+    subtitle.setPadding(dp(2), 0, dp(2), 0);
+    card.addView(subtitle);
+    card.setClickable(true);
+    card.setOnClickListener(v -> dispatchFeature(action));
+    return card;
   }
 
   private TextView sectionLabel(String value) {

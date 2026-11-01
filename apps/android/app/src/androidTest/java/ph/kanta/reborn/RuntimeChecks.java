@@ -143,12 +143,16 @@ public final class RuntimeChecks extends Instrumentation {
           () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.visuals") != null,
           "Home Visuals did not open the reference destination");
       capture("visuals_screen.png");
+      android.graphics.Bitmap previousScene = session.scenic;
       runOnMainSync(() -> {
-        View scene = activity.getWindow().getDecorView().findViewWithTag("kanta.visuals.background.bamboo-mist");
-        check(scene != null, "Existing scenic artwork thumbnail missing");
+        View scene = activity.getWindow().getDecorView().findViewWithTag("kanta.visuals.background.stage-lights");
+        check(scene != null, "Generated Stage Lights artwork thumbnail missing");
         scene.performClick();
       });
-      await(() -> "bambooMist".equals(session.scenicName), "Visual selection did not reach SessionController");
+      await(
+          () -> "stageLights".equals(session.scenicName) && session.scenic != null
+              && session.scenic != previousScene,
+          "Generated Stage Lights artwork did not reach the live SessionController stage");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
       await(
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),

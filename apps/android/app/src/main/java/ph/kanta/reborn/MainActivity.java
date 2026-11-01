@@ -1129,16 +1129,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 if (!session.stageReady) return;
                 camera.stop();
                 switch (name) {
-                  case "Bayan Dawn": session.scene("bayanDawn"); break;
-                  case "Bamboo Mist": session.scene("bambooMist"); break;
-                  case "Coral Haze": session.scene("coralHaze"); break;
-                  case "Deep Lagoon": session.scene("deepLagoon"); break;
-                  case "Ember Sunset": session.scene("emberSunset"); break;
-                  case "Indigo Horizon": session.scene("indigoHorizon"); break;
-                  case "Mango Glow": session.scene("mangoGlow"); break;
-                  case "Moonlit Bay": session.scene("moonlitBay"); break;
-                  case "Orchid Night": session.scene("orchidNight"); break;
-                  case "Pearl Sky": session.scene("pearlSky"); break;
+                  case "Default": session.sceneResource("default", ph.kanta.reborn.R.drawable.kanta_stage_phone); break;
+                  case "Stage Lights": session.sceneResource("stageLights", ph.kanta.reborn.R.drawable.kanta_visual_stage_lights); break;
+                  case "Galaxy": session.sceneResource("galaxy", ph.kanta.reborn.R.drawable.kanta_visual_galaxy); break;
+                  case "Sunset": session.sceneResource("sunset", ph.kanta.reborn.R.drawable.kanta_visual_sunset); break;
+                  case "Ocean": session.sceneResource("ocean", ph.kanta.reborn.R.drawable.kanta_visual_ocean); break;
+                  case "City": session.sceneResource("city", ph.kanta.reborn.R.drawable.kanta_visual_city); break;
+                  case "Neon": session.sceneResource("neon", ph.kanta.reborn.R.drawable.kanta_visual_neon); break;
+                  case "Particles": session.sceneResource("particles", ph.kanta.reborn.R.drawable.kanta_visual_particles); break;
                   default: return;
                 }
               }
@@ -1222,6 +1220,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(micVoiceScreen, new LinearLayout.LayoutParams(-1, -1));
   }
 
+  private int artworkResourceForSong(Song song) {
+    int index = Math.floorMod(song.id.hashCode(), 8);
+    switch (index) {
+      case 0: return ph.kanta.reborn.R.drawable.kanta_art_01;
+      case 1: return ph.kanta.reborn.R.drawable.kanta_art_02;
+      case 2: return ph.kanta.reborn.R.drawable.kanta_art_03;
+      case 3: return ph.kanta.reborn.R.drawable.kanta_art_04;
+      case 4: return ph.kanta.reborn.R.drawable.kanta_art_05;
+      case 5: return ph.kanta.reborn.R.drawable.kanta_art_06;
+      case 6: return ph.kanta.reborn.R.drawable.kanta_art_07;
+      default: return ph.kanta.reborn.R.drawable.kanta_art_08;
+    }
+  }
+
   /** Search projects the current catalog; it does not claim unsupported YouTube discovery. */
   private void searchScreen() {
     final java.util.ArrayList<Song> visibleSongs = new java.util.ArrayList<>();
@@ -1298,12 +1310,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             || isFinishing() || isDestroyed()) return;
         visibleSongs.clear();
         visibleSongs.addAll(matches);
-        String[][] rows = new String[matches.size()][3];
+        String[][] rows = new String[matches.size()][4];
         for (int i = 0; i < matches.size(); i++) {
           Song song = matches.get(i);
           rows[i][0] = song.title;
           rows[i][1] = song.artist.isEmpty() ? "Unknown artist" : song.artist;
           rows[i][2] = song.starter ? "#30245B" : "#17334A";
+          rows[i][3] = String.valueOf(artworkResourceForSong(song));
         }
         screen.showResults(rows);
       });
@@ -1313,7 +1326,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   /** Queue is a projection of the single authoritative reservation FIFO. */
   private void queueScreen() {
     java.util.List<ReservationQueue.Entry> entries = session.queue.snapshot();
-    String[][] rows = new String[entries.size()][5];
+    String[][] rows = new String[entries.size()][6];
     for (int i = 0; i < entries.size(); i++) {
       ReservationQueue.Entry entry = entries.get(i);
       rows[i][0] = String.valueOf(i + 1);
@@ -1323,6 +1336,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           : "YouTube video";
       rows[i][3] = "false";
       rows[i][4] = entry.youtube == null ? "#30245B" : "#17334A";
+      rows[i][5] = String.valueOf(entry.youtube == null
+          ? artworkResourceForSong(entry.song) : ph.kanta.reborn.R.drawable.kanta_stage_tv);
     }
     ph.kanta.reborn.ui.KantaQueueScreen screen =
         new ph.kanta.reborn.ui.KantaQueueScreen(

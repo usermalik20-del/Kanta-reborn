@@ -2,12 +2,14 @@ package ph.kanta.reborn.ui.components;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Song result row with artwork, metadata and a visible reservation action. */
+/** Song result row with bundled cover art, metadata and a visible reservation action. */
 public class KantaMediaRow extends LinearLayout {
   private final float density;
 
@@ -23,10 +25,23 @@ public class KantaMediaRow extends LinearLayout {
   }
 
   public void bind(String artworkColor, String title, String artist, Runnable onSing) {
+    bind(0, artworkColor, title, artist, onSing);
+  }
+
+  public void bind(int artworkResource, String title, String artist, Runnable onSing) {
+    bind(artworkResource, null, title, artist, onSing);
+  }
+
+  private void bind(int artworkResource, String artworkColor, String title, String artist, Runnable onSing) {
     removeAllViews();
-    KantaSongArtwork artwork = new KantaSongArtwork(getContext());
-    artwork.setColor(parseColor(artworkColor));
-    artwork.setRadiusDp(10);
+    ImageView artwork = new ImageView(getContext());
+    artwork.setScaleType(ImageView.ScaleType.CENTER_CROP);
+    GradientDrawable outline = ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
+        artworkColor == null ? ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED : parseColor(artworkColor),
+        10, ph.kanta.reborn.ui.KantaTheme.BORDER, 1, density);
+    artwork.setBackground(outline);
+    artwork.setClipToOutline(true);
+    if (artworkResource != 0) artwork.setImageResource(artworkResource);
     addView(artwork, new LayoutParams((int)(64 * density), (int)(64 * density)));
 
     LinearLayout metadata = new LinearLayout(getContext());
