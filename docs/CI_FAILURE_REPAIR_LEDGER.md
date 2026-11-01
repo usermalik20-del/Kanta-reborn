@@ -933,3 +933,16 @@ PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/K
 ## Android run #407 — inverted fullscreen camera acceptance assertion — 2026-11-01
 
 The repaired camera path reached a real CameraX `STREAMING` state on the emulator, but instrumentation failed at `RuntimeChecks.java:295`. The fullscreen-stage predicate was inverted: it required `!StageSurface.isCameraVisible()` while reporting that the camera had not moved to fullscreen. `StageSurface.cameraFrame(true)` is the authoritative visibility signal set by the CameraX stream-state observer, so the assertion rejected the expected successful handoff. The candidate now requires the fullscreen surface to report camera visibility and retains the separate primary-stage and return-to-primary assertions. This is a test correction, not a skipped gate; a new exact-head Android emulator run must still pass before the repair is considered verified.
+
+
+## Android — camera preview retained after disable on PR #130 (2026-11-01)
+
+**Affected run:** Android validation run ID [41294255213](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41294255213), PR #130 head `accfa77fc3a1cdd3a72cfbc354b17675e204f608`, job `android` / emulator runtime acceptance. The failing assertion was `Disabling the camera retained its preview` at `RuntimeChecks.java:306`. Earlier Android build, lint, domain, permission and browser checks passed; the emulator assertion failed.
+
+**Root cause:** `CameraStage.stop()` unbound the CameraX use case and removed observers but did not detach the `PreviewView` from its owning `StageSurface` or primary `BackgroundStage`. The primary stage retained CAMERA as its selected source and kept the old preview reference. `StagePresenterImpl.isCameraVisible()` trusted the preview's stream-state value without confirming that CAMERA was still the active source or that the view remained attached. CameraX stream state is asynchronous and can remain stale after unbinding, so the test could observe a retained preview even after the controller had begun shutdown. The fullscreen path also lacked an explicit call to `StageSurface.unmountCamera()` during ownership transfer.
+
+**Repair:** `CameraStage.stop()` now invalidates pending callbacks, removes observers, unbinds CameraX, clears the surface provider and explicitly releases the view from the exact stage that owned it. The primary presenter restores the pre-camera background; `BackgroundStage` discards the old preview and reports visibility only when CAMERA is the active source, the preview is attached, and CameraX reports STREAMING. Runtime instrumentation waits for fullscreen detachment and primary preview teardown, while retaining the actual startup and transfer assertions.
+
+**Regression coverage:** exact-head Android validation must prove primary startup, fullscreen transfer, return to primary, fullscreen detachment, explicit disable and no camera auto-restart after background/foreground. Do not substitute fixed sleeps or remove the acceptance assertion.
+
+**Validation:** repair candidate committed to `fix/android-camera-preview-release-pr130`; awaiting the new exact-head Android validation run. The original failure remains recorded and is not reclassified as transient.

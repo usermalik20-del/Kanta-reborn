@@ -166,4 +166,33 @@ The runner treats all eight named UI walkthrough screenshots as required evidenc
 
 ## Stage presenter and camera runtime ownership — 2026-11-01
 
-The primary `kanta.stage.primary` view is `StagePresenterImpl`; fullscreen and external-display output use `StageSurface`. `CameraStage` supports both target types. The primary presenter's `BackgroundStage` owns its `PreviewView`, while fullscreen `StageSurface` receives a dedicated mounted preview and stream-state updates. Runtime instrumentation validates video on fullscreen `StageSurface` and validates camera start/transfer/return on the correct primary/fullscreen targets.
+The primary `kanta.stage.primary` view is `StagePresenterImpl`; fullscreen and external-display output use `StageSurface`. `CameraStage` supports both target types. The primary presenter's `BackgroundStage` owns its `PreviewView`, while fullscreen `StageSurface` receives a dedicated mounted preview and stream-state updates. Runtime instrumentation validates video on fullscreen `StageSurface` and validates camera start/transfer/return on the correct primary/fullscreen targets. Camera shutdown unbinds CameraX and explicitly detaches the preview from its owning stage; the primary presenter restores the background selected before camera opt-in. Visibility requires the active CAMERA source, an attached preview and CameraX `STREAMING`, preventing stale stream-state values from passing teardown acceptance.
+
+## KANTA design-system UI — 2026-11-01
+
+The Android application uses a dedicated presentation layer under `ph.kanta.reborn.ui` implementing
+the KANTA dark entertainment design system against the supplied UI concept:
+
+- **Design tokens** (`KantaTheme`): `#050B18` background, `#081426` elevated, `#0D1930` surface,
+  `#12203A` surface elevated, `#203459` border, `#29D9FF`/`#2589FF`/`#7657FF`/`#D946EF` primaries,
+  `#F7F9FF` text
+- **Screens**: Home (branding, hero, search, 2x3 feature grid, quick play, bottom nav), Now Playing /
+  Lyrics (stage-dominant with large lyrics, progress, transport, key/tempo), Search (source tabs,
+  media rows with Sing action), Queue (count, items, Add Songs CTA), Pitch & Tempo (key/tempo
+  cards), Mic & Voice (mic toggle, input level, reverb/echo, voice FX, coach), Visuals
+  (Background/Camera/Effects tabs with thumbnail grid), Fullscreen Stage (clean stage with lyrics)
+- **Components**: KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar,
+  KantaStepper, KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow,
+  KantaTransportControls
+
+This is a presentation-only refactor. All playback, queue, persistence, sensor, companion and
+playback logic remains owned by `SessionController` and `StagePresenterImpl`; no backend behavior is
+duplicated or replaced. The existing workspace/StagePresenterImpl/transport/toolbar/body structure
+is preserved; the new screens are presented as an overlay via `contentContainer`.
+
+The browser remote (`apps/android/app/src/main/assets/companion/`) is restyled with the same KANTA
+design system: responsive 3-column desktop layout collapsing below 1000px, cyan active states, and
+honest disabled state for controls not in the companion protocol allowlist. The wire protocol and
+pairing flow are unchanged.
+
+See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [docs/TESTING.md](../../docs/TESTING.md).

@@ -36,6 +36,52 @@ fix, and anything about a browser-impersonating client.** Rate limiting and rate
 protection remain unimplemented; see [docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md)
 and section J of `docs/UNFINISHED_WORK.md`.
 
+## KANTA design-system UI refactor — 2026-11-01
+
+Android UI refactor implementing the KANTA dark entertainment design system faithfully against the
+supplied concept. Presentation-only change; all backend logic (playback, queue, persistence, sensor,
+companion) remains owned by `SessionController` and `StagePresenterImpl`.
+
+### Files added
+
+- `apps/android/app/src/main/java/ph/kanta/reborn/ui/KantaTheme.java` — design tokens (colors, radii,
+  gradient policy, helper factories)
+- `apps/android/app/src/main/java/ph/kanta/reborn/ui/components/` — 11 reusable components
+  (KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar, KantaStepper,
+  KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow, KantaTransportControls)
+- `apps/android/app/src/main/java/ph/kanta/reborn/ui/` — 8 screens
+  (HomeScreen, KantaNowPlayingScreen, KantaSearchScreen, KantaQueueScreen, KantaPitchTempoScreen,
+  KantaMicVoiceScreen, KantaVisualsScreen, KantaFullscreenStage)
+
+### Files modified
+
+- `apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java` — buildWindow uses KantaTheme
+  colors and adds a contentContainer overlay for design-system screens; screen management methods
+  wire each screen's Listener into existing SessionController / StagePresenterImpl methods; render()
+  updated to reflect current session state on active screens
+- `apps/android/app/src/main/assets/companion/index.html` — restyled to KANTA design system
+  (3-column desktop layout, sidebar, now-playing panel, bottom remote bar)
+- `apps/android/app/src/main/assets/companion/remote.css` — KANTA design system colors, radii,
+  responsive breakpoints at 1000px and 640px
+
+### Files NOT modified
+
+- All SessionController, StagePresenterImpl, playback, queue, microphone, camera, YouTube,
+  local-file, visuals and companion backend logic — unchanged, no behavior duplicated or replaced
+
+### Backward compatibility
+
+The existing workspace/StagePresenterImpl/transport/toolbar/body structure is preserved. The new
+design-system screens are presented as an overlay via contentContainer; the existing UI remains
+fully functional.
+
+### Verification
+
+- All new Java files parse (braces/parens/brackets balanced)
+- MainActivity.java braces/parens/brackets balanced
+- Browser remote: all 22 element IDs queried by remote.js exist in index.html; remote.js byte-identical
+  (no wire/protocol changes); HTML tags balanced; node --check passes on remote.js
+
 ## Current checkpoint — 2026-10-29 (main `2a01654`; public release source `41c8ddde`)
 
 Main head is [`2a01654`](https://github.com/usermalik20-del/Kanta-reborn/commit/2a01654).
@@ -312,3 +358,12 @@ A follow-up source review found that the initial candidate still checked whether
 ## Android run #400 — primary stage presenter ClassCastException — 2026-11-01
 
 The exact-head Android validation reached the emulator runtime gate after all earlier gates passed. Instrumentation crashed at `RuntimeChecks.java:255` with `ClassCastException: ph.kanta.reborn.stage.StagePresenterImpl cannot be cast to ph.kanta.reborn.StageSurface`. The cause was a stale runtime test assumption: `MainActivity` now installs `StagePresenterImpl` as the primary `kanta.stage.primary` view, while `StageSurface` exists only for fullscreen/external presentation. The test cast the primary view to the old class when asserting BGV visibility. The same ownership mismatch existed in camera handling: `CameraStage.start()` accepted `PreviewView` and `StageSurface`, but `MainActivity` passed the primary `StagePresenterImpl`, causing the camera start path to return without binding a preview. The candidate fix exercises video lifecycle through a real fullscreen `StageSurface`, adds primary-presenter camera-preview preparation/stream-state inspection, supports `StagePresenterImpl` as a camera target, and publishes camera stream state to fullscreen surfaces. The runtime test now checks primary camera streaming, movement to fullscreen, and return to the primary preview. This source repair is pending a fresh hosted Android validation run; do not mark it verified until emulator acceptance passes.
+
+
+## Android camera preview teardown repair candidate — 2026-11-01
+
+PR #130 exposed a second camera lifecycle defect after primary/fullscreen target support was added. CameraX unbinding and observer removal did not detach the PreviewView from the owning stage. The primary BackgroundStage also retained its CAMERA source and preview object, while the old fullscreen path did not call StageSurface.unmountCamera(). In addition, the primary visibility predicate trusted the PreviewView stream value without checking that the camera source was active and the view remained attached; that value can outlive the visible preview.
+
+The repair candidate makes stage ownership explicit during teardown: CameraStage.stop() invalidates callbacks, removes observers, unbinds the preview, clears its surface provider, and calls the owning stage's release method. StagePresenterImpl preserves and restores the previously selected background, while BackgroundStage drops the old preview reference and reports visible only for an attached, actively streaming camera source. Emulator instrumentation now waits for camera visibility to clear after fullscreen ownership moves and after explicit disable. No delay or weakened assertion is used to hide a lifecycle defect.
+
+**Status:** source and documentation candidate on fix/android-camera-preview-release-pr130, based on PR #130 head accfa77fc3a1cdd3a72cfbc354b17675e204f608. Android hosted build, lint, domain regression and emulator acceptance are pending on the resulting candidate SHA. No physical-device camera quality or lifecycle claim is made.

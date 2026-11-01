@@ -27,6 +27,7 @@ import ph.kanta.reborn.core.connect.KantaConnectInfo;
 import ph.kanta.reborn.core.connect.QrEncoder;
 import ph.kanta.reborn.stage.QrCodeView;
 import ph.kanta.reborn.settings.SettingsStore;
+import ph.kanta.reborn.ui.KantaTheme;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
@@ -313,7 +314,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void buildWindow() {
     root = column();
-    root.setBackgroundColor(NAVY);
+    root.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
     root.setPadding(dp(12), 0, dp(12), 0);
     root.setOnApplyWindowInsetsListener(
         (v, insets) -> {
@@ -331,7 +332,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     mark.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
     mark.setContentDescription("KANTA");
     header.addView(mark, new LinearLayout.LayoutParams(dp(40), dp(40)));
-    TextView brand = text("KANTA · ᜃᜈ᜔ᜆ", 22, GOLD);
+    TextView brand = text("KANTA · ᜃᜈ᜔ᜆ", 22, ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN);
     brand.setTypeface(null, android.graphics.Typeface.BOLD);
     header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(button("Help", this::help));
@@ -1848,7 +1849,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         d -> {
           fullscreenStage = null;
           if (stagePresenter != null) stagePresenter.setVisualActive(true);
-          camera.moveTo(stagePresenter.getCameraPreview());
+          camera.moveTo(stagePresenter);
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
     fullscreen.show();

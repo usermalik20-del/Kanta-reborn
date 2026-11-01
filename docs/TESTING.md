@@ -362,9 +362,43 @@ The runner must retrieve all eight named walkthrough screenshots from app-privat
 The hosted runtime suite must test the primary `StagePresenterImpl` and fullscreen `StageSurface` according to their actual ownership. Video rendering and visual-active lifecycle assertions use the fullscreen `StageSurface` created by `MainActivity.fullscreen()`. Primary camera acceptance asserts the presenter's `PreviewView` has reached `STREAMING`; fullscreen camera acceptance asserts the fullscreen surface camera visibility, and closing fullscreen must return a streaming preview to the primary presenter. The runtime test must not cast the primary stage to `StageSurface`.
 
 
+## KANTA design-system UI — 2026-11-01
+
+The Android presentation layer under `ph.kanta.reborn.ui` and `ph.kanta.reborn.ui.components`
+implements the KANTA dark entertainment design system. These are pure presentation components with
+no backend logic; all playback, queue, persistence, sensor, companion and playback state remains
+owned by `SessionController` and `StagePresenterImpl`.
+
+### What is tested
+
+- Design tokens (`KantaTheme`) expose the specified color values, radii and gradient policy
+- Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`,
+  `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`,
+  `KantaMediaRow`, `KantaTransportControls`) instantiate with correct colors, radii and states
+- Screens (`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
+  `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`)
+  wire their `Listener` callbacks into `MainActivity`, which delegates to existing backend methods
+- Browser remote restyling preserves all 22 element IDs queried by `remote.js` and keeps the wire
+  protocol, action allowlist, pairing flow and fingerprint verification unchanged
+
+### What is NOT tested by these checks
+
+- Canvas/Surface rendering, StaticLayout, ValueAnimator or emoji rendering (covered by the Android
+  emulator runtime instrumentation gate)
+- Visual, reduced-motion, APK/lint and emulator acceptance (separate gates on the Android
+  validation workflow)
+- Device acceptance (remains open)
+
+### Design-system constraints enforced
+
+- Background `#050B18`, elevated `#081426`, surface `#0D1930`, border `#203459`
+- Primary cyan `#29D9FF`, primary blue `#2589FF`, primary purple `#7657FF`, accent magenta `#D946EF`
+- Gradients (cyan -> blue -> violet -> magenta) reserved for emphasis only, not applied to every control
+- Honest disabled state for controls not in the companion protocol allowlist; no fake functionality
+
 ### Fullscreen camera handoff acceptance
 
-The Android emulator runtime test must prove that the opted-in CameraX preview is visible on the primary `StagePresenterImpl`, transfers to the fullscreen `StageSurface`, and returns to the primary stage when fullscreen closes. For fullscreen, require both `CameraStage.streaming()` and `StageSurface.isCameraVisible()`; do not invert this predicate or infer success merely from the camera remaining enabled. The stream observer drives the surface visibility signal. Camera disable and backgrounding must still release the preview, and foregrounding must not silently re-enable it.
+The Android emulator runtime test must prove that the opted-in CameraX preview is visible on the primary `StagePresenterImpl`, transfers to the fullscreen `StageSurface`, and returns to the primary stage when fullscreen closes. For fullscreen, require both `CameraStage.streaming()` and `StageSurface.isCameraVisible()`; do not invert this predicate or infer success merely from the camera remaining enabled. The stream observer drives the surface visibility signal. Ownership transfer must unmount the old fullscreen preview before the new target binds; the fullscreen dismissal callback must target `StagePresenterImpl` itself so it prepares a fresh attached preview after cleanup, never pass a cached `PreviewView` across the stop/start boundary. Explicit disable must unbind CameraX, remove observers and the surface provider, detach the preview view, restore the previously selected primary background, and wait for the primary stage's attached-preview visibility predicate to become false. Backgrounding must release the preview, and foregrounding must not silently re-enable it. The visibility predicate must include active CAMERA source and view attachment, not only a potentially stale `PreviewView.StreamState` value.
 
 
 ## Platform-specific download publication acceptance

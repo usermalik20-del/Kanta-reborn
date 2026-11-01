@@ -43,6 +43,33 @@ The public site declares an AI-training opt-out and refuses the declared AI trai
 | `apps/web/` | Static website and private browser Songbook |
 | `recovery/ios/` | Preserved historical source snapshots |
 | `docs/evidence/website/2026-10-15/` | Immutable original website evidence |
+## KANTA design-system UI (Android)
+
+The Android application uses a dedicated presentation layer under `ph.kanta.reborn.ui` that implements
+the KANTA dark entertainment design system against the supplied UI concept:
+
+- **Design tokens** (`KantaTheme`): `#050B18` background, `#0D1930`/`#12203A` surfaces, `#203459`
+  borders, `#29D9FF`/`#2589FF`/`#7657FF`/`#D946EF` primary colors, `#F7F9FF` text
+- **Screens**: Home (branding, hero, search, 2x3 feature grid, quick play, bottom nav), Now Playing /
+  Lyrics (stage-dominant with large lyrics, progress, transport, key/tempo), Search (source tabs,
+  media rows with Sing action), Queue (count, items, Add Songs CTA), Pitch & Tempo (key/tempo cards),
+  Mic & Voice (mic toggle, input level, reverb/echo, voice FX, coach), Visuals (Background/Camera/
+  Effects tabs with thumbnail grid), Fullscreen Stage (clean stage with lyrics and controls)
+- **Reusable components**: KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar,
+  KantaStepper, KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow,
+  KantaTransportControls
+
+The UI refactor is presentation-only. All playback, queue, persistence, sensor, companion and
+playback logic remains owned by `SessionController` and `StagePresenterImpl`; no backend behavior is
+duplicated or replaced.
+
+The browser remote (`apps/android/app/src/main/assets/companion/`) is restyled with the same KANTA
+design system: responsive 3-column desktop layout, cyan active states, honest disabled state for
+controls not in the companion protocol allowlist. The wire protocol and pairing flow are unchanged.
+
+See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) and [docs/TESTING.md](../docs/TESTING.md) for the
+design-system contract and test boundaries.
+
 | `docs/CODEBASE_CONTEXT_PACKET.md` | Actual stack, storage, playback, networking and performance risks |
 
 ### Compact Workspace implementation
@@ -100,7 +127,7 @@ GitHub sign-in is required for Actions artifact downloads. GitHub Release assets
 
 The Android validation workflow is a full acceptance gate, not a screenshot-only shortcut. Manual dispatch may select an explicit Git ref; ordinary pushes and pull requests validate their event SHA. The workflow definition must keep `workflow_dispatch` and `push` as separate top-level events. The emulator runner must fail only when boot/network prerequisites are absent, then continue to install both APKs, execute instrumentation, and preserve screenshots under `files/`. See [the CI repair ledger](docs/CI_FAILURE_REPAIR_LEDGER.md) and [testing](docs/TESTING.md). The November 1 repair is a candidate until the complete Android validation run passes on its exact PR head.
 
-**Android emulator repair follow-up (2026-11-01):** Android run #400 passed build, lint, native and browser gates but failed emulator instrumentation because `RuntimeChecks` cast the primary `StagePresenterImpl` to the separate fullscreen `StageSurface` class. The same review found the camera controller did not accept the primary presenter as a camera target. The current PR candidate corrects test ownership and primary/fullscreen camera binding; it remains unverified until a new complete Android emulator run passes. See `docs/CI_FAILURE_REPAIR_LEDGER.md`.
+**Android emulator repair follow-up (2026-11-01):** Android run #400 passed build, lint, native and browser gates but failed emulator instrumentation because `RuntimeChecks` cast the primary `StagePresenterImpl` to the separate fullscreen `StageSurface` class. The follow-up camera acceptance exposed a teardown defect: unbinding CameraX did not detach the preview from its owning stage, restore the primary background or invalidate stale visibility state. The repair candidate explicitly releases both primary and fullscreen previews and strengthens the visibility predicate and emulator assertions. It remains unverified until a new complete Android emulator run passes. See `docs/CI_FAILURE_REPAIR_LEDGER.md` and `docs/RECONSTRUCTION.md`.
 
 ## Platform CI ownership
 

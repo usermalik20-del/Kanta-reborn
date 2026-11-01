@@ -134,23 +134,37 @@ final class CameraStage {
   }
 
   void stop() {
+    // Invalidate asynchronous CameraX callbacks before detaching either stage's preview.
     generation++;
     enabled = false;
     streaming = false;
     session.cameraPreviewEnabled = false;
     handler.removeCallbacksAndMessages(null);
-    if (cameraStates != null && cameraObserver != null) cameraStates.removeObserver(cameraObserver);
-    if (view != null && streamObserver != null)
-      view.getPreviewStreamState().removeObserver(streamObserver);
+
+    android.view.View previousSurface = surface;
+    PreviewView previousView = view;
+    if (cameraStates != null && cameraObserver != null)
+      cameraStates.removeObserver(cameraObserver);
+    if (previousView != null && streamObserver != null)
+      previousView.getPreviewStreamState().removeObserver(streamObserver);
+
     if (provider != null && preview != null) provider.unbind(preview);
-    // surface.unmountCamera(view) - handled by BackgroundStage
     if (preview != null) preview.setSurfaceProvider(null);
+
+    // CameraX unbinding alone does not remove a PreviewView from its stage hierarchy.
+    if (previousSurface instanceof StageSurface && previousView != null) {
+      ((StageSurface) previousSurface).unmountCamera(previousView);
+    } else if (previousSurface instanceof ph.kanta.reborn.stage.StagePresenterImpl) {
+      ((ph.kanta.reborn.stage.StagePresenterImpl) previousSurface).releaseCameraPreview();
+    }
+
     cameraStates = null;
     cameraObserver = null;
     streamObserver = null;
     preview = null;
     view = null;
     surface = null;
+    provider = null;
   }
 
   private void unavailable(String message) {
