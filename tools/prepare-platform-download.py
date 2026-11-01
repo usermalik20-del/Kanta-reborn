@@ -45,13 +45,13 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     (output / name).write_bytes(application)
     checksum = __import__("hashlib").sha256(application).hexdigest()
-    (output / "SHA256.txt").write_text(checksum + "  " + name + "\\n")
+    (output / "SHA256.txt").write_text(checksum + "  " + name + "\n")
     details = {"platform": platform, "source": source_sha, "run": int(run["id"]),
                "artifact": int(artifact["id"]), "file": name, "sha256": checksum,
                "bytes": len(application), "signed": "debug" if platform == "android" else False}
     if walkthrough:
         details["walkthroughRun"] = int(walkthrough["id"])
-    (output / "build-info.json").write_text(json.dumps(details, indent=2) + "\\n")
+    (output / "build-info.json").write_text(json.dumps(details, indent=2) + "\n")
     print(json.dumps(details))
 if __name__ == "__main__":
     try:
