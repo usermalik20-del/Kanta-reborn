@@ -458,3 +458,6 @@ The Mic & Voice screenshot acceptance depends on idempotent screen-state project
 
 
 Instrumentation that calls `SessionController.publish()` must do so on the Android main Looper because publication synchronously reaches the Activity's view-render callback. Keep test-owned state resets and their publication in the same `runOnMainSync` block.
+
+
+The named Android reference-screen captures are accepted only after the destination view is attached, shown through its ancestor hierarchy, and has a non-empty global visible rectangle. The screenshot helper allows the compositor to commit the new frame before capture; a matching view tag alone is not sufficient evidence that a destination was actually displayed.
