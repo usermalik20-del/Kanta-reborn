@@ -307,3 +307,8 @@ When editing `.github/workflows/android-validation.yml`, keep `workflow_dispatch
 ## Android stage presenter and camera ownership regression — 2026-11-01
 
 The primary stage in `MainActivity` is `ph.kanta.reborn.stage.StagePresenterImpl`, not the legacy `StageSurface`. Do not cast the primary stage to `StageSurface` in instrumentation. Exercise `StageSurface` only when a fullscreen/external stage is actually created. `CameraStage` must support both primary `StagePresenterImpl` and fullscreen `StageSurface` targets, publish stream state to fullscreen surfaces, and obtain the primary preview from the presenter's `BackgroundStage`. Keep tests aligned with the actual stage owner and verify camera movement in both directions.
+
+
+## Platform release ownership
+
+Keep native build and public download publication independent. Android APK publishing is triggered only by successful main-branch Android validation and consumes that exact run's APK artifact. iOS unsigned IPA publishing is triggered only by successful main-branch iOS archive completion and must additionally pass the iPhone and iPad simulator walkthrough on the same SHA. Never require Android validation for iOS publication or iOS archive/walkthrough for Android publication. Each publisher may update only its own platform download page and manifest entry; preserve the peer platform's current published entry. The shared website deployment follows successful metadata publication.
