@@ -1033,3 +1033,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 
 **Validation:** rerun Android validation on the repair commit; instrumentation compilation, Chrome companion checks and emulator screenshots must all complete before acceptance.
 
+
+
+## Android PR #134 — browser cover assets were packaged but not served (2026-11-01)
+
+**Affected run:** Android validation #513, run `41325935952`, head `7b5a8d1e919e5134a7e889a59a7ab487fe991241`. Gradle build, lint, core regression and camera/offline checks passed; real-Chrome failed at `Search result covers are missing`, so emulator instrumentation was correctly skipped. The 45 MB artifact contained the debug APK and test APK but no screenshot captures because the browser gate failed first.
+
+**Root cause:** the eight WebP files were present in both app bundles and passed byte-parity/size checks, but both HTTPS hosts exposed only `/`, `/remote.js`, and `/remote.css`. The companion markup also used decorative CSS stage art and generated no image elements. This was a missing product capability, not an intermittent browser issue.
+
+**Repair:** add exact eight-path artwork routing to Android and iOS hosts, enforce per-file and aggregate limits at host startup, package the same files into the iOS host resource map, and render deterministic cover images in search results, queue rows, and Now Playing. Extend TLS regression coverage to assert successful image/webp delivery and rejection of an unlisted ninth path. Pairing, TLS pinning, command ownership and the transport protocol remain unchanged.
+
+**Validation:** exact-head Android validation must pass real Chrome and then emulator runtime instrumentation; its artifact must contain all eight native screen captures and `browser-remote.png`. iOS validation and unsigned archive must remain green. No merge or APK publication until acceptance is verified.

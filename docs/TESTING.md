@@ -449,3 +449,6 @@ The real-Chrome companion check verifies that search-result covers and the Now P
 The companion browser gate also checks that all eight WebP cover assets are present in both platform bundles, byte-identical, within the per-file and aggregate budgets, and load successfully over the pinned HTTPS host.
 
 The same browser gate asserts that XcodeGen includes `Resources/CompanionRemote` in the iOS app bundle, preventing a correct source mirror from being omitted during packaging.
+
+
+Browser companion cover delivery is part of the real-Chrome gate: Android and iOS HTTPS hosts serve only the eight exact `/assets/covers/01.webp`–`08.webp` routes as `image/webp`, reject unlisted paths, and enforce 160 KB per-file / 1.5 MB aggregate limits. Search-result, queue and Now Playing images are checked for successful loading before capture.

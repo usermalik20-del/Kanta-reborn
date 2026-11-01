@@ -94,6 +94,8 @@ try{
   assert.equal(await evaluate("new Set([...document.querySelectorAll('[data-digit]')].map(b=>b.dataset.digit)).size"),10);
   await evaluate("document.querySelector('[data-digit=\"0\"]').click();document.querySelector('[data-digit=\"0\"]').click();document.querySelector('[data-digit=\"1\"]').click();document.getElementById('search-form').requestSubmit()");
   await wait("document.getElementById('results').textContent.includes('Morning Light') && !document.getElementById('lookup').disabled");
+  await wait("[...document.querySelectorAll('#results .cover-art')].length>0 && [...document.querySelectorAll('#results .cover-art')].every(image=>image.complete&&image.naturalWidth>0)");
+  await wait("document.getElementById('now-art').complete && document.getElementById('now-art').naturalWidth>0");
   assert.equal(await evaluate("document.querySelectorAll('#results script').length"),0,'Host metadata became executable HTML');
   await evaluate("document.querySelector('#results button').click()");await wait("document.querySelectorAll('#queue .row').length===1 && !document.getElementById('lookup').disabled");
   await evaluate("document.querySelector('#results button').click()");await wait("document.querySelectorAll('#queue .row').length===2 && !document.getElementById('lookup').disabled");

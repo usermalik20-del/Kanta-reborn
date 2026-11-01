@@ -56,3 +56,8 @@ The eight song covers are mirrored byte-for-byte to `apps/android/app/src/main/a
 ## Validation
 
 The Android Gradle resource merge and packaging checks run through `assembleDebug` and `lintDebug`. These prove resource validity and references, not visual fidelity. Emulator screenshot capture and comparison against the supplied UI reference remain required before the branch can be accepted or merged. The Android workflow must list both `files/home_dashboard.png` and `files/home_dashboard_restored.png` in its upload-artifact paths; a capture not present in the downloaded ZIP is not accepted as delivered evidence.
+
+
+### HTTPS cover delivery
+
+The browser companion's eight deterministic cover images are served from the exact static routes `/assets/covers/01.webp` through `/assets/covers/08.webp` by both Android and iOS hosts. Startup validates all eight resources, limits each to 160 KB and the aggregate to 1.5 MB, and rejects any additional route. Search-result, queue and Now Playing artwork is presentation-only; the host retains authority over song metadata and playback.
