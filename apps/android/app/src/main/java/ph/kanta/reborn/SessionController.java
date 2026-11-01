@@ -1304,6 +1304,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     playing = false;
   }
 
+  long duration() {
+    return Math.max(0L, currentDuration);
+  }
+
   public long position() {
     try {
       return player == null ? 0 : player.position();

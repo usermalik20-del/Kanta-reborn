@@ -54,6 +54,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private Button playButton, nextButton;
   private final Map<String, Button> navigationButtons = new HashMap<>();
   private Dialog fullscreen, companionDialog, youtubeDialog;
+  private TextView fullscreenTitle, fullscreenArtist, fullscreenTime, fullscreenKeyTempo, fullscreenQueue;
+  private ProgressBar fullscreenProgress;
+  private Button fullscreenPlayButton;
   private AlertDialog youtubeEntryDialog;
   private YouTubeEmbeddedPlayer youtubePlayer;
   private final YouTubePreviewLifecycle youtubeLifecycle = new YouTubePreviewLifecycle();
@@ -86,6 +89,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           refreshMicrophoneReading();
           if (stagePresenter != null) stagePresenter.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
+          refreshFullscreenControls();
           if (externalStage != null) externalStage.refresh();
           handler.postDelayed(this, 100);
         }
@@ -405,7 +409,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     addWeighted(transport, playButton);
     nextButton = button("Next", session::next);
     addWeighted(transport, nextButton);
-    addWeighted(transport, button("Fullscreen", this::fullscreen));
+    Button openFullscreen = button("Fullscreen", this::fullscreen);
+    openFullscreen.setTag("kanta.fullscreen.open");
+    addWeighted(transport, openFullscreen);
     stagePane.addView(transport);
     stagePane.addView(workspaceToolbar());
     if (wide) main.addView(stagePane, new LinearLayout.LayoutParams(0, -1, 1.2f));
@@ -2235,28 +2241,140 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (fullscreen != null) fullscreen.dismiss();
   }
 
+  private String stageTime(long milliseconds) {
+    long seconds = Math.max(0, milliseconds / 1000);
+    return String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
+  }
+
+  /** Refreshes only the stage's live projection; transport and timing stay in SessionController. */
+  private void refreshFullscreenControls() {
+    if (fullscreen == null || !fullscreen.isShowing()) return;
+    if (fullscreenTitle != null)
+      fullscreenTitle.setText(session.current == null ? "Ready for your next song" : session.current.title);
+    if (fullscreenArtist != null)
+      fullscreenArtist.setText(
+          session.current == null ? "KANTA" :
+              (session.current.artist == null ? "" : session.current.artist)
+                  + (session.singer.isEmpty() ? "" : " · " + session.singer));
+    long duration = session.duration();
+    long position = session.position();
+    if (fullscreenProgress != null)
+      fullscreenProgress.setProgress(duration > 0
+          ? (int) Math.max(0, Math.min(1000, position * 1000L / duration)) : 0);
+    if (fullscreenTime != null)
+      fullscreenTime.setText(stageTime(position) + " / " + (duration > 0 ? stageTime(duration) : "--:--"));
+    if (fullscreenKeyTempo != null)
+      fullscreenKeyTempo.setText("Key " + (session.pitch > 0 ? "+" : "") + session.pitch
+          + "   ·   Tempo " + Math.round(session.tempo * 100f) + "%");
+    if (fullscreenQueue != null)
+      fullscreenQueue.setText("Queue (" + session.queue.snapshot().size() + ")");
+    if (fullscreenPlayButton != null)
+      fullscreenPlayButton.setText(session.playing ? "Pause" : "Play");
+  }
+
   void fullscreen() {
     if (fullscreen != null && fullscreen.isShowing()) return;
     fullscreen = new Dialog(this, android.R.style.Theme_Material_NoActionBar_Fullscreen);
-    LinearLayout content = column();
-    content.setBackgroundColor(Color.BLACK);
+    FrameLayout stageFrame = new FrameLayout(this);
+    stageFrame.setTag("kanta.fullscreen.stage");
+    stageFrame.setBackgroundColor(KantaTheme.BG_MAIN);
     fullscreenStage = new StageSurface(this, session);
-    content.addView(fullscreenStage, new LinearLayout.LayoutParams(-1, 0, 1));
-    LinearLayout controls = row();
-    addWeighted(controls, button("Play / Pause", session::toggle));
-    addWeighted(controls, button("Next", session::next));
-    addWeighted(controls, button("Close", this::closeFullscreen));
-    content.addView(controls);
-    fullscreen.setContentView(content);
+    stageFrame.addView(fullscreenStage, new FrameLayout.LayoutParams(-1, -1));
+
+    LinearLayout overlay = column();
+    overlay.setPadding(dp(16), dp(12), dp(16), dp(16));
+    overlay.setFocusable(false);
+    LinearLayout header = row();
+    TextView stageHeading = text("NOW PLAYING", 13, KantaTheme.TEXT_PRIMARY);
+    stageHeading.setTypeface(null, android.graphics.Typeface.BOLD);
+    addWeighted(header, stageHeading);
+    Button close = button("Close", this::closeFullscreen);
+    close.setTag("kanta.fullscreen.close");
+    header.addView(close);
+    overlay.addView(header);
+
+    View spacer = new View(this);
+    overlay.addView(spacer, new LinearLayout.LayoutParams(-1, 0, 1));
+
+    LinearLayout details = column();
+    details.setPadding(dp(16), dp(14), dp(16), dp(14));
+    details.setBackground(KantaTheme.backgroundDrawable(0xE8081426, 18, KantaTheme.BORDER, 1,
+        getResources().getDisplayMetrics().density));
+    fullscreenTitle = text("Ready for your next song", 20, KantaTheme.TEXT_PRIMARY);
+    fullscreenTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+    fullscreenTitle.setTag("kanta.fullscreen.title");
+    fullscreenArtist = text("KANTA", 13, KantaTheme.TEXT_SECONDARY);
+    fullscreenArtist.setTag("kanta.fullscreen.artist");
+    details.addView(fullscreenTitle);
+    details.addView(fullscreenArtist);
+
+    fullscreenProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+    fullscreenProgress.setMax(1000);
+    fullscreenProgress.setProgress(0);
+    fullscreenProgress.setTag("kanta.fullscreen.progress");
+    LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(-1, dp(6));
+    progressParams.topMargin = dp(12);
+    progressParams.bottomMargin = dp(4);
+    details.addView(fullscreenProgress, progressParams);
+    fullscreenTime = text("0:00 / --:--", 11, KantaTheme.TEXT_SECONDARY);
+    fullscreenTime.setTag("kanta.fullscreen.time");
+    details.addView(fullscreenTime);
+
+    LinearLayout transport = row();
+    fullscreenQueue = text("Queue (0)", 12, KantaTheme.TEXT_SECONDARY);
+    fullscreenQueue.setTag("kanta.fullscreen.queue");
+    transport.addView(fullscreenQueue, new LinearLayout.LayoutParams(0, -2, 1));
+    fullscreenPlayButton = KantaTheme.primaryButton(this, "Play", v -> session.toggle());
+    fullscreenPlayButton.setTag("kanta.fullscreen.play-pause");
+    transport.addView(fullscreenPlayButton, new LinearLayout.LayoutParams(dp(104), dp(48)));
+    Button next = KantaTheme.secondaryButton(this, "Next", v -> session.next());
+    next.setTag("kanta.fullscreen.next");
+    LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(dp(88), dp(48));
+    nextParams.leftMargin = dp(8);
+    transport.addView(next, nextParams);
+    details.addView(transport);
+
+    LinearLayout performance = row();
+    Button keyDown = button("Key −", () -> session.setPitch(session.pitch - 1));
+    keyDown.setTag("kanta.fullscreen.key.decrement");
+    Button keyUp = button("Key +", () -> session.setPitch(session.pitch + 1));
+    keyUp.setTag("kanta.fullscreen.key.increment");
+    Button tempoDown = button("Slower", () -> session.setTempo(session.tempo - .05f));
+    tempoDown.setTag("kanta.fullscreen.tempo.decrement");
+    Button tempoUp = button("Faster", () -> session.setTempo(session.tempo + .05f));
+    tempoUp.setTag("kanta.fullscreen.tempo.increment");
+    addWeighted(performance, keyDown);
+    addWeighted(performance, keyUp);
+    addWeighted(performance, tempoDown);
+    addWeighted(performance, tempoUp);
+    LinearLayout.LayoutParams performanceParams = new LinearLayout.LayoutParams(-1, -2);
+    performanceParams.topMargin = dp(10);
+    details.addView(performance, performanceParams);
+    fullscreenKeyTempo = text("", 12, KantaTheme.PRIMARY_CYAN);
+    fullscreenKeyTempo.setGravity(Gravity.CENTER);
+    fullscreenKeyTempo.setTag("kanta.fullscreen.key-tempo");
+    details.addView(fullscreenKeyTempo);
+    overlay.addView(details);
+    stageFrame.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
+    fullscreen.setContentView(stageFrame);
     fullscreen.setOnDismissListener(
         d -> {
           fullscreenStage = null;
+          fullscreenTitle = null;
+          fullscreenArtist = null;
+          fullscreenTime = null;
+          fullscreenKeyTempo = null;
+          fullscreenQueue = null;
+          fullscreenProgress = null;
+          fullscreenPlayButton = null;
           if (stagePresenter != null) stagePresenter.setVisualActive(true);
           camera.moveTo(stagePresenter);
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
     fullscreen.show();
+    if (fullscreen.getWindow() != null) fullscreen.getWindow().setLayout(-1, -1);
     camera.moveTo(fullscreenStage);
+    refreshFullscreenControls();
   }
 
   private void refreshDisplay() {

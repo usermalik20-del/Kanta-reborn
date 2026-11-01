@@ -116,6 +116,7 @@ def main() -> int:
             "pitch_tempo_screen.png",
             "visuals_screen.png",
             "mic_voice_screen.png",
+            "fullscreen_stage.png",
             "library_ready.png",
             "fixture_loaded.png",
             "ui_rendered.png",

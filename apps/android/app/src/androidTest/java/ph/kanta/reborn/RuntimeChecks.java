@@ -192,6 +192,35 @@ public final class RuntimeChecks extends Instrumentation {
         check(more != null, "Home dashboard More destination missing");
         more.performClick();
       });
+      runOnMainSync(() -> {
+        View open = activity.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.open");
+        check(open != null, "Stage fullscreen entry missing");
+        open.performClick();
+      });
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.stage") != null,
+          "Fullscreen StageSurface did not open");
+      capture("fullscreen_stage.png");
+      runOnMainSync(() -> {
+        View keyUp = activity.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.key.increment");
+        check(keyUp != null, "Fullscreen key increment control missing");
+        keyUp.performClick();
+      });
+      await(() -> session.pitch == 1, "Fullscreen key control did not update SessionController");
+      runOnMainSync(() -> {
+        View keyDown = activity.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.key.decrement");
+        check(keyDown != null, "Fullscreen key decrement control missing");
+        keyDown.performClick();
+      });
+      await(() -> session.pitch == 0, "Fullscreen key control did not restore original key");
+      runOnMainSync(() -> {
+        View close = activity.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.close");
+        check(close != null, "Fullscreen close control missing");
+        close.performClick();
+      });
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.stage") == null,
+          "Fullscreen stage did not dismiss cleanly");
       check(
           state(
               () -> !session.scoringEnabled && session.score == null && session.lastScore == null),
