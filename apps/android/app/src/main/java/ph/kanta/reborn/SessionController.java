@@ -616,8 +616,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     }
     if (!monitor.start(output)) {
       message =
-          "Connect wired or USB audio, then select that output again. Speaker and Bluetooth"
-              + " monitoring are unavailable.";
+          "Connect wired, USB or Bluetooth headset audio, then select that output again. Speaker"
+              + " and Bluetooth-speaker monitoring are unavailable.";
       publish();
     }
   }

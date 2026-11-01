@@ -198,6 +198,12 @@ and camera, companion and Kanta-Connect status, and the current message — and 
 It deliberately reports only *whether* Kanta-Connect is hosting, never the pairing code, so
 the report is safe to share. It changes no audio, playback or lifecycle path.
 
+`MicrophoneMonitor` now also accepts Bluetooth SCO and BLE headsets as monitored outputs and
+routes them through the Android communication path on API 31 and newer, with a longer readiness
+bound for the slower link. The microphone input itself is unchanged: it still comes from the
+phone's own built-in microphone, so a Bluetooth headset's microphone is not yet captured by the
+app and the Bluetooth route carries the processed voice out only.
+
 
 **Pitch Settings UI (Controls accessory) — implemented and validated**
 

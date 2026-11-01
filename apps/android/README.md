@@ -150,6 +150,10 @@ path and does not integrate BASS. Evidence and open items are recorded in
 
 Validation state: `LyricWordAnimationRegressionTests` is wired into the existing `coreRegression` JavaExec task and covers fragment interpolation, active-fragment selection and pitch-energy decay. The authoring environment has no working local JVM (`getcpu(2) system call not supported by kernel`), so the Gradle APK/lint/emulator and device acceptance for this candidate are still required.
 
+## Bluetooth headset monitoring candidate
+
+The optional voice-output route accepts Bluetooth SCO and BLE headsets next to wired headphones, USB audio and analog/aux line-out. Headset-class devices are safe to monitor because the microphone belongs to the same worn device; speaker-class routes (built-in speaker, Bluetooth A2DP speakers, HDMI/ARC) stay blocked because the microphone hears them. A Bluetooth activation asks Android for the communication route (API 31 and newer) and plays the effect chain as voice-communication audio, then releases that request when monitoring stops. Bluetooth sound is mono call quality with higher delay, link negotiation takes one to three seconds, and platforms older than Android 12 are not offered a Bluetooth output at all. The Bluetooth device's own microphone is not captured by the app yet: microphone input still comes from the phone. Physical routing, feedback, sound quality and round-trip latency remain unverified on real hardware.
+
 ## Multi-file import durability
 
 Multi-file song and SoundFont imports stage metadata until the complete batch succeeds. The repository performs one atomic metadata commit after all items finish; cancellation or commit failure restores the prior catalog and removes staged media. Regression coverage reloads the durable catalog after cancellation and verifies that only the original starter entries remain, with every referenced media file present. Single-file imports retain their immediate persistence behavior.

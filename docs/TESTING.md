@@ -17,6 +17,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 | ReleaseToolingTests / starter generator | Release contracts, privacy/source guards and deterministic first-party resources | Python locally and in CI |
 | Android core regression | FIFO retry identity, Unicode search, bounded MIDI timing and encrypted exports | Gradle JavaExec |
 | Android lyric animation | Source-fragment interpolation, active-fragment range and freshness-bounded pitch energy for the stage views | `coreRegression` JavaExec (`LyricWordAnimationRegressionTests`) |
+| Android Bluetooth monitor routing | Route-identity rules, the extended readiness bound used for Bluetooth links, and its expiry | `coreRegression` JavaExec (`CoreRegressionTests.monitorChecks`); device acceptance still open |
 | Android native SoundFont | Validated SF2 references, bounded allocations, audible pitch, truncation and mutation handling | C11 ASan/UBSan host harness |
 | Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, persistent-stage rendering, dispatcher-based workspace back dismissal, and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
 | Browser interoperability | Fresh Android export through the captured browser decrypt function | Node after Android regression fixture generation |
