@@ -957,3 +957,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** select the newest matching artifact by `created_at` (`sort_by(.created_at) | last`) and fail explicitly if none exists. The workflow contract test now requires this selection behavior. Keep the platform-specific source SHA, packaging run, retention and page independent; do not rewrite the peer platform's published provenance.
 
 **Acceptance:** the contract and website validation workflows must pass; then rerun the existing Android publication run against current main and verify the manifest/page commit plus Vercel production deployment. A created packaging ZIP alone is not a published APK.
+
+
+## Android PR #134 — Home workspace dismissal did not restore Home (2026-11-01)
+
+**Affected run:** Android validation [#41309024920](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41309024920), PR #134 head `9d12188602d0dd730d173cd1f13d22fe583f8c8d`. Build, lint, domain regression, package permission, browser companion and interoperability checks passed. Emulator instrumentation crashed at `RuntimeChecks.java:85` with `Home dashboard More destination missing`.
+
+**Root cause:** opening a Home workspace feature correctly switched to the stage-owning Control destination before presenting the existing workspace accessory, but dismissing the accessory left the user on Control. The runtime test exposed that the Home navigation context had been discarded. The earlier test then attempted to click a Home-only action after the Home screen had been removed.
+
+**Repair:** MainActivity now retains a one-shot return-to-Home intent for accessories opened from Home. When that accessory is dismissed through the existing workspace lifecycle callback, the app returns to Home after the dismissal callback completes. Switching directly between active accessories clears the return intent so a replacement accessory is not hidden. Runtime instrumentation now asserts that Home Search opens the existing accessory and that Back returns to the Home dashboard before exercising More and the legacy stage.
+
+**Validation:** the failed run remains recorded; a new exact-head Android build and emulator run must pass. No prior green result is carried forward.
