@@ -455,3 +455,6 @@ Browser companion cover delivery is part of the real-Chrome gate: Android and iO
 
 
 The Mic & Voice screenshot acceptance depends on idempotent screen-state projection. The 100 ms microphone refresh may continue to observe the capture owner, but identical labels, meter states, gain values, effect selections and scoring controls must not be reapplied to the view tree; this preserves a stable accessibility-idle window without slowing live input updates.
+
+
+Instrumentation that calls `SessionController.publish()` must do so on the Android main Looper because publication synchronously reaches the Activity's view-render callback. Keep test-owned state resets and their publication in the same `runOnMainSync` block.

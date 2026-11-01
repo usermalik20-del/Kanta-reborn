@@ -1055,3 +1055,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** make Mic & Voice view updates idempotent: update labels only when their text changes, update meter bars only when the active-bar count changes, avoid resetting unchanged SeekBar progress and monitor/score button state, and skip reapplying an already-selected effect mode. Keep the 100 ms microphone/score refresh cadence and actual capture/monitor owners unchanged.
 
 **Validation:** rerun the full Android emulator walkthrough. All eight requested native captures and `browser-remote.png` must be present in `android-reconstruction-checks`; verify Mic & Voice, Now Playing and fullscreen screenshots before accepting the PR.
+
+
+## Android PR #134 — instrumentation published UI state off the main Looper (2026-11-01)
+
+**Affected run:** Android validation #519, run `41328474202`, head `931e79cc75ceaab9917ed2cf3b50d66552b97b9`. The Mic & Voice idle screenshot timeout was resolved by idempotent state projection. The next run then failed immediately after verifying Room mode with `AndroidRuntimeException: Animators may only be run on Looper threads`; the stack entered `MainActivity.render()` from `SessionController.publish()` at `RuntimeChecks.onStart()` line 177.
+
+**Root cause:** the instrumentation thread reset `session.monitor.mode(DRY)` and called `session.publish()` directly. Publication synchronously invokes the MainActivity changed callback, which removes/rebuilds views. Android TextView drawable state animators require the main Looper, so the test invoked view lifecycle work from the wrong thread.
+
+**Repair:** move both the monitor reset and `session.publish()` into `runOnMainSync`. This preserves the test's intent (restore Dry mode before leaving Mic & Voice) while respecting the production UI-thread ownership contract. Other publication calls in this test already execute inside main-thread blocks.
+
+**Validation:** rerun Android validation and verify the complete screenshot set and runtime acceptance artifact.

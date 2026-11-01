@@ -173,8 +173,10 @@ public final class RuntimeChecks extends Instrumentation {
       });
       await(() -> session.monitor.mode() == ph.kanta.reborn.core.VocalMonitorEffects.Mode.ROOM,
           "Mic & Voice effect selection did not reach the existing monitor processor");
-      session.monitor.mode(ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY);
-      session.publish();
+      runOnMainSync(() -> {
+        session.monitor.mode(ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY);
+        session.publish();
+      });
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice.back");
         if (back != null) back.performClick();
