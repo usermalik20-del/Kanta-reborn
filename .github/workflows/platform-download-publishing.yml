@@ -9,7 +9,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: platform-download-${{ github.event.workflow_run.name }}-${{ github.event.workflow_run.head_sha }}
+  group: platform-download-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: false
 jobs:
   publish:
@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: main
           fetch-depth: 0
           persist-credentials: true
       - name: Package only the completed platform build
@@ -59,9 +59,8 @@ jobs:
           python3 tools/publish-platform-download.py
           python3 tools/verify-website.py
           python3 -m unittest tools.tests.test_website_security_contract
-          git add apps/web/downloads.json "apps/web/${PLATFORM}.html" apps/web/ios-download.html
-          # Only the selected page and the shared manifest may be committed.
-          git reset -q -- "apps/web/ios-download.html" "apps/web/android.html"
+          git add apps/web/downloads.json
+          # Stage only the page owned by this platform.
           if [ "${PLATFORM}" = android ]; then git add apps/web/android.html; else git add apps/web/ios-download.html; fi
           git diff --cached --check
           git config user.name "github-actions[bot]"
