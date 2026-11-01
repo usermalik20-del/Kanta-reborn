@@ -86,9 +86,26 @@ def main() -> int:
             print(result, flush=True)
             if "KANTA runtime:" not in result or "checks passed" not in result:
                 raise RuntimeError("Runtime instrumentation did not report acceptance")
-            with (ROOT / "android-runtime-stage.png").open("wb") as output:
-                run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-stage.png", stdout=output, timeout=20)
+            # Live UI screenshot capture via adb screencap (captures emulator display)
+            try:
+                result_capture = subprocess.run(
+                    ["adb", "shell", "screencap", "-p"],
+                    capture_output=True, timeout=30,
+                    env={**os.environ, "ANDROID_ADB_SERVER_PORT": "5037"}
+                )
+                if result_capture.returncode == 0 and result_capture.stdout:
+                    with (ROOT / "android-runtime-stage.png").open("wb") as f:
+                        f.write(result_capture.stdout)
+                    print("Stage screenshot captured via screencap", flush=True)
+                else:
+                    raise RuntimeError("screencap failed")
+            except Exception:
+                # Fallback: read from app private files (original behavior)
+                print("screencap failed, falling back to file-read", flush=True)
+                with (ROOT / "android-runtime-stage.png").open("wb") as output:
+                    run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-stage.png", stdout=output, timeout=20)
             if (ROOT / "android-runtime-stage.png").stat().st_size == 0: raise RuntimeError("Missing real stage capture")
+            # Camera capture: fallback to app private file (screencap captures emulator display only)
             with (ROOT / "android-runtime-camera.png").open("wb") as output:
                 run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-camera.png", stdout=output, timeout=20)
             if (ROOT / "android-runtime-camera.png").stat().st_size == 0: raise RuntimeError("Missing real camera capture")
