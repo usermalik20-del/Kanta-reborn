@@ -45,6 +45,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private SessionController session;
   private LinearLayout root, body, results, stagePane, navigationTabs;
   private View appHeader;
+  private boolean returnToHomeAfterAccessory;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -361,13 +362,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           @Override
           public void onAccessoryDeactivated(String accessoryId) {
             if (workspaceBackCallback != null) workspaceBackCallback.setEnabled(false);
-            // Hide stage presenter accessories when workspace dismisses them
             if (stagePresenter != null) {
               if (KantaWorkspace.ACCESSORY_SEARCH.equals(accessoryId)) {
                 stagePresenter.hideSearch();
               } else if (KantaWorkspace.ACCESSORY_QUEUE.equals(accessoryId)) {
                 stagePresenter.hideQueue();
               }
+            }
+            if (returnToHomeAfterAccessory) {
+              returnToHomeAfterAccessory = false;
+              tab = "Home";
+              handler.post(MainActivity.this::render);
             }
           }
         });
@@ -487,6 +492,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
    */
   private void presentAccessory(String accessoryId) {
     if (workspace == null) return;
+    if (workspace.activeAccessory() != null) returnToHomeAfterAccessory = false;
     workspaceSearchGeneration++;
     workspace.activateAccessory(accessoryId);
     LinearLayout target = workspace.accessoryContent();
@@ -965,6 +971,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     tab = "Control";
     render();
     presentAccessory(accessoryId);
+    returnToHomeAfterAccessory = true;
   }
 
   /** Reference-led home dashboard. Existing playback and workspace owners remain authoritative. */
