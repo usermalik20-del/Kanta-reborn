@@ -277,12 +277,21 @@ public class KantaNowPlayingScreen extends LinearLayout {
     if (titleView != null) titleView.setText(title);
     if (artistView != null) artistView.setText(artist);
   }
-  public void setLyrics(String l1, String l2, String l3, String l4) { setLyrics(l1,l2,l3,l4,0); }
-  public void setLyrics(String l1,String l2,String l3,String l4,int highlightedCharacters) {
-    if(lyricLine1!=null)lyricLine1.setText(l1==null?"":l1);
-    if(lyricLine2!=null){String line=l2==null?"":l2;SpannableString styled=new SpannableString(line);int end=Math.max(0,Math.min(line.length(),highlightedCharacters));if(end>0)styled.setSpan(new ForegroundColorSpan(ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN),0,end,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);lyricLine2.setText(styled);}
-    if(lyricLine3!=null)lyricLine3.setText(l3==null?"":l3);
-    if(lyricLine4!=null)lyricLine4.setText(l4==null?"":l4);
+  public void setLyrics(String l1, String l2, String l3, String l4) {
+    setLyrics(l1, l2, l3, l4, 0f);
+  }
+  public void setLyrics(String l1, String l2, String l3, String l4, float highlightedCharacters) {
+    if (lyricLine1 != null) lyricLine1.setText(l1 == null ? "" : l1);
+    if (lyricLine2 != null) {
+      String line = l2 == null ? "" : l2;
+      SpannableString styled = new SpannableString(line);
+      int end = Math.max(0, Math.min(line.length(), (int) Math.floor(Math.max(0f, highlightedCharacters))));
+      if (end > 0) styled.setSpan(new ForegroundColorSpan(
+          ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+      lyricLine2.setText(styled);
+    }
+    if (lyricLine3 != null) lyricLine3.setText(l3 == null ? "" : l3);
+    if (lyricLine4 != null) lyricLine4.setText(l4 == null ? "" : l4);
   }
   public void setProgress(float p) { progress = p; if (progressBar != null) progressBar.setProgress(p); }
   public void setTimes(String current, String dur) {
