@@ -375,11 +375,8 @@ owned by `SessionController` and `StagePresenterImpl`.
 - Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`,
   `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`,
   `KantaMediaRow`, `KantaTransportControls`) instantiate with correct colors, radii and states
-- Screens (`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
-  `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`)
-  wire their `Listener` callbacks into `MainActivity`, which delegates to existing backend methods
-- Browser remote restyling preserves all 22 element IDs queried by `remote.js` and keeps the wire
-  protocol, action allowlist, pairing flow and fingerprint verification unchanged
+- - The production Home dashboard is mounted by `MainActivity`; its navigation callbacks route into existing workspace and session owners. The other design-system screen classes are not considered integrated until a real navigation route and live-state callback test exists.
+- Browser remote validation preserves all 22 element IDs queried by `remote.js`, validates the pairing/command protocol and fingerprint checks, and does not imply desktop-layout or visual acceptance.
 
 ### What is NOT tested by these checks
 
