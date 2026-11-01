@@ -222,6 +222,10 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(primaryStage::performClick);
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing") != null,
           "Tapping the persistent stage did not open Now Playing");
+      check(state(() -> {
+        View mountedStage = activity.getWindow().getDecorView().findViewWithTag("kanta.now-playing.stage");
+        return mountedStage != null && mountedStage.getParent() != null;
+      }), "Now Playing did not embed its live StageSurface");
       check(state(() -> contains(activity.getWindow().getDecorView(), "Nothing playing")),
           "Now Playing did not display the truthful empty playback state");
       check(

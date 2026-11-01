@@ -91,24 +91,35 @@ public class KantaNowPlayingScreen extends LinearLayout {
     fullscreen.setOnClickListener(v -> { if (listener != null) listener.onFullscreen(); });
     top.addView(back); top.addView(nowPlaying); top.addView(fullscreen);
     addView(top);
-    LinearLayout stage = new LinearLayout(context);
-    stage.setOrientation(VERTICAL);
-    stage.setGravity(Gravity.CENTER);
+    FrameLayout stage = new FrameLayout(context);
     stage.setBackground(ph.kanta.reborn.ui.KantaTheme.stageBackground(context, false));
     LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
     stageParams.weight = 1;
     stage.setLayoutParams(stageParams);
+    if (stageView != null) {
+      if (stageView.getParent() instanceof ViewGroup) {
+        ((ViewGroup) stageView.getParent()).removeView(stageView);
+      }
+      stage.addView(stageView, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+    }
     LinearLayout lyrics = new LinearLayout(context);
     lyrics.setOrientation(VERTICAL);
     lyrics.setGravity(Gravity.CENTER);
     lyrics.setPadding((int)(32*density), 0, (int)(32*density), 0);
-    lyricLine1 = lyric("Previous line lyric text here", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 18);
-    lyricLine2 = lyric("Current line \u2014 bright white", ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY, 24);
-    lyricLine3 = lyric("Next upcoming line", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 18);
-    lyricLine4 = lyric("Following upcoming line", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 18);
+    lyricLine1 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
+    lyricLine2 = lyric("No timed lyrics loaded", ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY, 23);
+    lyricLine3 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
+    lyricLine4 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
     lyrics.addView(lyricLine1); lyrics.addView(lyricLine2);
     lyrics.addView(lyricLine3); lyrics.addView(lyricLine4);
-    stage.addView(lyrics);
+    if (stageView == null) {
+      FrameLayout.LayoutParams lyricParams = new FrameLayout.LayoutParams(
+          LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+      stage.addView(lyrics, lyricParams);
+    } else {
+      // StageSurface already owns the selected background, camera/video layers and timed lyrics.
+      lyrics.setVisibility(View.GONE);
+    }
     addView(stage);
     LinearLayout info = new LinearLayout(context);
     info.setOrientation(HORIZONTAL);
