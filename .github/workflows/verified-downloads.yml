@@ -8,7 +8,7 @@ on:
       - 'tools/prepare-platform-download.py'
       - 'tools/publish-platform-download.py'
       - 'tools/tests/test_verified_downloads.py'
-      - 'tools/tests/test_publish_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'\n      - 'tools/tests/test_platform_download_publishing.py'
       - '.github/workflows/**'
       - 'tools/tests/test_workflow_path_ownership.py'
       - 'tools/check-documentation-sync.py'
@@ -21,7 +21,7 @@ on:
       - 'tools/prepare-platform-download.py'
       - 'tools/publish-platform-download.py'
       - 'tools/tests/test_verified_downloads.py'
-      - 'tools/tests/test_publish_verified_downloads.py'
+      - 'tools/tests/test_publish_verified_downloads.py'\n      - 'tools/tests/test_platform_download_publishing.py'
       - '.github/workflows/**'
       - 'tools/tests/test_workflow_path_ownership.py'
 permissions:
