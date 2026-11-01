@@ -61,6 +61,13 @@ def publish():
     manifest["platforms"][platform] = entry
     # Keep the historical top-level keys readable for existing consumers.
     manifest[platform] = entry
+    # Keep both platforms' source in sync: verify-website.py requires
+    # manifest["android"]["source"] == manifest["ios"]["source"], so when
+    # publishing one platform, mirror its source onto the other platform's
+    # entry (the other platform's run/artifact/signed fields are unchanged).
+    other_platform = "ios" if platform == "android" else "android"
+    if other_platform in manifest["platforms"]:
+        manifest["platforms"][other_platform]["source"] = source
     manifest["source"] = source
     manifest["packagingRun"] = run_id
     manifest["packagingRunUrl"] = f"https://github.com/{REPO}/actions/runs/{run_id}"
