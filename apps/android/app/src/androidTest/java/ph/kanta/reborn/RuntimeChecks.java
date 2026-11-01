@@ -221,6 +221,26 @@ public final class RuntimeChecks extends Instrumentation {
         close.performClick();
       });
       await(() -> !fullscreenDialog.isShowing(), "Fullscreen stage did not dismiss cleanly");
+      View primaryStage = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
+      check(primaryStage != null, "Persistent stage missing before Now Playing");
+      runOnMainSync(primaryStage::performClick);
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing") != null,
+          "Tapping the persistent stage did not open Now Playing");
+      check(state(() -> contains(activity.getWindow().getDecorView(), "Nothing playing")),
+          "Now Playing did not display the truthful empty playback state");
+      capture("now_playing_screen.png");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing.back");
+        check(back != null, "Now Playing back control missing");
+        back.performClick();
+      });
+      await(() -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          "Now Playing did not return to Home");
+      runOnMainSync(() -> {
+        View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
+        check(more != null, "Home More destination missing after Now Playing");
+        more.performClick();
+      });
       check(
           state(
               () -> !session.scoringEnabled && session.score == null && session.lastScore == null),
@@ -1203,6 +1223,11 @@ public final class RuntimeChecks extends Instrumentation {
   }
 
   private void capture(String name) throws IOException {
+    try {
+      getUiAutomation().waitForIdle(250, 5000);
+    } catch (java.util.concurrent.TimeoutException timeout) {
+      throw new IOException("UI did not settle before screenshot: " + name, timeout);
+    }
     Bitmap image = getUiAutomation().takeScreenshot();
     if (image == null) throw new IOException("Missing runtime screenshot");
     try (FileOutputStream output =

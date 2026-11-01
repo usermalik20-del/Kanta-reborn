@@ -61,11 +61,12 @@ public final class FileAudioPlayback implements PlaybackBackend {
   }
 
   public long position() {
-    try {
-      return released ? 0 : player.getCurrentPosition();
-    } catch (IllegalStateException e) {
-      return 0;
-    }
+    try { return released ? 0 : player.getCurrentPosition(); }
+    catch (IllegalStateException e) { return 0; }
+  }
+  public long duration() {
+    try { return released ? 0 : Math.max(0, player.getDuration()); }
+    catch (IllegalStateException e) { return 0; }
   }
 
   /** Returns the audible clock for lyric synchronization. */

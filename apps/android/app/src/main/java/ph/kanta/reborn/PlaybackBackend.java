@@ -21,6 +21,8 @@ interface PlaybackBackend {
 
   long position();
 
+  default long duration() { return 0L; }
+
   default boolean controlsSettled() {
     return true;
   }

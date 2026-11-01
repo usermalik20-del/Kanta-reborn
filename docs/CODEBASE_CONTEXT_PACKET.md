@@ -393,3 +393,6 @@ The Android fullscreen surface now keeps the real `StageSurface` as the full-ble
 ## Fullscreen stage acceptance — 2026-11-01
 
 The active fullscreen player is the existing `StageSurface` (lyrics/background/camera/video owner) with a live `SessionController` projection for title, artist, source time, MIDI duration when known, queue count, key and tempo. Play/Pause, Next, key and tempo controls delegate to the existing session. Previous and seeking remain absent; unsupported duration is shown as unknown. The runtime walkthrough opens the actual Dialog window, captures the fullscreen stage, exercises key increment/reset and verifies dismissal. `fullscreen_stage.png` is mandatory in the runner collector and CI artifact.
+
+
+**Now Playing:** `MainActivity` opens the dedicated `KantaNowPlayingScreen` when the persistent stage is tapped. The screen reads the live `SessionController` song, singer, playback clock, backend duration and timed MIDI cues. Playback, Next, key, tempo, Queue, Mic & Voice and fullscreen are delegated to existing owners. Unsupported transport and favorite actions are disabled; no sample lyrics or demo song metadata are shipped.

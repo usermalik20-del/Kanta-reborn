@@ -129,9 +129,8 @@ final class SoundFontPlayback implements PlaybackBackend {
     return controlFence.settled();
   }
 
-  public long position() {
-    return Math.min(document.durationMilliseconds, audiblePosition);
-  }
+  public long position() { return Math.min(document.durationMilliseconds, audiblePosition); }
+  public long duration() { return document.durationMilliseconds; }
 
   /** Returns the audible clock for lyric synchronization. */
   public RenderedPlaybackClock getClock() {

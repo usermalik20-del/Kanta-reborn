@@ -1309,11 +1309,12 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   public long position() {
-    try {
-      return player == null ? 0 : player.position();
-    } catch (IllegalStateException e) {
-      return 0;
-    }
+    try { return player == null ? 0 : player.position(); }
+    catch (IllegalStateException e) { return 0; }
+  }
+  public long duration() {
+    try { return Math.max(0, player == null ? currentDuration : player.duration()); }
+    catch (IllegalStateException e) { return Math.max(0,currentDuration); }
   }
 
   public RenderedPlaybackClock getClock() {

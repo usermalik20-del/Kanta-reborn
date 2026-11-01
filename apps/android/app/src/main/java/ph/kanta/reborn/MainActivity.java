@@ -76,6 +76,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
+  private ph.kanta.reborn.ui.KantaNowPlayingScreen nowPlayingScreen;
   private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
   private int visualsSelectedTab;
   private String searchSource = "All";
@@ -88,6 +89,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           session.observeMicrophone();
           refreshScoreReading();
           refreshMicrophoneReading();
+          refreshNowPlayingScreen();
           if (stagePresenter != null) stagePresenter.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
           refreshFullscreenControls();
@@ -399,8 +401,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     SongCatalog catalog = new ph.kanta.reborn.core.catalog.SqliteSongCatalog(this, contentRoot, scanner);
     stagePresenter = new StagePresenterImpl(this, session, catalog, session.queue);
     stagePresenter.setTag("kanta.stage.primary");
-    stagePresenter.setOnClickListener(v -> fullscreen());
-    stagePresenter.setContentDescription("Karaoke stage. Double tap to open fullscreen.");
+    stagePresenter.setOnClickListener(v -> { tab = "Now Playing"; render(); });
+    stagePresenter.setContentDescription("Karaoke stage. Tap to open Now Playing.");
     workspace.addPersistentLayer(stagePresenter);
     // Register as ScoreSink
     session.setScoreSink(stagePresenter);
@@ -956,6 +958,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     microphoneReading = null;
     monitorReading = null;
     scoreReading = null;
+    nowPlayingScreen = null;
     if (!"Home".equals(tab) && !isReferenceDestination(tab)) {
       body.addView(text(session.message, 13, CYAN));
       body.addView(button("YouTube video (online)", this::openYouTubeVideo));
@@ -979,6 +982,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         break;
       case "Visuals":
         visualsScreen();
+        break;
+      case "Now Playing":
+        nowPlayingScreen();
         break;
       case "My Set":
         mySet();
@@ -1014,7 +1020,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         || "Queue".equals(destination)
         || "Pitch & Tempo".equals(destination)
         || "Mic & Voice".equals(destination)
-        || "Visuals".equals(destination);
+        || "Visuals".equals(destination)
+        || "Now Playing".equals(destination);
   }
 
   private void navigateHome() {
@@ -1022,8 +1029,56 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     tab = "Home";
     if (wasVisuals) visualsSelectedTab = 0;
     micVoiceScreen = null;
+    nowPlayingScreen = null;
     render();
   }
+
+  /** Now Playing projects live session state; the persistent stage remains the rendering owner. */
+  private void nowPlayingScreen() {
+    nowPlayingScreen=new ph.kanta.reborn.ui.KantaNowPlayingScreen(this,new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener(){
+      @Override public void onBack(){navigateHome();}
+      @Override public void onFullscreen(){fullscreen();}
+      @Override public void onPlayPause(){session.toggle();}
+      @Override public void onPrevious(){}
+      @Override public void onNext(){session.next();}
+      @Override public void onShuffle(){}
+      @Override public void onRepeat(){}
+      @Override public void onQueue(){tab="Queue";render();}
+      @Override public void onEffects(){tab="Mic & Voice";render();}
+      @Override public void onCoach(){tab="Control";voiceExpanded=true;render();}
+      @Override public void onKeyDown(){session.controls(session.volume,session.tempo,Math.max(-12,session.pitch-1));}
+      @Override public void onKeyUp(){session.controls(session.volume,session.tempo,Math.min(12,session.pitch+1));}
+      @Override public void onTempoDown(){session.controls(session.volume,Math.max(.5f,session.tempo-.05f),session.pitch);}
+      @Override public void onTempoUp(){session.controls(session.volume,Math.min(2f,session.tempo+.05f),session.pitch);}
+      @Override public void onFavorite(){}
+      @Override public void onOverflow(){}
+    });
+    nowPlayingScreen.setTag("kanta.screen.now-playing");
+    body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-1));
+    refreshNowPlayingScreen();
+  }
+  private void refreshNowPlayingScreen() {
+    if(nowPlayingScreen==null||!"Now Playing".equals(tab))return;
+    Song current=session.current;
+    nowPlayingScreen.setSongInfo(current==null?"Nothing playing":current.title,
+        current==null?"Reserve a song to begin":(session.singer.isEmpty()?current.artist:session.singer));
+    long position=Math.max(0,session.position()),duration=Math.max(0,session.duration());
+    nowPlayingScreen.setTimes(formatPlaybackTime(position),duration>0?formatPlaybackTime(duration):"—");
+    nowPlayingScreen.setProgress(duration>0?Math.min(1f,position/(float)duration):0f);
+    nowPlayingScreen.setPlaying(session.playing);
+    nowPlayingScreen.setKey(session.pitch);nowPlayingScreen.setTempo(session.tempo);
+    nowPlayingScreen.setTransportCapabilities(session.queue.peek()!=null);
+    java.util.List<ph.kanta.reborn.core.MidiLyrics.Cue> cues=session.lyrics;
+    if(current==null)nowPlayingScreen.setLyrics("","No song is playing","Reserve a song to begin","");
+    else if(cues==null||cues.isEmpty())nowPlayingScreen.setLyrics("","No timed lyrics available","","");
+    else{
+      int active=0;for(int i=0;i<cues.size();i++){if(cues.get(i).milliseconds<=position)active=i;else break;}
+      String previous=active>0?cues.get(active-1).line:"",line=cues.get(active).line;
+      String next=active+1<cues.size()?cues.get(active+1).line:"",following=active+2<cues.size()?cues.get(active+2).line:"";
+      nowPlayingScreen.setLyrics(previous,line,next,following,cues.get(active).highlightedCharacters(position));
+    }
+  }
+  private String formatPlaybackTime(long ms){long seconds=Math.max(0,ms/1000);return String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60);}
 
   /** Full-screen visual picker backed by the existing scenic, camera and import owners. */
   private void visualsScreen() {
