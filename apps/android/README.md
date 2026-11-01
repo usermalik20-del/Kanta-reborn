@@ -166,7 +166,7 @@ The runner treats all eight named UI walkthrough screenshots as required evidenc
 
 ## Stage presenter and camera runtime ownership — 2026-11-01
 
-The primary `kanta.stage.primary` view is `StagePresenterImpl`; fullscreen and external-display output use `StageSurface`. `CameraStage` supports both target types. The primary presenter's `BackgroundStage` owns its `PreviewView`, while fullscreen `StageSurface` receives a dedicated mounted preview and stream-state updates. Runtime instrumentation validates video on fullscreen `StageSurface` and validates camera start/transfer/return on the correct primary/fullscreen targets.
+The primary `kanta.stage.primary` view is `StagePresenterImpl`; fullscreen and external-display output use `StageSurface`. `CameraStage` supports both target types. The primary presenter's `BackgroundStage` owns its `PreviewView`, while fullscreen `StageSurface` receives a dedicated mounted preview and stream-state updates. Runtime instrumentation validates video on fullscreen `StageSurface` and validates camera start/transfer/return on the correct primary/fullscreen targets. Camera shutdown unbinds CameraX and explicitly detaches the preview from its owning stage; the primary presenter restores the background selected before camera opt-in. Visibility requires the active CAMERA source, an attached preview and CameraX `STREAMING`, preventing stale stream-state values from passing teardown acceptance.
 
 ## KANTA design-system UI — 2026-11-01
 
