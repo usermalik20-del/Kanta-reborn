@@ -957,6 +957,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
 
+  private void openHomeAccessory(String accessoryId) {
+    if (!"Home".equals(tab)) {
+      presentAccessory(accessoryId);
+      return;
+    }
+    tab = "Control";
+    render();
+    presentAccessory(accessoryId);
+  }
+
   /** Reference-led home dashboard. Existing playback and workspace owners remain authoritative. */
   private void homeDashboard() {
     body.addView(
@@ -971,12 +981,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 tab = "Control";
                 render();
               }
-              @Override public void onSearch() { presentAccessory(KantaWorkspace.ACCESSORY_SEARCH); }
-              @Override public void onQueue() { presentAccessory(KantaWorkspace.ACCESSORY_QUEUE); }
+              @Override public void onSearch() { openHomeAccessory(KantaWorkspace.ACCESSORY_SEARCH); }
+              @Override public void onQueue() { openHomeAccessory(KantaWorkspace.ACCESSORY_QUEUE); }
               @Override public void onYouTube() { openYouTubeVideo(); }
-              @Override public void onVisuals() { presentAccessory(KantaWorkspace.ACCESSORY_VISUALS); }
-              @Override public void onMicVoice() { presentAccessory(KantaWorkspace.ACCESSORY_MORE); }
-              @Override public void onPitchTempo() { presentAccessory(KantaWorkspace.ACCESSORY_MORE); }
+              @Override public void onVisuals() { openHomeAccessory(KantaWorkspace.ACCESSORY_VISUALS); }
+              @Override public void onMicVoice() { openHomeAccessory(KantaWorkspace.ACCESSORY_MORE); }
+              @Override public void onPitchTempo() { openHomeAccessory(KantaWorkspace.ACCESSORY_MORE); }
               @Override public void onMySet() { tab = "My Set"; render(); }
               @Override public void onFavorites() { tab = "My Set"; render(); }
               @Override public void onRecent() { tab = "My Set"; render(); }
