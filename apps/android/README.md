@@ -2,9 +2,9 @@
 
 ## Reference-led UI integration — safe branch in progress
 
-The Home dashboard is now mounted by `MainActivity` as the initial destination. Its Search, Queue, YouTube, Visuals, Mic & Voice, Pitch & Tempo, My Set, Scenic, Realm and More actions route to existing application owners; the Home view does not own playback or queue state. The legacy stage pane and legacy navigation row are hidden while Home is active and restored for existing destinations. Opening a Home feature that uses a workspace accessory returns to Home after Back/Done dismisses that accessory. The feature grid follows the reference's three-column / two-row layout.
+The Home dashboard is now mounted by `MainActivity` as the initial destination. Its Search, Queue, YouTube, Visuals, Mic & Voice, Pitch & Tempo, My Set, Scenic, Realm and More actions route to existing application owners; the Home view does not own playback or queue state. The legacy stage pane and legacy navigation row are hidden while Home is active and restored for existing destinations. Opening a Home feature that uses a workspace accessory returns to Home after Back/Done dismisses that accessory. The feature grid follows the reference's three-column / two-row layout. The supplied adaptive asset pack contributes native Home, Search, Queue, Visuals, Microphone, Pitch, Settings, Library, More and song-code VectorDrawables; optimized phone and landscape WebP artwork is used by the Home hero and fullscreen stage.
 
-This is an initial integration milestone, not completion of the supplied multi-screen concept. The other `ph.kanta.reborn.ui` screen classes remain unaccepted until mounted to real application state and validated. Do not claim visual fidelity or device acceptance from source presence or compilation alone.
+This is an initial integration milestone, not completion of the supplied multi-screen concept. The other `ph.kanta.reborn.ui` screen classes remain unaccepted until mounted to real application state and validated. Do not claim visual fidelity or device acceptance from source presence or compilation alone. The selected resource mapping and deliberate exclusions are documented in [docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md](../../docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md).
 
 
 ## Compact Workspace back-navigation contract
