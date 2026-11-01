@@ -1,6 +1,6 @@
 # Unfinished work
 
-**Last updated:** 2026-10-31 · **main:** `8210b26` · **public release source:** `41c8ddde`
+**Last updated:** 2026-11-01 · **main:** `9a46f71` · **public release source:** `41c8ddde`
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
