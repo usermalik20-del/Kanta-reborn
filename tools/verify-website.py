@@ -404,13 +404,13 @@ def main():
             build = manifest[platform]
             platform_source = build["source"]
             assert re.fullmatch(r"[0-9a-f]{40}", platform_source), filename + " source SHA is malformed"
-            platform_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["packagingRun"])
+            platform_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build.get("packagingRun", manifest["packagingRun"]))
             source_artifact_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"])
             packaged_artifact_url = platform_run_url + "/artifacts/" + str(build["packagingArtifact"])
             page_source = (WEB / filename).read_text(encoding="utf-8")
             assert build["downloadUrl"] == packaged_artifact_url, filename + " packaged artifact differs from manifest"
             assert packaged_artifact_url in page_source, filename + " packaged artifact link differs from manifest"
-            assert str(build["retentionDays"]) + "-day retention" in page_source, filename + " published retention differs from manifest"
+            assert str(build.get("retentionDays", manifest["retentionDays"])) + "-day retention" in page_source, filename + " published retention differs from manifest"
             assert source_artifact_url in page_source, filename + " source artifact provenance link is missing"
             assert platform_source[:8] in page_source, filename + " source revision differs from manifest"
             assert re.fullmatch(r"[0-9a-f]{64}", build["sha256"]), filename + " packaged ZIP digest is malformed"
