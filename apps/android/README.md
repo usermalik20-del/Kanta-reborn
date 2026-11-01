@@ -1,5 +1,12 @@
 # KANTA Android reconstruction preview
 
+## Reference-led UI integration — safe branch in progress
+
+The Home dashboard is now mounted by `MainActivity` as the initial destination. Its Search, Queue, YouTube, Visuals, Mic & Voice, Pitch & Tempo, My Set, Scenic, Realm and More actions route to existing application owners; the Home view does not own playback or queue state. The legacy stage pane and legacy navigation row are hidden while Home is active and restored for existing destinations. The feature grid follows the reference's three-column / two-row layout.
+
+This is an initial integration milestone, not completion of the supplied multi-screen concept. The other `ph.kanta.reborn.ui` screen classes remain unaccepted until mounted to real application state and validated. Do not claim visual fidelity or device acceptance from source presence or compilation alone.
+
+
 ## Compact Workspace back-navigation contract
 
 The persistent stage stays attached while Search, Queue, Visuals or Controls is open. Android system/predictive back dismisses that active accessory first through the lifecycle-bound AndroidX `OnBackPressedDispatcher` callback; the callback is disabled when the workspace is stage-only so normal navigation remains available. Keep this behavior covered by `RuntimeChecks.workspaceBackNavigationChecks` and `tools/check-android-workspace-contract.py`.
