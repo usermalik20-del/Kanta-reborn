@@ -3,8 +3,11 @@ package ph.kanta.reborn.ui;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -37,6 +40,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
   private final Context context;
   private final float density;
   private final Listener listener;
+  private final View stageView;
   private String songTitle = "Nothing playing";
   private String songArtist = "Reserve a song to begin";
   private String currentTime = "0:00";
@@ -51,10 +55,15 @@ public class KantaNowPlayingScreen extends LinearLayout {
   private KantaStepper keyStepper, tempoStepper;
   private TextView lyricLine1, lyricLine2, lyricLine3, lyricLine4;
   public KantaNowPlayingScreen(Context context, Listener listener) {
+    this(context, listener, null);
+  }
+
+  public KantaNowPlayingScreen(Context context, Listener listener, View stageView) {
     super(context);
     this.context = context;
     this.density = context.getResources().getDisplayMetrics().density;
     this.listener = listener;
+    this.stageView = stageView;
     setOrientation(VERTICAL);
     setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
     build();

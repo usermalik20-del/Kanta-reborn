@@ -77,6 +77,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
   private ph.kanta.reborn.ui.KantaNowPlayingScreen nowPlayingScreen;
+  private StageSurface nowPlayingStage;
   private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
   private int visualsSelectedTab;
   private String searchSource = "All";
@@ -146,7 +147,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     super.onStart();
     youtubeForeground = true;
     session.hostVisible(true);
-    if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
+    if (stagePresenter != null)
+      stagePresenter.setVisualActive(
+          (fullscreen == null || !fullscreen.isShowing()) && !"Now Playing".equals(tab));
+    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(fullscreen == null || !fullscreen.isShowing());
     if (fullscreenStage != null) fullscreenStage.setVisualActive(true);
     session.listen(this::render);
     handler.post(tick);
@@ -200,6 +204,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     session.listen(null);
     session.hostVisible(false);
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
+    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     if (fullscreenStage != null) fullscreenStage.setVisualActive(false);
     if (!isChangingConfigurations()) session.pause();
     if (presentation != null) presentation.dismiss();
@@ -331,6 +336,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
       entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
+    }
+    if ("Now Playing".equals(tab) && nowPlayingScreen != null) {
+      refreshNowPlayingScreen();
+      return;
+    }
+    if (!"Now Playing".equals(tab) && nowPlayingStage != null) {
+      nowPlayingStage.setVisualActive(false);
+      camera.moveTo(stagePresenter);
+      if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
+      nowPlayingStage = null;
+      nowPlayingScreen = null;
     }
     body.removeAllViews();
     renderPanel();
@@ -1033,8 +1049,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     render();
   }
 
-  /** Now Playing projects live session state; the persistent stage remains the rendering owner. */
+  /** Now Playing projects live session state over a real StageSurface, never a sample backdrop. */
   private void nowPlayingScreen() {
+    if (nowPlayingStage == null) {
+      nowPlayingStage = new StageSurface(this, session);
+      nowPlayingStage.setTag("kanta.now-playing.stage");
+      nowPlayingStage.setVisualActive(true);
+      if (stagePresenter != null) stagePresenter.setVisualActive(false);
+      camera.moveTo(nowPlayingStage);
+    }
     nowPlayingScreen=new ph.kanta.reborn.ui.KantaNowPlayingScreen(this,new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener(){
       @Override public void onBack(){navigateHome();}
       @Override public void onFullscreen(){fullscreen();}
@@ -2439,10 +2462,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           fullscreenQueue = null;
           fullscreenProgress = null;
           fullscreenPlayButton = null;
-          if (stagePresenter != null) stagePresenter.setVisualActive(true);
-          camera.moveTo(stagePresenter);
+          if ("Now Playing".equals(tab) && nowPlayingStage != null) {
+            nowPlayingStage.setVisualActive(true);
+            if (stagePresenter != null) stagePresenter.setVisualActive(false);
+            camera.moveTo(nowPlayingStage);
+          } else {
+            if (stagePresenter != null) stagePresenter.setVisualActive(true);
+            camera.moveTo(stagePresenter);
+          }
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
+    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     fullscreen.show();
     if (fullscreen.getWindow() != null) fullscreen.getWindow().setLayout(-1, -1);
     camera.moveTo(fullscreenStage);
