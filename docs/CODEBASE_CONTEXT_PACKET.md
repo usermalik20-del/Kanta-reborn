@@ -1,3 +1,15 @@
+## Android reference-led UI integration context — 2026-11-01
+
+**Working branch:** `feat/android-kanta-reference-fidelity`. The previous UI batch introduced `ph.kanta.reborn.ui` screens and components but did not mount them in the production `MainActivity` composition. The actual app still uses a native Java / Android Views root: `MainActivity` composes `KantaWorkspace`, a persistent `StagePresenterImpl`, a session strip/transport and a scrollable destination panel. `SessionController` remains the playback/session/queue owner. The initial safe-branch correction mounts `HomeScreen` as the Home destination and routes its actions to existing owners. It hides (does not destroy) the stage pane and legacy navigation row while Home is selected, restoring them for other destinations. The feature grid is now 3 columns × 2 rows.
+
+**Important integration boundary:** `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`, `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen` and `KantaFullscreenStage` remain unintegrated presentation candidates. Do not infer they are active because they compile. Search/Queue already have authoritative `StagePresenterImpl` overlays; controls and visual selection must continue to invoke the existing session, camera, stage and import owners. Avoid wiring local-only demo controls or fake coach scores.
+
+**Browser companion:** current `index.html`, `remote.css` and `remote.js` form a secure, narrow-first controller with certificate fingerprint verification and a bounded command protocol. It is not yet the reference's desktop three-column design. Preserve every DOM ID read by `remote.js`, its command allowlist, host-owned state, pairing expiry, and honest unavailable states while restyling.
+
+**Acceptance still pending:** branch Android build/lint/core regression/emulator workflow; actual Home/stage screenshots; visual comparison at controlled device sizes; functional tests for all Home destinations; APK artifact inspection. No visual-fidelity, emulator, device or release claim is made until those checks pass.
+
+---
+
 # Codebase Context Packet — KANTA Reborn
 
 ## Android camera lifecycle repair context — 2026-11-01
