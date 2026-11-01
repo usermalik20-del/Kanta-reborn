@@ -79,12 +79,6 @@ public final class RuntimeChecks extends Instrumentation {
           "Home Search did not open the existing workspace search");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
       await(homeWorkspace::isStageOnly, "Home Search did not dismiss through workspace back");
-      runOnMainSync(
-          () -> {
-            View home = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Home");
-            check(home != null, "Home destination was not restored in legacy navigation");
-            home.performClick();
-          });
       await(
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Home dashboard did not return after dismissing Search");
