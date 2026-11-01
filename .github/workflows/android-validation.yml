@@ -124,6 +124,8 @@ jobs:
             android-runtime-camera.png
             # UI walkthrough screenshots captured by RuntimeChecks.java
             files/library_ready.png
+            files/home_dashboard.png
+            files/home_dashboard_restored.png
             files/fixture_loaded.png
             files/ui_rendered.png
             files/youtube_loaded.png

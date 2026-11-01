@@ -41,4 +41,4 @@ Optimized from the pack's original JPEGs and installed under `apps/android/app/s
 
 ## Validation
 
-The Android Gradle resource merge and packaging checks run through `assembleDebug` and `lintDebug`. These prove resource validity and references, not visual fidelity. Emulator screenshot capture and comparison against the supplied UI reference remain required before the branch can be accepted or merged.
+The Android Gradle resource merge and packaging checks run through `assembleDebug` and `lintDebug`. These prove resource validity and references, not visual fidelity. Emulator screenshot capture and comparison against the supplied UI reference remain required before the branch can be accepted or merged. The Android workflow must list both `files/home_dashboard.png` and `files/home_dashboard_restored.png` in its upload-artifact paths; a capture not present in the downloaded ZIP is not accepted as delivered evidence.

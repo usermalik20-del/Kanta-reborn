@@ -979,3 +979,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** add explicit `import ph.kanta.reborn.R;` imports to the two UI classes that reference generated resources. Keep the app namespace and resource ownership unchanged.
 
 **Validation:** a new Android-owned workflow run must compile, lint, execute domain checks and complete the emulator runtime gate on the repaired head. The failed run remains recorded; it is not reclassified as flaky or ignored.
+
+
+## Android PR #134 — Home screenshot upload allowlist omitted new captures (2026-11-01)
+
+**Affected run:** Android validation [#41316345984](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41316345984) passed all checks, including emulator runtime instrumentation, but the downloaded `android-reconstruction-checks` artifact did not contain the two newly named Home screenshots. The instrumentation had written them to app-private storage and `tools/run-android-runtime.py` had collected them, but `.github/workflows/android-validation.yml` still had a fixed artifact path list containing only the earlier screenshots.
+
+**Root cause:** the artifact uploader uses an explicit path allowlist; adding a capture to the test and collector does not automatically include it in the uploaded ZIP.
+
+**Repair:** add `files/home_dashboard.png` and `files/home_dashboard_restored.png` to the Android workflow's upload-artifact paths. Add an operating rule requiring both the collector and workflow allowlist to be updated when runtime screenshots are added.
+
+**Validation:** rerun the Android-owned workflow on the exact repaired head, download its artifact and verify both file entries and image contents. A green job alone does not prove the new captures were uploaded.
