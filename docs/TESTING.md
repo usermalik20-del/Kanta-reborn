@@ -365,3 +365,10 @@ The hosted runtime suite must test the primary `StagePresenterImpl` and fullscre
 ### Fullscreen camera handoff acceptance
 
 The Android emulator runtime test must prove that the opted-in CameraX preview is visible on the primary `StagePresenterImpl`, transfers to the fullscreen `StageSurface`, and returns to the primary stage when fullscreen closes. For fullscreen, require both `CameraStage.streaming()` and `StageSurface.isCameraVisible()`; do not invert this predicate or infer success merely from the camera remaining enabled. The stream observer drives the surface visibility signal. Camera disable and backgrounding must still release the preview, and foregrounding must not silently re-enable it.
+
+
+## Platform-specific download publication acceptance
+
+Run `python3 -m unittest tools.tests.test_platform_download_publishing` with the existing exact-SHA packaging contract suites. The tests prove that Android publication replaces only Android metadata/page content, iOS publication replaces only iOS metadata/page content, stale peer-platform entries survive, and iOS publication refuses an IPA without same-SHA iPhone/iPad simulator walkthrough provenance.
+
+The `Platform-specific verified download publishing` workflow is triggered by successful main-branch Android validation or iOS unsigned-archive completion. Android publication requires only the exact-SHA Android validation artifact. iOS publication additionally waits for the exact-SHA iOS simulator walkthrough. Confirm workflow-run name, branch, source SHA, artifact run identity, artifact digest and retention metadata before accepting a published download. The final website verification and Vercel dispatch occur only after the selected platform's page and shared manifest validate.
