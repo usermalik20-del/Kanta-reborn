@@ -75,6 +75,12 @@ These must never be presented as working. They are deliberately out of scope or 
   TestFlight.
 - **iOS ↔ Android companion interoperability.**
 - **Any correctness claim about a Meg payload's contents**, because the format is undocumented.
+- **Any claim that the website is unscrapable, or that the declared AI-training opt-out is
+  enforced against a non-compliant crawler.** `robots.txt` constrains only crawlers that choose
+  to honor it, and a browser-impersonating client behind residential proxies is
+  indistinguishable from a visitor at the HTTP layer. The accurate statement is that the site
+  declares an opt-out, refuses the declared crawler user agents at the edge and in the
+  renderer, and keeps search-engine indexing intact.
 
 ## G. From review mining (2026-10-29)
 
@@ -138,6 +144,25 @@ headset-class or mic-bearing HFP device can.
 
 Total effort **L**, blocked on hardware acceptance: one phone and one Android TV box, each with a
 Bluetooth headset and one mic-bearing Bluetooth device.
+
+## J. Website crawler and scraping defense (2026-10-31)
+
+**Merged and deployed:** PR #125, merge commit `ccd09fd`, production Vercel deploy
+[run 41262424955](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41262424955).
+The declared policy in `apps/web/robots.txt`, the `X-Robots-Tag` preference and the `routes`
+refusal in `apps/web/vercel.json`, and the `isBlockedCrawler()` gate in `apps/web/api/page.js`
+are live, with the cross-file consistency contract in `tools/verify-website.py` and
+`tools/tests/test_website_security_contract.py`. Full rationale, token provenance and
+effectiveness limits: [docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md).
+
+| ID | Item | Why it matters | Acceptance criterion | Effort |
+| --- | --- | --- | --- | --- |
+| J1 | **Verify the refusal on a real deployment** | Verified in production on the `ccd09fd` deploy: `/robots.txt` serves the policy with the canonical sitemap line, a `GPTBot` user agent receives `403` on `/`, `/style.css` and `/downloads.json`, and `Googlebot` plus an iPhone Safari user agent receive `200` with rendered HTML. The edge refusal returns Vercel's own 403 page, so the renderer's plain-text refusal body is the layer behind it. One gap was found and repaired: `X-Robots-Tag` reached static responses but **not** the ten HTML routes, because a `routes` rewrite replaces the response — the renderer now sets the header itself, which the verifier and contract test enforce. | Remaining: re-measure the rendered routes on the deployment carrying that fix, and record the response headers, not the status alone. | S |
+| J2 | **Rate limiting on the renderer path** | A stateless serverless function holds no counters, so neither the function gate nor a `vercel.json` rule can limit request rate. Bulk collection at a low, crawler-like rate is currently unlimited. | A shared-state limiter (edge counter, Vercel Firewall rule or an upstream proxy) returns `429` past a documented threshold, and a normal visitor is unaffected. Requires the J5 decision first. | M |
+| J3 | **Per-request gating of static assets** | `style.css`, `songbook.js`, `downloads.json` and the image assets are served by Vercel without invoking `api/page.js`. The edge user-agent rule is the only layer covering them, and a UA-spoofing client bypasses it. | An edge layer refuses non-browser clients on static paths without breaking normal asset delivery, evidenced by a deployed check plus a browser acceptance pass on all ten public routes. | M |
+| J4 | **Legal clause for automated collection** | The site's terms do not yet state that automated collection for model training is not permitted, so the policy has no contractual backstop. | The owner approves wording and it is published in `apps/web/legal.html`; no clause is added without that approval, because the wording is an owner decision, not an engineering one. | S |
+| J5 | **Edge/WAF layer decision (Vercel Firewall vs Cloudflare in front of Vercel)** | Both J2 and J3 need an edge layer, and both options carry non-code consequences: Vercel Firewall needs the applicable plan tier, Cloudflare changes DNS ownership of the domain and interacts with the pending is-a.bot registration (A2). | The owner decides; the chosen layer is configured, its tier requirement recorded, and the decision written into `docs/WEBSITE_SCRAPING_DEFENSE.md` with what it does and does not cover. | M |
+| J6 | **Fold the canonical hostname into the domain sweep** | `apps/web/robots.txt` pins `https://kanta-public.vercel.app` in its `Sitemap:` line, exactly like the sitemap and the verifier's `PUBLIC_BASE_URL`. A half-moved domain would leave `robots.txt` advertising a stale sitemap host. | `robots.txt` changes in the same commit as the rest of A5, and `tools/verify-website.py` already fails if the `Sitemap:` line stops matching `PUBLIC_BASE_URL`. | S |
 
 ## F. Recently closed
 
