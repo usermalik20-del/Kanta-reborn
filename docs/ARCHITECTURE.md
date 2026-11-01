@@ -582,3 +582,7 @@ The iOS download remains an unsigned personal-signing input; this automation doe
 
 
 The request-time renderer also removes any legacy static `/analytics.js` script element from recovered page source before nonce decoration. A nonce only authorizes execution under CSP; it is not a consent decision. `site-consent.js` remains the sole runtime loader for Analytics and AdSense after explicit acceptance. Preserve this separation in future page/template changes.
+
+## Android validation runner ownership — 2026-11-01
+
+`android-validation.yml` owns the Android source/build/runtime gate. Its manual-dispatch input selects only the Git ref; the full acceptance suite remains mandatory and cannot be replaced by a screenshot-only mode. Push and pull-request triggers remain separate top-level workflow events. `tools/run-android-runtime.py` owns emulator provisioning, private-network readiness, APK installation, instrumentation execution and evidence collection. The private-IPv4 guard is a prerequisite boundary: only its missing-network failure is conditional; installation and instrumentation execute after the guard succeeds. UI screenshots are copied to the workspace's `files/` directory, matching the artifact upload paths. The workflow and runner do not own application playback, queue, persistence or sensor state.
