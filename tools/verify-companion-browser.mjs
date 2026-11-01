@@ -106,6 +106,10 @@ try{
   await cdp('Emulation.setDeviceMetricsOverride',{width:1280,height:960,deviceScaleFactor:1,mobile:false});
   assert.equal(await evaluate("document.querySelector('.sidebar').offsetWidth>0"),true,'Desktop sidebar is hidden');
   assert.equal(await evaluate("document.querySelector('.now-column').offsetWidth>0"),true,'Desktop Now Playing panel is hidden');
+  assert.equal(await evaluate("document.querySelectorAll('.cover-art').length>0"),true,'Search result covers are missing');
+  assert.equal(await evaluate("[...document.querySelectorAll('.cover-art')].every(image=>image.complete&&image.naturalWidth>0)"),true,'A cover image failed to load over the companion host');
+  assert.equal(await evaluate("document.getElementById('now-art').complete&&document.getElementById('now-art').naturalWidth>0"),true,'Now Playing cover failed to load');
+  assert.deepEqual(await evaluate("(async()=>{const response=await fetch('/assets/covers/01.webp');return [response.status,response.headers.get('content-type')]})()"),[200,'image/webp'],'Static cover route did not return an image/webp response');
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.remote-layout')).gridTemplateColumns.split(' ').length===3"),true,'Desktop layout is not three columns');
   assert.equal(await evaluate("document.querySelector('.remote-layout').getBoundingClientRect().width>1000"),true,'Desktop layout did not expand');
   assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,'Desktop layout overflows');
