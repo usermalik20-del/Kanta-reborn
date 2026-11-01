@@ -946,3 +946,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Regression coverage:** exact-head Android validation must prove primary startup, fullscreen transfer, return to primary, fullscreen detachment, explicit disable and no camera auto-restart after background/foreground. Do not substitute fixed sleeps or remove the acceptance assertion.
 
 **Validation:** repair candidate committed to `fix/android-camera-preview-release-pr130`; awaiting the new exact-head Android validation run. The original failure remains recorded and is not reclassified as transient.
+
+
+## Android download publication — repeated artifact-name ambiguity (2026-11-01)
+
+**Fingerprint:** Android validation run [#41302059160](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41302059160) passed on source `95e447b` and produced a valid 46.4 MB debug APK. Publication run [#41302408491](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41302408491) first failed website verification because the publisher synchronized the Android source SHA into the iOS manifest while leaving the iOS page/package untouched. After the independent-provenance repair, retry attempt 2 uploaded a second same-name packaging artifact, then failed because the workflow selected every artifact with that name and passed multiple IDs to the positive-integer validator.
+
+**Root cause:** `upload-artifact` uses `overwrite: false`, so a retry after a partial failure leaves multiple artifacts with the same name in one run. The publishing step assumed the name uniquely identified one artifact.
+
+**Repair:** select the newest matching artifact by `created_at` (`sort_by(.created_at) | last`) and fail explicitly if none exists. The workflow contract test now requires this selection behavior. Keep the platform-specific source SHA, packaging run, retention and page independent; do not rewrite the peer platform's published provenance.
+
+**Acceptance:** the contract and website validation workflows must pass; then rerun the existing Android publication run against current main and verify the manifest/page commit plus Vercel production deployment. A created packaging ZIP alone is not a published APK.
