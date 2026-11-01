@@ -21,7 +21,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 | Android native SoundFont | Validated SF2 references, bounded allocations, audible pitch, truncation and mutation handling | C11 ASan/UBSan host harness |
 | Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, Home/Search/Queue/Pitch & Tempo/Visuals/Mic & Voice navigation and screenshots, live pitch reset, scenic selection, monitor-mode routing, persistent-stage rendering, dispatcher-based workspace back dismissal and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
 | Android adaptive UI resources | Native vector drawable XML, WebP resource decoding/packaging, and resource references used by Home, fullscreen and persistent stage views | `assembleDebug` + `lintDebug`; visual composition remains a separate screenshot/emulator acceptance gate |
-| Browser interoperability | Fresh Android export through the captured browser decrypt function | Node after Android regression fixture generation |
+| Browser interoperability | Android/iOS companion HTML, CSS and JS byte parity; TLS fingerprint-gated pairing, bounded requests, live search/reservation/cancellation/playback, and responsive 320–1440px mobile/desktop layouts in real Chrome | `tools/verify-companion-browser.mjs` in Android validation |
 | Prompt bank contract | Pinned upstream metadata, cache boundary outside the repository, no vendored upstream text | Python unittest in the Android validation job |
 
 ## Website route and responsive navigation contract
@@ -423,3 +423,4 @@ The Android runtime screenshot artifact allowlist is updated in lockstep with th
 
 The Android-hosted browser companion now uses a reference-aligned responsive shell: a desktop sidebar, central host-library/search/queue column and right-side Now Playing panel. Narrow viewports collapse to a single-column mobile controller. The existing element IDs, pairing verification, fingerprint-pinned transport, session expiry, command identities, request bounds, host-owned state and protocol allowlist are retained. Unsupported Remotes/Settings, camera, microphone, key/tempo and fullscreen controls remain visibly unavailable; the remote does not fabricate commands or duplicate Android state.
 
+The browser screenshot capture uses a 1280px desktop viewport after the real-Chrome checks have exercised 320px, 390px, 768px and 1024px narrow/reflow widths. The test checks the desktop sidebar and Now Playing column, horizontal overflow, pairing verification, queue mutations and supported playback commands. This is layout and protocol acceptance, not a visual pixel-match sign-off.
