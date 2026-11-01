@@ -184,6 +184,7 @@ public class HomeScreen extends LinearLayout {
     for (String[] n : nav) {
       Button navBtn = new Button(context);
       navBtn.setText(n[0] + "\n" + n[1]);
+      navBtn.setTag("kanta.home.nav." + n[0]);
       navBtn.setTextSize(12);
       navBtn.setTypeface(null, Typeface.BOLD);
       navBtn.setGravity(Gravity.CENTER);
