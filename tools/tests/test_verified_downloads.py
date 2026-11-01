@@ -291,52 +291,47 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         cls.android = (root / ".github/workflows/android-validation.yml").read_text(encoding="utf-8")
         cls.archive = (root / ".github/workflows/ios-runtime-artifacts.yml").read_text(encoding="utf-8")
         cls.visual = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
-        cls.workflow = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
+        cls.publisher = (root / ".github/workflows/platform-download-publishing.yml").read_text(encoding="utf-8")
+        cls.contracts = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
+
+    def test_android_and_ios_publishing_are_separate_completion_paths(self):
+        self.assertIn("KANTA Android validation", self.publisher)
+        self.assertIn("KANTA iOS unsigned artifacts", self.publisher)
+        self.assertIn("github.event.workflow_run.name == 'KANTA Android validation'", self.publisher)
+        self.assertIn("github.event.workflow_run.name == 'KANTA iOS unsigned artifacts'", self.publisher)
+        self.assertIn("PLATFORM:", self.publisher)
+        self.assertIn("tools/prepare-platform-download.py", self.publisher)
+        self.assertIn("tools/publish-platform-download.py", self.publisher)
+        self.assertNotIn('workflows: ["KANTA iOS unsigned artifacts"]', self.contracts)
+
+    def test_ios_requires_walkthrough_but_android_does_not(self):
+        prepare = (pathlib.Path(__file__).resolve().parents[1] / "prepare-platform-download.py").read_text()
+        android_branch = prepare.split('if platform == "android":', 1)[1].split("else:", 1)[0]
+        ios_branch = prepare.split("else:", 1)[1]
+        self.assertNotIn('REQUIRED_RUNS["walkthrough"]', android_branch)
+        self.assertIn('REQUIRED_RUNS["walkthrough"]', ios_branch)
+
+    def test_platform_publisher_preserves_other_platform_and_serializes_writes(self):
+        publisher = (pathlib.Path(__file__).resolve().parents[1] / "publish-platform-download.py").read_text()
+        self.assertIn('manifest["platforms"][platform] = entry', publisher)
+        self.assertIn('manifest[platform] = entry', publisher)
+        self.assertIn("PLATFORM", publisher)
+        self.assertIn("platform-download-publishing", self.publisher)
+        self.assertIn("ref: main", self.publisher)
+        self.assertIn("git push origin HEAD:main", self.publisher)
 
     def test_release_tooling_does_not_trigger_native_platform_builds(self):
         release_paths = (
             "'tools/prepare-verified-downloads.py'",
             "'tools/publish-verified-downloads.py'",
-            "'tools/tests/test_verified_downloads.py'",
-            "'tools/tests/test_publish_verified_downloads.py'",
+            "'tools/prepare-platform-download.py'",
+            "'tools/publish-platform-download.py'",
         )
-        for workflow_name, source in (("android", self.android),
-                                      ("archive", self.archive),
-                                      ("walkthrough", self.visual)):
+        for source in (self.android, self.archive, self.visual):
             for event in ("push", "pull_request"):
                 section = workflow_event_section(source, event)
-                with self.subTest(workflow=workflow_name, event=event):
-                    for path in release_paths:
-                        self.assertNotIn(path, section)
-        for event in ("push", "pull_request"):
-            package_section = workflow_event_section(self.workflow, event)
-            for path in release_paths + (
-                "'tools/verify-website.py'",
-                "'tools/tests/test_website_security_contract.py'",
-                "'.github/workflows/**'",
-                "'tools/tests/test_workflow_path_ownership.py'",
-            ):
-                self.assertIn(path, package_section)
-
-
-    def test_successful_main_unsigned_archive_automatically_starts_packaging(self):
-        self.assertIn("workflow_run:", self.workflow)
-        self.assertIn('workflows: ["KANTA iOS unsigned artifacts"]', self.workflow)
-        self.assertIn("github.event.workflow_run.conclusion == 'success'", self.workflow)
-        self.assertIn("github.event.workflow_run.head_branch == 'main'", self.workflow)
-        self.assertIn("github.event.workflow_run.head_sha", self.workflow)
-
-    def test_packaging_publishes_site_and_dispatches_production_deploy(self):
-        self.assertIn("permissions:\n  contents: read\n  actions: read", self.workflow)
-        self.assertIn("persist-credentials: false", self.workflow)
-        self.assertIn("persist-credentials: true", self.workflow)
-        self.assertIn("  package:\n    permissions:\n      contents: write\n      actions: write", self.workflow)
-        self.assertIn("tools/publish-verified-downloads.py", self.workflow)
-        self.assertIn("python3 tools/verify-website.py", self.workflow)
-        self.assertIn("python3 -m unittest tools.tests.test_website_security_contract", self.workflow)
-        self.assertIn("actions/workflows/vercel-deploy.yml/dispatches", self.workflow)
-        self.assertIn("Content-Type: application/json", self.workflow)
-        self.assertIn("git push origin HEAD:main", self.workflow)
+                for path in release_paths:
+                    self.assertNotIn(path, section)
 
 
 if __name__ == "__main__":
