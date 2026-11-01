@@ -1066,3 +1066,12 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** move both the monitor reset and `session.publish()` into `runOnMainSync`. This preserves the test's intent (restore Dry mode before leaving Mic & Voice) while respecting the production UI-thread ownership contract. Other publication calls in this test already execute inside main-thread blocks.
 
 **Validation:** rerun Android validation and verify the complete screenshot set and runtime acceptance artifact.
+
+
+### Screenshot acceptance correction (2026-11-02)
+
+**Finding:** manual inspection of the successful Android validation artifact showed that `queue_screen.png`, `pitch_tempo_screen.png`, and `visuals_screen.png` displayed the Home dashboard even though the runtime job passed. The original walkthrough waited only for a destination tag to exist in the view tree and captured immediately; that did not prove the destination was visible or that the compositor had committed its frame.
+
+**Repair:** the runtime capture helper now requires each destination view to be attached, shown by its ancestors, and have a non-empty global visible rectangle. It waits for UI idle and a bounded compositor settling interval before taking the screenshot. This turns the screenshot artifact into an actual visual acceptance gate rather than a file-presence check.
+
+**Acceptance:** rerun Android validation on the exact new PR head. Inspect all eight named native screen captures and `browser-remote.png`; verify Queue, Pitch & Tempo and Visuals no longer show Home. Do not merge or publish an APK until the new artifact is visually reviewed and all platform checks are green.
