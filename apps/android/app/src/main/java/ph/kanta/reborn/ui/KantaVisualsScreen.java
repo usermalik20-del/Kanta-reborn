@@ -244,6 +244,7 @@ public final class KantaVisualsScreen extends LinearLayout {
     for (int i = 0; i < SCENES.length; i++) {
       if (SCENES[i].equals(scene)) {
         selectedBackground = LABELS[i];
+        refresh();
         return;
       }
     }

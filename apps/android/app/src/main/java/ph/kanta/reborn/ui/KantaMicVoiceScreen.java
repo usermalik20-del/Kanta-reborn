@@ -48,6 +48,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     back.setText("\u2190");
     back.setTextSize(18);
     back.setContentDescription("Back to Home");
+    back.setTag("kanta.screen.mic-voice.back");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
     TextView title = KantaTheme.titleText(context, "Mic & Voice", 20);
     top.addView(back);
