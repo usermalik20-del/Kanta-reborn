@@ -90,7 +90,7 @@ public class HomeScreen extends LinearLayout {
     hero.setElevation(dp(2));
     TextView greeting = KantaTheme.bodyText(context, "Good evening", 13);
     greeting.setTextColor(KantaTheme.TEXT_SECONDARY);
-    TextView headline = KantaTheme.titleText(context, "Music brings\npeople together.", 27);
+    TextView headline = KantaTheme.titleText(context, "Music brings people together.", 27);
     headline.setLineSpacing(dp(1), 1.0f);
     headline.setMaxLines(2);
     headline.setPadding(0, dp(3), 0, 0);
