@@ -1500,7 +1500,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     scenicName = name;
     stageKind = "scenic";
     stageVideo = null;
-    int request = ++stageRequest;
+    long request = ++stageRequest;
     visualGeneration++;
     if (ready && stageStore != null)
       io.execute(
