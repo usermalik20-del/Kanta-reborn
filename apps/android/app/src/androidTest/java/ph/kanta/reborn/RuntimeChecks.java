@@ -216,6 +216,7 @@ public final class RuntimeChecks extends Instrumentation {
                   && session.scenic.getWidth() == 80,
           "Controller photo import failed");
       AtomicReference<View> stableStage = new AtomicReference<>();
+      AtomicReference<StageSurface> cameraStageRef = new AtomicReference<>();
       runOnMainSync(
           () ->
               stableStage.set(
