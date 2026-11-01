@@ -44,7 +44,7 @@ public class KantaPitchTempoScreen extends LinearLayout {
     top.setGravity(Gravity.CENTER_VERTICAL);
     top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
     KantaIconButton back = new KantaIconButton(context);
-    back.setText("\u2190"); back.setTextSize(18);
+    back.setText("\u2190"); back.setTextSize(18); back.setTag("kanta.screen.pitch-tempo.back");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
     TextView title = new TextView(context);
     title.setText("Pitch & Tempo");

@@ -37,7 +37,7 @@ public class KantaQueueScreen extends LinearLayout {
     top.setGravity(Gravity.CENTER_VERTICAL);
     top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
     KantaIconButton back = new KantaIconButton(context);
-    back.setText("\u2190"); back.setTextSize(18);
+    back.setText("\u2190"); back.setTextSize(18); back.setTag("kanta.screen.queue.back");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
     headerCount = new TextView(context);
     headerCount.setText("Queue (0)");
