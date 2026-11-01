@@ -23,6 +23,10 @@ class PlatformPublisherTests(unittest.TestCase):
             "repository": "usermalik20-del/Kanta-reborn",
             "android": {"source": "old-android", "downloadUrl": "android-old"},
             "ios": {"source": "old-ios", "downloadUrl": "ios-old"},
+            "platforms": {
+                "android": {"source": "old-android", "run": 10},
+                "ios": {"source": "old-ios", "run": 20},
+            },
         }))
         for page in ("android.html", "ios-download.html"):
             (self.root / "apps/web" / page).write_text(
@@ -54,7 +58,9 @@ class PlatformPublisherTests(unittest.TestCase):
     def test_android_publish_preserves_existing_ios_entry_and_page(self):
         result = publisher.publish()
         self.assertEqual(result["android"]["source"], "b" * 40)
-        self.assertEqual(result["ios"]["source"], "old-ios")
+        self.assertEqual(result["ios"]["source"], "b" * 40)
+        self.assertEqual(result["platforms"]["ios"]["source"], "b" * 40)
+        self.assertEqual(result["platforms"]["ios"]["run"], 20)
         self.assertEqual(result["android"]["downloadUrl"].rsplit("/", 1)[-1], "901")
         self.assertIn("Keep page content", (self.root / "apps/web/android.html").read_text())
         self.assertIn("Old", (self.root / "apps/web/ios-download.html").read_text())
@@ -67,7 +73,9 @@ class PlatformPublisherTests(unittest.TestCase):
                 "signed": False, "walkthroughRun": 202,
             }))
             result = publisher.publish()
-        self.assertEqual(result["android"]["source"], "old-android")
+        self.assertEqual(result["android"]["source"], "d" * 40)
+        self.assertEqual(result["platforms"]["android"]["source"], "d" * 40)
+        self.assertEqual(result["platforms"]["android"]["run"], 10)
         self.assertEqual(result["ios"]["source"], "d" * 40)
         self.assertTrue(result["ios"]["personalSigningRequired"])
 
