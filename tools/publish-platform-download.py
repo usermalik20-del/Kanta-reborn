@@ -21,7 +21,7 @@ def publish():
     platform = os.environ.get("PLATFORM", "")
     if platform not in ("android", "ios"):
         raise ValueError("PLATFORM must be android or ios")
-    info = json.loads(Path("verified-downloads/" + platform + "/build-info.json").read_text())
+    info = json.loads((ROOT / "verified-downloads" / platform / "build-info.json").read_text())
     source = info.get("source", "")
     if not re.fullmatch(r"[0-9a-f]{40}", source) or info.get("platform") != platform:
         raise ValueError("Invalid platform package provenance")
