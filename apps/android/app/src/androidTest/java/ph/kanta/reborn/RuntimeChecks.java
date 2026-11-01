@@ -77,7 +77,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.search") != null,
           "Home Search did not open the reference Search destination");
-      capture("search_screen.png");
+      capture("search_screen.png", "kanta.screen.search");
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.search.back");
         check(back != null, "Search back control missing");
@@ -95,7 +95,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue") != null,
           "Home Queue did not open the reference Queue destination");
-      capture("queue_screen.png");
+      capture("queue_screen.png", "kanta.screen.queue");
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue.back");
         check(back != null, "Queue back control missing");
@@ -112,7 +112,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.pitch-tempo") != null,
           "Home Pitch & Tempo did not open its reference destination");
-      capture("pitch_tempo_screen.png");
+      capture("pitch_tempo_screen.png", "kanta.screen.pitch-tempo");
       runOnMainSync(() -> {
         View increment = activity.getWindow().getDecorView().findViewWithTag("kanta.pitch.key.increment");
         check(increment != null, "Pitch increment control missing");
@@ -142,7 +142,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.visuals") != null,
           "Home Visuals did not open the reference destination");
-      capture("visuals_screen.png");
+      capture("visuals_screen.png", "kanta.screen.visuals");
       android.graphics.Bitmap previousScene = session.scenic;
       runOnMainSync(() -> {
         View scene = activity.getWindow().getDecorView().findViewWithTag("kanta.visuals.background.stage-lights");
@@ -165,7 +165,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice") != null,
           "Home Mic & Voice did not open the reference destination");
-      capture("mic_voice_screen.png");
+      capture("mic_voice_screen.png", "kanta.screen.mic-voice");
       runOnMainSync(() -> {
         View room = activity.getWindow().getDecorView().findViewWithTag("kanta.monitor.mode.room");
         check(room != null, "Room monitor effect control missing");
@@ -237,7 +237,7 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.now-playing.stage") != null),
           "Now Playing did not mount the live StageSurface");
-      capture("now_playing_screen.png");
+      capture("now_playing_screen.png", "kanta.screen.now-playing");
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing.back");
         check(back != null, "Now Playing back control missing");
@@ -1231,13 +1231,26 @@ public final class RuntimeChecks extends Instrumentation {
     return response;
   }
 
+  private boolean visibleOnScreen(String tag) {
+    View view = activity.getWindow().getDecorView().findViewWithTag(tag);
+    if (view == null || !view.isShown() || view.getWindowToken() == null) return false;
+    android.graphics.Rect bounds = new android.graphics.Rect();
+    return view.getGlobalVisibleRect(bounds) && bounds.width() > 0 && bounds.height() > 0;
+  }
+
+  private void capture(String name, String requiredVisibleTag) throws IOException {
+    await(() -> visibleOnScreen(requiredVisibleTag),
+        "Destination was present in the view tree but not visible before capture: " + requiredVisibleTag);
+    capture(name);
+  }
+
   private void capture(String name) throws IOException {
     try {
       getUiAutomation().waitForIdle(250, 5000);
     } catch (java.util.concurrent.TimeoutException timeout) {
       throw new IOException("UI did not settle before screenshot: " + name, timeout);
     }
-    Bitmap image = getUiAutomation().takeScreenshot();
+    // Let the compositor commit the destination frame after synchronous view-tree changes.\n    SystemClock.sleep(350);\n    Bitmap image = getUiAutomation().takeScreenshot();
     if (image == null) throw new IOException("Missing runtime screenshot");
     try (FileOutputStream output =
         new FileOutputStream(new File(getTargetContext().getFilesDir(), name))) {
