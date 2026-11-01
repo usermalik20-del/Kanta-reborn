@@ -64,7 +64,7 @@ def publish():
     manifest["packagingRun"] = run_id
     manifest["packagingRunUrl"] = f"https://github.com/{REPO}/actions/runs/{run_id}"
     manifest["retentionDays"] = days
-    path.write_text(json.dumps(manifest, indent=2) + "\\n", encoding="utf-8")
+    path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     page_path = ROOT / ("apps/web/android.html" if platform == "android" else "apps/web/ios-download.html")
     page = page_path.read_text(encoding="utf-8")
     section = (f'<section class="section" id="download"><h2>{"Android preview download" if platform == "android" else "Unsigned iPhone / iPad package"}</h2>'
