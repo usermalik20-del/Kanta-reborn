@@ -928,3 +928,8 @@ PR #118's first contract run [#41094983755](https://github.com/usermalik20-del/K
 **Regression coverage:** exact-head Android validation must run the complete emulator suite. Required assertions: primary-stage camera reaches `PreviewView.StreamState.STREAMING`; fullscreen video becomes visible, deactivates and resumes; camera moves to fullscreen and returns to primary; camera disable releases preview. Static source checks and successful compilation are not emulator acceptance.
 
 **Validation:** candidate source repair committed to the existing PR branch; awaiting the next hosted Android run. The failed run remains a real failure and must not be overwritten in the ledger.
+
+
+## Android run #407 — inverted fullscreen camera acceptance assertion — 2026-11-01
+
+The repaired camera path reached a real CameraX `STREAMING` state on the emulator, but instrumentation failed at `RuntimeChecks.java:295`. The fullscreen-stage predicate was inverted: it required `!StageSurface.isCameraVisible()` while reporting that the camera had not moved to fullscreen. `StageSurface.cameraFrame(true)` is the authoritative visibility signal set by the CameraX stream-state observer, so the assertion rejected the expected successful handoff. The candidate now requires the fullscreen surface to report camera visibility and retains the separate primary-stage and return-to-primary assertions. This is a test correction, not a skipped gate; a new exact-head Android emulator run must still pass before the repair is considered verified.
