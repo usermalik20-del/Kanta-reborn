@@ -34,13 +34,7 @@ import java.util.Locale;
 public final class SearchOverlay extends FrameLayout {
 
   private static final int ANIM_DURATION_MS = 250;
-
-  // Karaoke machine style keypad keys
-  private static final String[] KEYPAD_KEYS = {
-      "1", "2", "3", "4", "5", "6", "7", "8", "9",
-      "⌫", "0", "✓"
-  };
-  private static final int SHEET_HEIGHT_PERCENT = 50;
+  private static final int SHEET_HEIGHT_PERCENT = 70;
 
   private final EditText searchField;
   private final RecyclerView resultsList;
@@ -52,10 +46,6 @@ public final class SearchOverlay extends FrameLayout {
   private ReservationQueue queue;
   private SearchListener listener;
   private boolean isVisible = false;
-
-  private final GridLayout keypadGrid;
-  private final TextView[] keypadKeyViews = new TextView[12];
-  private KeypadListener keypadListener;
 
   public SearchOverlay(Context context) {
     this(context, null);
@@ -70,9 +60,6 @@ public final class SearchOverlay extends FrameLayout {
     float density = context.getResources().getDisplayMetrics().density;
 
     LinearLayout container = new LinearLayout(context);
-    container.setOrientation(LinearLayout.VERTICAL);
-    container.setBackgroundResource(ph.kanta.reborn.R.drawable.karaoke_search_field_bg);
-    container.setPadding((int)(20 * density), (int)(20 * density), (int)(20 * density), (int)(20 * density));
     container.setOrientation(LinearLayout.VERTICAL);
     container.setBackgroundResource(ph.kanta.reborn.R.drawable.karaoke_search_field_bg); // reuse as sheet bg
     container.setPadding((int)(20 * density), (int)(20 * density), (int)(20 * density), (int)(20 * density));
@@ -126,79 +113,9 @@ public final class SearchOverlay extends FrameLayout {
     listParams.weight = 1;
     container.addView(resultsList, listParams);
 
-// Keypad row - always visible at bottom of search sheet
-keypadGrid = new GridLayout(context);
-keypadGrid.setColumnCount(3);
-keypadGrid.setRowCount(4);
-keypadGrid.setPadding((int)(16 * density), (int)(16 * density), (int)(16 * density), (int)(16 * density));
-LayoutParams keypadParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-keypadParams.gravity = android.view.Gravity.BOTTOM;
-container.addView(keypadGrid, keypadParams);
-
-String[] KEYS = KEYPAD_KEYS;
-for (int i = 0; i < KEYS.length; i++) {
-  TextView key = new TextView(context);
-  key.setText(KEYS[i]);
-  key.setTextSize(18);
-  key.setTextColor(0xFFFFFFFF);
-  key.setTypeface(null, android.graphics.Typeface.BOLD);
-  key.setGravity(android.view.Gravity.CENTER);
-  key.setBackgroundResource(ph.kanta.reborn.R.drawable.karaoke_keypad_key_bg);
-  key.setMinWidth((int)(48 * density));
-  key.setMinHeight((int)(48 * density));
-  key.setTag(i);
-  key.setOnClickListener(v -> {
-    int idx = (Integer) v.getTag();
-    String key = KEYS[idx];
-    if (key.equals("⌫")) {
-      if (keypadListener != null) keypadListener.onBackspace();
-    } else if (key.equals("✓")) {
-      if (keypadListener != null) keypadListener.onSubmit();
-      performSearch(searchField.getText().toString());
-    } else {
-      // Insert digit into search field
-      int selStart = searchField.getSelectionStart();
-      if (selStart < 0) selStart = 0;
-      searchField.getText().insert(selStart, key);
-    }
-  });
-
-  GridLayout.LayoutParams keyParams = new GridLayout.LayoutParams();
-  keyParams.width = 0;
-  keyParams.height = 0;
-  keyParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-  keyParams.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-  keyParams.setMargins((int)(6 * density), (int)(6 * density), (int)(6 * density), (int)(6 * density));
-  keypadGrid.addView(key, keyParams);
-
-  // Special styling for backspace and submit
-  if (i == 8) { // Backspace
-    key.setBackgroundResource(ph.kanta.reborn.R.drawable.karaoke_keypad_key_backspace_bg);
-  } else if (i == 11) { // Submit
-    key.setBackgroundResource(ph.kanta.reborn.R.drawable.karaoke_keypad_key_submit_bg);
-  }
-  keypadKeyViews[i] = key;
-}
-
     // Empty view
     emptyView = new TextView(context);
     emptyView.setText("No songs found");
-
-  /** Listener for keypad events from the search overlay. */
-  public interface KeypadListener {
-    void onBackspace();
-    void onSubmit();
-  }
-
-  /** Set the keypad listener to receive backspace/submit events. */
-  public void setKeypadListener(KeypadListener listener) {
-    this.keypadListener = listener;
-    if (keypadKeyViews != null) {
-      for (TextView kv : keypadKeyViews) {
-        kv.setEnabled(listener != null);
-      }
-    }
-  }
     emptyView.setTextColor(0xFF999999);
     emptyView.setGravity(android.view.Gravity.CENTER);
     emptyView.setVisibility(GONE);

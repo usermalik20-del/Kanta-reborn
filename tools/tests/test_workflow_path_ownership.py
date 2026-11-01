@@ -23,7 +23,7 @@ def workflow(name: str) -> str:
 
 
 class WorkflowOwnershipTests(unittest.TestCase):
-    def test_android_validation_is_limited_to_android_and_release_inputs(self):
+    def test_android_validation_is_limited_to_android_owned_inputs(self):
         source = workflow("android-validation.yml")
         for event in ("push", "pull_request"):
             section = event_section(source, event)
@@ -32,6 +32,8 @@ class WorkflowOwnershipTests(unittest.TestCase):
             self.assertNotIn("'apps/web/**'", section)
             self.assertNotIn("'tools/verify-website.py'", section)
             self.assertNotIn("'tools/tests/test_website_security_contract.py'", section)
+            for release_path in ("'tools/prepare-verified-downloads.py'", "'tools/publish-verified-downloads.py'", "'tools/tests/test_verified_downloads.py'", "'tools/tests/test_publish_verified_downloads.py'"):
+                self.assertNotIn(release_path, section)
 
     def test_website_validation_owns_website_contracts(self):
         source = workflow("website-validation.yml")
@@ -51,11 +53,23 @@ class WorkflowOwnershipTests(unittest.TestCase):
                 section = event_section(source, event)
                 self.assertNotIn("'tools/verify-website.py'", section)
                 self.assertNotIn("'tools/tests/test_website_security_contract.py'", section)
-                # Android changes need same-SHA iOS release evidence after merge, not on PRs.
-                if event == "push":
-                    self.assertIn("'apps/android/**'", section)
-                else:
-                    self.assertNotIn("'apps/android/**'", section)
+                # iOS archive and walkthrough runners are owned only by iOS inputs.
+                self.assertNotIn("'apps/android/**'", section)
+                self.assertNotIn("'tools/verify-android-companion-interface.py'", section)
+                for release_path in ("'tools/prepare-verified-downloads.py'", "'tools/publish-verified-downloads.py'", "'tools/tests/test_verified_downloads.py'", "'tools/tests/test_publish_verified_downloads.py'"):
+                    self.assertNotIn(release_path, section)
+
+    def test_ios_runtime_workflows_are_strictly_ios_owned(self):
+        for name in ("ios-runtime-artifacts.yml", "ios-visual-walkthrough.yml"):
+            source = workflow(name)
+            for event in ("push", "pull_request"):
+                section = event_section(source, event)
+                self.assertIn("'apps/ios/**'", section)
+                self.assertNotIn("'apps/android/**'", section)
+                self.assertNotIn("'tools/verify-android-companion-interface.py'", section)
+        android = event_section(workflow("android-validation.yml"), "push")
+        self.assertIn("'apps/android/**'", android)
+        self.assertNotIn("'apps/ios/**'", android)
 
     def test_ios_documentation_changes_do_not_allocate_native_runners(self):
         for name in ("ios-validation.yml", "ios-runtime-artifacts.yml",
@@ -118,6 +132,19 @@ class WorkflowOwnershipTests(unittest.TestCase):
             self.assertIn("if: github.event_name == 'push'", source, name)
         walkthrough = workflow("ios-visual-walkthrough.yml")
         self.assertEqual(walkthrough.count("Enforce documentation synchronization"), 2)
+
+    def test_platform_download_publisher_has_independent_completion_ownership(self):
+        source = workflow("platform-download-publishing.yml")
+        self.assertIn("KANTA Android validation", source)
+        self.assertIn("KANTA iOS unsigned artifacts", source)
+        self.assertIn("group: platform-download-publishing", source)
+        self.assertIn("tools/prepare-platform-download.py", source)
+        self.assertIn("tools/publish-platform-download.py", source)
+        self.assertIn("ref: main", source)
+        self.assertIn("git push origin HEAD:main", source)
+        contracts = workflow("verified-downloads.yml")
+        self.assertNotIn("workflow_run:", contracts)
+        self.assertNotIn("  package:", contracts)
 
     def test_vercel_production_workflow_does_not_validate_pull_requests(self):
         source = workflow("vercel-deploy.yml")

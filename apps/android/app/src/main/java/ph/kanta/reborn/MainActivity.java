@@ -475,14 +475,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     Button controls = workspaceButton("Controls", KantaWorkspace.ACCESSORY_MORE);
     Button pitchGame = workspaceButton("Pitch", KantaWorkspace.ACCESSORY_PITCH_GAME);
     Button learning = workspaceButton("Coach", KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT);
-    // Normal mode essentials: Search and Queue
     addWeighted(bar, search);
     addWeighted(bar, queue);
-    // Performance: Pitch access
-    addWeighted(bar, pitchGame);
-    // Expanded controls: Visuals, Controls, Coach
     addWeighted(bar, visuals);
     addWeighted(bar, controls);
+    addWeighted(bar, pitchGame);
     addWeighted(bar, learning);
     return bar;
   }

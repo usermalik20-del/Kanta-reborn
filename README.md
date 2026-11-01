@@ -128,3 +128,12 @@ GitHub sign-in is required for Actions artifact downloads. GitHub Release assets
 The Android validation workflow is a full acceptance gate, not a screenshot-only shortcut. Manual dispatch may select an explicit Git ref; ordinary pushes and pull requests validate their event SHA. The workflow definition must keep `workflow_dispatch` and `push` as separate top-level events. The emulator runner must fail only when boot/network prerequisites are absent, then continue to install both APKs, execute instrumentation, and preserve screenshots under `files/`. See [the CI repair ledger](docs/CI_FAILURE_REPAIR_LEDGER.md) and [testing](docs/TESTING.md). The November 1 repair is a candidate until the complete Android validation run passes on its exact PR head.
 
 **Android emulator repair follow-up (2026-11-01):** Android run #400 passed build, lint, native and browser gates but failed emulator instrumentation because `RuntimeChecks` cast the primary `StagePresenterImpl` to the separate fullscreen `StageSurface` class. The same review found the camera controller did not accept the primary presenter as a camera target. The current PR candidate corrects test ownership and primary/fullscreen camera binding; it remains unverified until a new complete Android emulator run passes. See `docs/CI_FAILURE_REPAIR_LEDGER.md`.
+
+## Platform CI ownership
+
+Android validation and APK packaging/deployment are triggered by Android-owned source and build inputs. iOS validation, unsigned IPA packaging and iPhone/iPad simulator acceptance are triggered by iOS-owned inputs. Website validation and production deployment remain website-owned. Cross-platform fan-out is limited to explicitly shared protocol files that a second platform directly compiles or tests. An Android-only change must not start Xcode builds or IPA deployment, and an iOS-only change must not start Android builds or APK deployment. See `AGENTS.md`, `docs/ARCHITECTURE.md` and `docs/TESTING.md` for the enforced policy and regression checks.
+
+
+### Independent Android and iOS downloads
+
+Android APK publication follows successful Android validation only. iOS unsigned IPA publication follows the iOS archive and additionally requires same-commit iPhone and iPad simulator walkthrough acceptance. Each release updates only its own download page and preserves the other platform's latest published artifact. The website is deployed after the selected platform's metadata passes website validation.

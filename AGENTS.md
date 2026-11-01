@@ -62,6 +62,11 @@ Shared product behavior may be documented, but one platform must not become a bu
 
 Preserve the product invariants in apps/ios/AGENTS.md within the iOS project unless a higher-priority current instruction explicitly changes them.
 
+
+## Platform CI and deployment isolation
+
+Keep every automatic CI and deployment flow owned by its platform. Android source/build/test changes may trigger Android validation and Android APK packaging/deployment; they must not start iOS validation, Xcode archives, iPhone/iPad walkthroughs or IPA deployment. iOS source/build/test changes may trigger iOS validation, unsigned IPA packaging and iPhone/iPad walkthroughs; they must not start Android validation or APK deployment. Website-only changes belong to website validation and Vercel deployment. A shared protocol or tool may trigger multiple platform workflows only when each workflow directly compiles or tests that exact shared contract; enumerate the exact path and cover the exception in `tools/tests/test_workflow_path_ownership.py`. Never use the other platform's entire source tree as a same-SHA release trigger. Keep APK deployment in an Android-owned flow and IPA deployment in an iOS-owned flow. Changes to workflow ownership must update `docs/ARCHITECTURE.md`, `docs/TESTING.md` and the ownership regression tests.
+
 ## 4. Playback, queue and scoring invariants
 
 Each native application must have exactly one authoritative owner for playback and FIFO queue state.
@@ -302,3 +307,8 @@ When editing `.github/workflows/android-validation.yml`, keep `workflow_dispatch
 ## Android stage presenter and camera ownership regression — 2026-11-01
 
 The primary stage in `MainActivity` is `ph.kanta.reborn.stage.StagePresenterImpl`, not the legacy `StageSurface`. Do not cast the primary stage to `StageSurface` in instrumentation. Exercise `StageSurface` only when a fullscreen/external stage is actually created. `CameraStage` must support both primary `StagePresenterImpl` and fullscreen `StageSurface` targets, publish stream state to fullscreen surfaces, and obtain the primary preview from the presenter's `BackgroundStage`. Keep tests aligned with the actual stage owner and verify camera movement in both directions.
+
+
+## Platform release ownership
+
+Keep native build and public download publication independent. Android APK publishing is triggered only by successful main-branch Android validation and consumes that exact run's APK artifact. iOS unsigned IPA publishing is triggered only by successful main-branch iOS archive completion and must additionally pass the iPhone and iPad simulator walkthrough on the same SHA. Never require Android validation for iOS publication or iOS archive/walkthrough for Android publication. Each publisher may update only its own platform download page and manifest entry; preserve the peer platform's current published entry. The shared website deployment follows successful metadata publication.
