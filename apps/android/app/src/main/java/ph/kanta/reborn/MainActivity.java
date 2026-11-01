@@ -73,6 +73,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
+  private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
   private String searchSource = "All";
   private boolean preparingExport = false;
   private byte[] exportBytes;
@@ -958,6 +959,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       case "Pitch & Tempo":
         pitchTempoScreen();
         break;
+      case "Mic & Voice":
+        micVoiceScreen();
+        break;
+      case "Visuals":
+        visualsScreen();
+        break;
       case "My Set":
         mySet();
         break;
@@ -990,12 +997,120 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean isReferenceDestination(String destination) {
     return "Search".equals(destination)
         || "Queue".equals(destination)
-        || "Pitch & Tempo".equals(destination);
+        || "Pitch & Tempo".equals(destination)
+        || "Mic & Voice".equals(destination)
+        || "Visuals".equals(destination);
   }
 
   private void navigateHome() {
     tab = "Home";
+    micVoiceScreen = null;
     render();
+  }
+
+  /** Full-screen visual picker backed by the existing scenic, camera and import owners. */
+  private void visualsScreen() {
+    ph.kanta.reborn.ui.KantaVisualsScreen screen =
+        new ph.kanta.reborn.ui.KantaVisualsScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaVisualsScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onTabSelected(int index, String label) {}
+              @Override public void onBackgroundSelected(String name) {
+                if (!session.stageReady) return;
+                camera.stop();
+                String[] ids = {
+                  "bayanDawn", "bambooMist", "coralHaze", "deepLagoon", "emberSunset",
+                  "indigoHorizon", "mangoGlow", "moonlitBay", "orchidNight", "pearlSky"
+                };
+                String[] labels = {
+                  "Default", "Stage Lights", "Galaxy", "Sunset", "Ocean",
+                  "City", "Neon", "Particles", "Custom", "Forest"
+                };
+                for (int i = 0; i < labels.length; i++) {
+                  if (labels[i].equals(name)) {
+                    if (i == 8) { chooseCustomStageMedia(); return; }
+                    session.scene(ids[i]);
+                    return;
+                  }
+                }
+              }
+              @Override public void onCameraToggle(boolean enabled) {
+                if (enabled != camera.enabled()) toggleCamera();
+              }
+              @Override public void onEffectSelected(String name) {
+                Toast.makeText(
+                    MainActivity.this,
+                    "Stage effect " + name + " is not available yet. Your current background is unchanged.",
+                    Toast.LENGTH_LONG).show();
+              }
+              @Override public void onCustomImport() { chooseCustomStageMedia(); }
+            });
+    screen.setTag("kanta.screen.visuals");
+    screen.setCameraState(camera.enabled(), camera.streaming());
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  private void chooseCustomStageMedia() {
+    new AlertDialog.Builder(this)
+        .setTitle("Custom stage background")
+        .setItems(
+            new String[] {"Choose photo", "Choose video"},
+            (dialog, selected) -> {
+              Intent picker =
+                  new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                      .addCategory(Intent.CATEGORY_OPENABLE)
+                      .setType(selected == 0 ? "image/*" : "video/*");
+              startActivityForResult(picker, selected == 0 ? PHOTO : VIDEO);
+            })
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  /** The UI exposes only controls backed by the existing microphone and monitor owners. */
+  private void micVoiceScreen() {
+    micVoiceScreen =
+        new ph.kanta.reborn.ui.KantaMicVoiceScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaMicVoiceScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onMicToggle(boolean enabled) {
+                if (enabled) toggleMicrophone();
+                else session.stopMicrophone();
+              }
+              @Override public void onMonitorToggle(boolean enabled) {
+                if (enabled) toggleMonitoring();
+                else session.stopMonitor();
+              }
+              @Override public void onMonitorGainChanged(float value) {
+                session.monitor.gain(value);
+              }
+              @Override public void onMonitorModeSelected(String mode) {
+                ph.kanta.reborn.core.VocalMonitorEffects.Mode selected;
+                switch (mode) {
+                  case "Room": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.ROOM; break;
+                  case "Hall": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.HALL; break;
+                  case "Echo": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.ECHO; break;
+                  default: selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY;
+                }
+                session.monitor.mode(selected);
+                session.publish();
+              }
+              @Override public void onScoringToggle(boolean enabled) {
+                session.setScoring(enabled);
+              }
+            });
+    micVoiceScreen.setTag("kanta.screen.mic-voice");
+    micVoiceScreen.setState(
+        session.microphone.enabled(),
+        session.microphone.capturing(),
+        session.monitor.enabled(),
+        session.monitor.audible(),
+        session.monitor.gain(),
+        session.monitor.mode().name(),
+        session.scoringEnabled,
+        session.scoreStatus());
+    body.addView(micVoiceScreen, new LinearLayout.LayoutParams(-1, -1));
   }
 
   /** Search projects the current catalog; it does not claim unsupported YouTube discovery. */
@@ -1208,8 +1323,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
               @Override public void onQueue() { tab = "Queue"; render(); }
               @Override public void onYouTube() { openYouTubeVideo(); }
-              @Override public void onVisuals() { tab = "Scenic"; render(); }
-              @Override public void onMicVoice() { tab = "Control"; voiceExpanded = true; render(); }
+              @Override public void onVisuals() { tab = "Visuals"; render(); }
+              @Override public void onMicVoice() { tab = "Mic & Voice"; render(); }
               @Override public void onPitchTempo() { tab = "Pitch & Tempo"; render(); }
               @Override public void onMySet() { tab = "My Set"; render(); }
               @Override public void onFavorites() { tab = "My Set"; render(); }
@@ -1814,6 +1929,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void refreshMicrophoneReading() {
+    if (micVoiceScreen != null && "Mic & Voice".equals(tab)) {
+      MicrophoneInput.Reading reading = session.microphone.reading();
+      micVoiceScreen.setInputLevel(
+          reading == null ? 0f : (float) reading.rms,
+          !session.microphone.enabled()
+              ? "Microphone off"
+              : !session.microphone.capturing()
+                  ? "Starting microphone…"
+                  : reading == null ? "Listening for input…" : "Microphone input active");
+      micVoiceScreen.setMonitorState(
+          session.monitor.enabled(), session.monitor.audible(), session.monitor.gain(),
+          session.monitor.mode().name());
+      micVoiceScreen.setScoreState(session.scoringEnabled, session.scoreStatus());
+    }
     if (microphoneReading == null) return;
     MicrophoneInput.Reading value = session.microphone.reading();
     String label;

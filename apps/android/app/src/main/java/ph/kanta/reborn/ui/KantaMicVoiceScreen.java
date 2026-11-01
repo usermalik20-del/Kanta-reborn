@@ -5,217 +5,277 @@ import android.graphics.Typeface;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
-import ph.kanta.reborn.ui.components.KantaIconButton;
-
-public class KantaMicVoiceScreen extends LinearLayout {
+/** Mic and voice controls backed by the app's existing capture, monitor and scoring owners. */
+public final class KantaMicVoiceScreen extends LinearLayout {
   public interface Listener {
     void onBack();
     void onMicToggle(boolean enabled);
-    void onReverbChanged(float value);
-    void onEchoChanged(float value);
-    void onFxSelected(String fx);
+    void onMonitorToggle(boolean enabled);
+    void onMonitorGainChanged(float value);
+    void onMonitorModeSelected(String mode);
+    void onScoringToggle(boolean enabled);
   }
+
   private final Context context;
   private final float density;
   private final Listener listener;
-  private boolean micEnabled = false;
-  private String reverbValue = "0";
-  private String echoValue = "0";
+  private TextView micStatus, monitorStatus, levelLabel, gainValue, scoreStatus;
+  private Button micToggle, monitorToggle, scoringToggle;
+  private SeekBar gainSlider;
+  private final Button[] modeButtons = new Button[4];
+  private float inputLevel;
+
   public KantaMicVoiceScreen(Context context, Listener listener) {
     super(context);
     this.context = context;
     this.density = context.getResources().getDisplayMetrics().density;
     this.listener = listener;
     setOrientation(VERTICAL);
-    setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
+    setBackgroundColor(KantaTheme.BG_MAIN);
     build();
   }
+
   private void build() {
     LinearLayout top = new LinearLayout(context);
     top.setOrientation(HORIZONTAL);
     top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
-    KantaIconButton back = new KantaIconButton(context);
-    back.setText("\u2190"); back.setTextSize(18);
+    top.setPadding(dp(16), dp(12), dp(16), dp(8));
+    ph.kanta.reborn.ui.components.KantaIconButton back =
+        new ph.kanta.reborn.ui.components.KantaIconButton(context);
+    back.setText("\u2190");
+    back.setTextSize(18);
+    back.setContentDescription("Back to Home");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    TextView title = new TextView(context);
-    title.setText("Mic & Voice");
-    title.setTextSize(18);
-    title.setTypeface(null, Typeface.BOLD);
-    title.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
-    LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    tp.weight = 1;
-    title.setLayoutParams(tp);
-    top.addView(back); top.addView(title);
+    TextView title = KantaTheme.titleText(context, "Mic & Voice", 20);
+    top.addView(back);
+    top.addView(title, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     addView(top);
+
+    android.widget.ScrollView scroll = new android.widget.ScrollView(context);
+    scroll.setFillViewport(false);
     LinearLayout content = new LinearLayout(context);
     content.setOrientation(VERTICAL);
-    content.setPadding((int)(16*density), 0, (int)(16*density), 0);
-    LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
-    cp.weight = 1;
-    addView(content, cp);
-    LinearLayout micRow = new LinearLayout(context);
-    micRow.setOrientation(HORIZONTAL);
-    micRow.setGravity(Gravity.CENTER_VERTICAL);
-    micRow.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(12*density));
-    micRow.setBackground(ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
-        ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED, 16,
-        ph.kanta.reborn.ui.KantaTheme.BORDER, 1, density));
-    TextView micLabel = new TextView(context);
-    micLabel.setText("Mic Input");
-    micLabel.setTextSize(16);
-    micLabel.setTypeface(null, Typeface.BOLD);
-    micLabel.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
-    LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    mlp.weight = 1;
-    micLabel.setLayoutParams(mlp);
-    Button micToggle = new Button(context);
-    micToggle.setText(micEnabled ? "ON" : "OFF");
-    micToggle.setTextSize(14);
-    micToggle.setTypeface(null, Typeface.BOLD);
-    micToggle.setTextColor(micEnabled ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-    micToggle.setBackground(ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
-        micEnabled ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.SURFACE,
-        20, 0, 0, density));
-    micToggle.setPadding((int)(16*density),(int)(8*density),(int)(16*density),(int)(8*density));
+    content.setPadding(dp(16), dp(4), dp(16), dp(24));
+    scroll.addView(content);
+    addView(scroll, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1));
+
+    LinearLayout micCard = card();
+    LinearLayout micHeader = new LinearLayout(context);
+    micHeader.setGravity(Gravity.CENTER_VERTICAL);
+    TextView micTitle = KantaTheme.titleText(context, "Mic Input", 16);
+    micHeader.addView(micTitle, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
+    micToggle = actionButton("Turn on");
+    micToggle.setTag("kanta.mic.toggle");
     micToggle.setOnClickListener(v -> {
-      micEnabled = !micEnabled;
-      micToggle.setText(micEnabled ? "ON" : "OFF");
-      micToggle.setTextColor(micEnabled ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-      micToggle.setBackground(ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
-          micEnabled ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.SURFACE,
-          20, 0, 0, density));
-      if (listener != null) listener.onMicToggle(micEnabled);
+      if (listener != null) listener.onMicToggle(micStatus != null
+          && micStatus.getText().toString().startsWith("Microphone off"));
     });
-    micRow.addView(micLabel); micRow.addView(micToggle);
-    content.addView(micRow);
-    LinearLayout levelRow = new LinearLayout(context);
-    levelRow.setOrientation(VERTICAL);
-    levelRow.setPadding((int)(16*density),(int)(16*density),(int)(16*density), 0);
-    TextView levelLabel = new TextView(context);
-    levelLabel.setText("Input Level");
-    levelLabel.setTextSize(12);
-    levelLabel.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-    levelRow.addView(levelLabel);
+    micHeader.addView(micToggle);
+    micCard.addView(micHeader);
+    micStatus = bodyText("Microphone off");
+    micStatus.setTag("kanta.mic.status");
+    micCard.addView(micStatus);
+    levelLabel = bodyText("Input level · waiting");
+    levelLabel.setPadding(0, dp(12), 0, dp(4));
+    micCard.addView(levelLabel);
     LinearLayout meter = new LinearLayout(context);
-    meter.setOrientation(HORIZONTAL);
-    meter.setGravity(Gravity.BOTTOM);
-    meter.setPadding(0, (int)(8*density), 0, (int)(8*density));
-    for (int i = 0; i < 10; i++) {
-      android.view.View bar = new android.view.View(context);
-      bar.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-      LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(0, (int)(20*density), 1);
-      bp.bottomMargin = (int)(2*density);
-      meter.addView(bar, bp);
+    meter.setGravity(Gravity.CENTER_VERTICAL);
+    for (int i = 0; i < 12; i++) {
+      TextView bar = new TextView(context);
+      bar.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE_ELEVATED, 3, KantaTheme.BORDER, 1, density));
+      LinearLayout.LayoutParams p = new LayoutParams(0, dp(12), 1);
+      p.leftMargin = dp(2);
+      p.rightMargin = dp(2);
+      meter.addView(bar, p);
     }
-    levelRow.addView(meter);
-    content.addView(levelRow);
-    content.addView(sliderRow("Reverb", reverbValue, (v) -> {
-      reverbValue = v;
-      if (listener != null) listener.onReverbChanged(Float.parseFloat(v));
-    }));
-    content.addView(sliderRow("Echo", echoValue, (v) -> {
-      echoValue = v;
-      if (listener != null) listener.onEchoChanged(Float.parseFloat(v));
-    }));
-    LinearLayout fxLabelRow = new LinearLayout(context);
-    fxLabelRow.setOrientation(HORIZONTAL);
-    fxLabelRow.setPadding((int)(16*density),(int)(20*density),(int)(16*density),(int)(8*density));
-    TextView fxLabel = new TextView(context);
-    fxLabel.setText("Voice FX");
-    fxLabel.setTextSize(12);
-    fxLabel.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-    fxLabel.setTypeface(null, Typeface.BOLD);
-    fxLabelRow.addView(fxLabel);
-    content.addView(fxLabelRow);
-    LinearLayout fxRow = new LinearLayout(context);
-    fxRow.setOrientation(HORIZONTAL);
-    fxRow.setGravity(Gravity.CENTER_VERTICAL);
-    fxRow.setPadding((int)(16*density), 0, (int)(16*density), (int)(16*density));
-    String[] fx = {"Off", "Warm", "Bright", "Hall"};
-    for (String f : fx) {
-      Button chip = new Button(context);
-      chip.setText(f);
-      chip.setTextSize(13);
-      chip.setTypeface(null, Typeface.BOLD);
-      chip.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-      chip.setBackground(ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
-          ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED, 20,
-          ph.kanta.reborn.ui.KantaTheme.BORDER, 1, density));
-      chip.setPadding((int)(14*density),(int)(10*density),(int)(14*density),(int)(10*density));
-      final String fxName = f;
-      chip.setOnClickListener(v -> { if (listener != null) listener.onFxSelected(fxName); });
-      fxRow.addView(chip);
+    meter.setTag("kanta.mic.level-meter");
+    micCard.addView(meter);
+    addViewCard(content, micCard);
+
+    LinearLayout monitorCard = card();
+    TextView monitorTitle = KantaTheme.titleText(context, "Voice Monitoring", 16);
+    monitorCard.addView(monitorTitle);
+    monitorStatus = bodyText("Monitoring off · connect wired, USB or Bluetooth headphones");
+    monitorStatus.setPadding(0, dp(6), 0, dp(8));
+    monitorCard.addView(monitorStatus);
+    monitorToggle = actionButton("Choose output");
+    monitorToggle.setTag("kanta.monitor.toggle");
+    monitorToggle.setOnClickListener(v -> {
+      boolean enabled = monitorStatus != null
+          && monitorStatus.getText().toString().startsWith("Monitoring off");
+      if (listener != null) listener.onMonitorToggle(enabled);
+    });
+    monitorCard.addView(monitorToggle);
+    TextView gainTitle = bodyText("Voice output level");
+    monitorCard.addView(gainTitle);
+    LinearLayout gainHeader = new LinearLayout(context);
+    gainHeader.setGravity(Gravity.CENTER_VERTICAL);
+    gainValue = bodyText("10%");
+    gainHeader.addView(gainValue);
+    monitorCard.addView(gainHeader);
+    gainSlider = new SeekBar(context);
+    gainSlider.setTag("kanta.monitor.gain");
+    gainSlider.setMax(35);
+    gainSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+      @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+      @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        if (fromUser && listener != null) {
+          gainValue.setText(progress + "%");
+          listener.onMonitorGainChanged(progress / 100f);
+        }
+      }
+    });
+    monitorCard.addView(gainSlider);
+    TextView fxTitle = bodyText("Monitor effect");
+    fxTitle.setPadding(0, dp(10), 0, dp(6));
+    monitorCard.addView(fxTitle);
+    LinearLayout modes = new LinearLayout(context);
+    modes.setGravity(Gravity.CENTER_VERTICAL);
+    String[] names = {"Dry", "Room", "Hall", "Echo"};
+    for (int i = 0; i < names.length; i++) {
+      final String name = names[i];
+      Button chip = actionButton(name);
+      chip.setTextSize(12);
+      chip.setTag("kanta.monitor.mode." + name.toLowerCase(java.util.Locale.ROOT));
+      chip.setOnClickListener(v -> {
+        if (listener != null) listener.onMonitorModeSelected(name);
+        selectMode(name);
+      });
+      modeButtons[i] = chip;
+      LinearLayout.LayoutParams p = new LayoutParams(0, dp(44), 1);
+      p.leftMargin = dp(3);
+      p.rightMargin = dp(3);
+      modes.addView(chip, p);
     }
-    content.addView(fxRow);
-    LinearLayout coachLabelRow = new LinearLayout(context);
-    coachLabelRow.setOrientation(HORIZONTAL);
-    coachLabelRow.setPadding((int)(16*density),(int)(24*density),(int)(16*density),(int)(8*density));
-    TextView coachLabel = new TextView(context);
-    coachLabel.setText("Coach");
-    coachLabel.setTextSize(12);
-    coachLabel.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-    coachLabel.setTypeface(null, Typeface.BOLD);
-    coachLabelRow.addView(coachLabel);
-    content.addView(coachLabelRow);
-    LinearLayout coachRow = new LinearLayout(context);
-    coachRow.setOrientation(HORIZONTAL);
-    coachRow.setGravity(Gravity.CENTER);
-    coachRow.setPadding((int)(16*density), 0, (int)(16*density), (int)(24*density));
-    String[] coach = {"Pitch", "Timing", "Control"};
-    for (String c : coach) {
-      LinearLayout col = new LinearLayout(context);
-      col.setOrientation(VERTICAL);
-      col.setGravity(Gravity.CENTER);
-      TextView score = new TextView(context);
-      score.setText("--");
-      score.setTextSize(24);
-      score.setTypeface(null, Typeface.BOLD);
-      score.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-      TextView label = new TextView(context);
-      label.setText(c);
-      label.setTextSize(11);
-      label.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-      col.addView(score); col.addView(label);
-      coachRow.addView(col, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
-    }
-    content.addView(coachRow);
+    monitorCard.addView(modes);
+    TextView monitorNote = bodyText(
+        "Monitoring is opt-in and requires a verified wired, USB or Bluetooth headset route. "
+            + "Speaker outputs are blocked to prevent feedback.");
+    monitorNote.setTextSize(12);
+    monitorCard.addView(monitorNote);
+    addViewCard(content, monitorCard);
+
+    LinearLayout coachCard = card();
+    TextView coachTitle = KantaTheme.titleText(context, "Vocal Coach", 16);
+    coachCard.addView(coachTitle);
+    scoreStatus = bodyText("Song scoring is off");
+    scoreStatus.setTag("kanta.score.status");
+    scoreStatus.setPadding(0, dp(8), 0, dp(8));
+    coachCard.addView(scoreStatus);
+    scoringToggle = actionButton("Enable song scoring");
+    scoringToggle.setTag("kanta.score.toggle");
+    scoringToggle.setOnClickListener(v -> {
+      boolean enabled = scoringToggle.getText().toString().startsWith("Enable");
+      if (listener != null) listener.onScoringToggle(enabled);
+    });
+    coachCard.addView(scoringToggle);
+    TextView note = bodyText(
+        "Scores appear only when the current song has a supported melody reference and reliable "
+            + "microphone input. No example scores are displayed.");
+    note.setTextSize(12);
+    coachCard.addView(note);
+    addViewCard(content, coachCard);
   }
-  private LinearLayout sliderRow(String label, String value, SliderListener callback) {
-    LinearLayout row = new LinearLayout(context);
-    row.setOrientation(VERTICAL);
-    row.setPadding((int)(16*density),(int)(16*density),(int)(16*density),(int)(8*density));
-    LinearLayout header = new LinearLayout(context);
-    header.setOrientation(HORIZONTAL);
-    TextView l = new TextView(context);
-    l.setText(label);
-    l.setTextSize(12);
-    l.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-    l.setTypeface(null, Typeface.BOLD);
-    header.addView(l);
-    TextView v = new TextView(context);
-    v.setText(value);
-    v.setTextSize(12);
-    v.setTextColor(ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN);
-    v.setTypeface(null, Typeface.BOLD);
-    header.addView(v);
-    row.addView(header);
-    LinearLayout track = new LinearLayout(context);
-    track.setOrientation(HORIZONTAL);
-    track.setGravity(Gravity.CENTER_VERTICAL);
-    track.setPadding(0, (int)(8*density), 0, 0);
-    track.setBackground(ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
-        ph.kanta.reborn.ui.KantaTheme.BORDER, 4, 0, 0, density));
-    android.view.View thumb = new android.view.View(context);
-    thumb.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN);
-    LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams((int)(24*density), (int)(24*density));
-    track.addView(thumb, tp);
-    row.addView(track);
-    return row;
+
+  private LinearLayout card() {
+    LinearLayout card = new LinearLayout(context);
+    card.setOrientation(VERTICAL);
+    card.setPadding(dp(16), dp(14), dp(16), dp(14));
+    card.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE_ELEVATED, 16, KantaTheme.BORDER, 1, density));
+    return card;
   }
-  private interface SliderListener {
-    void onChanged(String value);
+
+  private void addViewCard(LinearLayout parent, LinearLayout card) {
+    LayoutParams p = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+    p.bottomMargin = dp(12);
+    parent.addView(card, p);
+  }
+
+  private Button actionButton(String label) {
+    Button button = new Button(context);
+    button.setText(label);
+    button.setAllCaps(false);
+    button.setTextSize(13);
+    button.setTypeface(null, Typeface.BOLD);
+    button.setTextColor(KantaTheme.TEXT_PRIMARY);
+    button.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 12, KantaTheme.PRIMARY_BLUE, 1, density));
+    button.setMinHeight(dp(44));
+    return button;
+  }
+
+  private TextView bodyText(String value) {
+    TextView view = new TextView(context);
+    view.setText(value);
+    view.setTextSize(13);
+    view.setTextColor(KantaTheme.TEXT_SECONDARY);
+    view.setLineSpacing(dp(2), 1f);
+    return view;
+  }
+
+  private int dp(int value) { return (int) (value * density); }
+
+  public void setState(
+      boolean micEnabled, boolean micCapturing, boolean monitorEnabled, boolean monitorAudible,
+      float gain, String mode, boolean scoringEnabled, String scoringMessage) {
+    if (micStatus != null) {
+      micStatus.setText(!micEnabled ? "Microphone off"
+          : micCapturing ? "Microphone input active" : "Starting microphone…");
+      micToggle.setText(micEnabled ? "Turn off" : "Turn on");
+      micToggle.setEnabled(!micEnabled || micCapturing);
+    }
+    setMonitorState(monitorEnabled, monitorAudible, gain, mode);
+    setScoreState(scoringEnabled, scoringMessage);
+  }
+
+  public void setInputLevel(float rms, String message) {
+    inputLevel = Float.isFinite(rms) ? Math.max(0f, Math.min(1f, rms * 8f)) : 0f;
+    if (levelLabel != null) levelLabel.setText(message);
+    if (getChildCount() < 2) return;
+    android.view.ViewGroup scrollContent = (android.view.ViewGroup) ((android.widget.ScrollView) getChildAt(1)).getChildAt(0);
+    if (scrollContent == null) return;
+    android.view.View meter = scrollContent.findViewWithTag("kanta.mic.level-meter");
+    if (!(meter instanceof LinearLayout)) return;
+    LinearLayout bars = (LinearLayout) meter;
+    int active = Math.round(inputLevel * bars.getChildCount());
+    for (int i = 0; i < bars.getChildCount(); i++) {
+      TextView bar = (TextView) bars.getChildAt(i);
+      int color = i < active ? (i >= 9 ? KantaTheme.WARNING : KantaTheme.SUCCESS) : KantaTheme.SURFACE_ELEVATED;
+      bar.setBackground(KantaTheme.backgroundDrawable(color, 3, KantaTheme.BORDER, 1, density));
+    }
+  }
+
+  public void setMonitorState(boolean enabled, boolean audible, float gain, String mode) {
+    if (monitorStatus == null) return;
+    monitorStatus.setText(!enabled ? "Monitoring off · connect a supported headset"
+        : audible ? "Monitoring active · route verified" : "Monitoring muted · verifying output");
+    monitorToggle.setText(enabled ? "Turn off monitoring" : "Choose output");
+    monitorToggle.setEnabled(enabled || micStatus.getText().toString().equals("Microphone input active"));
+    int progress = Math.round(Math.max(0f, Math.min(.35f, gain)) * 100);
+    if (gainSlider != null && !gainSlider.isPressed()) gainSlider.setProgress(progress);
+    if (gainValue != null) gainValue.setText(progress + "%");
+    selectMode(mode);
+  }
+
+  private void selectMode(String mode) {
+    String selected = mode == null ? "DRY" : mode.toUpperCase(java.util.Locale.ROOT);
+    for (int i = 0; i < modeButtons.length; i++) {
+      if (modeButtons[i] == null) continue;
+      String key = new String[] {"DRY", "ROOM", "HALL", "ECHO"}[i];
+      boolean active = key.equals(selected);
+      modeButtons[i].setTextColor(active ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_SECONDARY);
+      modeButtons[i].setBackground(KantaTheme.backgroundDrawable(
+          active ? KantaTheme.SURFACE_ELEVATED : KantaTheme.SURFACE, 10,
+          active ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER, active ? 2 : 1, density));
+    }
+  }
+
+  public void setScoreState(boolean enabled, String message) {
+    if (scoreStatus == null) return;
+    scoreStatus.setText(message == null ? "Scoring status unavailable" : message);
+    scoringToggle.setText(enabled ? "Turn off song scoring" : "Enable song scoring");
   }
 }
