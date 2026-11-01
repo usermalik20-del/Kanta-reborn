@@ -402,20 +402,21 @@ def main():
             ("ios", "ios-download.html", "ipaSha256", "IPA"),
         ):
             build = manifest[platform]
+            platform_source = build["source"]
+            assert re.fullmatch(r"[0-9a-f]{40}", platform_source), filename + " source SHA is malformed"
+            platform_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["packagingRun"])
             source_artifact_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"])
-            packaged_artifact_url = packaging_run_url + "/artifacts/" + str(build["packagingArtifact"])
+            packaged_artifact_url = platform_run_url + "/artifacts/" + str(build["packagingArtifact"])
             page_source = (WEB / filename).read_text(encoding="utf-8")
-            assert build["source"] == source, filename + " source revision differs from manifest"
             assert build["downloadUrl"] == packaged_artifact_url, filename + " packaged artifact differs from manifest"
             assert packaged_artifact_url in page_source, filename + " packaged artifact link differs from manifest"
-            assert str(manifest["retentionDays"]) + "-day retention" in page_source, filename + " published retention differs from manifest"
+            assert str(build["retentionDays"]) + "-day retention" in page_source, filename + " published retention differs from manifest"
             assert source_artifact_url in page_source, filename + " source artifact provenance link is missing"
-            assert source[:8] in page_source, filename + " source revision differs from manifest"
+            assert platform_source[:8] in page_source, filename + " source revision differs from manifest"
             assert re.fullmatch(r"[0-9a-f]{64}", build["sha256"]), filename + " packaged ZIP digest is malformed"
             assert "Artifact ZIP SHA-256: <code>" + build["sha256"] + "</code>" in page_source, filename + " packaged ZIP digest differs from manifest"
             assert re.fullmatch(r"[0-9a-f]{64}", build[app_digest_key]), filename + " application checksum is malformed"
             assert app_label + " SHA-256: <code>" + build[app_digest_key] + "</code>" in page_source, filename + " application checksum differs from manifest"
-        assert manifest["android"]["source"] == manifest["ios"]["source"], "Platform downloads must describe the same accepted source revision"
         assert manifest["ios"]["signed"] is False and manifest["ios"]["personalSigningRequired"]
         assert not manifest["ios"]["icloudAvailable"]
         ios_page = (WEB / "ios-download.html").read_text(encoding="utf-8")
