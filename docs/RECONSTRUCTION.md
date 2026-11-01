@@ -36,51 +36,28 @@ fix, and anything about a browser-impersonating client.** Rate limiting and rate
 protection remain unimplemented; see [docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md)
 and section J of `docs/UNFINISHED_WORK.md`.
 
-## KANTA design-system UI refactor — 2026-11-01
+## KANTA reference-led Android UI — integration correction (2026-11-01)
 
-Android UI refactor implementing the KANTA dark entertainment design system faithfully against the
-supplied concept. Presentation-only change; all backend logic (playback, queue, persistence, sensor,
-companion) remains owned by `SessionController` and `StagePresenterImpl`.
+The earlier UI refactor added a dark design token set, reusable Android Views components and eight screen classes. Its completion note overstated integration: the production `MainActivity` composition continued to mount the existing Compact Workspace, and the new screen classes were not instantiated by the app's navigation. The browser companion was also described as a three-column desktop layout even though the checked-in HTML/CSS remained a narrow single-column controller. Source presence and balanced delimiters were incorrectly treated as evidence of an implemented visual redesign.
 
-### Files added
+### Corrected baseline
 
-- `apps/android/app/src/main/java/ph/kanta/reborn/ui/KantaTheme.java` — design tokens (colors, radii,
-  gradient policy, helper factories)
-- `apps/android/app/src/main/java/ph/kanta/reborn/ui/components/` — 11 reusable components
-  (KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar, KantaStepper,
-  KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow, KantaTransportControls)
-- `apps/android/app/src/main/java/ph/kanta/reborn/ui/` — 8 screens
-  (HomeScreen, KantaNowPlayingScreen, KantaSearchScreen, KantaQueueScreen, KantaPitchTempoScreen,
-  KantaMicVoiceScreen, KantaVisualsScreen, KantaFullscreenStage)
+- The app remains native Java / Android Views; `MainActivity` owns composition, `KantaWorkspace` owns persistent-stage/accessory presentation, `StagePresenterImpl` owns stage overlays and `SessionController` owns playback/session/queue behavior.
+- `HomeScreen` is now mounted as the initial destination on the safe branch `feat/android-kanta-reference-fidelity`. Its actions route to existing application owners; it does not replace them.
+- The Home dashboard now has the reference's 3-column / 2-row feature grid. While Home is active, the old stage pane and old tab row are hidden from view but not destroyed. Existing destinations restore the legacy composition.
+- The other new screen classes remain unintegrated candidates until their routes, real state bindings and functional callbacks are verified.
+- Browser companion is still the existing secure single-column controller; desktop three-column visual acceptance has not been implemented.
+- No visual acceptance, emulator screenshot comparison, APK production, device acceptance or release is claimed for this safe-branch work yet.
 
-### Files modified
+### Files changed in the first integration batch
 
-- `apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java` — buildWindow uses KantaTheme
-  colors and adds a contentContainer overlay for design-system screens; screen management methods
-  wire each screen's Listener into existing SessionController / StagePresenterImpl methods; render()
-  updated to reflect current session state on active screens
-- `apps/android/app/src/main/assets/companion/index.html` — restyled to KANTA design system
-  (3-column desktop layout, sidebar, now-playing panel, bottom remote bar)
-- `apps/android/app/src/main/assets/companion/remote.css` — KANTA design system colors, radii,
-  responsive breakpoints at 1000px and 640px
+- `MainActivity.java`: mounts the Home dashboard, selects it at launch, hides the legacy stage/navigation chrome only while Home is active, and routes Home actions into the existing workspace and navigation.
+- `ui/HomeScreen.java`: corrects the feature grid to three columns by two rows, adds working Home/settings actions and preserves the existing destination callbacks.
+- Architecture and testing documentation now distinguish integrated production UI from unused presentation candidates.
 
-### Files NOT modified
+### Required next acceptance
 
-- All SessionController, StagePresenterImpl, playback, queue, microphone, camera, YouTube,
-  local-file, visuals and companion backend logic — unchanged, no behavior duplicated or replaced
-
-### Backward compatibility
-
-The existing workspace/StagePresenterImpl/transport/toolbar/body structure is preserved. The new
-design-system screens are presented as an overlay via contentContainer; the existing UI remains
-fully functional.
-
-### Verification
-
-- All new Java files parse (braces/parens/brackets balanced)
-- MainActivity.java braces/parens/brackets balanced
-- Browser remote: all 22 element IDs queried by remote.js exist in index.html; remote.js byte-identical
-  (no wire/protocol changes); HTML tags balanced; node --check passes on remote.js
+Run the Android-owned workflow on this branch; inspect its actual APK and emulator screenshots; add a visual walkthrough that captures Home and the existing stage/accessory surfaces at controlled dimensions; compare those captures with the supplied reference. Continue integrating the remaining screens only where real backend state and actions can be preserved. Do not merge or publish until the visual and functional gates pass.
 
 ## Current checkpoint — 2026-10-29 (main `2a01654`; public release source `41c8ddde`)
 
