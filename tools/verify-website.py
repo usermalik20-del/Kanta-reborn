@@ -197,6 +197,136 @@ def validate_responsive_navigation_styles():
     )
 
 
+def parse_robots_groups(source):
+    """Return {agent token: set of (field, value)} for blank-line separated groups."""
+    groups = {}
+    agents = []
+    directives = []
+    for raw in source.splitlines() + [""]:
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            for agent in agents:
+                groups.setdefault(agent, set()).update(directives)
+            agents, directives = [], []
+            continue
+        field, _, value = line.partition(":")
+        field = field.strip().lower()
+        value = value.strip()
+        if field == "user-agent":
+            if directives:
+                for agent in agents:
+                    groups.setdefault(agent, set()).update(directives)
+                agents, directives = [], []
+            agents.append(value.lower())
+        elif field in ("allow", "disallow"):
+            directives.append((field, value))
+    return groups
+
+
+def validate_crawler_policy():
+    """robots.txt, vercel.json and the page handler must express one policy."""
+    robots_path = WEB / "robots.txt"
+    assert robots_path.is_file(), "Missing public crawler policy: apps/web/robots.txt"
+    robots = robots_path.read_text(encoding="utf-8")
+    groups = parse_robots_groups(robots)
+
+    assert "Sitemap: " + PUBLIC_BASE_URL + "/sitemap.xml" in robots, (
+        "robots.txt must advertise the canonical sitemap on " + PUBLIC_BASE_URL
+    )
+    assert re.search(r"(?m)^Content-Signal:\s*search=yes", robots), (
+        "robots.txt must declare a search-allowed Content-Signal"
+    )
+    assert re.search(r"ai-train=no", robots), "robots.txt must declare ai-train=no"
+
+    # Search engines must stay allowed; blocking them would remove the site from
+    # organic results, which is the opposite of the intended policy.
+    for agent in ("*", "googlebot", "bingbot", "duckduckbot", "applebot", "facebookexternalhit"):
+        assert agent in groups, "robots.txt is missing a group for " + agent
+        assert ("disallow", "/") not in groups[agent], (
+            "robots.txt must not disallow all crawling for " + agent
+        )
+
+    for agent in ("gptbot", "claudebot", "anthropic-ai", "ccbot", "bytespider",
+                  "meta-externalagent", "amazonbot", "cohere-ai", "diffbot",
+                  "imagesiftbot", "omgilibot", "timpibot", "youbot"):
+        assert agent in groups, "robots.txt is missing an AI crawler group for " + agent
+        assert ("disallow", "/") in groups[agent], (
+            "robots.txt must disallow crawling for " + agent
+        )
+
+    # Comments are stripped above, so the sentinel paragraph must survive as a comment block.
+    assert "not permitted" in robots, "robots.txt must state the policy in prose"
+
+    blocked = {token for token, rules in groups.items() if ("disallow", "/") in rules}
+    handler = (WEB / "api/page.js").read_text(encoding="utf-8")
+    handler_block = re.search(r"const BLOCKED_USER_AGENT_TOKENS = \[([^\]]*)\];", handler)
+    assert handler_block, "api/page.js must declare BLOCKED_USER_AGENT_TOKENS"
+    handler_tokens = {token.lower() for token in re.findall(r'"([^"]+)"', handler_block.group(1))}
+    robots_only = re.search(r"const ROBOTS_ONLY_TOKENS = \[([^\]]*)\];", handler)
+    assert robots_only, "api/page.js must declare ROBOTS_ONLY_TOKENS"
+    robots_only_tokens = {token.lower() for token in re.findall(r'"([^"]+)"', robots_only.group(1))}
+
+    assert handler_tokens, "api/page.js declares an empty crawler block list"
+    assert not (handler_tokens & {"googlebot", "bingbot", "duckduckbot", "applebot"}), (
+        "api/page.js must not block search-engine user agents"
+    )
+    missing_in_handler = (blocked - robots_only_tokens) - handler_tokens
+    assert not missing_in_handler, (
+        "api/page.js does not enforce robots.txt block tokens", sorted(missing_in_handler)
+    )
+    undeclared = handler_tokens - blocked
+    assert not undeclared, (
+        "api/page.js blocks tokens that robots.txt does not declare", sorted(undeclared)
+    )
+    assert 'isBlockedCrawler' in handler and "crawlerGate(req)" in handler, (
+        "api/page.js must apply the crawler gate before rendering"
+    )
+
+    config = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))
+    header_values = [
+        header.get("value", "")
+        for rule in config.get("headers", [])
+        for header in rule.get("headers", [])
+        if header.get("key", "").lower() == "x-robots-tag"
+    ]
+    assert header_values, "vercel.json must publish an X-Robots-Tag crawler preference"
+    assert all(rule.get("source") == "/(.*)" for rule, header in (
+        (rule, header) for rule in config.get("headers", []) for header in rule.get("headers", [])
+        if header.get("key", "").lower() == "x-robots-tag"
+    )), "X-Robots-Tag must apply to every path"
+    combined = " ".join(header_values).lower()
+    assert "noai" in combined and "noimageai" in combined, (
+        "X-Robots-Tag must declare the noai and noimageai preferences"
+    )
+    assert "noindex" not in combined, (
+        "X-Robots-Tag must not deindex the public site; use robots.txt groups instead"
+    )
+
+    edge_pattern = ""
+    for rule in config.get("routes", []):
+        status = rule.get("status")
+        if status is None:
+            continue
+        assert status >= 400, ("Only refusal rules may set a status", status)
+        conditions = [
+            condition for condition in rule.get("has", [])
+            if condition.get("type") == "header"
+            and condition.get("key", "").lower() == "user-agent"
+            and condition.get("value")
+        ]
+        assert conditions, (
+            "A route status rule without a user-agent condition would refuse every visitor"
+        )
+        edge_pattern += " " + " ".join(condition["value"] for condition in conditions)
+    assert edge_pattern, "vercel.json must refuse declared AI crawlers at the edge"
+    edge_lower = edge_pattern.lower()
+    for token in sorted(handler_tokens):
+        assert token in edge_lower, (
+            "vercel.json edge rule does not cover a handler-blocked token", token
+        )
+    assert "(?i)" in edge_pattern, "The edge user-agent pattern must match case-insensitively"
+
+
 def main():
     pages = {}
     for path in WEB.glob("*.html"):
@@ -238,6 +368,7 @@ def main():
 
     validate_public_resources()
     validate_responsive_navigation_styles()
+    validate_crawler_policy()
 
     config = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))
     validate_csp_config(config)
@@ -308,7 +439,8 @@ def main():
         assert "no standalone <code>sha256.txt</code> is included" in android_page.lower(), "Android artifact contents must be described accurately"
     print(
         "10 public pages, local routes/anchors, lowercase ads.txt, canonical sitemap, "
-        "route-scoped CSP, immutable Songbook reader and verified download provenance passed"
+        "route-scoped CSP, declared crawler policy, immutable Songbook reader and "
+        "verified download provenance passed"
     )
 
 

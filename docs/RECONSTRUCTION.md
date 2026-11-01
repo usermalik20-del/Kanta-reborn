@@ -1,5 +1,38 @@
 # Reconstruction evidence and work ledger
 
+## Local candidate — website crawler and scraping defense (2026-10-31, unmerged)
+
+Branch `feat/website-scraping-defense`, based on `main` `8210b26`. **Local only: not pushed,
+not merged and not deployed,** so nothing here is in the live site's behavior yet. No CI run
+exists for it.
+
+Three enforcement points now express one crawler policy. `apps/web/robots.txt` is new and
+declares the policy: an allow group for search engines and unfurlers, a `Disallow: /` group
+for AI training and data-mining crawlers, a separate allow group for live-user AI fetchers, an
+allow-by-default fallback group that disallows only `/api/`, the canonical `Sitemap:` line and
+a `Content-Signal: search=yes, ai-train=no, ai-input=no` preference.
+`apps/web/vercel.json` gains an `X-Robots-Tag: noai, noimageai` response header and a `routes`
+entry that refuses the declared user agents with `403` before the page rewrites, so static
+assets are covered as well. `apps/web/api/page.js` gains `isBlockedCrawler()`, exported for
+tests, and a fail-open `crawlerGate()` applied before `fs.readFile`.
+
+Evidence available for this candidate: `tools/verify-website.py` passes with the new
+`validate_crawler_policy()` contract; `tools/tests/test_website_security_contract.py` passes
+11 tests; the full local tools suite passes 88 tests; the documentation-sync guard passes on
+the candidate commit (do not embed that commit's own SHA here — it changes on every amend);
+`vercel.json` validates against Vercel's published configuration schema with
+negative controls; the real `isBlockedCrawler()`, `crawlerGate()` and `refuseCrawler()` source
+executes correctly under QuickJS over 19 user-agent vectors plus the fail-open paths; the
+`vercel.json` user-agent regex matches every declared crawler and no allowed client; and five
+deliberately re-injected policy breakages are all rejected by the verifier.
+
+Evidence that does **not** exist: `node` scripts do not run in the authoring environment, so
+the committed Node test file is unexecuted locally — syntax was checked with `esprima` and the
+behaviour with QuickJS on extracted source instead. The `vercel.json` `has`/`status` route
+semantics come from Vercel's published schema, not from an observed deployment, and no
+deployment has confirmed the live `403`. Rate limiting and per-request gating of static assets
+remain unimplemented; see [docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md).
+
 ## Current checkpoint — 2026-10-29 (main `2a01654`; public release source `41c8ddde`)
 
 Main head is [`2a01654`](https://github.com/usermalik20-del/Kanta-reborn/commit/2a01654).
