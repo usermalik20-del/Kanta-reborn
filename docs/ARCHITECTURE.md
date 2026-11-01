@@ -617,22 +617,17 @@ A single token source defines the KANTA visual language:
 `KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`, `KantaProgressBar`, `KantaStepper`,
 `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`.
 
-### Screens (`ph.kanta.reborn.ui`)
+### Reference-led Android presentation integration
 
-`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
-`KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`.
-Each screen exposes a `Listener` interface that callbacks into `MainActivity`, which in turn calls
-the existing `SessionController` / `StagePresenterImpl` backend methods. No backend behavior is
-duplicated or replaced.
+The app's production composition remains owned by `MainActivity`, `KantaWorkspace`, `StagePresenterImpl` and `SessionController`. The reference-led Home dashboard (`ph.kanta.reborn.ui.HomeScreen`) is mounted by `MainActivity` as the initial destination. Its listener routes user actions into the existing workspace accessories and navigation destinations; it does not own playback, queue, microphone, camera or persistence state.
+
+When Home is active, the legacy stage pane and legacy tab row are hidden from presentation, but the stage/session objects are not destroyed or re-created. Returning to an existing destination restores the prior composition. Search and Queue remain the authoritative `StagePresenterImpl` overlays, preserving their existing search and FIFO queue behavior.
+
+The other design-system screen classes (`KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`, `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, and `KantaFullscreenStage`) are source-level presentation candidates only until each is explicitly integrated with real state and callbacks. Their presence is not proof of a production route, working control or visual acceptance. Prefer styling the existing authoritative surface over introducing a second owner or wiring controls that only update local demo state.
 
 ### Browser remote
 
-The browser companion (`apps/android/app/src/main/assets/companion/`) is restyled with the same KANTA
-design system: `#050B18` background, `#0D1930`/`#12203A` surfaces, `#203459` borders, cyan active
-states, responsive 3-column desktop layout collapsing to a single column below 1000px. The wire
-protocol, action allowlist, pairing flow and fingerprint verification are unchanged; controls not in
-the protocol allowlist (Key -, Key +, Slower, Faster, Fullscreen, Previous) are rendered as honestly
-disabled with explanatory tooltips.
+The browser companion lives in `apps/android/app/src/main/assets/companion/`. Its current implementation is a secure, narrow-screen-first pairing/controller surface, not yet the reference's desktop three-column controller. Its wire protocol, pairing flow, certificate-fingerprint verification, action allowlist and host-owned state are authoritative. A future visual reflow must preserve all DOM IDs consumed by `remote.js`, retain explicit unavailable states for unsupported commands, and never imply that unsupported Key, Tempo, Previous or Fullscreen actions work.
 
 ## Camera preview ownership across stage transitions
 
