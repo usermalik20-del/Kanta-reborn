@@ -51,27 +51,19 @@ def publish():
     manifest.setdefault("platforms", {})
     entry = {"source": source, "run": int(info["run"]), "artifact": int(info["artifact"]),
              "packagingRun": run_id, "packagingArtifact": package_id, "downloadUrl": url,
+             "retentionDays": days,
              "artifactName": "KANTA-" + ("Android-preview-download" if platform == "android" else "iOS-personal-unsigned-download"),
              "signed": info["signed"], "sha256": digest,
          **({"apkSha256": info["sha256"]} if platform == "android" else {"ipaSha256": info["sha256"]}),
-             "bytes": int(info["bytes"]), "retentionDays": days}
+             "bytes": int(info["bytes"])}
     if platform == "ios":
         entry.update({"personalSigningRequired": True, "icloudAvailable": False,
                       "walkthroughRun": int(info["walkthroughRun"])})
     manifest["platforms"][platform] = entry
     # Keep the historical top-level keys readable for existing consumers.
     manifest[platform] = entry
-    # Keep both platforms' source in sync: verify-website.py requires
-    # manifest["android"]["source"] == manifest["ios"]["source"], so when
-    # publishing one platform, mirror its source onto the other platform's
-    # entry (the other platform's run/artifact/signed fields are unchanged).
-    other_platform = "ios" if platform == "android" else "android"
-    if other_platform in manifest["platforms"]:
-        manifest["platforms"][other_platform]["source"] = source
-    # The verifier and existing website consumers read the legacy top-level
-    # platform entries, so keep those source revisions aligned as well.
-    if other_platform in manifest:
-        manifest[other_platform]["source"] = source
+    # Platform releases are independent: never rewrite the peer platform's
+    # source revision or provenance when publishing only this platform.
     manifest["source"] = source
     manifest["packagingRun"] = run_id
     manifest["packagingRunUrl"] = f"https://github.com/{REPO}/actions/runs/{run_id}"
