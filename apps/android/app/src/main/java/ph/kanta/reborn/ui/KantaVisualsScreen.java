@@ -239,6 +239,11 @@ public final class KantaVisualsScreen extends LinearLayout {
     build();
   }
 
+  public void setSelectedTab(int tab) {
+    selectedTab = Math.max(0, Math.min(2, tab));
+    refresh();
+  }
+
   public void setSelectedScene(String scene) {
     if (scene == null) return;
     for (int i = 0; i < SCENES.length; i++) {

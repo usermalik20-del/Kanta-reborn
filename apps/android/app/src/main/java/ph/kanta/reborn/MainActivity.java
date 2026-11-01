@@ -77,6 +77,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
   private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
+  private int visualsSelectedTab;
   private String searchSource = "All";
   private boolean preparingExport = false;
   private byte[] exportBytes;
@@ -116,8 +117,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new OnBackPressedCallback(false) {
           @Override
           public void handleOnBackPressed() {
-            // Enabled only while a transient workspace accessory is visible.
-            dismissAccessory();
+            if (workspace != null && workspace.activeAccessory() != null) {
+              dismissAccessory();
+            } else if (isReferenceDestination(tab)) {
+              navigateHome();
+            } else {
+              setEnabled(false);
+            }
           }
         };
     getOnBackPressedDispatcher().addCallback(this, workspaceBackCallback);
@@ -314,6 +320,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     nextButton.setEnabled(session.ready && !session.loading);
     boolean home = "Home".equals(tab);
     boolean referenceDestination = isReferenceDestination(tab);
+    if (workspaceBackCallback != null
+        && (workspace == null || workspace.activeAccessory() == null))
+      workspaceBackCallback.setEnabled(referenceDestination);
     if (appHeader != null) appHeader.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
     if (stagePane != null) stagePane.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
     if (navigationTabs != null) navigationTabs.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
@@ -1009,7 +1018,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void navigateHome() {
+    boolean wasVisuals = "Visuals".equals(tab);
     tab = "Home";
+    if (wasVisuals) visualsSelectedTab = 0;
     micVoiceScreen = null;
     render();
   }
@@ -1021,7 +1032,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             this,
             new ph.kanta.reborn.ui.KantaVisualsScreen.Listener() {
               @Override public void onBack() { navigateHome(); }
-              @Override public void onTabSelected(int index, String label) {}
+              @Override public void onTabSelected(int index, String label) {
+                visualsSelectedTab = index;
+              }
               @Override public void onBackgroundSelected(String name) {
                 if (!session.stageReady) return;
                 camera.stop();
@@ -1051,6 +1064,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onCustomImport() { chooseCustomStageMedia(); }
             });
     screen.setTag("kanta.screen.visuals");
+    screen.setSelectedTab(visualsSelectedTab);
     screen.setSelectedScene(session.scenicName);
     screen.setCameraState(camera.enabled(), camera.streaming());
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
