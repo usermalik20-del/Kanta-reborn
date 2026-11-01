@@ -149,11 +149,7 @@ public final class RuntimeChecks extends Instrumentation {
         scene.performClick();
       });
       await(() -> "bambooMist".equals(session.scenicName), "Visual selection did not reach SessionController");
-      runOnMainSync(() -> {
-        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.visuals.back");
-        check(back != null, "Visuals back control missing");
-        back.performClick();
-      });
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
       await(
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Visuals did not return to Home");

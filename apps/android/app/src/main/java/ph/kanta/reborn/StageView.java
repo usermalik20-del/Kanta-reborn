@@ -22,6 +22,7 @@ final class StageView extends View {
   private int cachedWidth = -1;
   private float cachedSize;
   private boolean externalMedia;
+  private boolean fullscreenMode;
   private final Bitmap portraitArtwork;
   private final Bitmap landscapeArtwork;
   private final float[] stars = new float[192];
@@ -52,6 +53,11 @@ final class StageView extends View {
 
   void mediaVisible(boolean visible) {
     externalMedia = visible;
+    invalidate();
+  }
+
+  void setFullscreenMode(boolean enabled) {
+    fullscreenMode = enabled;
     invalidate();
   }
 
@@ -123,24 +129,26 @@ final class StageView extends View {
       highlightLayout = cue == null ? null : layout(cue.line, width, font, 0xFFF6CE77);
       nextLayout = layout(next, width, font * .7f, 0xFFB9D8E8);
     }
-    drawLayout(canvas, currentLayout, w / 2, h * .46f);
+    float currentLyricY = h * (fullscreenMode ? (w >= h ? .24f : .32f) : .46f);
+    float nextLyricY = h * (fullscreenMode ? (w >= h ? .41f : .49f) : .70f);
+    drawLayout(canvas, currentLayout, w / 2, currentLyricY);
     if (cue != null && highlightLayout != null) {
       drawProgressiveHighlight(
           canvas,
           currentLayout,
           highlightLayout,
           w / 2,
-          h * .46f,
+          currentLyricY,
           LyricWordAnimation.highlightedCharacters(cue, session.position()));
-      drawPitchWave(canvas, currentLayout, w / 2, h * .46f, cue, session.position());
+      drawPitchWave(canvas, currentLayout, w / 2, currentLyricY, cue, session.position());
     }
-    if (!next.isEmpty()) drawLayout(canvas, nextLayout, w / 2, h * .70f);
+    if (!next.isEmpty()) drawLayout(canvas, nextLayout, w / 2, nextLyricY);
     if (session.current == null)
       line(
           canvas,
           "Reserve your next song in CONTROL",
           w / 2,
-          h * 0.68f,
+          h * (fullscreenMode ? .48f : .68f),
           w - dp(40),
           font * 0.6f,
           0xFFB9D8E8);

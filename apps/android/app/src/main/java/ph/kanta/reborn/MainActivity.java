@@ -2348,6 +2348,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     stageFrame.setTag("kanta.fullscreen.stage");
     stageFrame.setBackgroundColor(KantaTheme.BG_MAIN);
     fullscreenStage = new StageSurface(this, session);
+    fullscreenStage.setFullscreenMode(true);
     stageFrame.addView(fullscreenStage, new FrameLayout.LayoutParams(-1, -1));
 
     LinearLayout overlay = column();
