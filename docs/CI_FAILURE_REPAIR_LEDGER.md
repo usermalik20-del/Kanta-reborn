@@ -1001,3 +1001,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** retain the public backend-aware accessor and remove the older package-private duplicate. The retained implementation returns the active backend duration when a player exists and falls back to the parsed MIDI duration otherwise. No playback state or duration source is discarded.
 
 **Validation:** current-head Android validation must pass compilation, lint, domain regression and emulator runtime checks. The original failed compile remains recorded and is not treated as a flaky test.
+## Android PR #134 — Now Playing lyric progress type mismatch (2026-11-01)
+
+**Affected run:** Android validation [#41324196420](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41324196420), run number 496, exact head `56bcb5b7e35c875480f2673c71a0b805e25fe102`. The `Build, lint and domain regression tests` step failed during `compileDebugJavaWithJavac` at `MainActivity.java:1112`: `LyricWordAnimation.highlightedCharacters(...)` returns `float`, but `KantaNowPlayingScreen.setLyrics(...)` accepted only `int`. The later camera, browser and emulator steps were correctly skipped after the deterministic compile failure.
+
+**Root cause:** the new Now Playing lyric projection passed the fractional character position from the source-timed lyric animation into a presentation API that had retained an integer-only signature. The caller and callee did not agree on the value type; truncating at the call site would also discard the smooth fractional progression supplied by the core timing helper.
+
+**Repair candidate:** `KantaNowPlayingScreen.setLyrics` now accepts a `float` highlight position and floors it only at the final text-span boundary, where Android requires an integer character index. The existing source-timed interpolation remains fractional until rendering. The same screen mounts the supplied live `StageSurface` as its stage child and suppresses the duplicate fallback lyric overlay when the live stage is present.
+
+**Regression coverage:** exact-head Android validation must compile the full app, run lint and core regression, then complete real-Chrome companion checks and emulator instrumentation. The Now Playing instrumentation must find the live `StageSurface` in the attached view hierarchy and verify clean dismissal. Do not count the successful pre-failure static checks as build or runtime acceptance.
+
+**Validation:** repair commit `6b891fd6650c02a6e56c28b0753c7e687f78d67e`; candidate pending exact-head hosted validation. The original failure remains recorded.
