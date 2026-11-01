@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Git ref to validate (defaults to the event commit)'
+        description: 'Optional branch, tag or commit SHA; defaults to the event commit'
         required: false
   push:
     branches: [main]
@@ -46,7 +46,6 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # Steps will be limited based on mode
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
