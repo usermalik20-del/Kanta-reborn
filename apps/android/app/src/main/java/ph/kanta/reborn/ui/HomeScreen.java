@@ -11,6 +11,8 @@ import android.widget.TextView;
 
 public class HomeScreen extends LinearLayout {
   public interface Listener {
+    void onHome();
+    void onSettings();
     void onSearch();
     void onQueue();
     void onYouTube();
@@ -57,6 +59,8 @@ public class HomeScreen extends LinearLayout {
     settings.setTextSize(16);
     settings.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
     settings.setGravity(Gravity.END);
+    settings.setContentDescription("Settings");
+    settings.setOnClickListener(v -> { if (listener != null) listener.onSettings(); });
     LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
     sp.weight = 1;
     sp.gravity = Gravity.END;
@@ -134,13 +138,15 @@ public class HomeScreen extends LinearLayout {
         {"Mic & Voice", "\uD83D\uDCF4", "onMicVoice"},
         {"Pitch & Tempo", "\u266B", "onPitchTempo"},
     };
-    for (int row = 0; row < 3; row++) {
+    for (int row = 0; row < 2; row++) {
       LinearLayout rowLayout = new LinearLayout(context);
       rowLayout.setOrientation(HORIZONTAL);
-      for (int col = 0; col < 2; col++) {
-        String[] feature = features[row * 2 + col];
+      for (int col = 0; col < 3; col++) {
+        String[] feature = features[row * 3 + col];
         Button card = featureCard(context, feature[0], feature[1], feature[2]);
-        rowLayout.addView(card, new LayoutParams(0, (int)(110*density), 1));
+        LinearLayout.LayoutParams cardParams = new LayoutParams(0, (int)(96*density), 1);
+        cardParams.setMargins((int)(4*density), (int)(5*density), (int)(4*density), (int)(5*density));
+        rowLayout.addView(card, cardParams);
       }
       grid.addView(rowLayout, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
     }
@@ -187,7 +193,7 @@ public class HomeScreen extends LinearLayout {
       navParams.bottomMargin = (int)(6*density);
       navBtn.setLayoutParams(navParams);
       switch (n[2]) {
-        case "onHome": navBtn.setOnClickListener(v -> { if (listener != null) listener.onSearch(); }); break;
+        case "onHome": navBtn.setOnClickListener(v -> { if (listener != null) listener.onHome(); }); break;
         case "onMySet": navBtn.setOnClickListener(v -> { if (listener != null) listener.onMySet(); }); break;
         case "onScenic": navBtn.setOnClickListener(v -> { if (listener != null) listener.onScenic(); }); break;
         case "onRealm": navBtn.setOnClickListener(v -> { if (listener != null) listener.onRealm(); }); break;
