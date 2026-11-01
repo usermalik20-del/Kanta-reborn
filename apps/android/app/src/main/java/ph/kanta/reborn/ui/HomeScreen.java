@@ -1,7 +1,6 @@
 package ph.kanta.reborn.ui;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.view.Gravity;
@@ -138,21 +137,22 @@ public class HomeScreen extends LinearLayout {
     LinearLayout grid = new LinearLayout(context);
     grid.setOrientation(VERTICAL);
     grid.setPadding(dp(12), 0, dp(12), 0);
-    int[][] features = {
-      {R.string.kanta_search_label, R.drawable.kanta_search_outline, 0},
-      {R.string.kanta_queue_label, R.drawable.kanta_queue_outline, 1},
-      {R.string.kanta_youtube_label, android.R.drawable.ic_media_play, 2},
-      {R.string.kanta_visuals_label, R.drawable.kanta_visuals_outline, 3},
-      {R.string.kanta_mic_voice_label, R.drawable.kanta_microphone_outline, 4},
-      {R.string.kanta_pitch_tempo_label, R.drawable.kanta_pitch_outline, 5}
+    String[] featureLabels = {"Search", "Queue", "YouTube", "Visuals", "Mic & Voice", "Pitch & Tempo"};
+    int[] featureIcons = {
+      R.drawable.kanta_search_outline,
+      R.drawable.kanta_queue_outline,
+      android.R.drawable.ic_media_play,
+      R.drawable.kanta_visuals_outline,
+      R.drawable.kanta_microphone_outline,
+      R.drawable.kanta_pitch_outline
     };
+    int[] featureActions = {0, 1, 2, 3, 4, 5};
     for (int row = 0; row < 2; row++) {
       LinearLayout rowLayout = new LinearLayout(context);
       rowLayout.setOrientation(HORIZONTAL);
       for (int col = 0; col < 3; col++) {
-        int[] feature = features[row * 3 + col];
-        Button card = featureCard(
-            getResources().getString(feature[0]), feature[1], feature[2]);
+        int index = row * 3 + col;
+        Button card = featureCard(featureLabels[index], featureIcons[index], featureActions[index]);
         LinearLayout.LayoutParams cardParams = new LayoutParams(0, dp(94), 1);
         cardParams.setMargins(dp(4), dp(4), dp(4), dp(4));
         rowLayout.addView(card, cardParams);
