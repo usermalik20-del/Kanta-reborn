@@ -344,3 +344,7 @@ The iOS download remains an unsigned personal-signing input; this automation doe
 ## Website consent runtime regression
 
 `tools/tests/test_site_page_handler.test.js` verifies that the request-time renderer removes a legacy static `/analytics.js` script element before adding nonces and injecting the consent manager. This prevents a nonce-authorized Analytics bootstrap from executing before the visitor's choice. The live preview still requires browser-level acceptance/rejection/revocation checks; static tests do not simulate browser cookies or prove third-party network behavior.
+
+## Android CI runner regression checks — 2026-11-01
+
+The Android workflow now runs `python3 -m unittest tools.tests.test_android_runtime_runner` before Gradle/emulator work. The test parses the runner with Python's AST, requires the private-IPv4 guard to fail explicitly, and verifies that both APK installation calls are outside that failure branch and that instrumentation plus the `files/` screenshot destination remain wired. The workflow's `workflow_dispatch` and `push` events must remain separate YAML keys; manual `ref` selection changes the checked-out commit, not the required test scope. Full validation remains the default and only supported mode until a genuinely independent visual-only acceptance contract exists. A passing static test is not Android compilation, instrumentation, emulator acceptance or device acceptance.
