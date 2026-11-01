@@ -142,6 +142,11 @@ async function handler(req, res) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    // The vercel.json headers rule reaches static files only: a rewrite to this
+    // function replaces the response, so the crawler preference has to be set
+    // here for the rendered routes. Observed live on the 2026-11-01 production
+    // deployment, where /style.css carried X-Robots-Tag and / did not.
+    res.setHeader("X-Robots-Tag", "noai, noimageai");
     res.setHeader("Cache-Control", "private, no-store, max-age=0");
     res.setHeader("Vary", "Cookie");
     res.setHeader("Content-Security-Policy", isSongbook

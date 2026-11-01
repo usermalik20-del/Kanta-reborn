@@ -1,9 +1,10 @@
 # Website crawler and scraping defense
 
-**Status: implemented on branch `feat/website-scraping-defense` (committed locally, based on
-`main` `8210b26`, not pushed and not merged).**
-Not yet deployed: the edge rules and headers below take effect only on the next production
-deployment of `apps/web`.
+**Status: merged to `main` (PR #125, merge commit `ccd09fd`) and deployed to production.**
+The policy, the edge refusal and the headers are live; the production behaviour recorded in §3
+was measured on that deployment. One follow-up fix is on top of it: the renderer now sets
+`X-Robots-Tag` itself, because the `vercel.json` headers rule does not reach the rewritten HTML
+routes (§2.2).
 
 ## 1. What this defends against, and what it cannot
 
@@ -73,6 +74,16 @@ for every path, including static assets:
 published configuration schema. The `X-Robots-Tag: noai, noimageai` response header is added
 to the existing global `headers` rule.
 
+**Live finding (2026-11-01 production deployment).** The `headers` rule does reach static
+responses — `/style.css`, `/robots.txt` and `/downloads.json` all carry
+`X-Robots-Tag: noai, noimageai` — but it does **not** reach the ten HTML routes, because the
+`routes` rewrite replaces that response with the function's. The renderer therefore sets the
+header itself, and the contract checks fail if that line is removed. The same deployment
+confirmed that a declared crawler receives `403` on both an HTML route and a static asset, and
+that `Googlebot` and an ordinary browser still receive `200` with the rendered page. Crawler
+refusals at the edge return Vercel's own 403 page, so the renderer's plain-text refusal body is
+a second layer that a declared crawler never reaches.
+
 ### 2.3 Request-time gate — `apps/web/api/page.js`
 
 `isBlockedCrawler(userAgent)` matches the declared tokens against the request user agent and
@@ -132,23 +143,27 @@ enforces.
 | Python oracle of `isBlockedCrawler` over every allow-group token | 0 collisions with a blocked token |
 | `vercel.json` user-agent regex evaluated over blocked and allowed clients | matches every declared crawler, matches no allowed client |
 | Negative controls (5 policy breakages re-injected) | every breakage rejected |
+| **Production verification 2026-11-01** (deploy of `ccd09fd`, run `41262424955`) | `/robots.txt` 200 with the policy; `GPTBot` UA → `403` on `/`, `/style.css` and `/downloads.json`; `Googlebot` UA and an iPhone Safari UA → `200` with rendered HTML; `X-Robots-Tag` present on static responses, absent on HTML routes — see §2.2 |
 
 **Not validated, and not claimed:**
 
 - `node` scripts do not execute in this authoring environment. `node --check`, `node --test` and
   `node --test tools/tests/test_site_page_handler.test.js` exit `0` without running anything, so
   the committed JavaScript test file is **unexecuted locally**. The QuickJS run above exercises
-  the real source functions but is not a Node result; CI runs the real Node checks.
-- **No deployment has happened and the production behaviour of the edge rule is unverified.**
-  Confirming that Vercel refuses a `GPTBot` user agent on a real deployment is an acceptance
-  step for the next preview, not something this change proves.
+  the real source functions but is not a Node result. CI runs the real Node checks, and the
+  website validation job passed `node --test tools/tests/test_site_page_handler.test.js` on the
+  pull-request head.
+- A per-request refusal of a **browser-impersonating** client is untested and unachievable with
+  user-agent matching alone; only the declared agents are refused.
+- Rate limiting is neither implemented nor measurable without the edge layer in §4.1.
 
 ## 4. Staged follow-ups (not implemented)
 
-### 4.1 Edge/WAF layer — covers static assets and rate limits
+### 4.1 Edge/WAF layer — rate limits and browser-impersonating clients
 
-The function gate cannot see static assets, and neither layer can rate-limit. Both need an
-edge layer:
+The edge `routes` refusal already covers static assets for the declared user agents. What no
+layer covers is **rate** and **clients that do not declare themselves**: both need an edge
+layer:
 
 - **Vercel Firewall / WAF**: managed bot rules and challenge modes, configured in the dashboard
   or API rather than `vercel.json`. Requires the applicable plan tier — check before promising it.

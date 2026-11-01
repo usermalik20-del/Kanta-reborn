@@ -1,37 +1,40 @@
 # Reconstruction evidence and work ledger
 
-## Local candidate — website crawler and scraping defense (2026-10-31, unmerged)
+## Website crawler and scraping defense — merged and deployed (2026-11-01)
 
-Branch `feat/website-scraping-defense`, based on `main` `8210b26`. **Local only: not pushed,
-not merged and not deployed,** so nothing here is in the live site's behavior yet. No CI run
-exists for it.
+Branch `feat/website-scraping-defense`, PR [#125](https://github.com/usermalik20-del/Kanta-reborn/pull/125),
+**merge commit `ccd09fd`** on `main`. Website validation [run 41262424926](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41262424926),
+verified-download packaging [run 41262424946](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41262424946)
+and the production Vercel deploy [run 41262424955](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41262424955)
+all succeeded on that SHA. The pull-request head `1d85d73` passed the full website job, which
+includes `node --test tools/tests/test_site_page_handler.test.js` — the JavaScript assertions
+that could not be executed in the authoring environment did run in CI and passed.
 
-Three enforcement points now express one crawler policy. `apps/web/robots.txt` is new and
-declares the policy: an allow group for search engines and unfurlers, a `Disallow: /` group
-for AI training and data-mining crawlers, a separate allow group for live-user AI fetchers, an
-allow-by-default fallback group that disallows only `/api/`, the canonical `Sitemap:` line and
-a `Content-Signal: search=yes, ai-train=no, ai-input=no` preference.
-`apps/web/vercel.json` gains an `X-Robots-Tag: noai, noimageai` response header and a `routes`
-entry that refuses the declared user agents with `403` before the page rewrites, so static
-assets are covered as well. `apps/web/api/page.js` gains `isBlockedCrawler()`, exported for
-tests, and a fail-open `crawlerGate()` applied before `fs.readFile`.
+Three enforcement points express one crawler policy. `apps/web/robots.txt` declares it: an
+allow group for search engines and unfurlers, a `Disallow: /` group for AI training and
+data-mining crawlers, a separate allow group for live-user AI fetchers, an allow-by-default
+fallback group that disallows only `/api/`, the canonical `Sitemap:` line and a
+`Content-Signal: search=yes, ai-train=no, ai-input=no` preference. `apps/web/vercel.json`
+publishes `X-Robots-Tag: noai, noimageai` and a `routes` entry that refuses the declared user
+agents with `403` before the page rewrites. `apps/web/api/page.js` adds `isBlockedCrawler()`,
+exported for tests, plus a fail-open `crawlerGate()` applied before `fs.readFile`.
 
-Evidence available for this candidate: `tools/verify-website.py` passes with the new
-`validate_crawler_policy()` contract; `tools/tests/test_website_security_contract.py` passes
-11 tests; the full local tools suite passes 88 tests; the documentation-sync guard passes on
-the candidate commit (do not embed that commit's own SHA here — it changes on every amend);
-`vercel.json` validates against Vercel's published configuration schema with
-negative controls; the real `isBlockedCrawler()`, `crawlerGate()` and `refuseCrawler()` source
-executes correctly under QuickJS over 19 user-agent vectors plus the fail-open paths; the
-`vercel.json` user-agent regex matches every declared crawler and no allowed client; and five
-deliberately re-injected policy breakages are all rejected by the verifier.
+**Production verification measured on that deployment.** `/robots.txt` returns `200` with the
+policy, the `Content-Signal` line and the canonical sitemap. A `GPTBot` user agent receives
+`403` on `/`, on `/style.css` and on `/downloads.json`; `Googlebot` and an iPhone Safari user
+agent receive `200` with rendered HTML. `X-Robots-Tag: noai, noimageai` is present on static
+responses and was **absent on the ten HTML routes**, because a `routes` rewrite replaces the
+response and the `headers` rule does not reach it. That gap is repaired on branch
+`fix/website-robots-tag-rendered-pages` (the renderer now sets the header itself) and both the
+verifier and the contract test fail if the line is removed; the verifier scopes its search to
+the handler body because the refusal path sets the same header text and an unscoped search
+passed with the rendered-page header deleted.
 
-Evidence that does **not** exist: `node` scripts do not run in the authoring environment, so
-the committed Node test file is unexecuted locally — syntax was checked with `esprima` and the
-behaviour with QuickJS on extracted source instead. The `vercel.json` `has`/`status` route
-semantics come from Vercel's published schema, not from an observed deployment, and no
-deployment has confirmed the live `403`. Rate limiting and per-request gating of static assets
-remain unimplemented; see [docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md).
+**Deployed and verified: the declared-agent refusal, the policy file and the static-asset
+header. Not verified: the rendered-page header on a production response after the follow-up
+fix, and anything about a browser-impersonating client.** Rate limiting and rate-based
+protection remain unimplemented; see [docs/WEBSITE_SCRAPING_DEFENSE.md](WEBSITE_SCRAPING_DEFENSE.md)
+and section J of `docs/UNFINISHED_WORK.md`.
 
 ## Current checkpoint — 2026-10-29 (main `2a01654`; public release source `41c8ddde`)
 

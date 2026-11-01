@@ -144,7 +144,7 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertIn("403", refusal)
         self.assertIn("noai, noimageai", refusal)
 
-    def test_x_robots_tag_states_preferences_without_deindexing(self):
+    def test_x_robots_tag_is_set_by_both_the_config_and_the_renderer(self):
         values = [
             header["value"]
             for rule in CONFIG["headers"]
@@ -156,6 +156,19 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertIn("noai", combined)
         self.assertIn("noimageai", combined)
         self.assertNotIn("noindex", combined, "X-Robots-Tag must not deindex the public site")
+        # A rewrite to the function replaces the response, so the config rule alone is
+        # not enough: the rendered response must set the header itself.
+        rendered = PAGE_SOURCE[PAGE_SOURCE.index("async function handler"):]
+        self.assertIn(
+            'res.setHeader("X-Robots-Tag", "noai, noimageai")',
+            rendered,
+            "Rendered responses must set X-Robots-Tag; the vercel.json rule does not reach them",
+        )
+        self.assertLess(
+            rendered.index('res.setHeader("X-Robots-Tag"'),
+            rendered.index("res.statusCode = 200"),
+            "The rendered preference must be set before the page is returned",
+        )
 
     def test_every_status_route_rule_requires_a_user_agent_condition(self):
         for rule in CONFIG["routes"]:

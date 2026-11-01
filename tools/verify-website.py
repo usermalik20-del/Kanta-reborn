@@ -301,6 +301,19 @@ def validate_crawler_policy():
     assert "noindex" not in combined, (
         "X-Robots-Tag must not deindex the public site; use robots.txt groups instead"
     )
+    # Observed on the 2026-11-01 production deployment: the vercel.json headers rule
+    # reached /style.css and /robots.txt but not the rewritten HTML routes, so the
+    # renderer has to set the preference on its own response. Scope the check to the
+    # handler body: the refusal path sets the same header, so an unscoped search would
+    # pass even with the rendered-page header removed.
+    handler_body = handler[handler.index("async function handler"):]
+    assert 'res.setHeader("X-Robots-Tag", "noai, noimageai")' in handler_body, (
+        "api/page.js must set X-Robots-Tag on rendered responses; the vercel.json rule "
+        "does not reach a rewritten function response"
+    )
+    assert handler_body.index('res.setHeader("X-Robots-Tag"') < handler_body.index("res.statusCode = 200"), (
+        "api/page.js must set X-Robots-Tag before returning the rendered page"
+    )
 
     edge_pattern = ""
     for rule in config.get("routes", []):

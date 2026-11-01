@@ -12,6 +12,8 @@ The layering is deliberate, not redundant. The edge rule is the only layer that 
 
 Three invariants constrain the policy and are enforced, not merely documented. Ordinary search-engine crawling must remain possible, so no search-engine user agent may be blocked in any layer and the fallback group must not disallow all crawling. The `X-Robots-Tag` response header may carry `noai`/`noimageai` but never `noindex`, because `noindex` would remove the site from organic search. A refusal rule must always carry a user-agent condition, because a `status` rule without one would refuse every visitor.
 
+The `X-Robots-Tag` preference is deliberately set in two places, and they are not interchangeable: the `vercel.json` headers rule reaches static responses, while a `routes` rewrite replaces the response for the ten HTML routes, so `api/page.js` sets the header on its own response. Production measurement on 2026-11-01 confirmed exactly that split, which is why both places exist and why the verifier fails if either is removed.
+
 The classification is fail-open by design: an absent or unparsable user agent is never refused, and a classification error allows the request. `robots.txt` is a declared preference that only constrains compliant crawlers, so neither the file nor this architecture removes the possibility of scraping by a browser-impersonating client. See `docs/WEBSITE_SCRAPING_DEFENSE.md` for the effectiveness limits and the deferred edge/WAF layer.
 
 ## Documentation and workflow ownership

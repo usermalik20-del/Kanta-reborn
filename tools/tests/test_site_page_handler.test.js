@@ -87,10 +87,11 @@ test("blocked crawler requests are refused before any page is rendered", async (
   assert.doesNotMatch(res.body, /<html/i);
 });
 
-test("search-engine requests still receive the rendered page", async () => {
+test("rendered pages carry the crawler preference on the response itself", async () => {
   const res = fakeResponse();
   await handler(fakeRequest("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"), res);
   assert.equal(res.statusCode, 200);
-  assert.equal(res.headers["x-robots-tag"], undefined);
+  // The vercel.json headers rule does not reach a rewritten function response.
+  assert.equal(res.headers["x-robots-tag"], "noai, noimageai");
   assert.match(res.body, /<html/i);
 });
