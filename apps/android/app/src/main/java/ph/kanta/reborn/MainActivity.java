@@ -27,6 +27,14 @@ import ph.kanta.reborn.core.connect.KantaConnectInfo;
 import ph.kanta.reborn.core.connect.QrEncoder;
 import ph.kanta.reborn.stage.QrCodeView;
 import ph.kanta.reborn.settings.SettingsStore;
+import ph.kanta.reborn.ui.HomeScreen;
+import ph.kanta.reborn.ui.KantaNowPlayingScreen;
+import ph.kanta.reborn.ui.KantaSearchScreen;
+import ph.kanta.reborn.ui.KantaQueueScreen;
+import ph.kanta.reborn.ui.KantaPitchTempoScreen;
+import ph.kanta.reborn.ui.KantaMicVoiceScreen;
+import ph.kanta.reborn.ui.KantaVisualsScreen;
+import ph.kanta.reborn.ui.KantaFullscreenStage;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
@@ -42,7 +50,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       CYAN = 0xFF6FE5E8,
       GOLD = 0xFFF6CE77;
   private SessionController session;
-  private LinearLayout root, body, results;
+  private FrameLayout root, body, results;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -63,7 +71,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   // New KANTA design-system screens (presentation layer only; backend logic
   // is unchanged and owned by SessionController / StagePresenterImpl).
-  private LinearLayout contentContainer;
+  private FrameLayout contentContainer;
   private HomeScreen homeScreen;
   private KantaNowPlayingScreen nowPlayingScreen;
   private KantaSearchScreen searchScreen;

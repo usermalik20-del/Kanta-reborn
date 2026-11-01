@@ -169,11 +169,11 @@ public class HomeScreen extends LinearLayout {
     bottom.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_ELEVATED);
     bottom.setPadding(0, (int)(8*density), 0, (int)(16*density));
     String[][] nav = {
-        {"Home", "\uD83C\uDFA0", "onHome", true},
-        {"My Set", "\u2606", "onMySet", false},
-        {"Scenic", "\uD83C\uDFAB", "onScenic", false},
-        {"Realm", "\uD83D\uDDFE\uFE0F", "onRealm", false},
-        {"More", "\u22EE", "onMore", false},
+        {"Home", "\uD83C\uDFA0", "onHome", "true"},
+        {"My Set", "\u2606", "onMySet", "false"},
+        {"Scenic", "\uD83C\uDFAB", "onScenic", "false"},
+        {"Realm", "\uD83D\uDDFE\uFE0F", "onRealm", "false"},
+        {"More", "\u22EE", "onMore", "false"},
     };
     for (String[] n : nav) {
       Button navBtn = new Button(context);

@@ -206,10 +206,10 @@ public class KantaNowPlayingScreen extends LinearLayout {
     bottomNav.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_ELEVATED);
     bottomNav.setPadding(0, (int)(8*density), 0, (int)(16*density));
     String[][] nav = {
-        {"Queue", "\uD83D\uDC51", "onQueue", false},
-        {"Lyrics", "\ud83c\udf1e", "onLyrics", true},
-        {"Effects", "\ud83c\udfab", "onEffects", false},
-        {"Coach", "\ud83d\udcbb", "onCoach", false},
+        {"Queue", "\uD83D\uDC51", "onQueue", "false"},
+        {"Lyrics", "\ud83c\udf1e", "onLyrics", "true"},
+        {"Effects", "\ud83c\udfab", "onEffects", "false"},
+        {"Coach", "\ud83d\udcbb", "onCoach", "false"},
     };
     for (String[] n : nav) {
       Button b = new Button(context);

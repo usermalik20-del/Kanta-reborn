@@ -69,7 +69,7 @@ public class KantaPitchTempoScreen extends LinearLayout {
     divider.setText("\u266D\u266D   \u266D   0   \u266F   \u266F\u266F");
     divider.setTextSize(13);
     divider.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-    divider.setTypeface(null, Typeface.MONOSPACE);
+    divider.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL);
     divider.setGravity(Gravity.CENTER);
     divider.setPadding(0, (int)(4*density), 0, (int)(16*density));
     addView(divider);
@@ -83,7 +83,7 @@ public class KantaPitchTempoScreen extends LinearLayout {
     sliderNote.setText("50%  ─────────────────  200%");
     sliderNote.setTextSize(12);
     sliderNote.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-    sliderNote.setTypeface(null, Typeface.MONOSPACE);
+    sliderNote.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL);
     sliderNote.setGravity(Gravity.CENTER);
     sliderNote.setPadding(0, (int)(4*density), 0, (int)(24*density));
     addView(sliderNote);
