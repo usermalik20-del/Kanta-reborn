@@ -298,3 +298,7 @@ The iOS download remains an unsigned personal-signing input; this automation doe
 ## Android CI runner regression contract — 2026-11-01
 
 When editing `.github/workflows/android-validation.yml`, keep `workflow_dispatch`, `push` and `pull_request` as independent top-level event keys. A manual ref input may select the checkout SHA, but it must not silently select a reduced validation mode. The Android emulator runner's private-network check is a prerequisite guard only; APK installation, instrumentation and evidence capture must remain reachable after it succeeds. Keep screenshot destination paths synchronized between `tools/run-android-runtime.py` and artifact upload configuration. Execute `tools.tests.test_android_runtime_runner` in the Android workflow and update the CI repair ledger for any recurrence. Never interpret a static runner test as successful Android emulator acceptance.
+
+## Android stage presenter and camera ownership regression — 2026-11-01
+
+The primary stage in `MainActivity` is `ph.kanta.reborn.stage.StagePresenterImpl`, not the legacy `StageSurface`. Do not cast the primary stage to `StageSurface` in instrumentation. Exercise `StageSurface` only when a fullscreen/external stage is actually created. `CameraStage` must support both primary `StagePresenterImpl` and fullscreen `StageSurface` targets, publish stream state to fullscreen surfaces, and obtain the primary preview from the presenter's `BackgroundStage`. Keep tests aligned with the actual stage owner and verify camera movement in both directions.
