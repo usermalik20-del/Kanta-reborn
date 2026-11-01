@@ -1044,3 +1044,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** add exact eight-path artwork routing to Android and iOS hosts, enforce per-file and aggregate limits at host startup, package the same files into the iOS host resource map, and render deterministic cover images in search results, queue rows, and Now Playing. Extend TLS regression coverage to assert successful image/webp delivery and rejection of an unlisted ninth path. Pairing, TLS pinning, command ownership and the transport protocol remain unchanged.
 
 **Validation:** exact-head Android validation must pass real Chrome and then emulator runtime instrumentation; its artifact must contain all eight native screen captures and `browser-remote.png`. iOS validation and unsigned archive must remain green. No merge or APK publication until acceptance is verified.
+
+
+## Android PR #134 — Mic & Voice screenshot idle timeout (2026-11-01)
+
+**Affected run:** Android validation #518, run `41327810681`, exact head `763c78326912ddc35d7ef5bb5b19014dd00767aa`. Android compilation, lint, 65k+ domain regressions, HTTPS companion in real Chrome, browser interoperability and private-interface checks passed. Emulator acceptance stopped at `mic_voice_screen.png`: `UiAutomation.waitForIdle(250, 5000)` timed out.
+
+**Root cause:** MainActivity intentionally refreshes microphone presentation every 100 ms. Mic & Voice's setters reapplied identical TextView text, SeekBar progress, selected-mode backgrounds and meter-bar backgrounds on every tick. Those redundant view mutations continuously emitted accessibility/UI changes, preventing the screenshot harness from observing an idle window. This was not an audio capture failure or a rendering crash.
+
+**Repair:** make Mic & Voice view updates idempotent: update labels only when their text changes, update meter bars only when the active-bar count changes, avoid resetting unchanged SeekBar progress and monitor/score button state, and skip reapplying an already-selected effect mode. Keep the 100 ms microphone/score refresh cadence and actual capture/monitor owners unchanged.
+
+**Validation:** rerun the full Android emulator walkthrough. All eight requested native captures and `browser-remote.png` must be present in `android-reconstruction-checks`; verify Mic & Voice, Now Playing and fullscreen screenshots before accepting the PR.

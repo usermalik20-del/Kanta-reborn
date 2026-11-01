@@ -452,3 +452,6 @@ The same browser gate asserts that XcodeGen includes `Resources/CompanionRemote`
 
 
 Browser companion cover delivery is part of the real-Chrome gate: Android and iOS HTTPS hosts serve only the eight exact `/assets/covers/01.webp`–`08.webp` routes as `image/webp`, reject unlisted paths, and enforce 160 KB per-file / 1.5 MB aggregate limits. Search-result, queue and Now Playing images are checked for successful loading before capture.
+
+
+The Mic & Voice screenshot acceptance depends on idempotent screen-state projection. The 100 ms microphone refresh may continue to observe the capture owner, but identical labels, meter states, gain values, effect selections and scoring controls must not be reapplied to the view tree; this preserves a stable accessibility-idle window without slowing live input updates.

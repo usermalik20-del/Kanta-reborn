@@ -27,6 +27,9 @@ public final class KantaMicVoiceScreen extends LinearLayout {
   private SeekBar gainSlider;
   private final Button[] modeButtons = new Button[4];
   private float inputLevel;
+  private int lastActiveBars = -1;
+  private String lastInputMessage;
+  private String selectedMode;
 
   public KantaMicVoiceScreen(Context context, Listener listener) {
     super(context);
@@ -234,7 +237,10 @@ public final class KantaMicVoiceScreen extends LinearLayout {
 
   public void setInputLevel(float rms, String message) {
     inputLevel = Float.isFinite(rms) ? Math.max(0f, Math.min(1f, rms * 8f)) : 0f;
-    if (levelLabel != null) levelLabel.setText(message);
+    if (levelLabel != null && !String.valueOf(levelLabel.getText()).equals(message)) {
+      levelLabel.setText(message);
+      lastInputMessage = message;
+    }
     if (getChildCount() < 2) return;
     android.view.ViewGroup scrollContent = (android.view.ViewGroup) ((android.widget.ScrollView) getChildAt(1)).getChildAt(0);
     if (scrollContent == null) return;
@@ -242,6 +248,8 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     if (!(meter instanceof LinearLayout)) return;
     LinearLayout bars = (LinearLayout) meter;
     int active = Math.round(inputLevel * bars.getChildCount());
+    if (active == lastActiveBars) return;
+    lastActiveBars = active;
     for (int i = 0; i < bars.getChildCount(); i++) {
       TextView bar = (TextView) bars.getChildAt(i);
       int color = i < active ? (i >= 9 ? KantaTheme.WARNING : KantaTheme.SUCCESS) : KantaTheme.SURFACE_ELEVATED;
@@ -251,18 +259,24 @@ public final class KantaMicVoiceScreen extends LinearLayout {
 
   public void setMonitorState(boolean enabled, boolean audible, float gain, String mode) {
     if (monitorStatus == null) return;
-    monitorStatus.setText(!enabled ? "Monitoring off · connect a supported headset"
-        : audible ? "Monitoring active · route verified" : "Monitoring muted · verifying output");
-    monitorToggle.setText(enabled ? "Turn off monitoring" : "Choose output");
-    monitorToggle.setEnabled(enabled || micStatus.getText().toString().equals("Microphone input active"));
+    String status = !enabled ? "Monitoring off · connect a supported headset"
+        : audible ? "Monitoring active · route verified" : "Monitoring muted · verifying output";
+    if (!String.valueOf(monitorStatus.getText()).equals(status)) monitorStatus.setText(status);
+    String toggle = enabled ? "Turn off monitoring" : "Choose output";
+    if (!String.valueOf(monitorToggle.getText()).equals(toggle)) monitorToggle.setText(toggle);
+    boolean canToggle = enabled || micStatus.getText().toString().equals("Microphone input active");
+    if (monitorToggle.isEnabled() != canToggle) monitorToggle.setEnabled(canToggle);
     int progress = Math.round(Math.max(0f, Math.min(.35f, gain)) * 100);
-    if (gainSlider != null && !gainSlider.isPressed()) gainSlider.setProgress(progress);
-    if (gainValue != null) gainValue.setText(progress + "%");
+    if (gainSlider != null && !gainSlider.isPressed() && gainSlider.getProgress() != progress) gainSlider.setProgress(progress);
+    String gainText = progress + "%";
+    if (gainValue != null && !String.valueOf(gainValue.getText()).equals(gainText)) gainValue.setText(gainText);
     selectMode(mode);
   }
 
   private void selectMode(String mode) {
     String selected = mode == null ? "DRY" : mode.toUpperCase(java.util.Locale.ROOT);
+    if (selected.equals(selectedMode)) return;
+    selectedMode = selected;
     for (int i = 0; i < modeButtons.length; i++) {
       if (modeButtons[i] == null) continue;
       String key = new String[] {"DRY", "ROOM", "HALL", "ECHO"}[i];
@@ -276,7 +290,9 @@ public final class KantaMicVoiceScreen extends LinearLayout {
 
   public void setScoreState(boolean enabled, String message) {
     if (scoreStatus == null) return;
-    scoreStatus.setText(message == null ? "Scoring status unavailable" : message);
-    scoringToggle.setText(enabled ? "Turn off song scoring" : "Enable song scoring");
+    String status = message == null ? "Scoring status unavailable" : message;
+    if (!String.valueOf(scoreStatus.getText()).equals(status)) scoreStatus.setText(status);
+    String toggle = enabled ? "Turn off song scoring" : "Enable song scoring";
+    if (!String.valueOf(scoringToggle.getText()).equals(toggle)) scoringToggle.setText(toggle);
   }
 }
