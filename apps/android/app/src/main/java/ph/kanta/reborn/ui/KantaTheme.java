@@ -3,6 +3,9 @@ package ph.kanta.reborn.ui;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
 import android.view.View;
@@ -26,6 +29,11 @@ public final class KantaTheme {
   public static final int WARNING = 0xFFF5C451;
   public static final int DANGER = 0xFFFF5277;
   private KantaTheme() {}
+  public static Drawable stageBackground(Context context, boolean wide) {
+    int artwork = wide ? R.drawable.kanta_stage_tv : R.drawable.kanta_stage_phone;
+    Drawable image = context.getDrawable(artwork).mutate();
+    return new LayerDrawable(new Drawable[] {image, new ColorDrawable(0x55050B18)});
+  }
   public static GradientDrawable backgroundDrawable(int color, int radiusDp, int strokeColor, int strokeWidthDp, float density) {
     GradientDrawable d = new GradientDrawable();
     d.setColor(color);
