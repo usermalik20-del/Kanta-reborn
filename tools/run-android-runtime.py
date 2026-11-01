@@ -106,7 +106,26 @@ def main() -> int:
                     run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-stage.png", stdout=output, timeout=20)
             if (ROOT / "android-runtime-stage.png").stat().st_size == 0: raise RuntimeError("Missing real stage capture")
             # Camera capture: fallback to app private file (screencap captures emulator display only)
-            with (ROOT / "android-runtime-camera.png").open("wb") as output:
+            # Read new UI walkthrough screenshots captured by RuntimeChecks.java
+            for screenshot_name in [
+                "library_ready.png",
+                "fixture_loaded.png",
+                "ui_rendered.png",
+                "youtube_loaded.png",
+                "stage_ready.png",
+                "camera_optin.png",
+                "voice_settings.png",
+                "final_ui.png",
+            ]:
+                screenshot_path = ROOT / screenshot_name
+                if screenshot_path.exists() and screenshot_path.stat().st_size > 0:
+                    print(f"Reading {screenshot_name} from app files", flush=True)
+                    with open(screenshot_path, "wb") as f:
+                        run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", f"files/{screenshot_name}", stdout=f, timeout=20)
+                else:
+                    print(f"{screenshot_name} not found or empty, skipping", flush=True)
+            
+            # Camera capture (existing behavior)            with (ROOT / "android-runtime-camera.png").open("wb") as output:
                 run(adb, "exec-out", "run-as", "ph.kanta.reborn", "cat", "files/runtime-camera.png", stdout=output, timeout=20)
             if (ROOT / "android-runtime-camera.png").stat().st_size == 0: raise RuntimeError("Missing real camera capture")
         return 0
