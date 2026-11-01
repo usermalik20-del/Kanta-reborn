@@ -968,3 +968,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** MainActivity now retains a one-shot return-to-Home intent for accessories opened from Home. When that accessory is dismissed through the existing workspace lifecycle callback, the app returns to Home after the dismissal callback completes. Switching directly between active accessories clears the return intent so a replacement accessory is not hidden. Runtime instrumentation now asserts that Home Search opens the existing accessory and that Back returns to the Home dashboard before exercising More and the legacy stage.
 
 **Validation:** the failed run remains recorded; a new exact-head Android build and emulator run must pass. No prior green result is carried forward.
+
+
+## Android PR #134 — missing generated resource imports after adaptive asset integration (2026-11-01)
+
+**Affected run:** [Android validation #41314360456](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41314360456), branch `feat/android-kanta-reference-fidelity`, commit `9769349c513f81aaeeb33a4ee718069fb250abde`. The build reached `compileDebugJavaWithJavac` and failed with 19 `package R does not exist` errors in `HomeScreen.java` and `KantaTheme.java`.
+
+**Root cause:** both classes are in the `ph.kanta.reborn.ui` subpackage. Android generates the app resource class in the application namespace package `ph.kanta.reborn.R`; unlike `StageView` in the namespace package, the UI classes cannot resolve `R` without an explicit import. The vector and WebP resource files themselves were not the cause.
+
+**Repair:** add explicit `import ph.kanta.reborn.R;` imports to the two UI classes that reference generated resources. Keep the app namespace and resource ownership unchanged.
+
+**Validation:** a new Android-owned workflow run must compile, lint, execute domain checks and complete the emulator runtime gate on the repaired head. The failed run remains recorded; it is not reclassified as flaky or ignored.

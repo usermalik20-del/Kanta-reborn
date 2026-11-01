@@ -1,5 +1,7 @@
 package ph.kanta.reborn.ui;
 
+import ph.kanta.reborn.R;
+
 import android.content.Context;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
