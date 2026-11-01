@@ -90,7 +90,12 @@ try{
   await evaluate("document.getElementById('play-pause').click()");await wait("document.getElementById('transport-state').textContent==='Paused / stopped' && !document.getElementById('play-pause').disabled");
   await evaluate("document.getElementById('stop').click()");await wait("!document.getElementById('stop').disabled");
   assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,'Phone layout overflows');
-  for(const width of [320,768,1024]){await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,`Layout overflow at ${width}`);}
+  for(const width of [320,390,768,1024]){await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,`Layout overflow at ${width}`);}
+  await cdp('Emulation.setDeviceMetricsOverride',{width:1280,height:960,deviceScaleFactor:1,mobile:false});
+  assert.equal(await evaluate("document.querySelector('.sidebar').offsetWidth>0"),true,'Desktop sidebar is hidden');
+  assert.equal(await evaluate("document.querySelector('.now-column').offsetWidth>0"),true,'Desktop Now Playing panel is hidden');
+  assert.equal(await evaluate("document.querySelector('.remote-layout').getBoundingClientRect().width>1000"),true,'Desktop layout did not expand');
+  assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,'Desktop layout overflows');
   if(process.env.KANTA_BROWSER_SCREENSHOT){await evaluate("document.getElementById('pairing').hidden=true");const shot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});await writeFile(process.env.KANTA_BROWSER_SCREENSHOT,Buffer.from(shot.data,'base64'));}
   await evaluate("document.getElementById('disconnect').click()");await wait("document.getElementById('controller').hidden && !document.getElementById('pairing').hidden");
   assert.equal(await evaluate("document.getElementById('code').value"),'');

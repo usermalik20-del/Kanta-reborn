@@ -1,14 +1,117 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>KANTA Remote</title><link rel="stylesheet" href="/remote.css"><script src="/remote.js" defer></script></head>
-<body><main>
-<header><p class="brand">KANTA</p><h1>REMOTE CONTROLLER</h1><p id="status" role="status" aria-live="polite">Pair with your host</p></header>
-<section id="pairing" class="card"><h2>Connect securely</h2><p>Use the address displayed by your host on the same Wi-Fi. Before entering the pairing code, compare this site's certificate SHA-256 fingerprint with the one on the host. Cancel if they differ. A local certificate warning alone does not establish the host's identity.</p><label class="check"><input id="verified" type="checkbox"> I verified the certificate fingerprint, or the KANTA app verified the exact fingerprint I entered.</label><form id="pair-form"><label for="code">Host pairing code</label><input id="code" type="password" autocomplete="off" maxlength="32" spellcheck="false" autocapitalize="none" required pattern="[a-fA-F0-9]{32}"><button type="submit">Pair with host</button></form><p>No media files, microphone or camera are shared. Pairing closes after five minutes; guest sessions last up to ten minutes.</p></section>
-<div id="controller" hidden>
-<section class="entry"><h2>ENTER SONG CODE</h2><form id="search-form"><label class="sr" for="query">Song code, title or artist</label><div class="search-row"><input id="query" maxlength="128" autocomplete="off" placeholder="Code, title or artist"><button id="lookup" type="submit">SEARCH / RESERVE</button></div><label for="singer">Singer (optional)</label><input id="singer" maxlength="80" autocomplete="off"></form><div class="keypad" aria-label="Song code keypad"><button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button><button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button><button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button><button id="clear" type="button">Clear</button><button type="button" data-digit="0">0</button><button id="backspace" type="button" aria-label="Delete last character">⌫</button></div><p>Search first, then choose the song to reserve. Voice entry uses your keyboard's optional dictation.</p><div id="results" aria-live="polite"></div></section>
-<section class="card"><h2>MODE SELECT</h2><div class="modes"><button type="button" class="selected" aria-pressed="true">KANTA LIBRARY</button><button type="button" disabled aria-describedby="online-limit">YouTube</button></div><p id="online-limit">YouTube controls stay on the host's visible official player. This remote controls the local library.</p></section>
-<nav class="shortcuts" aria-label="Host shortcuts"><button disabled type="button">▣<span>Host Cam</span></button><button id="queue-shortcut" type="button">☷<span>Song Queue</span></button><button disabled type="button">♡<span>Favorites</span></button><button disabled type="button">☷<span>Audio FX</span></button></nav><p>Camera, Favorites and Audio FX are unavailable through this protocol. Sensors stay under the host's control.</p>
-<section class="card now"><h2>NOW PLAYING · HOST SCREEN</h2><p id="current">Loading host…</p><p id="transport-state"></p><div class="transport"><button type="button" disabled>Previous</button><button id="play-pause" type="button" class="primary">Play</button><button id="next" type="button">Next</button><button id="stop" type="button">Stop</button></div><p>Previous and seek are unavailable. Host playback continues when this remote disconnects.</p></section>
-<section id="queue-card" class="card" tabindex="-1"><h2>SONG QUEUE · FIRST 10</h2><div id="queue"></div><button id="refresh" type="button">Refresh host state</button></section>
-<button id="disconnect" type="button" class="disconnect">Disconnect remote</button>
-</div><p id="notice" role="alert"></p><footer>Private LAN companion · No cloud relay</footer>
-</main></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050b18">
+  <title>KANTA Remote Controller</title>
+  <link rel="stylesheet" href="/remote.css">
+  <script src="/remote.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="pairing-header">
+      <p class="brand">KANTA</p>
+      <h1>REMOTE CONTROLLER</h1>
+      <p id="status" role="status" aria-live="polite">Pair with your host</p>
+    </header>
+
+    <section id="pairing" class="card pairing-card">
+      <h2>Connect securely</h2>
+      <p>Use the address displayed by your host on the same Wi-Fi. Before entering the pairing code, compare this site's certificate SHA-256 fingerprint with the one on the host. Cancel if they differ. A local certificate warning alone does not establish the host's identity.</p>
+      <label class="check"><input id="verified" type="checkbox"> I verified the certificate fingerprint, or the KANTA app verified the exact fingerprint I entered.</label>
+      <form id="pair-form">
+        <label for="code">Host pairing code</label>
+        <input id="code" type="password" autocomplete="off" maxlength="32" spellcheck="false" autocapitalize="none" required pattern="[a-fA-F0-9]{32}">
+        <button type="submit" class="primary">Pair with host</button>
+      </form>
+      <p>No media files, microphone or camera are shared. Pairing closes after five minutes; guest sessions last up to ten minutes.</p>
+    </section>
+
+    <div id="controller" class="remote-layout" hidden>
+      <aside class="sidebar">
+        <a class="sidebar-brand" href="#entry" aria-label="KANTA remote home"><span class="brand-mark">✦</span><span><strong>KANTA</strong><small>REMOTE CONTROLLER</small></span></a>
+        <p class="connection-label"><span class="connection-dot"></span> Secure session</p>
+        <nav aria-label="Remote sections">
+          <a class="active" href="#entry">♫ <span>Music</span></a>
+          <a id="queue-shortcut" href="#queue-card">☷ <span>Queue</span></a>
+          <a href="#now-panel">◉ <span>Now Playing</span></a>
+          <button type="button" disabled>⌁ <span>Remotes</span></button>
+          <button type="button" disabled>⚙ <span>Settings</span></button>
+        </nav>
+        <div class="sidebar-note">
+          <strong>Connected to host</strong>
+          <p>Private LAN companion. The host keeps ownership of playback, media and permissions.</p>
+        </div>
+      </aside>
+
+      <div class="library-column">
+        <section id="entry" class="card library-panel">
+          <div class="section-heading">
+            <div><p class="eyebrow">YOUR KARAOKE LIBRARY</p><h2>Find your next song</h2></div>
+            <span class="source-pill">Host library</span>
+          </div>
+          <form id="search-form">
+            <label class="sr" for="query">Song code, title or artist</label>
+            <div class="search-row">
+              <input id="query" maxlength="128" autocomplete="off" placeholder="Search songs, artists or enter code">
+              <button id="lookup" type="submit" class="primary">Search</button>
+            </div>
+            <label for="singer">Singer (optional)</label>
+            <input id="singer" maxlength="80" autocomplete="off" placeholder="Singer name">
+          </form>
+          <div class="modes" aria-label="Music source">
+            <button type="button" class="selected" aria-pressed="true">KANTA LIBRARY</button>
+            <button type="button" disabled aria-describedby="online-limit">YouTube</button>
+          </div>
+          <p id="online-limit" class="subtle">YouTube playback stays on the host's visible official player. This remote controls the local library.</p>
+          <details class="keypad-disclosure">
+            <summary>Enter a song code with keypad</summary>
+            <div class="keypad" aria-label="Song code keypad">
+              <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
+              <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
+              <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
+              <button id="clear" type="button">Clear</button><button type="button" data-digit="0">0</button><button id="backspace" type="button" aria-label="Delete last character">⌫</button>
+            </div>
+          </details>
+          <div class="results-heading"><h3>Search results</h3><span>Reserve to add to queue</span></div>
+          <div id="results" aria-live="polite"><p class="empty-state">Search the host library to find songs.</p></div>
+        </section>
+
+        <section id="queue-card" class="card queue-panel" tabindex="-1">
+          <div class="section-heading"><div><p class="eyebrow">UP NEXT</p><h2>Song queue</h2></div><span class="source-pill">First 10</span></div>
+          <div id="queue"><p class="empty-state">Queue will appear after pairing.</p></div>
+          <button id="refresh" type="button" class="secondary">Refresh host state</button>
+        </section>
+      </div>
+
+      <aside id="now-panel" class="now-column">
+        <section class="card now">
+          <p class="eyebrow">KARAOKE STAGE</p>
+          <h2>Now Playing</h2>
+          <div class="stage-art" aria-hidden="true"><span>♫</span></div>
+          <p id="current" class="current-title">Loading host…</p>
+          <p id="transport-state" class="transport-state"></p>
+          <div class="transport">
+            <button id="play-pause" type="button" class="primary play-button">Play</button>
+            <button id="next" type="button">Next</button>
+            <button id="stop" type="button">Stop</button>
+          </div>
+          <p class="subtle">The host controls the playback clock and current media. Previous, seek and fullscreen are not exposed by this companion protocol.</p>
+        </section>
+        <section class="card capability-panel">
+          <h3>Host controls</h3>
+          <div class="capability-row"><span>Queue management</span><strong class="available">Available</strong></div>
+          <div class="capability-row"><span>Local playback</span><strong class="available">Available</strong></div>
+          <div class="capability-row"><span>Key / tempo</span><strong>Host only</strong></div>
+          <div class="capability-row"><span>Camera / microphone</span><strong>Host only</strong></div>
+        </section>
+        <button id="disconnect" type="button" class="disconnect">Disconnect remote</button>
+      </aside>
+    </div>
+
+    <p id="notice" role="alert"></p>
+    <footer>Private LAN companion · No cloud relay · Host-owned playback</footer>
+  </main>
+</body>
+</html>
