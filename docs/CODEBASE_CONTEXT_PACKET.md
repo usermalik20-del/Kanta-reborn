@@ -402,3 +402,8 @@ Now Playing is a real destination opened by tapping the persistent stage. Its `K
 ## Generated KANTA artwork integration — 2026-11-01
 
 The existing drawable-nodpi art pack is now used by production UI rather than remaining an unused resource set. Home Quick Play uses the My Set/Favorites/Recent collection artwork; Search results and Queue rows use deterministic stable song-ID mappings to the eight generated covers. Visuals uses the seven supplied cinematic backgrounds plus the existing stage artwork for Default, and selecting a tile calls `SessionController.sceneResource` to decode/publish the actual drawable through the existing stage owner. The runtime test selects Stage Lights and waits for the new Bitmap instance to replace the prior scene. No additional upload is needed for these existing 18 assets; future new artwork can be added through the same resource mapping and screen APIs.
+## Browser remote cover-art delivery — 2026-11-01
+
+The eight supplied WebP covers are packaged alongside the browser companion in Android `assets/companion/art/covers/` and mirrored byte-for-byte into iOS `Resources/CompanionRemote/art/covers/`. The Android `BrowserRemoteServer` and iOS `BrowserRemoteHost` serve only the exact `/assets/covers/01.webp` through `/assets/covers/08.webp` allowlist, with per-file and aggregate byte limits; no new remote commands or host-state authority are introduced.
+
+The real-Chrome companion check verifies that search-result covers and the Now Playing cover load successfully over the pinned HTTPS host. The browser host fixture uses the same bundled files, so a missing resource fails the browser contract instead of silently falling back to decorative placeholders.
