@@ -1012,3 +1012,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Regression coverage:** exact-head Android validation must compile the full app, run lint and core regression, then complete real-Chrome companion checks and emulator instrumentation. The Now Playing instrumentation must find the live `StageSurface` in the attached view hierarchy and verify clean dismissal. Do not count the successful pre-failure static checks as build or runtime acceptance.
 
 **Validation:** repair commit `6b891fd6650c02a6e56c28b0753c7e687f78d67e`; candidate pending exact-head hosted validation. The original failure remains recorded.
+## Android PR #134 — scenic resource request generation narrowed from long to int (2026-11-01)
+
+**Affected run:** Android validation [#41324929503](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41324929503), run number 503, exact head `8918279d05c9b8a8e7321739b8c67857a4ecbe6e`. The `Build, lint and domain regression tests` step failed during `compileDebugJavaWithJavac` at `SessionController.java:1503`: `stageRequest` is a `long`, but the new bundled-scene loader assigned its incremented value to an `int`.
+
+**Root cause:** the new resource-backed scenic selection reused the existing generation counter but declared its request token with a narrower type. This was a compile-time type mismatch, not an emulator or asset decoding failure.
+
+**Repair candidate:** `sceneResource` now stores the incremented request token as `long`, matching the authoritative `stageRequest` field and preserving the stale-result guard without narrowing or overflow.
+
+**Regression coverage:** exact-head Android validation must compile, lint, run domain regressions, verify the browser companion over real Chrome and complete emulator instrumentation. The generated Stage Lights selection must publish the new bitmap, and all eight browser cover files must load through the pinned host. The original failed run remains recorded.
+
+**Validation:** repair commit `030bb38473a92e080a9d7342b9f875ead92e41fa`; candidate pending exact-head hosted validation.
