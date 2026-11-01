@@ -48,8 +48,10 @@ jobs:
         run: |
           set -euo pipefail
           artifacts="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts")"
-          artifact="$(printf '%s' "${artifacts}" | jq -c --arg name "${PLATFORM}" '
-            .artifacts[] | select(.name == (if $name == "android" then "KANTA-Android-preview-download" else "KANTA-iOS-personal-unsigned-download" end))')"
+          artifact="$(printf '%s' "${artifacts}" | jq -ce --arg name "${PLATFORM}" '
+            [.artifacts[] | select(.name == (if $name == "android" then "KANTA-Android-preview-download" else "KANTA-iOS-personal-unsigned-download" end))]
+            | sort_by(.created_at)
+            | last // error("no matching platform package artifact")')"
           test -n "${artifact}"
           PACKAGE_ARTIFACT_ID="$(printf '%s' "${artifact}" | jq -r '.id')"
           PACKAGE_ARTIFACT_SHA256="$(printf '%s' "${artifact}" | jq -r '.digest')"

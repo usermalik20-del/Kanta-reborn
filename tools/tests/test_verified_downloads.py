@@ -319,6 +319,8 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         self.assertIn("platform-download-publishing", self.publisher)
         self.assertIn("ref: main", self.publisher)
         self.assertIn("git push origin HEAD:main", self.publisher)
+        self.assertIn("sort_by(.created_at)", self.publisher)
+        self.assertIn("last // error(\"no matching platform package artifact\")", self.publisher)
 
     def test_release_tooling_does_not_trigger_native_platform_builds(self):
         release_paths = (

@@ -292,9 +292,9 @@ For each CI failure, update `docs/CI_FAILURE_REPAIR_LEDGER.md` with the fingerpr
 
 ## Exact-SHA download publication automation
 
-A successful KANTA iOS unsigned artifacts run on main is the release-pipeline completion signal. The Verified download packaging workflow then resolves the Android validation artifact, unsigned iPhoneOS IPA and both-device simulator walkthrough from the same exact main-branch SHA. It waits for in-flight exact-SHA gates instead of accepting an older successful artifact.
+Android and iOS publication are independent release paths. Android publication resolves only its successful exact-SHA Android validation artifact. iOS publication resolves only its exact-SHA unsigned archive and matching iPhone/iPad simulator walkthrough. Neither publisher waits for or rewrites the peer platform's provenance.
 
-Only after all three gates pass does packaging create up-to-30-day, provenance-bearing Android and unsigned iOS bundles. The publication helper verifies that both builds share the same full source SHA, validates the expected debug/unsigned signing states, and writes apps/web/downloads.json plus the two platform download sections. The workflow commits those generated website files with its narrowly scoped GitHub Actions token and dispatches the existing Vercel production deployment workflow.
+Each platform packages its own provenance-bearing bundle and validates its expected debug/unsigned signing state. The shared manifest records independent source SHA, build run, packaging run, artifact identity, checksum and retention metadata for each platform. On retries, the publisher must select the newest matching package artifact by creation time; upload-artifact names are not unique after a partial failure. The workflow commits only the selected platform page plus the shared manifest and dispatches the existing Vercel production deployment workflow.
 
 The iOS download remains an unsigned personal-signing input; this automation does not create Apple signing identities, provisioning profiles, Safari OTA installation or physical-device acceptance. A failed or missing exact-SHA gate fails closed and leaves the previous website downloads untouched. A rejected non-fast-forward publication push also fails safely rather than overwriting newer main-branch work.
 
