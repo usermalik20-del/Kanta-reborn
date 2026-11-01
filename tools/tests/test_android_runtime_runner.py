@@ -57,6 +57,7 @@ class AndroidRuntimeRunnerContractTests(unittest.TestCase):
         self.assertIn("if screenshot_path.stat().st_size == 0:", source)
         self.assertNotIn("if screenshot_path.exists()", source)
         self.assertIn('"am", "instrument"', source)
+        self.assertIn('[str(adb), "shell", "screencap", "-p"]', source)
 
 
 if __name__ == "__main__":
