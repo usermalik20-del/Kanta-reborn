@@ -648,3 +648,8 @@ iOS IPA publication is owned by the successful `KANTA iOS unsigned artifacts` wo
 Both publishers write only their own platform download page and platform entry in `apps/web/downloads.json`. The publisher reads the latest main branch after acquiring a shared publication concurrency group, merges its platform entry, and preserves the other platform's current metadata. It then validates the website and dispatches the existing Vercel production deployment. A failed validation or rejected non-fast-forward push leaves the previous live download unchanged.
 
 The combined `verified-downloads.yml` workflow is now a contract-only workflow; it must not package or publish either platform. Shared website deployment is downstream of a successful platform-specific metadata publication, not a reason to run both native build pipelines.
+
+
+## Android library import progress lifecycle — 2026-11-02
+
+The repository performs file-provider I/O on its import workers, but it does not own Activity presentation. `SessionController` now dispatches repository progress and completion through its main-Looper handler and resolves the current Activity listener at delivery time. The listener is cleared on completion, cancellation, folder-scan failure and Activity stop; a returning Activity reattaches only while a library import remains active. This avoids worker-thread View/Toast access and prevents the application-scoped repository from retaining a destroyed Activity.

@@ -77,6 +77,10 @@ design-system contract and test boundaries.
 - iOS: `apps/ios/Sources/Features/RootView.swift` instantiates `KantaWorkspace(services:presentationState:)` as the root view body.
 - Android: `apps/android/app/src/main/java/ph/kanta/reborn/KantaWorkspace.java` is the root container; `MainActivity.java` sets it as the content view and routes toolbar buttons through `workspace.activateAccessory(...)`.
 
+## Android library import lifecycle
+
+Android song and folder imports keep provider I/O on the app-owned workers. `SessionController` is the main-Looper boundary for progress and completion callbacks, so Activity dialogs and toasts are never mutated from an import worker. The Activity detaches its listener when stopped and reattaches only while a library import is still active; completion, cancellation and folder-scan failure clear the listener.
+
 ## CI ownership and release gates
 
 GitHub Actions is partitioned by source ownership. Website changes run website validation; Android changes run Android validation; iOS changes run iOS validation. The lightweight documentation-sync check runs on every pull request and fails when an implementation or workflow change is missing its required owner documentation. Cross-platform iOS archive and iPhone/iPad simulator release evidence for Android-only changes is collected on `main` after merge, not on every Android pull request. Vercel production deployment is separate from pull-request validation and runs only from `main` or an explicit dispatch. See [workflow ownership and testing](docs/TESTING.md). CI status is commit-specific; a green result on an earlier SHA is not evidence for a later commit.
