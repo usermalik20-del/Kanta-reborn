@@ -420,3 +420,8 @@ The hosted Android `RuntimeChecks` acceptance verifies that repository progress 
 ## Android browser companion pairing lifecycle
 
 `BrowserRemoteRegressionTests` runs through `CoreRegressionTests` in the existing `coreRegression` JavaExec task and exercises the real generated TLS identity and socket server. The guest-cap regression fills all four slots, performs three valid-code attempts while capacity is full, leaves one guest, and proves a new guest can pair within the five-minute pairing window. Separate wrong-code cases must still lock pairing after three incorrect codes. Capacity rejection must not weaken the wrong-code lockout or change guest count, token expiry, request authorization, or revocation behavior.
+
+
+## Android SoundFont storage regression — 2026-11-02
+
+The framework-free CoreRegressionTests suite covers the SoundFont storage policy: a 600 MiB bank is accepted when 1 GiB is available (leaving 424 MiB), a copy that would consume the 64 MiB reserve is rejected, and unknown/under-reported streams reserve one full 8 MiB lookahead interval plus the next chunk before each periodic StatFs recheck. Reported remaining bytes are used when they exceed that interval, with overflow rejected. The Android importer also performs a reported-size preflight and a final reserve check. Run the normal Android core regression, build, lint, and emulator runtime gates.
