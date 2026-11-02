@@ -375,3 +375,8 @@ Source review found that `LibraryRepository.importBatch` emits progress on the a
 
 
 **PR #136 validation follow-up (2026-11-02):** the first hosted Android run, [#41370531275](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370531275), caught a mutable-counter lambda capture before tests ran. The follow-up snapshots the success result before posting to the main Looper. Corrected code head `ac5e393cff3d1dcee09b4ae424c634b6243bb6f3` passed [Android validation #41370798485](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798485) with 65,402 core regression checks and 228 emulator runtime checks, and [website validation #41370798446](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798446) passed documentation synchronization. The compile failure and repair are retained in the CI failure ledger.
+
+
+## iOS playback cancellation hardening — 2026-11-02
+
+Current-main audit found that user-initiated controller commands could resume after cancellation of an awaited library lookup or native preparation and still start/commit the next song. The repair rechecks cancellation at those suspension boundaries, retires an uncommitted backend asset, and preserves the previous current song and FIFO reservation for recovery. Natural-completion auto-advance remains independent of view-poll cancellation. Five deterministic Swift regressions cover canceled enqueue, canceled Next during library resolution, canceled Next during native load/recovery, canceled snapshot polling during natural auto-advance, and pre-load cancellation preserving the current playing asset. The fix is on a dedicated PR branch; hosted package, simulator-build and iPhone/iPad acceptance are not claimed until exact-head workflows finish.
