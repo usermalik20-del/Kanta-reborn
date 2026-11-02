@@ -227,10 +227,42 @@ import Testing
     #expect(snapshot.queue.map(\.song.id) == [second.id])
 }
 
+@MainActor
+@Test func audioSessionPreparationFailureKeepsCurrentPlaybackRunning() async throws {
+    let first = LibrarySong(id: SongID(rawValue: "session-failure-current"), title: "Current", mediaKind: .wav)
+    let second = LibrarySong(id: SongID(rawValue: "session-failure-next"), title: "Next", mediaKind: .wav)
+    let ownership = KaraokeAudioOwnership()
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(
+        engine: engine,
+        library: FakeKaraokeLibrary(songs: [first, second]),
+        audioOwnership: ownership
+    )
+    try await controller.send(.enqueue(songID: first.id))
+    try await controller.send(.enqueue(songID: second.id))
+    try await controller.send(.play)
+    let before = await controller.snapshot()
+
+    ownership.configurePlaybackSession = {
+        throw TestPlaybackError.audioSession
+    }
+    await #expect(throws: TestPlaybackError.audioSession) {
+        try await controller.send(.next)
+    }
+
+    let after = await controller.snapshot()
+    #expect(after.nowPlaying?.id == first.id)
+    #expect(after.transport == .playing)
+    #expect(after.queue.map(\\.song.id) == [second.id])
+    #expect(after.playbackID == before.playbackID)
+    #expect(await engine.numberOfLoads() == 1)
+}
+
 private enum TestPlaybackError: Error, Equatable, Sendable {
     case forcedAsset(SongID)
     case forcedLoad(SongID)
     case forcedPlay(SongID)
+    case audioSession
 }
 
 private actor FakeAudioPlaybackEngine: AudioPlaybackEngine {
