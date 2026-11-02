@@ -93,7 +93,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private final SettingsStore settings;
   boolean realm;
   final PartyAudio party;
-  final MicrophoneMonitor microphone;
+  final MicrophoneInput microphone;
   final BgvLibrary bgvLibrary;
   final MicrophoneMonitor monitor;
   public final android.content.SharedPreferences options;
