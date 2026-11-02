@@ -54,6 +54,18 @@ public final class RuntimeChecks extends Instrumentation {
     return false;
   }
 
+  private boolean clickText(View view, String text) {
+    if (view instanceof android.widget.Button
+        && ((android.widget.Button) view).getText().toString().equals(text))
+      return view.performClick();
+    if (view instanceof ViewGroup) {
+      ViewGroup group = (ViewGroup) view;
+      for (int i = 0; i < group.getChildCount(); i++)
+        if (clickText(group.getChildAt(i), text)) return true;
+    }
+    return false;
+  }
+
   @Override
   public void onStart() {
     Bundle result = new Bundle();
@@ -153,6 +165,36 @@ public final class RuntimeChecks extends Instrumentation {
                 java.nio.file.Files.readAllBytes(new File(isolated.media, copy.fileName).toPath())),
             "Imported source bytes changed");
       }
+      runOnMainSync(() -> session.importSongs(files));
+      await(
+          () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 2,
+          "SessionController did not publish imported songs and SoundFonts");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "My Set"),
+              "My Set navigation control was not clickable"));
+      await(
+          () -> state(() -> contains(activity.getWindow().getDecorView(), "Original KAR")
+              && contains(activity.getWindow().getDecorView(), "ACTIVE")
+              && contains(activity.getWindow().getDecorView(), "Use")),
+          "My Set did not show imported songs and SoundFont actions");
+      capture("my-set-imported-library.png");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Use"),
+              "SoundFont Use action was not visible/clickable"));
+      await(
+          () -> session.soundFontName.equals("KANTA original tone"),
+          "SoundFont selector did not activate the bundled bank");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Use"),
+              "Imported SoundFont Use action was not visible/clickable"));
+      await(
+          () -> !session.soundFontName.equals("KANTA original tone"),
+          "SoundFont selector did not reactivate the imported bank");
+      capture("my-set-active-soundfont.png");
+
       AtomicBoolean progressSeen = new AtomicBoolean();
       AtomicBoolean progressOnMain = new AtomicBoolean(true);
       AtomicBoolean importCompleted = new AtomicBoolean();
