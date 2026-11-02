@@ -133,6 +133,8 @@ jobs:
             files/mic_voice_screen.png
             files/fullscreen_stage.png
             files/now_playing_screen.png
+            files/my-set-imported-library.png
+            files/my-set-active-soundfont.png
             files/fixture_loaded.png
             files/ui_rendered.png
             files/youtube_loaded.png
