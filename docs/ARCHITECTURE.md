@@ -587,7 +587,7 @@ The request-time renderer also removes any legacy static `/analytics.js` script 
 
 `android-validation.yml` owns the Android source/build/runtime gate. Its manual-dispatch input selects only the Git ref; the full acceptance suite remains mandatory and cannot be replaced by a screenshot-only mode. Push and pull-request triggers remain separate top-level workflow events. `tools/run-android-runtime.py` owns emulator provisioning, private-network readiness, APK installation, instrumentation execution and evidence collection. The private-IPv4 guard is a prerequisite boundary: only its missing-network failure is conditional; installation and instrumentation execute after the guard succeeds. UI screenshots are copied to the workspace's `files/` directory, matching the artifact upload paths. The workflow and runner do not own application playback, queue, persistence or sensor state.
 
-Every named UI walkthrough screenshot is required evidence. The runner copies it from app-private storage into `files/` and fails closed when retrieval is unsuccessful or the file is empty; the artifact path and runtime destination must remain identical.
+Every named UI walkthrough screenshot is required evidence: all nine reference-led destinations plus the My Set imported-library and active-SoundFont captures. The runner copies each from app-private storage into `files/` and fails closed when retrieval is unsuccessful or the file is empty; the artifact path and runtime destination must remain identical.
 
 ## Android stage presenter and camera target contract — 2026-11-01
 
