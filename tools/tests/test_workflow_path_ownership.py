@@ -141,6 +141,7 @@ class WorkflowOwnershipTests(unittest.TestCase):
         self.assertIn("types: [completed]", trigger)
         self.assertIn("branches: [main]", trigger)
         self.assertIn("group: platform-download-publishing", source)
+        self.assertRegex(source, r"(?m)^\s+fetch-depth:\s*0\s*$")
         self.assertIn("tools/prepare-platform-download.py", source)
         self.assertIn("tools/publish-platform-download.py", source)
         self.assertIn("ref: main", source)

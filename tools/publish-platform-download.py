@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +17,50 @@ def positive(name):
     if not re.fullmatch(r"[1-9][0-9]*", value):
         raise ValueError(name + " must be a positive integer")
     return int(value)
+
+def is_ancestor(older: str, newer: str) -> bool:
+    """Return whether older is an ancestor of newer in the checked-out history."""
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", older, newer],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    detail = result.stderr.strip() or "git merge-base could not resolve both revisions"
+    raise ValueError("Unable to verify platform publication ancestry: " + detail)
+
+def require_forward_source(platform: str, candidate: str, manifest: dict) -> None:
+    """Reject delayed older completions and source histories unrelated to the published entry."""
+    platform_entries = manifest.get("platforms", {})
+    if not isinstance(platform_entries, dict):
+        raise ValueError("Invalid published platform provenance map")
+    current_entry = platform_entries.get(platform)
+    if current_entry is None:
+        current_entry = manifest.get(platform)
+    if current_entry is None:
+        return
+    if not isinstance(current_entry, dict):
+        raise ValueError("Invalid currently published platform entry")
+    current = current_entry.get("source")
+    if not isinstance(current, str) or not re.fullmatch(r"[0-9a-f]{40}", current):
+        raise ValueError("Invalid currently published source SHA")
+    if current == candidate:
+        return
+    if is_ancestor(candidate, current):
+        raise ValueError(
+            f"Refusing stale {platform} publication for {candidate[:12]}; "
+            f"the published source {current[:12]} is newer"
+        )
+    if not is_ancestor(current, candidate):
+        raise ValueError(
+            f"Refusing {platform} publication from unrelated source history "
+            f"({current[:12]} -> {candidate[:12]})"
+        )
 
 def publish():
     platform = os.environ.get("PLATFORM", "")
@@ -45,6 +90,7 @@ def publish():
     url = f"https://github.com/{REPO}/actions/runs/{run_id}/artifacts/{package_id}"
     path = ROOT / "apps/web/downloads.json"
     manifest = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    require_forward_source(platform, source, manifest)
     manifest.setdefault("repository", REPO)
     manifest["verifiedAt"] = now.date().isoformat()
     manifest["signInRequired"] = True
