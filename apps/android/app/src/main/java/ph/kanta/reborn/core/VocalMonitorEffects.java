@@ -202,6 +202,6 @@ public final class VocalMonitorEffects {
     }
     previousInput = value;
     previousOutput = blocked;
-    return Math.max(-0.95f, Math.min(0.95f, blocked));
+    return Math.max(-0.9f, Math.min(0.9f, blocked));
   }
 }
