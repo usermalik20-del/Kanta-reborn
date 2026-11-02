@@ -1442,7 +1442,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           text(bank.name, 14, Color.WHITE),
           new LinearLayout.LayoutParams(0, -2, 1));
       boolean active = bank.fileName.equals(session.activeSoundFontFileName());
-      item.addView(button(active ? "Active" : "Use", active ? () -> {} : () -> session.selectSoundFont(bank.fileName)));
+      if (active) item.addView(text("ACTIVE", 12, CYAN));
+      else item.addView(button("Use", () -> session.selectSoundFont(bank.fileName)));
       body.addView(item);
     }
     body.addView(
