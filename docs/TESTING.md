@@ -355,7 +355,7 @@ The iOS download remains an unsigned personal-signing input; this automation doe
 
 The Android workflow now runs `python3 -m unittest tools.tests.test_android_runtime_runner` before Gradle/emulator work. The test parses the runner with Python's AST, requires the private-IPv4 guard to fail explicitly, and verifies that both APK installation calls are outside that failure branch and that instrumentation plus the `files/` screenshot destination remain wired. The workflow's `workflow_dispatch` and `push` events must remain separate YAML keys; manual `ref` selection changes the checked-out commit, not the required test scope. Full validation remains the default and only supported mode until a genuinely independent visual-only acceptance contract exists. A passing static test is not Android compilation, instrumentation, emulator acceptance or device acceptance.
 
-The runner must retrieve all eight named walkthrough screenshots from app-private storage into `files/`; a missing or empty capture fails the runtime gate instead of being logged and skipped. The AST regression test rejects the old local-file-exists precondition that caused every new screenshot to be skipped before retrieval.
+The runner must retrieve all nine reference-led destination screenshots plus `my-set-imported-library.png` and `my-set-active-soundfont.png` from app-private storage into `files/`; a missing or empty capture fails the runtime gate instead of being logged and skipped. The AST regression test rejects the old local-file-exists precondition that caused every new screenshot to be skipped before retrieval.
 
 ## Android stage runtime integration — 2026-11-01
 
@@ -429,3 +429,29 @@ The existing RuntimeChecks fixture imports a mixed SAF batch, verifies the MIDI/
 ## Android SoundFont storage regression — 2026-11-02
 
 The framework-free CoreRegressionTests suite covers the SoundFont storage policy: a 600 MiB bank is accepted when 1 GiB is available (leaving 424 MiB), a copy that would consume the 64 MiB reserve is rejected, and unknown/under-reported streams reserve one full 8 MiB lookahead interval plus the next chunk before each periodic StatFs recheck. Reported remaining bytes are used when they exceed that interval, with overflow rejected. The Android importer also performs a reported-size preflight and a final reserve check. Run the normal Android core regression, build, lint, and emulator runtime gates.
+
+
+## iOS controller cancellation regressions — 2026-11-02
+
+The Swift package suite includes deterministic cancellation coverage for a suspended library song lookup during enqueue, a suspended asset lookup during Next, cancellation while the native backend is loading the next asset, natural-completion auto-advance while its snapshot poll is canceled, and cancellation during audio-session preparation before `engine.load`. A separate failure-path case throws from audio-session configuration and verifies that the already-playing backend is not stopped before a new asset load begins. The tests require no queue/current-item/playback-identity commit after user-command cancellation, require an uncommitted backend asset to be stopped only after loading has begun, verify that the prior current song remains playing when cancellation or session setup failure precedes load, verify reload recovery after a partial replacement, and prove that observer cancellation does not strand Up Next. Run `swift build --build-tests` and `swift test --no-parallel`; simulator app build and independent iPhone/iPad walkthroughs remain separate acceptance gates.
+
+
+## Android reference-led screen acceptance
+
+The Android emulator runtime walkthrough opens each reference-led destination from the Home dashboard, exercises Search/Queue navigation, Pitch reset, Visuals selection, Mic & Voice effect selection, fullscreen controls and Now Playing stage embedding, then captures the screen. A screenshot is accepted only after the destination's tagged view is attached, shown by its ancestors and has a non-empty global visible rectangle; the capture helper waits for UI idle and a bounded compositor settle before taking the screenshot. The Android workflow artifact allowlist and `tools/run-android-runtime.py` collector must retain all nine destination captures plus `my-set-imported-library.png` and `my-set-active-soundfont.png`. Verify all eleven files in the uploaded artifact, not only in app-private storage. This is emulator visual evidence; physical-device acceptance remains separate.
+
+## Independent platform download publication
+
+Each Android and iOS manifest entry owns its own `packagingRun`, artifact ID, URL and checksum. The top-level `packagingRun` is a legacy compatibility fallback only while a platform entry has no scoped value; the verifier still requires that platform's artifact URL to match the fallback run. Every new publication writes a scoped value, and legacy peer provenance is migrated from the peer's immutable artifact URL. When migrating a legacy manifest, the publisher recovers the peer platform's packaging run from that peer's immutable GitHub artifact URL before advancing the shared pointer. Regression tests cover Android and iOS publication in both directions and require the untouched platform's source, package URL, run provenance and page to remain intact.
+
+
+The Android packaged ZIP includes the application APK and a `SHA256.txt` file containing the APK digest. The publisher-generated Android download section must disclose that file, and the website verifier enforces the public copy against the packaged bundle contract.
+
+
+The platform publisher must dispatch `vercel-deploy.yml` after its verified website commit. GitHub's `GITHUB_TOKEN` does not start downstream workflows from the publisher's push, so the publisher job requires narrowly scoped `actions: write` permission for the explicit workflow-dispatch API call; retain read-only Actions access everywhere else.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+After reconciling PR #134 with current `main`, rerun documentation sync and complete Android validation on the resulting SHA. The manual Android run on `bfa605d` proved the Home-launch repair; it does not substitute for later-head validation.
+
+The reconciled exact head must compile against current-main `SessionController` SoundFont and import-progress APIs before the Android runtime walkthrough is accepted.

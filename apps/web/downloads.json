@@ -1,23 +1,25 @@
 {
   "repository": "usermalik20-del/Kanta-reborn",
-  "verifiedAt": "2026-11-01",
+  "verifiedAt": "2026-11-02",
   "retentionDays": 30,
   "signInRequired": true,
-  "source": "fe57a8826f721fbeede9c7a7e59f224eff33cee3",
-  "packagingRun": 41281111931,
-  "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41281111931",
+  "source": "dd0570ef92d4a2c21979bdc9e5ed0b689cf89c38",
+  "packagingRun": 41449342463,
+  "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463",
   "walkthroughRun": 41280807337,
   "android": {
-    "source": "fe57a8826f721fbeede9c7a7e59f224eff33cee3",
-    "run": 41280807356,
-    "artifact": 13073436681,
-    "packagingArtifact": 13074035614,
+    "source": "dd0570ef92d4a2c21979bdc9e5ed0b689cf89c38",
+    "run": 41448595696,
+    "artifact": 13142909420,
+    "packagingRun": 41449342463,
+    "packagingArtifact": 13146170660,
+    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463/artifacts/13146170660",
+    "retentionDays": 30,
     "artifactName": "KANTA-Android-preview-download",
-    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41281111931/artifacts/13074035614",
     "signed": "debug",
-    "sha256": "ddd85febc5e48879a4c10745575426cd857fdc2812429b15cf435833965e6624",
-    "apkSha256": "b6a16d0ab90ba18dd1aa66472a9661527857ca558a2fd287b0a19eb191fc3ad2",
-    "bytes": 46379099
+    "sha256": "745d08801ce4928e9d653058a96248c627569f192466f667033a1a239c6da1b7",
+    "apkSha256": "41541df8dc9fb436f54fac6259cf3b93a20f3320ff7d1440c2fc08432b5c73f1",
+    "bytes": 51914315
   },
   "ios": {
     "source": "fe57a8826f721fbeede9c7a7e59f224eff33cee3",
@@ -32,6 +34,23 @@
     "sha256": "4a4fa24a97615a7b16286dbb46e50119b03436ef865c090f2f11d46e58faf90a",
     "ipaSha256": "7d7ae06b32369bf43302346a1bb31e34661882c20757209da5a278d289983d2b",
     "walkthroughRun": 41280807337,
-    "bytes": 25136904
+    "bytes": 25136904,
+    "packagingRun": 41281111931
+  },
+  "platforms": {
+    "android": {
+      "source": "dd0570ef92d4a2c21979bdc9e5ed0b689cf89c38",
+      "run": 41448595696,
+      "artifact": 13142909420,
+      "packagingRun": 41449342463,
+      "packagingArtifact": 13146170660,
+      "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463/artifacts/13146170660",
+      "retentionDays": 30,
+      "artifactName": "KANTA-Android-preview-download",
+      "signed": "debug",
+      "sha256": "745d08801ce4928e9d653058a96248c627569f192466f667033a1a239c6da1b7",
+      "apkSha256": "41541df8dc9fb436f54fac6259cf3b93a20f3320ff7d1440c2fc08432b5c73f1",
+      "bytes": 51914315
+    }
   }
 }

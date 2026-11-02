@@ -312,3 +312,13 @@ The primary stage in `MainActivity` is `ph.kanta.reborn.stage.StagePresenterImpl
 ## Platform release ownership
 
 Keep native build and public download publication independent. Android APK publishing is triggered only by successful main-branch Android validation and consumes that exact run's APK artifact. iOS unsigned IPA publishing is triggered only by successful main-branch iOS archive completion and must additionally pass the iPhone and iPad simulator walkthrough on the same SHA. Never require Android validation for iOS publication or iOS archive/walkthrough for Android publication. Each publisher may update only its own platform download page and manifest entry; preserve the peer platform's current published entry. The shared website deployment follows successful metadata publication.
+
+
+Android reference-led UI screenshot acceptance is part of the Android-owned emulator flow. When `RuntimeChecks.java` captures the Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals, fullscreen and Now Playing destinations, update both `tools/run-android-runtime.py` and `.github/workflows/android-validation.yml` in the same change. Each destination must be visibly attached/on-screen before capture; the uploaded Android artifact must retain all nine named screenshots in `apps/android/README.md` plus the existing My Set import and active-SoundFont captures. Do not trigger iOS workflows for this Android-only work; keep shared browser companion changes separate and validate only the exact platform contracts they touch.
+
+
+The platform download publisher has narrowly scoped `actions: write` permission because it must dispatch the separate Vercel production workflow after committing a verified platform-owned download page. Keep this permission job-scoped; all other publisher access remains read-only unless required to commit the manifest/page.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+The Android reference-led UI and companion changes remain subject to the repository platform ownership and exact-head validation rules. Reconciliation with current `main` is not merge, release, signing or device acceptance.

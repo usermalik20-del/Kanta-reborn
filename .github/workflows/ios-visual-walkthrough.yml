@@ -12,6 +12,7 @@ on:
       - '!apps/ios/AGENTS.md'
       - '!apps/ios/Docs/**'
       - '!apps/ios/PublicSite/**'
+      - '!apps/ios/Resources/CompanionRemote/**'
       - 'tools/capture-ios-runtime.py'
 
     tags:
@@ -25,6 +26,7 @@ on:
       - '!apps/ios/AGENTS.md'
       - '!apps/ios/Docs/**'
       - '!apps/ios/PublicSite/**'
+      - '!apps/ios/Resources/CompanionRemote/**'
       - 'tools/capture-ios-runtime.py'
 
 permissions:

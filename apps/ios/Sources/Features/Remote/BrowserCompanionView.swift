@@ -91,6 +91,12 @@ struct BrowserCompanionView: View {
                 guard let url = Bundle.main.url(forResource: "CompanionRemote", withExtension: nil)?.appendingPathComponent(name) else { throw CompanionError.invalidInput }
                 assets[path] = try Data(contentsOf: url)
             }
+            for index in 1...8 {
+                let name = String(format: "%02d.webp", index)
+                guard let root = Bundle.main.url(forResource: "CompanionRemote", withExtension: nil) else { throw CompanionError.invalidInput }
+                let url = root.appendingPathComponent("art").appendingPathComponent("covers").appendingPathComponent(name)
+                assets[String(format: "/assets/covers/%02d.webp", index)] = try Data(contentsOf: url)
+            }
             host.start(address: hostAddress, assets: assets); notice = ""
         } catch { notice = "Companion interface resources could not be opened." }
     }

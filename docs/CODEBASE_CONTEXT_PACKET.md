@@ -2,7 +2,7 @@
 
 ## Android library import-discoverability repair candidate — 2026-11-02
 
-**Candidate tree before this context refresh:** `3a5667acf98dd3958ed2c0aad872064ab265eaf8` on `fix/android-library-import-discoverability-20261102`, based on main `6e303a165558546eea8c56a8c3a5986791e95992`. Android remains Java 17 + Android Views, one `SessionController` queue/playback owner, one serial `LibraryRepository` IO owner, app-private hash-addressed media, JSON metadata through `AtomicFile`, TinySoundFont via JNI/AudioTrack, and no Room/Compose/FluidSynth dependency.
+**Candidate tree before this context refresh:** `3a2f936dec401d73ebcef373d9df3d170afec1cc` on `reconcile/ios-playback-cancellation-after-android-20261102`, based on main merge `2f3ad90b0d92f7e05377ba1683c66c01adbb4559` (Android import-discoverability PR #147). Android remains Java 17 + Android Views, one `SessionController` queue/playback owner, one serial `LibraryRepository` IO owner, app-private hash-addressed media, JSON metadata through `AtomicFile`, TinySoundFont via JNI/AudioTrack, and no Room/Compose/FluidSynth dependency.
 
 **Observed gap:** My Set previously showed only the current SoundFont label and starter-song actions; it did not expose imported song rows or a bank selector. `LibraryRepository` persisted only one active SoundFont filename/name, so older imported banks could not be selected later. The separate legacy `SqliteSongCatalog.importFromLegacyContainer(...)` API is not called by the active library/session path. `MegContainerImporter`/`MkmdDecoder` have synthetic-fixture coverage only; no real `kantidx`/`kantablob` has been decoded on a device.
 
@@ -362,3 +362,21 @@ The compact workspace now uses KANTA Karaoke branding in Host navigation/header,
 The compact persistent workspace's accessibility repair removes the identifier from the interactive transport parent and labels the Host-controls action “More controls” to avoid collision with Settings. The branch was synchronized with main while preserving the workspace implementation and its repair documentation, then merged as `41c8ddde`. Reconstruction, focused smoke, unsigned archive and both independent device walkthroughs passed on the merged source SHA, and the result shipped in GitHub Release `v0.1.0-workspace-redesign`.
 
 The Android implementation mirrors the same architecture and the same two accessibility rules: `KantaWorkspace.java` owns the persistent stage layer and the single-active transient accessories, and each actionable child keeps its own `contentDescription` while the container does not override it. The Android toolbar's control-opening entry is labelled “Controls”, never “Settings”.
+
+
+## iOS playback cancellation reconciliation — 2026-11-02
+
+The current-main iOS controller had cancellation gaps across awaited library lookup and native preparation. The reconciled branch ports the complete PR #144 implementation onto the post-#147 main tree, including the additional audio-session setup failure regression absent from older PR #138. It preserves queue reservations and committed playback identity until successful replacement, does not stop the current backend when session configuration fails before `engine.load`, retires only a partially loaded uncommitted asset, and keeps natural-completion auto-advance controller-owned. Five core cancellation scenarios plus the audio-session failure case are covered in `LocalKaraokeControllerTests.swift`.
+
+**Prior source-head evidence:** PR #144 head `f4de237a58250024082018e8933e8ed66b87d677` passed iOS, smoke, unsigned archive, iPhone, iPad and documentation-sync checks (runs `41385876764`, `41385876632`, `41385876753`, `41385876648`, and `41385876770`). Those are historical evidence only; the reconciled branch must pass the same gates on its exact new head. Do not merge the older duplicate PR #138; its cancellation patch lacks the later audio-session failure regression. The broad PR #134 remains a draft and is not merge-ready.
+
+
+## Android reference-led UI context — 2026-11-02
+
+- **Composition:** `MainActivity` owns destination selection and mounts the Java/Android Views screens in `ph.kanta.reborn.ui`; Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing are presentation destinations.
+- **State ownership:** `SessionController` remains the single Android playback/FIFO owner. `LibraryRepository` remains the persisted song/SoundFont owner. UI listeners delegate intents to those existing owners; no parallel queue or playback engine is introduced. Now Playing embeds `StageSurface` rather than maintaining a second stage clock.
+- **Latest-main reconciliation:** keep the merged SoundFont inventory/storage preflight and My Set imported-song/Use actions from the latest main branch. The legacy ShubBlob/kantablob container remains explicitly unsupported in the preview.
+- **Validation evidence:** a new Android emulator walkthrough is being added for all reference-led destinations. It must capture visible screens and retain the screenshots in the Android workflow artifact. Current source branch requires fresh exact-head build/lint/core/native/emulator/Chrome and documentation checks; prior PR #134 run evidence is historical only.
+- **Platform boundary:** browser companion markup, iOS mirrored resources and iOS host changes are excluded from this Android-native UI slice and require a separately reviewed shared-contract change.
+
+**Reconciliation integration note:** the first PR #149 compile found that the reference Visuals destination needed `SessionController.sceneResource(String, int)`. This adapter has now been ported to the current main controller and uses the existing stage generation/IO/publication path. Fresh Android validation is required on the repaired head.

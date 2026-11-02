@@ -21,7 +21,7 @@ jobs:
            github.event.workflow_run.name == 'KANTA iOS unsigned artifacts') }}
     permissions:
       contents: write
-      actions: read
+      actions: write
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:

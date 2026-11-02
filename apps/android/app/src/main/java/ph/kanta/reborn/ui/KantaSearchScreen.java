@@ -44,7 +44,7 @@ public class KantaSearchScreen extends LinearLayout {
     top.setGravity(Gravity.CENTER_VERTICAL);
     top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
     KantaIconButton back = new KantaIconButton(context);
-    back.setText("\u2190"); back.setTextSize(18);
+    back.setText("\u2190"); back.setTextSize(18); back.setTag("kanta.screen.search.back");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
     TextView title = new TextView(context);
     title.setText("Search");
@@ -117,7 +117,15 @@ public class KantaSearchScreen extends LinearLayout {
       final String title = r[0];
       final String artist = r[1];
       final String color = r.length > 2 ? r[2] : "#203459";
-      row.bind(color, title, artist, () -> {
+      int artwork = 0;
+      if (r.length > 3) {
+        try { artwork = Integer.parseInt(r[3]); } catch (NumberFormatException ignored) {}
+      }
+      final int artworkResource = artwork;
+      if (artworkResource != 0) row.bind(artworkResource, title, artist, () -> {
+        if (listener != null) listener.onSing(title, artist);
+      });
+      else row.bind(color, title, artist, () -> {
         if (listener != null) listener.onSing(title, artist);
       });
       resultsContainer.addView(row);

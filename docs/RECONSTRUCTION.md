@@ -390,3 +390,23 @@ A current-main review confirmed that the browser host incremented its incorrect-
 ## Android SoundFont storage safety — 2026-11-02
 
 Current-main audit found that the SF2 post-copy check compared the copied file size against the remaining free space, effectively requiring roughly twice the file size plus a 64 MiB reserve. This rejected valid large banks even when sufficient space remained. The importer also had no preflight for known file sizes, so an unknown/oversized provider stream could temporarily exhaust app storage before the post-copy check. The repair preflights reported sizes, rechecks free space while streaming unknown/under-reported sources, and preserves a 64 MiB reserve without imposing a fixed file-size ceiling. CoreRegressionTests cover both the large-bank acceptance case and reserve enforcement. Exact-head Android CI/runtime validation is tracked by the dedicated PR; no emulator acceptance is claimed until those checks finish.
+
+
+## iOS playback cancellation hardening — 2026-11-02
+
+Current-main review found that user-initiated controller commands could resume after cancellation of an awaited library lookup or native preparation and still start/commit the next song. The controller now rechecks cancellation at those suspension boundaries, retires an uncommitted backend asset only after loading begins, and preserves the previous current song and FIFO reservation for recovery. Audio-session configuration failure before `engine.load` leaves current playback untouched. Natural-completion auto-advance remains independent of view-poll cancellation. Deterministic Swift regressions cover canceled enqueue, canceled Next during library resolution, canceled Next during native load/recovery, canceled snapshot polling during natural auto-advance, pre-load cancellation preserving the current playing asset, and audio-session setup failure preserving playback. The reconciled candidate requires fresh hosted package, smoke, unsigned archive and iPhone/iPad acceptance on its exact SHA.
+
+
+## Android reference-led UI integration — 2026-11-02
+
+The reference-led Android UI work is being reconciled from draft PR #134 onto a branch based on current `main`, rather than merging its 94-commit mixed-platform history. The native presentation slice mounts Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing while retaining the latest main-branch `SessionController`, `LibraryRepository`, My Set import discoverability and SoundFont inventory/storage safety. The current PR #134 branch's latest source head `c039c1d` had a successful Android validation run (`41369103980`); the screenshot-capture compiler error recorded for earlier head `9255c24` was already corrected there. That historical green run does not validate the new reconciled branch. The browser companion markup, mirrored iOS resources and iOS host changes are deliberately held for a separate shared-contract review so this native UI PR does not trigger unrelated iOS workflows. Fresh exact-head Android runtime, screenshots, documentation sync and APK packaging checks are required before merge or publication.
+
+The first reconciled PR #149 Android compile exposed one missing adapter: the new Visuals screen called `SessionController.sceneResource(String, int)`, which existed only on the old draft branch. The repair ports that single adapter into the current main-branch controller, preserving its latest import/SoundFont/storage changes and routing bitmap decode through the existing stage generation and publication owner. The original compile failure is recorded in `docs/CI_FAILURE_REPAIR_LEDGER.md`; exact-head Android validation must pass again after the repair.
+
+**PR #149 screenshot artifact reconciliation (2026-11-02):** Exact-head emulator instrumentation generated `my-set-imported-library.png` and `my-set-active-soundfont.png`, but the reconciled collector and Android workflow artifact allowlist initially omitted them. The runner now retrieves both as required captures and the artifact allowlist retains them alongside the nine reference-led destination screenshots. Fresh exact-head Android validation must confirm all eleven files in the uploaded artifact; the earlier green run on `a5af972` predates this repair.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+PR #134 remains a validation candidate, not a release claim. Its reference-led Android destinations and companion changes were merged with current `main`; the fixed Home default (`bfa605d`) and exact-head Android runtime result remain part of the evidence before merge.
+
+The PR reconciliation restored current-main `SessionController` APIs after resolving the branch divergence. Android compile and runtime evidence must be collected on the resulting exact head.

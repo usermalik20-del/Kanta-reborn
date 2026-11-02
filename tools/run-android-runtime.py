@@ -109,6 +109,17 @@ def main() -> int:
         screenshots = ROOT / "files"
         screenshots.mkdir(exist_ok=True)
         for screenshot_name in [
+            "home_dashboard.png",
+            "home_dashboard_restored.png",
+            "search_screen.png",
+            "queue_screen.png",
+            "pitch_tempo_screen.png",
+            "visuals_screen.png",
+            "mic_voice_screen.png",
+            "fullscreen_stage.png",
+            "now_playing_screen.png",
+            "my-set-imported-library.png",
+            "my-set-active-soundfont.png",
             "library_ready.png",
             "fixture_loaded.png",
             "ui_rendered.png",

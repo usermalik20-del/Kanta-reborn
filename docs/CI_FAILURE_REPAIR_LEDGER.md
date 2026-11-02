@@ -989,3 +989,78 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 ## Android UI screenshot artifact documentation sync — 2026-11-02
 
 **Fingerprint:** Website documentation-sync run `41393816911` failed because the Android workflow artifact path list was expanded to retain the new My Set and active-SoundFont screenshots, but the same change did not update root `AGENTS.md`. The workflow ownership and implementation docs were already synchronized; the missing policy note was specifically the artifact-retention requirement. **Repair:** root `AGENTS.md` now requires both captured My Set screenshots to remain in the Android validation artifact. Re-run documentation-sync and Android validation on the resulting head.
+
+
+## iOS playback cancellation reconciliation — 2026-11-02
+
+**Finding:** user-initiated enqueue/Next/Previous operations could resume after cancellation at an awaited library lookup or native preparation boundary and start or commit a replacement song. A separate audio-session setup failure before `engine.load` must not stop the currently playing backend. Natural-completion auto-advance must remain independent of cancellation in a short-lived UI snapshot poll.
+
+**Repair:** the reconciled branch rechecks cancellation after async lookups and preparation, preserves the current item and FIFO reservation until a successful commit, retires only an uncommitted backend after native loading has begun, and marks the prior item for reload only when replacement loading may have changed the backend. Audio-session configuration failure before load leaves current playback untouched. Auto-advance remains controller-owned.
+
+**Regression coverage:** canceled enqueue lookup; canceled Next asset resolution; cancellation during native load and recovery; canceled snapshot polling during natural auto-advance; cancellation before native load preserving the current playing asset; and audio-session preparation failure preserving the current playing backend.
+
+**Prior-branch validation evidence:** PR #144 head `f4de237a58250024082018e8933e8ed66b87d677` passed iOS validation run [#41385876764](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876764), iOS smoke [#41385876632](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876632), unsigned archive [#41385876753](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876753), iPhone/iPad acceptance [#41385876648](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876648), and documentation sync [#41385876770](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876770). Those checks validate the prior PR head only; the reconciled current-main branch must pass fresh exact-head gates before merge.
+
+
+## Android reference-led UI PR #149 — bundled scene resource adapter missing on current main (2026-11-02)
+
+**Fingerprint:** Android validation run [41441404880](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41441404880), job `125263891088`, exact head `a591b9f5f8b0151b5f76f2c8a1d323bce1612c4e`; `:app:compileDebugJavaWithJavac` reported eight unresolved calls to `SessionController.sceneResource(String, int)` from `MainActivity`'s Visuals destination.
+
+**Cause:** the draft UI branch had added the bundled-artwork adapter to its older `SessionController`, but the reconciliation intentionally retained the newer main-branch controller to preserve the merged import, SoundFont inventory and storage-safety work. The adapter therefore did not come across with the presentation slice. This was a real integration boundary omission, not an Android resource-generation or Gradle dependency failure.
+
+**Repair:** port only `sceneResource(String, int)` onto the current main-branch `SessionController`. It uses the existing stage generation token, IO executor, `StageMediaStore` selection, bounded bitmap decode and main-thread publication path; stale results are recycled rather than replacing a newer selected scene. No older controller or repository file was restored.
+
+**Regression:** the reference Visuals walkthrough selects the bundled Stage Lights resource and asserts that the existing `SessionController` publishes the selected scene. Re-run the full exact-head Android validation and emulator capture flow; do not treat the earlier website/download checks as Android acceptance.
+
+
+## Android reference-led UI PR #149 — scene adapter patch range truncated (2026-11-02)
+
+**Fingerprint:** Follow-up Android validation run [41441803068](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41441803068), job `125265729605`, exact head `3b2ee4d85fce6dfcae2520dde08bcf203f545d2a`; `SessionController.java` reported an illegal method start and end-of-file while parsing at lines 1623–1638.
+
+**Cause:** the first source-port operation copied only the beginning of `sceneResource` because the retrieved line range ended before the method's closing body. This was an incomplete patch application, not a defect in the stage design.
+
+**Repair:** replace the entire bounded `sceneResource` method region with the complete source implementation, verify the closing method boundary before writing, and keep `loadSet` outside the replacement. No test was weakened.
+
+**Validation:** fresh Android build/lint/domain and emulator walkthrough must pass on the next exact head.
+
+
+## Android reference-led UI PR #149 — screenshot helper overload and local-name collisions (2026-11-02)
+
+**Fingerprint:** Android validation run [41442430933](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41442430933), job `125268058173`; `compileDebugAndroidTestJavaWithJavac` reported a duplicate `capture(String, String)` method, missing one-argument `capture(String)` calls, and a duplicate `primaryStage` local in `RuntimeChecks.onStart()`.
+
+**Cause:** while porting the visible-screen screenshot helper, the overload extractor matched the two-argument method twice and replaced the original one-argument capture implementation. The inserted walkthrough also reused a local name already declared by the preserved main-branch runtime tests.
+
+**Repair:** restore the one-argument capture implementation (UI idle wait, bounded compositor settle, screenshot null check, PNG write and bitmap recycle), keep exactly one `capture(String, String)` overload, and rename the walkthrough-only stage reference to `referencePrimaryStage`. The screenshot helper still requires a visible destination tag before capture; no assertions or runtime gates are removed.
+
+**Validation:** re-run Android instrumentation compilation, then the emulator walkthrough and inspect the uploaded nine-screen artifact set on the exact repaired head.
+
+## PR #149 — My Set/SoundFont screenshot artifact omission (2026-11-02)
+
+- **Detection:** Inspection of the exact-head `android-reconstruction-checks` ZIP from run `41443168080` found all nine new reference-led destination screenshots, but not `my-set-imported-library.png` or `my-set-active-soundfont.png`.
+- **Cause:** `RuntimeChecks.java` already captured both My Set/SoundFont screenshots, while `tools/run-android-runtime.py` did not retrieve them and `.github/workflows/android-validation.yml` did not include them in its artifact allowlist.
+- **Repair:** Add both filenames to the runner's required app-private retrieval list and to the workflow's `files/` upload paths. Update the Android README, architecture, testing and reconstruction guidance to define the eleven-file evidence contract.
+- **Verification:** The original run was green but is historical evidence only; a fresh exact-head Android emulator run must prove both captures are nonempty and present in the uploaded artifact.
+
+
+## Platform download publisher — shared packaging-run pointer overwrote peer provenance (2026-11-02)
+
+- **Fingerprint:** Android platform publishing workflow run [41449342463](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463) failed during website verification after the APK package artifact had uploaded.
+- **Cause:** the download manifest kept one top-level `packagingRun`. The verifier used that value as a fallback when a platform entry lacked its own packaging run. Publishing Android advanced the shared value, so the unchanged iOS entry was checked against the new Android artifact run and its old download URL was rejected.
+- **Repair:** give every platform entry an explicit `packagingRun`; migrate legacy peer entries by parsing their existing immutable GitHub artifact URL before changing the shared compatibility pointer; make the verifier reject missing platform-scoped provenance instead of falling back to the global field.
+- **Regression:** publisher tests exercise Android and iOS publication independently, verify peer platform source/run/package URL/page preservation, and assert each newly published entry records its own packaging run. Website validation and the publisher workflow must pass on the exact repair commit before the new APK is considered published.
+
+
+## Android package checksum disclosure — publisher-generated page omitted bundle contents note (2026-11-02)
+
+- **Fingerprint:** Retried Android publisher run [41449342463, attempt 2](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463) successfully packaged and uploaded the new bundle, then failed website verification with `Android bundle checksum contents must be described accurately`.
+- **Cause:** the packager includes `SHA256.txt` inside the Android ZIP, and the website verifier requires the public page to say so. The generated download section still described only the debug-signed preview and omitted the checksum-file disclosure.
+- **Repair:** update the Android publisher's generated section to state that `SHA256.txt` is included, and assert that generated page copy in the publisher regression test. This keeps the published description tied to the actual package contents.
+- **Validation:** rerun website validation and verified-download contracts, then retry the existing failed Android publisher job against the merged fix. Verify the committed manifest and live page after Vercel deploy.
+
+
+## Platform publisher — Vercel workflow dispatch denied by token scope (2026-11-02)
+
+- **Fingerprint:** Android publisher run [41449342463, attempt 3](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463) packaged and uploaded the Android bundle, verified the website files, and committed the platform download update, but the final Vercel workflow dispatch returned HTTP 403.
+- **Cause:** the publisher job had `actions: read`, but GitHub's workflow-dispatch endpoint requires Actions write permission. The ordinary publisher push is intentionally performed with `GITHUB_TOKEN` and therefore does not trigger another workflow automatically.
+- **Repair:** elevate only the publisher job to `actions: write` so it can explicitly dispatch the Vercel deployment after its verified commit. Keep the permission scoped to that job and preserve platform isolation.
+- **Validation:** rerun the publisher after merge; confirm the download commit lands on main, Vercel deployment succeeds, and the live Android page points to the newly uploaded package.
