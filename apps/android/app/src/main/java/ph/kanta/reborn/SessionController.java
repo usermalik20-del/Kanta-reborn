@@ -36,6 +36,23 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   String scenicName = "bayanDawn";
   private boolean savingSet = false;
   private LibraryRepository repository;
+  private LibraryRepository.ImportProgressListener importProgressListener;
+  private final LibraryRepository.ImportProgressListener importProgressDispatcher =
+      new LibraryRepository.ImportProgressListener() {
+        @Override
+        public void onProgress(long total, long copied, String status) {
+          main.post(
+              () -> {
+                LibraryRepository.ImportProgressListener current = importProgressListener;
+                if (current != null) current.onProgress(total, copied, status);
+              });
+        }
+
+        @Override
+        public void onComplete(boolean success, String message) {
+          main.post(() -> completeImportProgress(success, message));
+        }
+      };
   private StageMediaStore stageStore;
   StageMediaStore.Selection stageSelection;
   boolean stageReady;
@@ -47,6 +64,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
   public List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
+  List<LibraryRepository.SoundFontEntry> soundFonts = Collections.emptyList();
   public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
   Song current;
@@ -80,6 +98,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   public String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
+  boolean libraryImporting = false;
   private Listener listener;
   private ScoreSink scoreSink;
   public PlaybackBackend player, pending;
@@ -186,15 +205,19 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             String bankLabel = repository.soundFontName();
             List<Song> loaded = repository.songs();
             List<LibraryRepository.SavedSet> sets = repository.sets();
+            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
             List<ReservationQueue.Entry> restored = repository.queue();
             main.post(
                 () -> {
                   songs = loaded;
                   savedSets = sets;
+                  soundFonts = banks;
                   queue.restore(restored);
                   selectedSoundFont = bank;
                   soundFontName = bankLabel;
                   ready = true;
+                  if (importProgressListener != null)
+                    repository.setImportProgressListener(importProgressDispatcher);
                   preparePads();
                   restoreStage();
                   message = "Your music. Your stage.";
@@ -1305,12 +1328,19 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   public long position() {
-    try { return player == null ? 0 : player.position(); }
-    catch (IllegalStateException e) { return 0; }
+    try {
+      return player == null ? 0 : player.position();
+    } catch (IllegalStateException e) {
+      return 0;
+    }
   }
+
   public long duration() {
-    try { return Math.max(0, player == null ? currentDuration : player.duration()); }
-    catch (IllegalStateException e) { return Math.max(0,currentDuration); }
+    try {
+      return Math.max(0, player == null ? currentDuration : player.duration());
+    } catch (IllegalStateException e) {
+      return Math.max(0, currentDuration);
+    }
   }
 
   public RenderedPlaybackClock getClock() {
@@ -1322,6 +1352,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     if (!ready || importing) return;
     importCancelled.set(false);
     importing = true;
+    libraryImporting = true;
     message = "Importing your selected songs…";
     publish();
     io.execute(
@@ -1337,6 +1368,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           List<Song> loaded = repository.songs();
           File bank = repository.soundFont();
           String bankLabel = repository.soundFontName();
+          List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
           String result =
               "Imported "
                   + good
@@ -1344,20 +1376,60 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   + (failed > 0
                       ? ". " + failed + " unsupported or unreadable file(s) were skipped."
                       : ".");
+          final boolean importSucceeded = failed == 0;
           main.post(
               () -> {
                 songs = loaded;
                 selectedSoundFont = bank;
                 soundFontName = bankLabel;
+                soundFonts = banks;
                 importing = false;
+                libraryImporting = false;
                 message = result;
+                completeImportProgress(importSucceeded, result);
                 publish();
               });
         });
   }
 
+  String activeSoundFontFileName() {
+    return selectedSoundFont == null ? "kanta-tone.sf2" : selectedSoundFont.getName();
+  }
+
+  void selectSoundFont(String fileName) {
+    if (!ready || importing) return;
+    io.execute(
+        () -> {
+          try {
+            repository.selectSoundFont(fileName);
+            File bank = repository.soundFont();
+            String label = repository.soundFontName();
+            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
+            main.post(() -> {
+              selectedSoundFont = bank;
+              soundFontName = label;
+              soundFonts = banks;
+              message = "Active SoundFont: " + label + ". Changes apply to the next song.";
+              publish();
+            });
+          } catch (Exception failure) {
+            main.post(() -> { message = "Could not activate that SoundFont. " + failure.getMessage(); publish(); });
+          }
+        });
+  }
+
   void setImportProgressListener(LibraryRepository.ImportProgressListener listener) {
-    repository.setImportProgressListener(listener);
+    importProgressListener = listener;
+    if (repository != null)
+      repository.setImportProgressListener(
+          listener == null ? null : importProgressDispatcher);
+  }
+
+  private void completeImportProgress(boolean success, String message) {
+    LibraryRepository.ImportProgressListener listener = importProgressListener;
+    importProgressListener = null;
+    if (repository != null) repository.setImportProgressListener(null);
+    if (listener != null) listener.onComplete(success, message);
   }
 
   void cancelImports() {
@@ -1367,6 +1439,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   void importFolder(Uri tree) {
     if (!ready || importing) return;
     importing = true;
+    libraryImporting = true;
     importCancelled.set(false);
     message = "Finding music in your selected folder…";
     publish();
@@ -1379,17 +1452,22 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 () -> {
                   importing = false;
                   if (importCancelled.get()) {
+                    libraryImporting = false;
                     message = "Folder import cancelled.";
+                    completeImportProgress(false, message);
                     publish();
                     return;
                   }
+                  libraryImporting = false;
                   importSongs(files);
                 });
           } catch (Exception e) {
             main.post(
                 () -> {
                   importing = false;
+                  libraryImporting = false;
                   message = "The folder is unavailable, cancelled or exceeds the scan limit.";
+                  completeImportProgress(false, message);
                   publish();
                 });
           }
@@ -1494,7 +1572,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
-  /** Selects a bundled drawable through the same stage generation and publication owner. */
   void sceneResource(String name, int drawableResource) {
     if (name == null || name.isEmpty() || drawableResource == 0) return;
     scenicName = name;
