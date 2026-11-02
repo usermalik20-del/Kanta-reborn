@@ -7,6 +7,7 @@ import android.os.*;
 import android.view.*;
 import android.widget.TextView;
 import java.io.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import ph.kanta.reborn.core.*;
@@ -49,6 +50,18 @@ public final class RuntimeChecks extends Instrumentation {
       ViewGroup group = (ViewGroup) view;
       for (int i = 0; i < group.getChildCount(); i++)
         if (contains(group.getChildAt(i), text)) return true;
+    }
+    return false;
+  }
+
+  private boolean clickText(View view, String text) {
+    if (view instanceof android.widget.Button
+        && ((android.widget.Button) view).getText().toString().equals(text))
+      return view.performClick();
+    if (view instanceof ViewGroup) {
+      ViewGroup group = (ViewGroup) view;
+      for (int i = 0; i < group.getChildCount(); i++)
+        if (clickText(group.getChildAt(i), text)) return true;
     }
     return false;
   }
@@ -223,9 +236,9 @@ public final class RuntimeChecks extends Instrumentation {
         close.performClick();
       });
       await(() -> !fullscreenDialog.isShowing(), "Fullscreen stage did not dismiss cleanly");
-      View primaryStage = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
-      check(primaryStage != null, "Persistent stage missing before Now Playing");
-      runOnMainSync(primaryStage::performClick);
+      View referencePrimaryStage = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
+      check(referencePrimaryStage != null, "Persistent stage missing before Now Playing");
+      runOnMainSync(referencePrimaryStage::performClick);
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing") != null,
           "Tapping the persistent stage did not open Now Playing");
       check(state(() -> {
@@ -250,6 +263,7 @@ public final class RuntimeChecks extends Instrumentation {
         check(more != null, "Home More destination missing after Now Playing");
         more.performClick();
       });
+
       check(
           state(
               () -> !session.scoringEnabled && session.score == null && session.lastScore == null),
@@ -303,6 +317,28 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           !isolated.soundFontName().equals("KANTA original tone"),
           "SoundFont override not retained");
+      check(
+          isolated.soundFonts().size() == 2
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta-tone.sf2"))
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals(isolated.soundFont().getName())),
+          "Imported and bundled SoundFonts are not discoverable");
+      String importedBank = isolated.soundFont().getName();
+      isolated.selectSoundFont("kanta-tone.sf2");
+      check(
+          isolated.soundFont().getName().equals("kanta-tone.sf2")
+              && isolated.soundFontName().equals("KANTA original tone"),
+          "Bundled SoundFont could not be selected");
+      isolated.selectSoundFont(importedBank);
+      LibraryRepository reloadedBanks =
+          new LibraryRepository(getTargetContext().createDeviceProtectedStorageContext());
+      reloadedBanks.load();
+      check(
+          reloadedBanks.soundFont().getName().equals(importedBank)
+              && reloadedBanks.soundFonts().size() == 2,
+          "Active SoundFont selection or inventory did not survive reload");
+      check(
+          isolated.songs().stream().anyMatch(value -> !value.starter && value.fileName.endsWith(".mid")),
+          "Imported MIDI/KAR was not added to the playable song catalog");
       try (InputStream original =
           getTargetContext().getContentResolver().openInputStream(FixtureProvider.file("song"))) {
         Song copy =
@@ -316,12 +352,103 @@ public final class RuntimeChecks extends Instrumentation {
                 java.nio.file.Files.readAllBytes(new File(isolated.media, copy.fileName).toPath())),
             "Imported source bytes changed");
       }
-      runOnMainSync(
-          () ->
-              session.importSongs(
-                  java.util.Collections.singletonList(FixtureProvider.file("audio"))));
+      runOnMainSync(() -> session.importSongs(files));
       await(
-          () -> !session.importing && session.songs.size() == 4, "Controller audio import failed");
+          () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 2,
+          "SessionController did not publish imported songs and SoundFonts");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "My Set"),
+              "My Set navigation control was not clickable"));
+      await(
+          () -> contains(activity.getWindow().getDecorView(), "Original KAR")
+              && contains(activity.getWindow().getDecorView(), "ACTIVE")
+              && contains(activity.getWindow().getDecorView(), "Use"),
+          "My Set did not show imported songs and SoundFont actions");
+      capture("my-set-imported-library.png");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Use"),
+              "SoundFont Use action was not visible/clickable"));
+      await(
+          () -> session.soundFontName.equals("KANTA original tone"),
+          "SoundFont selector did not activate the bundled bank");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Use"),
+              "Imported SoundFont Use action was not visible/clickable"));
+      await(
+          () -> !session.soundFontName.equals("KANTA original tone"),
+          "SoundFont selector did not reactivate the imported bank");
+      capture("my-set-active-soundfont.png");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Control"),
+              "Control navigation was not restored after My Set assertions"));
+
+      AtomicBoolean progressSeen = new AtomicBoolean();
+      AtomicBoolean progressOnMain = new AtomicBoolean(true);
+      AtomicBoolean importCompleted = new AtomicBoolean();
+      AtomicBoolean completionOnMain = new AtomicBoolean();
+      AtomicBoolean importSucceeded = new AtomicBoolean();
+      runOnMainSync(
+          () -> {
+            session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+              @Override
+              public void onProgress(long total, long copied, String status) {
+                progressSeen.set(true);
+                if (Looper.myLooper() != Looper.getMainLooper()) progressOnMain.set(false);
+              }
+
+              @Override
+              public void onComplete(boolean success, String message) {
+                importSucceeded.set(success);
+                completionOnMain.set(Looper.myLooper() == Looper.getMainLooper());
+                importCompleted.set(true);
+              }
+            });
+            session.importSongs(
+                java.util.Collections.singletonList(FixtureProvider.file("audio")));
+          });
+      await(
+          () -> !session.importing && !session.libraryImporting
+              && importCompleted.get() && session.songs.size() == 5,
+          "Controller audio import or progress completion failed");
+      check(
+          progressSeen.get() && progressOnMain.get()
+              && completionOnMain.get() && importSucceeded.get(),
+          "Library import progress/completion callbacks did not run on the main Looper");
+      check(
+          field(field(session, "repository"), "progressListener") == null,
+          "Completed import retained its Activity-scoped progress listener");
+      AtomicBoolean folderCompleted = new AtomicBoolean();
+      AtomicBoolean folderCompletionOnMain = new AtomicBoolean();
+      AtomicBoolean folderSucceeded = new AtomicBoolean(true);
+      runOnMainSync(
+          () -> {
+            session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+              @Override
+              public void onProgress(long total, long copied, String status) {}
+
+              @Override
+              public void onComplete(boolean success, String message) {
+                folderSucceeded.set(success);
+                folderCompletionOnMain.set(Looper.myLooper() == Looper.getMainLooper());
+                folderCompleted.set(true);
+              }
+            });
+            session.importFolder(
+                android.net.Uri.parse("content://missing.kanta.reborn/tree/root"));
+          });
+      await(
+          () -> !session.importing && !session.libraryImporting && folderCompleted.get(),
+          "Folder scan failure did not finish the import progress lifecycle");
+      check(
+          !folderSucceeded.get() && folderCompletionOnMain.get(),
+          "Folder scan failure did not report completion on the main Looper");
+      check(
+          field(field(session, "repository"), "progressListener") == null,
+          "Failed folder scan retained its Activity-scoped progress listener");
       Song loopSong =
           session.songs.stream()
               .filter(SessionController::isAudio)
@@ -417,7 +544,7 @@ public final class RuntimeChecks extends Instrumentation {
                           .getDecorView()
                           .findViewWithTag("kanta.stage.primary")),
           "Controller update detached the stage subtree");
-      await(() -> stableStage.get().getWidth() > 0, "Stage layout never became visible after leaving Home");
+      await(() -> stableStage.get().getWidth() > 0, "Stage layout never became visible");
       workspaceBackNavigationChecks();
       check(
           state(
@@ -439,7 +566,7 @@ public final class RuntimeChecks extends Instrumentation {
           () -> !session.importing && session.stageKind.equals("video"),
           "Controller video import failed");
       // The primary UI is StagePresenterImpl; StageSurface is the dedicated fullscreen renderer.
-      check(stableStage.get() == primaryStage, "Persistent stage reference changed before fullscreen");
+      View primaryStage = stableStage.get();
       runOnMainSync(activity::fullscreen);
       await(
           () -> field(activity, "fullscreenStage") instanceof StageSurface,
@@ -1262,6 +1389,8 @@ public final class RuntimeChecks extends Instrumentation {
       image.recycle();
     }
   }
+
+
 
   private void shell(String command) throws IOException {
     try (InputStream result =

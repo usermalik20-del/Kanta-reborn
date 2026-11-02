@@ -1840,3 +1840,14 @@ Source 339b8f6 passed hosted Android APK/instrumentation assembly, lint, native 
 **Blockers:** new exact-head reconstruction, focused smoke, unsigned archive, and independent iPhone/iPad walkthrough jobs must finish. The previous iPad timeout remains open until all 13 required UI cases pass cleanly on both devices on the same candidate SHA.
 
 **Next executable task:** inspect the fresh per-device job summaries and failed-case logs; repair the specific failing destination if any, then record the first passing run in `docs/CI_FAILURE_REPAIR_LEDGER.md`. Signing, physical-device acceptance and production release remain separate gates.
+
+
+## iOS controller cancellation transaction repair — 2026-11-02
+
+**Finding (CONFIRMED):** LocalKaraokeController.send(.enqueue) and the Next/Previous preparation path could resume after cancellation of an awaited library lookup and still mutate the FIFO or start the resolved asset. Cancellation during native engine.load could likewise proceed to engine.play and commit a reservation because the controller checked only before entering the command.
+
+**Root cause:** the controller's operation gate correctly serializes commands across actor reentrancy, but user commands did not recheck Task.isCancelled after the library and engine suspension points.
+
+**Fix:** recheck cancellation after library resolution and each native preparation await. If cancellation occurs before engine.load begins, leave the current backend playing; once loading starts, retire the uncommitted backend and set needsPlaybackReload. Preserve the current item, playback identity and queue reservation. Natural-completion auto-advance explicitly ignores cancellation inherited from a UI snapshot poll.
+
+**Regression protection:** added five deterministic Swift regressions: canceled enqueue, canceled Next during asset resolution, canceled Next during native load/recovery, and natural auto-advance surviving a canceled snapshot poll, and pre-load cancellation preserving the current playing asset. Hosted Swift package tests and simulator build are pending on the PR head; no simulator/device acceptance is claimed yet.

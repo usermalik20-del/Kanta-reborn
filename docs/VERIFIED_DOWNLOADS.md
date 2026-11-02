@@ -1,5 +1,7 @@
 # Verified preview downloads
 
+> Historical release-evidence record for the 2026-10-27 preview baseline. It records the exact artifacts and source used by that release; it is not the current publication procedure. The active platform-specific flow is documented in [VERIFIED_DOWNLOAD_PUBLICATION.md](VERIFIED_DOWNLOAD_PUBLICATION.md).
+
 
 ## Current accepted preview baseline — 2026-10-27
 

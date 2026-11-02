@@ -1940,11 +1940,55 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     folder.setEnabled(session.ready && !session.importing);
     body.addView(folder);
     if (session.importing) body.addView(button("Cancel import", session::cancelImports));
-    body.addView(text("SoundFont: " + session.soundFontName, 14, CYAN));
+    body.addView(text("Active SoundFont · " + session.soundFontName, 14, CYAN));
+    body.addView(text("SoundFonts", 20, GOLD));
+    for (LibraryRepository.SoundFontEntry bank : session.soundFonts) {
+      LinearLayout item = row();
+      item.addView(
+          text(bank.name, 14, Color.WHITE),
+          new LinearLayout.LayoutParams(0, -2, 1));
+      boolean active = bank.fileName.equals(session.activeSoundFontFileName());
+      if (active) item.addView(text("ACTIVE", 12, CYAN));
+      else item.addView(button("Use", () -> session.selectSoundFont(bank.fileName)));
+      body.addView(item);
+    }
     body.addView(
         text(
-            "SoundFonts up to 32 MB. MIDI/KAR up to 16 MB and six hours. Original files stay"
-                + " unchanged.",
+            "Imported MIDI/KAR and audio", 20, GOLD));
+    List<Song> importedSongs = new ArrayList<>();
+    for (Song song : session.songs) if (!song.starter) importedSongs.add(song);
+    if (importedSongs.isEmpty()) {
+      body.addView(text("No personal songs imported yet. Add MIDI, KAR, MP3 or WAV files above.", 13, 0xFFAFB8D0));
+    } else {
+      int shown = Math.min(importedSongs.size(), 40);
+      body.addView(text(importedSongs.size() + " imported item(s)", 13, 0xFFAFB8D0));
+      for (int i = 0; i < shown; i++) {
+        Song song = importedSongs.get(i);
+        LinearLayout item = row();
+        item.addView(
+            text(song.title + (song.artist.isEmpty() ? "" : "\n" + song.artist), 14, Color.WHITE),
+            new LinearLayout.LayoutParams(0, -2, 1));
+        item.addView(button("Reserve", () -> session.reserve(song, "")));
+        body.addView(item);
+      }
+      if (importedSongs.size() > shown)
+        body.addView(text("The full collection remains searchable in Control.", 13, 0xFFAFB8D0));
+    }
+    body.addView(
+        button(
+            "Legacy ShubBlob container status",
+            () -> new AlertDialog.Builder(this)
+                .setTitle("Legacy ShubBlob import")
+                .setMessage(
+                    "This preview does not yet import legacy ShubBlob/kantablob containers. "
+                        + "The container is encrypted and its format has not been validated against "
+                        + "a real file. Import extracted MIDI/KAR files instead. Do not treat a "
+                        + "100% file copy as a successful container decode.")
+                .setPositiveButton("OK", null)
+                .show()));
+    body.addView(
+        text(
+            "SoundFont banks are validated before activation. MIDI/KAR imports are limited to 16 MiB and six hours; original files stay unchanged.",
             13,
             0xFFAFB8D0));
 
@@ -2613,26 +2657,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           uris.add(data.getClipData().getItemAt(i).getUri());
       } else if (data.getData() != null) uris.add(data.getData());
       showImportProgress();
-      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
-        @Override public void onProgress(long total, long copied, String status) {
-          updateImportProgress(total, copied, status);
-        }
-        @Override public void onComplete(boolean success, String message) {
-          hideImportProgress(message);
-        }
-      });
+      attachImportProgressListener();
       session.importSongs(uris);
     }
     else if (request == FOLDER && data.getData() != null) {
       showImportProgress();
-      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
-        @Override public void onProgress(long total, long copied, String status) {
-          updateImportProgress(total, copied, status);
-        }
-        @Override public void onComplete(boolean success, String message) {
-          hideImportProgress(message);
-        }
-      });
+      attachImportProgressListener();
       session.importFolder(data.getData());
     }
     else if (request == VOICE) {
@@ -2718,6 +2748,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   /** Dismisses the import dialog and reports the outcome the repository returned. */
+  private void attachImportProgressListener() {
+    session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+      @Override
+      public void onProgress(long total, long copied, String status) {
+        updateImportProgress(total, copied, status);
+      }
+
+      @Override
+      public void onComplete(boolean success, String message) {
+        hideImportProgress(message);
+      }
+    });
+  }
+
+  private void dismissImportProgress() {
+    android.app.ProgressDialog dialog = importProgressDialog;
+    importProgressDialog = null;
+    if (dialog != null && dialog.isShowing()) dialog.dismiss();
+  }
+
   private void hideImportProgress(String message) {
     if (importProgressDialog != null && importProgressDialog.isShowing())
       importProgressDialog.dismiss();

@@ -19,9 +19,8 @@ Tests and production source must describe the same behavior. Keep recovered test
 | Android lyric animation | Source-fragment interpolation, active-fragment range and freshness-bounded pitch energy for the stage views | `coreRegression` JavaExec (`LyricWordAnimationRegressionTests`) |
 | Android Bluetooth monitor routing | Route-identity rules, the extended readiness bound used for Bluetooth links, and its expiry | `coreRegression` JavaExec (`CoreRegressionTests.monitorChecks`); device acceptance still open |
 | Android native SoundFont | Validated SF2 references, bounded allocations, audible pitch, truncation and mutation handling | C11 ASan/UBSan host harness |
-| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, Home/Search/Queue/Pitch & Tempo/Visuals/Mic & Voice/Now Playing/fullscreen-stage navigation and screenshots, live pitch reset, scenic selection, monitor-mode routing, live Now Playing StageSurface and lyrics, fullscreen key increment/reset and dismissal, persistent-stage rendering, dispatcher-based workspace back dismissal and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
-| Android adaptive UI resources | Native vector drawable XML, WebP resource decoding/packaging, and resource references used by Home, fullscreen and persistent stage views | `assembleDebug` + `lintDebug`; visual composition remains a separate screenshot/emulator acceptance gate |
-| Browser interoperability | Android/iOS companion HTML, CSS and JS byte parity; TLS fingerprint-gated pairing, bounded requests, live search/reservation/cancellation/playback, and responsive 320–1440px mobile/desktop layouts in real Chrome | `tools/verify-companion-browser.mjs` in Android validation |
+| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, persistent-stage rendering, dispatcher-based workspace back dismissal, and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
+| Browser interoperability | Fresh Android export through the captured browser decrypt function | Node after Android regression fixture generation |
 | Prompt bank contract | Pinned upstream metadata, cache boundary outside the repository, no vendored upstream text | Python unittest in the Android validation job |
 
 ## Website route and responsive navigation contract
@@ -337,7 +336,7 @@ The verified-download packager discovers the Android APK from the `KANTA Android
 
 ## Exact-SHA download publication automation
 
-Android and iOS publication are independent completion paths. Each resolves only its own successful exact-SHA main-branch build artifact; iOS additionally requires its matching both-device simulator walkthrough. The publisher never assumes the peer platform has an artifact for the same SHA.
+Android and iOS publication are independent completion paths. Each resolves only its own successful exact-SHA main-branch build artifact; iOS additionally requires its matching both-device simulator walkthrough. The publisher's `workflow_run` trigger must include `branches: [main]` so feature-branch PR completions do not create skipped publisher runs; the job-level success, branch and workflow-name checks remain as defense in depth. The publisher never assumes the peer platform has an artifact for the same SHA.
 
 The Android publication path packages the exact-SHA Android validation artifact; the iOS path packages the exact-SHA unsigned archive only after its matching iPhone/iPad simulator walkthrough passes. Each platform entry records its own source SHA, build run, packaging run, artifact identity, checksum and retention window. Publishing one platform must not rewrite the other platform's provenance or page. The website verifier validates each page against its own platform entry. The workflow commits only the selected platform page plus the shared manifest with its narrowly scoped GitHub Actions token and dispatches the existing Vercel production deployment workflow.
 
@@ -356,7 +355,7 @@ The iOS download remains an unsigned personal-signing input; this automation doe
 
 The Android workflow now runs `python3 -m unittest tools.tests.test_android_runtime_runner` before Gradle/emulator work. The test parses the runner with Python's AST, requires the private-IPv4 guard to fail explicitly, and verifies that both APK installation calls are outside that failure branch and that instrumentation plus the `files/` screenshot destination remain wired. The workflow's `workflow_dispatch` and `push` events must remain separate YAML keys; manual `ref` selection changes the checked-out commit, not the required test scope. Full validation remains the default and only supported mode until a genuinely independent visual-only acceptance contract exists. A passing static test is not Android compilation, instrumentation, emulator acceptance or device acceptance.
 
-The runner must retrieve all eight named walkthrough screenshots from app-private storage into `files/`; a missing or empty capture fails the runtime gate instead of being logged and skipped. The AST regression test rejects the old local-file-exists precondition that caused every new screenshot to be skipped before retrieval.
+The runner must retrieve all nine reference-led destination screenshots plus `my-set-imported-library.png` and `my-set-active-soundfont.png` from app-private storage into `files/`; a missing or empty capture fails the runtime gate instead of being logged and skipped. The AST regression test rejects the old local-file-exists precondition that caused every new screenshot to be skipped before retrieval.
 
 ## Android stage runtime integration — 2026-11-01
 
@@ -376,8 +375,11 @@ owned by `SessionController` and `StagePresenterImpl`.
 - Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`,
   `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`,
   `KantaMediaRow`, `KantaTransportControls`) instantiate with correct colors, radii and states
-- The production Home dashboard and Search, Queue, Pitch & Tempo, Mic & Voice and Visuals destinations are mounted by `MainActivity`; their callbacks route into existing workspace, session, queue, microphone, monitor, camera and media-import owners. Runtime instrumentation captures each destination and verifies representative live-state mutations.
-- Browser remote validation preserves all 22 element IDs queried by `remote.js`, validates the pairing/command protocol and fingerprint checks, and does not imply desktop-layout or visual acceptance.
+- Screens (`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
+  `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`)
+  wire their `Listener` callbacks into `MainActivity`, which delegates to existing backend methods
+- Browser remote restyling preserves all 22 element IDs queried by `remote.js` and keeps the wire
+  protocol, action allowlist, pairing flow and fingerprint verification unchanged
 
 ### What is NOT tested by these checks
 
@@ -401,63 +403,49 @@ The Android emulator runtime test must prove that the opted-in CameraX preview i
 
 ## Platform-specific download publication acceptance
 
-Run `python3 -m unittest tools.tests.test_platform_download_publishing` with the existing exact-SHA packaging contract suites. The tests prove that Android publication replaces only Android metadata/page content, iOS publication replaces only iOS metadata/page content, and the peer platform's source SHA, package URL, run/artifact identity, checksums, signing state and page remain unchanged. The website verifier validates each platform against its own accepted source SHA and packaging run; platform releases are independent and must not rewrite peer provenance. iOS publication refuses an IPA without same-SHA iPhone/iPad simulator walkthrough provenance.
+Run `python3 -m unittest tools.tests.test_platform_download_publishing` with the existing exact-SHA packaging contract suites. The tests prove that Android publication replaces only Android metadata/page content, iOS publication replaces only iOS metadata/page content, and the peer platform's source SHA, package URL, run/artifact identity, checksums, signing state and page remain unchanged. The website verifier validates each platform against its own accepted source SHA and packaging run; platform releases are independent and must not rewrite peer provenance. iOS publication refuses an IPA without same-SHA iPhone/iPad simulator walkthrough provenance. The publisher also rejects a delayed candidate whose source is an ancestor of the currently published source, an older workflow run for the same source SHA, or unrelated history. Local Git-graph tests prove newer commits and newer same-SHA runs can publish while stale source/run completions cannot mutate the manifest or page. The publisher workflow must retain `fetch-depth: 0` so both revisions are available to the ancestry check.
 
-The `Platform-specific verified download publishing` workflow is triggered by successful main-branch Android validation or iOS unsigned-archive completion. Android publication requires only the exact-SHA Android validation artifact. iOS publication additionally waits for the exact-SHA iOS simulator walkthrough. Confirm workflow-run name, branch, source SHA, artifact run identity, artifact digest and retention metadata before accepting a published download.
+The legacy `prepare-verified-downloads.py` and `publish-verified-downloads.py` helpers retain paired same-SHA behavior for their unit-contract tests. `verified-downloads.yml` runs those tests as compatibility coverage but does not invoke the legacy helpers to package or publish; the active platform-specific publishers are independent and must preserve each peer platform's own provenance.
+
+The `Platform-specific verified download publishing` workflow listens only to Android validation and iOS unsigned-archive completion events originating from `main` (`workflow_run.branches: [main]`); the job still checks successful conclusion, branch and workflow name as defense in depth. Android publication requires only the exact-SHA Android validation artifact. iOS publication additionally waits for the exact-SHA iOS simulator walkthrough. Confirm workflow-run name, branch, source SHA, artifact run identity, artifact digest and retention metadata before accepting a published download.
 - `publish-platform-download.py` must write `apkSha256` (Android) or `ipaSha256` (iOS) as the application digest key in `downloads.json`, matching the key names `verify-website.py` expects in its download-manifest verification loop. Using any other key name (e.g. `appSha256`) causes `KeyError` and fails publication.
 - `publish-platform-download.py` updates only the selected platform's top-level and nested manifest entry, including its own source SHA, packaging run, artifact, checksum and retention metadata. Never synchronize source revisions across Android and iOS: each platform may be released from a different accepted main-branch commit. `verify-website.py` validates each page against that platform's own source SHA and packaging run. The final website verification and Vercel dispatch occur only after the selected platform's page and shared manifest validate.
 
-## Android Mic & Voice and Visuals destination integration — 2026-11-01
 
-The safe reference branch now mounts `KantaMicVoiceScreen` and `KantaVisualsScreen` as full-screen Home destinations. Mic & Voice delegates microphone permission/start/stop to `MainActivity.toggleMicrophone()` and `SessionController.startMicrophone/stopMicrophone`; monitoring output selection and teardown use the existing verified-route `MicrophoneMonitor`, gain and the implemented Dry/Room/Hall/Echo modes. The screen polls the real input meter and `SessionController.scoreStatus()`; it never invents coach scores. The previous screen's drawn-but-inert reverb/echo tracks and unsupported Warm/Bright FX labels were removed.
+## Android library import progress regression — 2026-11-02
 
-Visuals now renders thumbnails from the ten existing `assets/scenic/*.png` images, selects those existing scenes through `SessionController.scene()`, and routes Camera through the existing CameraStage permission/lifecycle owner. Custom media opens the existing user-selected photo/video import path. Stage post-processing effects are explicitly reported as not implemented rather than exposing nonfunctional controls. New generated KANTA artwork can later replace/add to these thumbnails without changing the scene-selection or camera ownership contracts.
-
-## Mic & Voice and Visuals runtime acceptance — 2026-11-01
-
-Android instrumentation now captures the mounted Mic & Voice and Visuals destinations in addition to Home, Search, Queue and Pitch & Tempo. It selects the existing Bamboo Mist scenic asset and asserts the selection reaches SessionController, then selects the Room vocal-monitor processor mode and asserts the existing MicrophoneMonitor owner receives it. The test does not request microphone/camera permissions or fabricate input/coach readings. Both named screenshots are required by the Android runtime collector and artifact allowlist.
-
-The Android runtime screenshot artifact allowlist is updated in lockstep with the required capture collector: `visuals_screen.png` and `mic_voice_screen.png` are mandatory captures, not optional files.
-
-## Browser remote desktop layout — safe branch in progress
-
-The Android-hosted browser companion now uses a reference-aligned responsive shell: a desktop sidebar, central host-library/search/queue column and right-side Now Playing panel. Narrow viewports collapse to a single-column mobile controller. The existing element IDs, pairing verification, fingerprint-pinned transport, session expiry, command identities, request bounds, host-owned state and protocol allowlist are retained. Unsupported Remotes/Settings, camera, microphone, key/tempo and fullscreen controls remain visibly unavailable; the remote does not fabricate commands or duplicate Android state.
-
-The browser screenshot capture uses a 1280px desktop viewport after the real-Chrome checks have exercised 320px, 390px, 768px and 1024px narrow/reflow widths. The test checks the desktop sidebar and Now Playing column, horizontal overflow, pairing verification, queue mutations and supported playback commands. This is layout and protocol acceptance, not a visual pixel-match sign-off.
-
-## Fullscreen Now Playing stage integration — 2026-11-01
-
-The Android fullscreen surface now keeps the real `StageSurface` as the full-bleed background/lyric owner and adds a live metadata/transport overlay. Song title, artist, playback time, MIDI duration when available, queue count, key and tempo are projected from `SessionController`; Play/Pause, Next, key and tempo commands delegate to that owner. The overlay does not add Previous, seek, shuffle or repeat controls that are absent from the active Android contract. Runtime instrumentation captures `fullscreen_stage.png`, exercises key increment/reset through the live session and verifies dismissal; the runner and Android workflow require the screenshot in the artifact. Audio formats without an available source duration display `--:--` rather than an invented duration.
-
-## Fullscreen stage acceptance — 2026-11-01
-
-The active fullscreen player is the existing `StageSurface` (lyrics/background/camera/video owner) with a live `SessionController` projection for title, artist, source time, MIDI duration when known, queue count, key and tempo. Play/Pause, Next, key and tempo controls delegate to the existing session. Previous and seeking remain absent; unsupported duration is shown as unknown. The runtime walkthrough opens the actual Dialog window, captures the fullscreen stage, exercises key increment/reset and verifies dismissal. `fullscreen_stage.png` is mandatory in the runner collector and CI artifact.
-
-Now Playing is a real destination opened by tapping the persistent stage. Its `KantaNowPlayingScreen` embeds a live `StageSurface` rather than a static mock backdrop; selected scenic/video/camera output and synchronized lyric rendering remain with the existing StageSurface owner. Session updates refresh the Now Playing metadata/transport projection without rebuilding the screen or restarting the stage surface. The runtime collector and Android artifact allowlist now require `now_playing_screen.png` as well as `fullscreen_stage.png`.
-
-The mirrored static browser companion resources under `apps/ios/Resources/CompanionRemote/**` are shared with Android and are validated by the Android real-Chrome/parity suite plus the iOS package/build flows that actually bundle them. They are explicitly excluded from the native iPhone/iPad UI walkthrough and focused native simulator smoke triggers because those tests exercise native navigation/audio lifecycle, not the static browser page. The exact negative path rule is enforced by `tools/tests/test_workflow_path_ownership.py`.
-
-## Generated KANTA artwork integration — 2026-11-01
-
-The existing drawable-nodpi art pack is now used by production UI rather than remaining an unused resource set. Home Quick Play uses the My Set/Favorites/Recent collection artwork; Search results and Queue rows use deterministic stable song-ID mappings to the eight generated covers. Visuals uses the seven supplied cinematic backgrounds plus the existing stage artwork for Default, and selecting a tile calls `SessionController.sceneResource` to decode/publish the actual drawable through the existing stage owner. The runtime test selects Stage Lights and waits for the new Bitmap instance to replace the prior scene. No additional upload is needed for these existing 18 assets; future new artwork can be added through the same resource mapping and screen APIs.
-## Browser remote cover-art delivery — 2026-11-01
-
-The eight supplied WebP covers are packaged alongside the browser companion in Android `assets/companion/art/covers/` and mirrored byte-for-byte into iOS `Resources/CompanionRemote/art/covers/`. The Android `BrowserRemoteServer` and iOS `BrowserRemoteHost` serve only the exact `/assets/covers/01.webp` through `/assets/covers/08.webp` allowlist, with per-file and aggregate byte limits; no new remote commands or host-state authority are introduced.
-
-The real-Chrome companion check verifies that search-result covers and the Now Playing cover load successfully over the pinned HTTPS host. The browser host fixture uses the same bundled files, so a missing resource fails the browser contract instead of silently falling back to decorative placeholders.
-
-The companion browser gate also checks that all eight WebP cover assets are present in both platform bundles, byte-identical, within the per-file and aggregate budgets, and load successfully over the pinned HTTPS host.
-
-The same browser gate asserts that XcodeGen includes `Resources/CompanionRemote` in the iOS app bundle, preventing a correct source mirror from being omitted during packaging.
+The hosted Android `RuntimeChecks` acceptance verifies that repository progress and completion callbacks run on the main Looper, that the repository releases the Activity-scoped listener after completion, and that an unavailable SAF folder reports a main-thread completion instead of leaving the import progress UI open. The assertions run in the existing emulator instrumentation gate; they do not replace Android build, lint or runtime acceptance.
 
 
-Browser companion cover delivery is part of the real-Chrome gate: Android and iOS HTTPS hosts serve only the eight exact `/assets/covers/01.webp`–`08.webp` routes as `image/webp`, reject unlisted paths, and enforce 160 KB per-file / 1.5 MB aggregate limits. Search-result, queue and Now Playing images are checked for successful loading before capture.
+## Android browser companion pairing lifecycle
+
+`BrowserRemoteRegressionTests` runs through `CoreRegressionTests` in the existing `coreRegression` JavaExec task and exercises the real generated TLS identity and socket server. The guest-cap regression fills all four slots, performs three valid-code attempts while capacity is full, leaves one guest, and proves a new guest can pair within the five-minute pairing window. Separate wrong-code cases must still lock pairing after three incorrect codes. Capacity rejection must not weaken the wrong-code lockout or change guest count, token expiry, request authorization, or revocation behavior.
 
 
-The Mic & Voice screenshot acceptance depends on idempotent screen-state projection. The 100 ms microphone refresh may continue to observe the capture owner, but identical labels, meter states, gain values, effect selections and scoring controls must not be reapplied to the view tree; this preserves a stable accessibility-idle window without slowing live input updates.
+## Android imported-library and SoundFont selection regression — 2026-11-02
+
+The existing RuntimeChecks fixture imports a mixed SAF batch, verifies the MIDI/KAR file is present in the authoritative LibraryRepository song catalog, and verifies the SoundFont inventory contains both the bundled default and imported bank. It switches to the bundled bank and back, reloads a fresh repository instance, and asserts both inventory and active selection persist. The My Set UI is covered by the same exact-head Android emulator run: imported songs must be visible with Reserve actions, every SoundFont must be listed, the selected one must be marked Active, and the other banks must offer Use. Legacy ShubBlob/kantablob import is intentionally not asserted as supported; its format remains unverified against a real container and the UI must explain that boundary. The runtime test then exercises the same mixed batch through the live SessionController and My Set UI, switches to the default bank and back, and captures both library and active-bank screenshots. It then restores the Control tab so later voice-settings instrumentation retains its original screen precondition. The CI artifact includes `files/my-set-imported-library.png` and `files/my-set-active-soundfont.png` alongside the standard walkthrough captures. The later controller-audio fixture assertion expects five catalog rows: three starters, one imported KAR and one imported WAV. The controller's separate WAV import is content-hash deduplicated because that same WAV was already included in the folder fixture. These checks do not constitute physical-device audio acceptance.
+
+## Android SoundFont storage regression — 2026-11-02
+
+The framework-free CoreRegressionTests suite covers the SoundFont storage policy: a 600 MiB bank is accepted when 1 GiB is available (leaving 424 MiB), a copy that would consume the 64 MiB reserve is rejected, and unknown/under-reported streams reserve one full 8 MiB lookahead interval plus the next chunk before each periodic StatFs recheck. Reported remaining bytes are used when they exceed that interval, with overflow rejected. The Android importer also performs a reported-size preflight and a final reserve check. Run the normal Android core regression, build, lint, and emulator runtime gates.
 
 
-Instrumentation that calls `SessionController.publish()` must do so on the Android main Looper because publication synchronously reaches the Activity's view-render callback. Keep test-owned state resets and their publication in the same `runOnMainSync` block.
+## iOS controller cancellation regressions — 2026-11-02
+
+The Swift package suite includes deterministic cancellation coverage for a suspended library song lookup during enqueue, a suspended asset lookup during Next, cancellation while the native backend is loading the next asset, natural-completion auto-advance while its snapshot poll is canceled, and cancellation during audio-session preparation before `engine.load`. A separate failure-path case throws from audio-session configuration and verifies that the already-playing backend is not stopped before a new asset load begins. The tests require no queue/current-item/playback-identity commit after user-command cancellation, require an uncommitted backend asset to be stopped only after loading has begun, verify that the prior current song remains playing when cancellation or session setup failure precedes load, verify reload recovery after a partial replacement, and prove that observer cancellation does not strand Up Next. Run `swift build --build-tests` and `swift test --no-parallel`; simulator app build and independent iPhone/iPad walkthroughs remain separate acceptance gates.
 
 
-The named Android reference-screen captures are accepted only after the destination view is attached, shown through its ancestor hierarchy, and has a non-empty global visible rectangle. The screenshot helper allows the compositor to commit the new frame before capture; a matching view tag alone is not sufficient evidence that a destination was actually displayed.
+## Android reference-led screen acceptance
+
+The Android emulator runtime walkthrough opens each reference-led destination from the Home dashboard, exercises Search/Queue navigation, Pitch reset, Visuals selection, Mic & Voice effect selection, fullscreen controls and Now Playing stage embedding, then captures the screen. A screenshot is accepted only after the destination's tagged view is attached, shown by its ancestors and has a non-empty global visible rectangle; the capture helper waits for UI idle and a bounded compositor settle before taking the screenshot. The Android workflow artifact allowlist and `tools/run-android-runtime.py` collector must retain all nine destination captures plus `my-set-imported-library.png` and `my-set-active-soundfont.png`. Verify all eleven files in the uploaded artifact, not only in app-private storage. This is emulator visual evidence; physical-device acceptance remains separate.
+
+## Independent platform download publication
+
+Each Android and iOS manifest entry owns its own `packagingRun`, artifact ID, URL and checksum. The top-level `packagingRun` is a legacy compatibility fallback only while a platform entry has no scoped value; the verifier still requires that platform's artifact URL to match the fallback run. Every new publication writes a scoped value, and legacy peer provenance is migrated from the peer's immutable artifact URL. When migrating a legacy manifest, the publisher recovers the peer platform's packaging run from that peer's immutable GitHub artifact URL before advancing the shared pointer. Regression tests cover Android and iOS publication in both directions and require the untouched platform's source, package URL, run provenance and page to remain intact.
+
+
+The Android packaged ZIP includes the application APK and a `SHA256.txt` file containing the APK digest. The publisher-generated Android download section must disclose that file, and the website verifier enforces the public copy against the packaged bundle contract.
+
+
+The platform publisher must dispatch `vercel-deploy.yml` after its verified website commit. GitHub's `GITHUB_TOKEN` does not start downstream workflows from the publisher's push, so the publisher job requires narrowly scoped `actions: write` permission for the explicit workflow-dispatch API call; retain read-only Actions access everywhere else.

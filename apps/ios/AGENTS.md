@@ -224,11 +224,7 @@ ownership by the karaoke/scoring/voice services. Keep privacy text synchronized.
 PR #47's real-capture work remains included; its updated tests require fresh
 macOS CI execution before merge. See Docs/STAGE_UI_ACCEPTANCE.md.
 
-## Shared browser companion asset contract — 2026-11-01
 
-The Android and iOS apps package the same browser companion files from `apps/android/app/src/main/assets/companion/` and `apps/ios/Resources/CompanionRemote/`. Keep `index.html`, `remote.css` and `remote.js` byte-identical. The companion remains a bounded LAN controller with explicit fingerprint verification, host-owned state, pairing/session expiry and no cloud relay. Its responsive desktop layout is presentation-only; it must not add commands outside the existing protocol allowlist or claim host-only features are remotely available. The shared asset parity and real-Chrome browser contract are checked by `tools/verify-companion-browser.mjs`.
+## Cancellation-safe playback transactions — 2026-11-02
 
-
-## Shared companion remote parity
-
-The Android-hosted companion at `apps/android/app/src/main/assets/companion/` and the iOS-bundled companion at `Resources/CompanionRemote/` are packaged copies of the same browser remote contract. Intentional shared UI, accessibility, responsive-layout or protocol changes must update both copies in the same pull request and run `tools/verify-companion-browser.mjs`. Keep the DOM IDs consumed by `remote.js`, fingerprint verification, pairing expiry, command identity, request bounds and host-owned state aligned. Do not add remote commands for host controls that are not in the protocol allowlist; render those controls as unavailable instead.
+The LocalKaraokeController remains the sole playback and FIFO owner. User-initiated commands must recheck cancellation after asynchronous library lookups and native preparation awaits, and before committing queue/history/playback identity. If cancellation arrives before engine.load begins, leave the committed backend playing. Once engine.load begins, stop a potentially replaced backend, retain the prior controller item and reservation, and mark the current item for reload before the next Play. Natural-completion auto-advance is controller-owned and must not inherit cancellation from a short-lived UI snapshot poll. Keep regressions for canceled enqueue lookup, Next asset resolution, native preparation, recovery of the prior song, and natural auto-advance surviving a canceled snapshot poll.

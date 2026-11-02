@@ -118,6 +118,8 @@ def main() -> int:
             "mic_voice_screen.png",
             "fullscreen_stage.png",
             "now_playing_screen.png",
+            "my-set-imported-library.png",
+            "my-set-active-soundfont.png",
             "library_ready.png",
             "fixture_loaded.png",
             "ui_rendered.png",

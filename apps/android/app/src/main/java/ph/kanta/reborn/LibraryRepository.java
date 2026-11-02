@@ -22,6 +22,11 @@ final class LibraryRepository {
   static final String[] STARTERS = {"morning-light", "sing-together", "starlight-echo"};
   static final String[] TITLES = {"Morning Light", "Sing Together", "Starlight Echo"};
 
+  static final class SoundFontEntry {
+    final String fileName, name;
+    SoundFontEntry(String fileName, String name) { this.fileName = fileName; this.name = name; }
+  }
+
   static final class SavedSet {
     final String id, name;
     final List<String> songs;
@@ -38,13 +43,14 @@ final class LibraryRepository {
   private final AtomicFile state;
   private final ArrayList<Song> songs = new ArrayList<>();
   private final ArrayList<SavedSet> sets = new ArrayList<>();
+  private final ArrayList<SoundFontEntry> soundFonts = new ArrayList<>();
   private final Set<String> removed = new HashSet<>();
   private List<ReservationQueue.Entry> queue = new ArrayList<>();
   private String selectedBank = "kanta-tone.sf2", bankName = "KANTA original tone";
   private boolean batching;
   private java.util.function.BooleanSupplier cancelled = () -> false;
   private final ArrayList<File> batchFiles = new ArrayList<>();
-  private ImportProgressListener progressListener;
+  private volatile ImportProgressListener progressListener;
 
   LibraryRepository(Context context) throws IOException {
     this.context = context;
@@ -67,6 +73,23 @@ final class LibraryRepository {
         selectedBank = bank;
         bankName = root.optString("soundfontName", "Imported SoundFont");
       }
+      JSONArray banks = root.optJSONArray("soundfonts");
+      if (banks != null) {
+        if (banks.length() > 256) throw new IOException("Too many saved SoundFonts");
+        for (int i = 0; i < banks.length(); i++) {
+          JSONObject item = banks.getJSONObject(i);
+          String file = item.optString("file", "");
+          String name = item.optString("name", "Imported SoundFont");
+          if ((file.equals("kanta-tone.sf2") || file.matches("[a-f0-9]{64}\\.sf2"))
+              && new File(media, file).isFile()
+              && soundFonts.stream().noneMatch(value -> value.fileName.equals(file)))
+            soundFonts.add(new SoundFontEntry(file, name));
+        }
+      }
+      // Migrate the pre-inventory format without losing the previously active imported bank.
+      if (new File(media, selectedBank).isFile()
+          && soundFonts.stream().noneMatch(value -> value.fileName.equals(selectedBank)))
+        soundFonts.add(new SoundFontEntry(selectedBank, bankName));
       JSONArray rows = root.getJSONArray("songs");
       if (rows.length() > 150000) throw new IOException("Too many library rows");
       Set<String> ids = new HashSet<>();
@@ -125,6 +148,12 @@ final class LibraryRepository {
         temp.delete();
         throw new IOException("Cannot install original tone");
       }
+    }
+    if (soundFonts.stream().noneMatch(value -> value.fileName.equals("kanta-tone.sf2")))
+      soundFonts.add(0, new SoundFontEntry("kanta-tone.sf2", "KANTA original tone"));
+    if (soundFonts.stream().noneMatch(value -> value.fileName.equals(selectedBank))) {
+      selectedBank = "kanta-tone.sf2";
+      bankName = "KANTA original tone";
     }
     for (int i = 0; i < STARTERS.length; i++) {
       String id = "starter:" + STARTERS[i], file = STARTERS[i] + ".mid";
@@ -189,6 +218,23 @@ final class LibraryRepository {
     return bankName;
   }
 
+  List<SoundFontEntry> soundFonts() {
+    return Collections.unmodifiableList(new ArrayList<>(soundFonts));
+  }
+
+  void selectSoundFont(String fileName) throws Exception {
+    SoundFontEntry selected = null;
+    for (SoundFontEntry entry : soundFonts)
+      if (entry.fileName.equals(fileName)) { selected = entry; break; }
+    if (selected == null || !new File(media, selected.fileName).isFile())
+      throw new IOException("That SoundFont is no longer available. Import it again.");
+    String oldFile = selectedBank, oldName = bankName;
+    selectedBank = selected.fileName;
+    bankName = selected.name;
+    try { persist(); }
+    catch (Exception failure) { selectedBank = oldFile; bankName = oldName; throw failure; }
+  }
+
   private Song importSong(Uri uri) throws Exception {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening song...");
@@ -206,7 +252,10 @@ final class LibraryRepository {
         lower.endsWith(".kar") || lower.endsWith(".mid") || lower.endsWith(".midi")
             ? "mid"
             : lower.endsWith(".mp3") ? "mp3" : lower.endsWith(".wav") ? "wav" : null;
-    if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music");
+    if (lower.endsWith(".shubblob") || lower.endsWith(".kantablob")
+        || lower.endsWith(".shubidx") || lower.endsWith(".kantidx"))
+      throw new IOException("Legacy ShubBlob containers are not supported by this preview. Import extracted MIDI/KAR files instead.");
+    if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music, or a valid SF2 SoundFont.");
     File temp = File.createTempFile("import-", ".tmp", media);
     boolean installed = false;
     try {
@@ -307,30 +356,44 @@ final class LibraryRepository {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening SoundFont...");
 
-    File temp = File.createTempFile("bank-", ".tmp", media);
+    File temp = null;
     boolean created = false;
     File destination = null;
     String oldBank = selectedBank, oldName = bankName;
+    ArrayList<SoundFontEntry> oldSoundFonts = new ArrayList<>(soundFonts);
     try {
+      long availableBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
+      if (fileSize > 0 && !SoundFontStoragePolicy.canCopy(availableBytes, fileSize))
+        throw new IOException("Insufficient storage space for SoundFont");
+      temp = File.createTempFile("bank-", ".tmp", media);
       MessageDigest hash = MessageDigest.getInstance("SHA-256");
       try (InputStream in = context.getContentResolver().openInputStream(uri);
           FileOutputStream out = new FileOutputStream(temp)) {
         if (in == null) throw new IOException("Cannot open SoundFont");
         byte[] bytes = new byte[65536];
         long total = 0;
+        long nextSpaceCheck = 0;
         int count;
         while ((count = in.read(bytes)) != -1) {
           total += count;
           notifyProgress(fileSize, total, "Copying: " + formatBytes(total) + " / " + formatBytes(fileSize));
           if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
             throw new InterruptedIOException();
+          if (total >= nextSpaceCheck) {
+            long currentAvailable = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
+            long reportedRemaining = fileSize > 0 ? Math.max(0, fileSize - total) : -1;
+            if (!SoundFontStoragePolicy.canContinueCopying(
+                currentAvailable, reportedRemaining, count))
+              throw new IOException("Insufficient storage space for SoundFont");
+            nextSpaceCheck = total + SoundFontStoragePolicy.RECHECK_INTERVAL_BYTES;
+          }
           hash.update(bytes, 0, count);
           out.write(bytes, 0, count);
         }
         notifyProgress(fileSize, total, "Validating...");
-        // Size validated by native loader; check disk space only
         long freeBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
-        if (total > freeBytes - 64 * 1024 * 1024) throw new IOException("Insufficient storage space for SoundFont");
+        if (!SoundFontStoragePolicy.hasReserve(freeBytes))
+          throw new IOException("Insufficient storage space for SoundFont");
         out.getFD().sync();
       }
       notifyProgress(fileSize, fileSize, "Validating structure...");
@@ -355,16 +418,21 @@ final class LibraryRepository {
         if (c != null && c.moveToFirst() && !c.isNull(0))
           bankName = c.getString(0).substring(0, Math.min(120, c.getString(0).length()));
       }
+      String destinationName = destination.getName();
+      soundFonts.removeIf(value -> value.fileName.equals(destinationName));
+      soundFonts.add(new SoundFontEntry(destinationName, bankName));
       if (!batching) persist();
       if (created && batching) batchFiles.add(destination);
     } catch (Exception | LinkageError e) {
       notifyComplete(false, e.getMessage());
       selectedBank = oldBank;
       bankName = oldName;
+      soundFonts.clear();
+      soundFonts.addAll(oldSoundFonts);
       if (created && destination != null) destination.delete();
       throw e;
     } finally {
-      temp.delete();
+      if (temp != null) temp.delete();
     }
     notifyProgress(fileSize, fileSize, "Import complete");
     notifyComplete(true, "Import complete");
@@ -438,6 +506,7 @@ final class LibraryRepository {
       throws Exception {
     ArrayList<Song> before = new ArrayList<>(songs);
     String oldBank = selectedBank, oldName = bankName;
+    ArrayList<SoundFontEntry> oldSoundFonts = new ArrayList<>(soundFonts);
     int good = 0, failed = 0;
     batching = true;
     cancelled = cancellation;
@@ -467,6 +536,8 @@ final class LibraryRepository {
       songs.addAll(before);
       selectedBank = oldBank;
       bankName = oldName;
+      soundFonts.clear();
+      soundFonts.addAll(oldSoundFonts);
       for (File file : batchFiles) file.delete();
       throw e;
     } finally {
@@ -545,6 +616,10 @@ final class LibraryRepository {
               .put("file", s.fileName)
               .put("starter", s.starter));
     root.put("songs", rows);
+    JSONArray banks = new JSONArray();
+    for (SoundFontEntry entry : soundFonts)
+      banks.put(new JSONObject().put("file", entry.fileName).put("name", entry.name));
+    root.put("soundfonts", banks);
     root.put("removed", new JSONArray(removed));
     JSONArray q = new JSONArray();
     for (ReservationQueue.Entry e : queue)
