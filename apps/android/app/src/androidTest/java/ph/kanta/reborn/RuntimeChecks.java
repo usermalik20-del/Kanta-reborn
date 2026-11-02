@@ -194,6 +194,10 @@ public final class RuntimeChecks extends Instrumentation {
           () -> !session.soundFontName.equals("KANTA original tone"),
           "SoundFont selector did not reactivate the imported bank");
       capture("my-set-active-soundfont.png");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Control"),
+              "Control navigation was not restored after My Set assertions"));
 
       AtomicBoolean progressSeen = new AtomicBoolean();
       AtomicBoolean progressOnMain = new AtomicBoolean(true);
