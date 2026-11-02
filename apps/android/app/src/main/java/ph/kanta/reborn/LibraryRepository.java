@@ -331,7 +331,9 @@ final class LibraryRepository {
             throw new InterruptedIOException();
           if (total >= nextSpaceCheck) {
             long currentAvailable = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
-            if (!SoundFontStoragePolicy.canCopy(currentAvailable, count))
+            long reportedRemaining = fileSize > 0 ? Math.max(0, fileSize - total) : -1;
+            if (!SoundFontStoragePolicy.canContinueCopying(
+                currentAvailable, reportedRemaining, count))
               throw new IOException("Insufficient storage space for SoundFont");
             nextSpaceCheck = total + SoundFontStoragePolicy.RECHECK_INTERVAL_BYTES;
           }
