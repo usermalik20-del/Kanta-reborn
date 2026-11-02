@@ -1384,6 +1384,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
+  String activeSoundFontFileName() {
+    return selectedSoundFont == null ? "kanta-tone.sf2" : selectedSoundFont.getName();
+  }
+
   void selectSoundFont(String fileName) {
     if (!ready || importing) return;
     io.execute(
