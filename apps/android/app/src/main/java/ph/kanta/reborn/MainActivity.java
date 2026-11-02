@@ -59,7 +59,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean cameraPermissionPending, microphonePermissionPending, voiceExpanded;
   private Presentation presentation;
   private DisplayManager displays;
-  private String tab = "Control", query = "", singer = "";
+  private String tab = "Home", query = "", singer = "";
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
