@@ -34,8 +34,8 @@ def is_ancestor(older: str, newer: str) -> bool:
     detail = result.stderr.strip() or "git merge-base could not resolve both revisions"
     raise ValueError("Unable to verify platform publication ancestry: " + detail)
 
-def require_forward_source(platform: str, candidate: str, manifest: dict) -> None:
-    """Reject delayed older completions and source histories unrelated to the published entry."""
+def require_forward_source(platform: str, candidate: str, candidate_run: int, manifest: dict) -> None:
+    """Reject delayed older source commits, retries and unrelated histories."""
     platform_entries = manifest.get("platforms", {})
     if not isinstance(platform_entries, dict):
         raise ValueError("Invalid published platform provenance map")
@@ -50,6 +50,19 @@ def require_forward_source(platform: str, candidate: str, manifest: dict) -> Non
     if not isinstance(current, str) or not re.fullmatch(r"[0-9a-f]{40}", current):
         raise ValueError("Invalid currently published source SHA")
     if current == candidate:
+        current_run = current_entry.get("run")
+        if current_run is None:
+            legacy_entry = manifest.get(platform)
+            if isinstance(legacy_entry, dict):
+                current_run = legacy_entry.get("run")
+        if current_run is not None:
+            if isinstance(current_run, bool) or not isinstance(current_run, int) or current_run < 1:
+                raise ValueError("Invalid currently published source run ID")
+            if candidate_run < current_run:
+                raise ValueError(
+                    f"Refusing older {platform} source run {candidate_run}; "
+                    f"run {current_run} is already published for this source"
+                )
         return
     if is_ancestor(candidate, current):
         raise ValueError(
@@ -74,6 +87,9 @@ def publish():
         raise ValueError("iOS publication requires an unsigned IPA and same-SHA simulator walkthrough")
     if platform == "android" and info.get("signed") != "debug":
         raise ValueError("Android publication requires the debug APK")
+    source_run = info.get("run")
+    if isinstance(source_run, bool) or not isinstance(source_run, int) or source_run < 1:
+        raise ValueError("Invalid source workflow run ID")
     run_id = positive("GITHUB_RUN_ID")
     package_id = positive("PACKAGE_ARTIFACT_ID")
     digest = os.environ.get("PACKAGE_ARTIFACT_SHA256", "").removeprefix("sha256:")
@@ -90,12 +106,12 @@ def publish():
     url = f"https://github.com/{REPO}/actions/runs/{run_id}/artifacts/{package_id}"
     path = ROOT / "apps/web/downloads.json"
     manifest = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-    require_forward_source(platform, source, manifest)
+    require_forward_source(platform, source, source_run, manifest)
     manifest.setdefault("repository", REPO)
     manifest["verifiedAt"] = now.date().isoformat()
     manifest["signInRequired"] = True
     manifest.setdefault("platforms", {})
-    entry = {"source": source, "run": int(info["run"]), "artifact": int(info["artifact"]),
+    entry = {"source": source, "run": source_run, "artifact": int(info["artifact"]),
              "packagingRun": run_id, "packagingArtifact": package_id, "downloadUrl": url,
              "retentionDays": days,
              "artifactName": "KANTA-" + ("Android-preview-download" if platform == "android" else "iOS-personal-unsigned-download"),
@@ -120,7 +136,7 @@ def publish():
     section = (f'<section class="section" id="download"><h2>{"Android preview download" if platform == "android" else "Unsigned iPhone / iPad package"}</h2>'
       f'<p><a class="button primary" href="{url}">Download {"verified Android bundle" if platform == "android" else "unsigned iOS bundle"} ↗</a></p>'
       f'<p class="release-note">Verified CI artifact · GitHub sign-in required · {days}-day retention.</p>'
-      f'<p>Source <code>{source[:8]}</code> · Validated build run <a href="https://github.com/{REPO}/actions/runs/{int(info["run"])}">#{int(info["run"])}</a>.</p>'
+      f'<p>Source <code>{source[:8]}</code> · Validated build run <a href="https://github.com/{REPO}/actions/runs/{source_run}">#{source_run}</a>.</p>'
       + ('<p>Debug-signed APK testing preview; not a Google Play release.</p>' if platform == "android" else '<p><strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable.</p><p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/' + REPO + '/actions/runs/' + str(int(info["walkthroughRun"])) + '">run #' + str(int(info["walkthroughRun"])) + '</a>. Simulator results do not establish physical-device acceptance.</p>')
       + f'<p>Artifact ZIP SHA-256: <code>{digest}</code>. {"APK SHA-256" if platform == "android" else "IPA SHA-256"}: <code>{info["sha256"]}</code>.</p></section>')
     import re as regex

@@ -143,5 +143,40 @@ class PlatformPublisherTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unrelated source history"):
             publisher.publish()
 
+    def test_older_retry_for_same_source_cannot_replace_newer_publication(self):
+        path = self.root / "apps/web/downloads.json"
+        manifest = json.loads(path.read_text())
+        manifest["android"].update({"source": self.new_source, "run": 300})
+        manifest["platforms"]["android"].update({"source": self.new_source, "run": 300})
+        path.write_text(json.dumps(manifest))
+        build_info = self.root / "verified-downloads/android/build-info.json"
+        retry = json.loads(build_info.read_text())
+        retry.update({"source": self.new_source, "run": 200})
+        build_info.write_text(json.dumps(retry))
+        before = path.read_text()
+        page_before = (self.root / "apps/web/android.html").read_text()
+
+        with self.assertRaisesRegex(ValueError, "Refusing older android source run"):
+            publisher.publish()
+
+        self.assertEqual(path.read_text(), before)
+        self.assertEqual((self.root / "apps/web/android.html").read_text(), page_before)
+
+    def test_newer_retry_for_same_source_can_replace_older_run(self):
+        path = self.root / "apps/web/downloads.json"
+        manifest = json.loads(path.read_text())
+        manifest["android"].update({"source": self.new_source, "run": 100})
+        manifest["platforms"]["android"].update({"source": self.new_source, "run": 100})
+        path.write_text(json.dumps(manifest))
+        build_info = self.root / "verified-downloads/android/build-info.json"
+        retry = json.loads(build_info.read_text())
+        retry.update({"source": self.new_source, "run": 200})
+        build_info.write_text(json.dumps(retry))
+
+        result = publisher.publish()
+
+        self.assertEqual(result["android"]["source"], self.new_source)
+        self.assertEqual(result["android"]["run"], 200)
+
 if __name__ == "__main__":
     unittest.main()
