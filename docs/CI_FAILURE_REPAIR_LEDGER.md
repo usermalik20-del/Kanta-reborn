@@ -1048,3 +1048,11 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 - **Cause:** the download manifest kept one top-level `packagingRun`. The verifier used that value as a fallback when a platform entry lacked its own packaging run. Publishing Android advanced the shared value, so the unchanged iOS entry was checked against the new Android artifact run and its old download URL was rejected.
 - **Repair:** give every platform entry an explicit `packagingRun`; migrate legacy peer entries by parsing their existing immutable GitHub artifact URL before changing the shared compatibility pointer; make the verifier reject missing platform-scoped provenance instead of falling back to the global field.
 - **Regression:** publisher tests exercise Android and iOS publication independently, verify peer platform source/run/package URL/page preservation, and assert each newly published entry records its own packaging run. Website validation and the publisher workflow must pass on the exact repair commit before the new APK is considered published.
+
+
+## Android package checksum disclosure — publisher-generated page omitted bundle contents note (2026-11-02)
+
+- **Fingerprint:** Retried Android publisher run [41449342463, attempt 2](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463) successfully packaged and uploaded the new bundle, then failed website verification with `Android bundle checksum contents must be described accurately`.
+- **Cause:** the packager includes `SHA256.txt` inside the Android ZIP, and the website verifier requires the public page to say so. The generated download section still described only the debug-signed preview and omitted the checksum-file disclosure.
+- **Repair:** update the Android publisher's generated section to state that `SHA256.txt` is included, and assert that generated page copy in the publisher regression test. This keeps the published description tied to the actual package contents.
+- **Validation:** rerun website validation and verified-download contracts, then retry the existing failed Android publisher job against the merged fix. Verify the committed manifest and live page after Vercel deploy.
