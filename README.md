@@ -150,3 +150,8 @@ The Android My Set surface now lists imported MIDI/KAR/audio items with direct R
 ## Android SoundFont storage safety — 2026-11-02
 
 SF2 import now checks the reported size before copying, periodically rechecks free storage while streaming, and preserves a 64 MiB free-space reserve for unknown or under-reported providers. The old post-copy comparison double-counted the imported file and rejected valid large banks; the corrected policy does not impose a fixed file-size ceiling and retains native structure/sample validation. Core regression coverage and exact-head Android validation are tracked in the dedicated pull request.
+
+
+## iOS playback cancellation hardening — 2026-11-02
+
+The iOS controller treats user-initiated library lookup and native playback preparation as cancellation-aware transactions: canceled Next/queue operations preserve their reservation and committed current song, while partially prepared backends are retired safely. Natural-completion auto-advance remains controller-owned rather than tied to a view's snapshot-poll lifetime. Regression coverage includes cancellation before and during native load, recovery, audio-session setup failure before load, and observer cancellation during natural completion. The reconciled branch requires fresh exact-head Swift package, smoke, unsigned archive, and iPhone/iPad simulator acceptance before merge.
