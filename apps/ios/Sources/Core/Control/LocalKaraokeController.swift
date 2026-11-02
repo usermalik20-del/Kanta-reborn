@@ -377,7 +377,7 @@ public actor LocalKaraokeController: KaraokeController {
         } catch {
             // A cancellation before engine.load must leave the committed song playing.
             // Once loading starts, the backend may have replaced its asset and must be retired.
-            if loadStarted || !(error is CancellationError) {
+            if loadStarted {
                 await engine.stop()
                 needsPlaybackReload = true
             }
