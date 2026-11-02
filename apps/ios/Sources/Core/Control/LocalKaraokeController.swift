@@ -128,8 +128,12 @@ public actor LocalKaraokeController: KaraokeController {
            let next = queue.items.first,
            failedAutoAdvanceItemID != next.id {
             do {
-                try await startFollowingQueueItem()
+                // Natural completion is controller-owned, not tied to a view poll's lifetime.
+                try await startNext(shouldPlay: true, cancellationSensitive: false)
                 audio = await engine.snapshot()
+            } catch is CancellationError {
+                // A canceled observer must not poison the reservation; a later snapshot retries.
+                return lastPublishedSnapshot
             } catch {
                 // Keep the reservation, surface the failure, and avoid retrying
                 // expensive/broken media on every Host/Remote snapshot poll.
@@ -181,12 +185,22 @@ public actor LocalKaraokeController: KaraokeController {
                 try await startNext(shouldPlay: true)
             } else {
                 let before = await engine.snapshot()
+                try Task.checkCancellation()
                 if needsPlaybackReload, let currentItem {
                     let asset = try await library.playbackAsset(for: currentItem.song.id)
+                    try Task.checkCancellation()
                     try await prepareAsset(asset, shouldPlay: true)
+                    try await checkCancellationAfterPreparation()
                 } else {
                     try await audioOwnership?.prepareNativeAudio()
-                    try await engine.play()
+                    try Task.checkCancellation()
+                    do {
+                        try await engine.play()
+                        try Task.checkCancellation()
+                    } catch {
+                        await engine.pause()
+                        throw error
+                    }
                 }
                 if before.transport == .stopped {
                     playbackID = UUID()
@@ -208,8 +222,11 @@ public actor LocalKaraokeController: KaraokeController {
             try await startPrevious()
 
         case let .seek(milliseconds):
-            if await engine.snapshot().transport == .playing {
+            let wasPlaying = await engine.snapshot().transport == .playing
+            try Task.checkCancellation()
+            if wasPlaying {
                 try await audioOwnership?.prepareNativeAudio()
+                try Task.checkCancellation()
             }
             try await engine.seek(toMilliseconds: milliseconds)
 
@@ -223,7 +240,9 @@ public actor LocalKaraokeController: KaraokeController {
             await engine.setTempo(ratio: ratio)
 
         case let .enqueue(songID):
-            guard let song = try await library.song(id: songID) else {
+            let resolvedSong = try await library.song(id: songID)
+            try Task.checkCancellation()
+            guard let song = resolvedSong else {
                 throw LocalKaraokeControllerError.songNotFound(songID)
             }
             guard song.isPlayable else {
@@ -232,7 +251,9 @@ public actor LocalKaraokeController: KaraokeController {
             queue.enqueue(song)
 
         case let .enqueueForSinger(songID, singer):
-            guard let song = try await library.song(id: songID) else {
+            let resolvedSong = try await library.song(id: songID)
+            try Task.checkCancellation()
+            guard let song = resolvedSong else {
                 throw LocalKaraokeControllerError.songNotFound(songID)
             }
             guard song.isPlayable else {
@@ -251,6 +272,7 @@ public actor LocalKaraokeController: KaraokeController {
 
         case let .triggerSFX(sound):
             try await audioOwnership?.prepareNativeAudio()
+            try Task.checkCancellation()
             try await partySFX?.trigger(sound)
 
         case .stopSFX:
@@ -273,7 +295,12 @@ public actor LocalKaraokeController: KaraokeController {
         await partySFX?.stopAll()
         try await engine.suspendForOnlinePlayback()
         try Task.checkCancellation()
-        return try await audioOwnership.claimOnlineAudio(id, retire: retire)
+        let claimed = try await audioOwnership.claimOnlineAudio(id, retire: retire)
+        if Task.isCancelled {
+            if claimed { await audioOwnership.releaseOnlineAudio(id) }
+            throw CancellationError()
+        }
+        return claimed
     }
 
     /// Explicit local Play action. Existing FIFO reservations are preserved.
@@ -288,6 +315,7 @@ public actor LocalKaraokeController: KaraokeController {
         let asset = try await library.playbackAsset(for: songID)
         try Task.checkCancellation()
         try await prepareAsset(asset, shouldPlay: true)
+        try await checkCancellationAfterPreparation()
         if let currentItem { history.append(currentItem) }
         currentItem = QueueItem(song: song)
         playbackID = UUID()
@@ -299,13 +327,24 @@ public actor LocalKaraokeController: KaraokeController {
         try await startNext(shouldPlay: true)
     }
 
-    private func startNext(shouldPlay: Bool) async throws {
+    private func startNext(
+        shouldPlay: Bool,
+        cancellationSensitive: Bool = true
+    ) async throws {
         guard let next = queue.items.first else {
             throw LocalKaraokeControllerError.queueEmpty
         }
 
         let asset = try await library.playbackAsset(for: next.song.id)
-        try await prepareAsset(asset, shouldPlay: shouldPlay)
+        if cancellationSensitive { try Task.checkCancellation() }
+        try await prepareAsset(
+            asset,
+            shouldPlay: shouldPlay,
+            cancellationSensitive: cancellationSensitive
+        )
+        if cancellationSensitive {
+            try await checkCancellationAfterPreparation()
+        }
 
         // Commit queue state only after preparation/play succeeds.
         // Failed or malformed media therefore remains visible and
@@ -318,12 +357,38 @@ public actor LocalKaraokeController: KaraokeController {
         failedAutoAdvanceItemID = nil
     }
 
-    private func prepareAsset(_ asset: AudioPlaybackAsset, shouldPlay: Bool) async throws {
+    private func prepareAsset(
+        _ asset: AudioPlaybackAsset,
+        shouldPlay: Bool,
+        cancellationSensitive: Bool = true
+    ) async throws {
+        var loadStarted = false
         do {
             try await audioOwnership?.prepareNativeAudio()
+            if cancellationSensitive { try Task.checkCancellation() }
+            loadStarted = true
             try await engine.load(asset)
-            if shouldPlay { try await engine.play() }
+            if cancellationSensitive { try Task.checkCancellation() }
+            if shouldPlay {
+                try await engine.play()
+                if cancellationSensitive { try Task.checkCancellation() }
+            }
             needsPlaybackReload = false
+        } catch {
+            // A cancellation before engine.load must leave the committed song playing.
+            // Once loading starts, the backend may have replaced its asset and must be retired.
+            if loadStarted || !(error is CancellationError) {
+                await engine.stop()
+                needsPlaybackReload = true
+            }
+            throw error
+        }
+    }
+
+    /// Retires a prepared backend if cancellation arrives before the controller commits it.
+    private func checkCancellationAfterPreparation() async throws {
+        do {
+            try Task.checkCancellation()
         } catch {
             await engine.stop()
             needsPlaybackReload = true
@@ -337,7 +402,9 @@ public actor LocalKaraokeController: KaraokeController {
         }
 
         let asset = try await library.playbackAsset(for: previous.song.id)
+        try Task.checkCancellation()
         try await prepareAsset(asset, shouldPlay: true)
+        try await checkCancellationAfterPreparation()
 
         history.removeLast()
         if let currentItem {
