@@ -1850,4 +1850,4 @@ Source 339b8f6 passed hosted Android APK/instrumentation assembly, lint, native 
 
 **Fix:** recheck cancellation after library resolution and each native preparation await; retire an uncommitted backend and set needsPlaybackReload if cancellation arrives after preparation. Preserve the current item, playback identity and queue reservation. Natural-completion auto-advance explicitly ignores cancellation inherited from a UI snapshot poll.
 
-**Regression protection:** added deterministic suspended-library tests for canceled enqueue and Next, plus a suspended-engine-load test proving the uncommitted asset is stopped and the previous song can be resumed. Hosted Swift package tests and simulator build are pending on the PR head; no simulator/device acceptance is claimed yet.
+**Regression protection:** added four deterministic Swift regressions: canceled enqueue, canceled Next during asset resolution, canceled Next during native load/recovery, and natural auto-advance surviving a canceled snapshot poll. Hosted Swift package tests and simulator build are pending on the PR head; no simulator/device acceptance is claimed yet.

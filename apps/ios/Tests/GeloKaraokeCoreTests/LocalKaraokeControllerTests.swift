@@ -522,6 +522,35 @@ private actor BlockingKaraokeLibrary: KaraokeLibraryAccess {
 }
 
 
+@Test func canceledSnapshotPollDoesNotAbortNaturalAutoAdvance() async throws {
+    let first = LibrarySong(id: SongID(rawValue: "cancel-poll-current"), title: "Current", mediaKind: .wav)
+    let second = LibrarySong(id: SongID(rawValue: "cancel-poll-next"), title: "Next", mediaKind: .wav)
+    let library = BlockingKaraokeLibrary(songs: [first, second])
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(engine: engine, library: library)
+    try await controller.send(.enqueue(songID: first.id))
+    try await controller.send(.enqueue(songID: second.id))
+    try await controller.send(.play)
+    await engine.finishCurrentNaturally()
+
+    await library.blockNextAssetLookup()
+    let poll = Task { await controller.snapshot() }
+    for _ in 0..<1_000 {
+        if await library.isBlocked() { break }
+        await Task.yield()
+    }
+    #expect(await library.isBlocked())
+    poll.cancel()
+    await library.releaseBlockedLookup()
+
+    let snapshot = await poll.value
+    #expect(snapshot.nowPlaying?.id == second.id)
+    #expect(snapshot.queue.isEmpty)
+    #expect(snapshot.transport == .playing)
+}
+
+
+
 @Test func concurrentSnapshotsAdvanceExactlyOneReservation() async throws {
     let song = LibrarySong(id: SongID(rawValue: "repeat"), title: "Repeat", mediaKind: .wav)
     let engine = FakeAudioPlaybackEngine()

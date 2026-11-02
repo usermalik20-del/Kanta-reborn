@@ -185,6 +185,7 @@ public actor LocalKaraokeController: KaraokeController {
                 try await startNext(shouldPlay: true)
             } else {
                 let before = await engine.snapshot()
+                try Task.checkCancellation()
                 if needsPlaybackReload, let currentItem {
                     let asset = try await library.playbackAsset(for: currentItem.song.id)
                     try Task.checkCancellation()
@@ -294,7 +295,12 @@ public actor LocalKaraokeController: KaraokeController {
         await partySFX?.stopAll()
         try await engine.suspendForOnlinePlayback()
         try Task.checkCancellation()
-        return try await audioOwnership.claimOnlineAudio(id, retire: retire)
+        let claimed = try await audioOwnership.claimOnlineAudio(id, retire: retire)
+        if Task.isCancelled {
+            if claimed { await audioOwnership.releaseOnlineAudio(id) }
+            throw CancellationError()
+        }
+        return claimed
     }
 
     /// Explicit local Play action. Existing FIFO reservations are preserved.
