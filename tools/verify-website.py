@@ -404,7 +404,8 @@ def main():
             build = manifest[platform]
             platform_source = build["source"]
             assert re.fullmatch(r"[0-9a-f]{40}", platform_source), filename + " source SHA is malformed"
-            platform_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build.get("packagingRun", manifest["packagingRun"]))
+            assert isinstance(build.get("packagingRun"), int) and build["packagingRun"] > 0, filename + " platform packaging run is missing"
+            platform_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["packagingRun"])
             source_artifact_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"])
             packaged_artifact_url = platform_run_url + "/artifacts/" + str(build["packagingArtifact"])
             page_source = (WEB / filename).read_text(encoding="utf-8")
