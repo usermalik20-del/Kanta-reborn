@@ -11,6 +11,9 @@ import ph.kanta.reborn.core.*;
 import ph.kanta.reborn.core.companion.KantaConnectHost;
 import ph.kanta.reborn.score.ScoreSink;
 import ph.kanta.reborn.settings.SettingsStore;
+import ph.kanta.reborn.core.bgv.ScenicCatalog;
+import ph.kanta.reborn.core.bgv.ScenicClip;
+import ph.kanta.reborn.BgvLibrary;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 
@@ -36,23 +39,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   String scenicName = "bayanDawn";
   private boolean savingSet = false;
   private LibraryRepository repository;
-  private LibraryRepository.ImportProgressListener importProgressListener;
-  private final LibraryRepository.ImportProgressListener importProgressDispatcher =
-      new LibraryRepository.ImportProgressListener() {
-        @Override
-        public void onProgress(long total, long copied, String status) {
-          main.post(
-              () -> {
-                LibraryRepository.ImportProgressListener current = importProgressListener;
-                if (current != null) current.onProgress(total, copied, status);
-              });
-        }
-
-        @Override
-        public void onComplete(boolean success, String message) {
-          main.post(() -> completeImportProgress(success, message));
-        }
-      };
   private StageMediaStore stageStore;
   StageMediaStore.Selection stageSelection;
   boolean stageReady;
@@ -64,7 +50,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
   public List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
-  List<LibraryRepository.SoundFontEntry> soundFonts = Collections.emptyList();
   public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
   Song current;
@@ -98,7 +83,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   public String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
-  boolean libraryImporting = false;
   private Listener listener;
   private ScoreSink scoreSink;
   public PlaybackBackend player, pending;
@@ -109,7 +93,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private final SettingsStore settings;
   boolean realm;
   final PartyAudio party;
-  final MicrophoneInput microphone;
+  final MicrophoneMonitor microphone;
+  final BgvLibrary bgvLibrary;
   final MicrophoneMonitor monitor;
   public final android.content.SharedPreferences options;
   boolean foreground, loopEnabled, auxiliaryInterrupted, assigningPad;
@@ -205,19 +190,15 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             String bankLabel = repository.soundFontName();
             List<Song> loaded = repository.songs();
             List<LibraryRepository.SavedSet> sets = repository.sets();
-            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
             List<ReservationQueue.Entry> restored = repository.queue();
             main.post(
                 () -> {
                   songs = loaded;
                   savedSets = sets;
-                  soundFonts = banks;
                   queue.restore(restored);
                   selectedSoundFont = bank;
                   soundFontName = bankLabel;
                   ready = true;
-                  if (importProgressListener != null)
-                    repository.setImportProgressListener(importProgressDispatcher);
                   preparePads();
                   restoreStage();
                   message = "Your music. Your stage.";
@@ -724,6 +705,43 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     loopEnabled = false;
     party.stopAll();
     publish();
+  }
+
+  /** Downloads a built‑in scenic clip. Returns true if the download was started. */
+  public boolean downloadScenic(String clipId) {
+    ScenicClip clip = ScenicCatalog.byId(clipId);
+    if (clip == null) return false;
+    return bgvLibrary.download(clip, id -> {
+      // UI will be updated via the listener callback on the main thread.
+      publish();
+    });
+  }
+
+  /** Deletes a previously downloaded clip from the library. */
+  public boolean deleteScenic(String clipId) {
+    return bgvLibrary.delete(clipId);
+  }
+
+  /** Returns the current download status line, or empty when idle. */
+  public String scenicDownloadStatus() {
+    return bgvLibrary.progressLine();
+  }
+
+  /** Called from the UI to refresh the library list after a download completes. */
+  public synchronized List<BgvLibrary.Entry> scenicEntries() {
+    return bgvLibrary.entries();
+  }
+
+  /**
+   * Plays one party effect slot for a stage cue such as the score reveal.
+   *
+   * <p>The stage owns presentation but not audio, so it asks the single audio owner instead of
+   * reaching for the pads itself. A negative slot is ignored, and an unavailable pad is silent
+   * rather than an error: a missing cue must never block the score card.
+   */
+  public void playEffectCue(int slot) {
+    if (slot < 0 || slot >= PartySounds.TITLES.size()) return;
+    triggerPad(slot);
   }
 
   void partyVolumes(float sfx, float intermission) {
@@ -1335,14 +1353,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     }
   }
 
-  public long duration() {
-    try {
-      return Math.max(0, player == null ? currentDuration : player.duration());
-    } catch (IllegalStateException e) {
-      return Math.max(0, currentDuration);
-    }
-  }
-
   public RenderedPlaybackClock getClock() {
     if (player != null) return player.getClock();
     return currentClock;
@@ -1352,7 +1362,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     if (!ready || importing) return;
     importCancelled.set(false);
     importing = true;
-    libraryImporting = true;
     message = "Importing your selected songs…";
     publish();
     io.execute(
@@ -1368,7 +1377,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           List<Song> loaded = repository.songs();
           File bank = repository.soundFont();
           String bankLabel = repository.soundFontName();
-          List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
           String result =
               "Imported "
                   + good
@@ -1376,60 +1384,20 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   + (failed > 0
                       ? ". " + failed + " unsupported or unreadable file(s) were skipped."
                       : ".");
-          final boolean importSucceeded = failed == 0;
           main.post(
               () -> {
                 songs = loaded;
                 selectedSoundFont = bank;
                 soundFontName = bankLabel;
-                soundFonts = banks;
                 importing = false;
-                libraryImporting = false;
                 message = result;
-                completeImportProgress(importSucceeded, result);
                 publish();
               });
         });
   }
 
-  String activeSoundFontFileName() {
-    return selectedSoundFont == null ? "kanta-tone.sf2" : selectedSoundFont.getName();
-  }
-
-  void selectSoundFont(String fileName) {
-    if (!ready || importing) return;
-    io.execute(
-        () -> {
-          try {
-            repository.selectSoundFont(fileName);
-            File bank = repository.soundFont();
-            String label = repository.soundFontName();
-            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
-            main.post(() -> {
-              selectedSoundFont = bank;
-              soundFontName = label;
-              soundFonts = banks;
-              message = "Active SoundFont: " + label + ". Changes apply to the next song.";
-              publish();
-            });
-          } catch (Exception failure) {
-            main.post(() -> { message = "Could not activate that SoundFont. " + failure.getMessage(); publish(); });
-          }
-        });
-  }
-
   void setImportProgressListener(LibraryRepository.ImportProgressListener listener) {
-    importProgressListener = listener;
-    if (repository != null)
-      repository.setImportProgressListener(
-          listener == null ? null : importProgressDispatcher);
-  }
-
-  private void completeImportProgress(boolean success, String message) {
-    LibraryRepository.ImportProgressListener listener = importProgressListener;
-    importProgressListener = null;
-    if (repository != null) repository.setImportProgressListener(null);
-    if (listener != null) listener.onComplete(success, message);
+    repository.setImportProgressListener(listener);
   }
 
   void cancelImports() {
@@ -1439,7 +1407,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   void importFolder(Uri tree) {
     if (!ready || importing) return;
     importing = true;
-    libraryImporting = true;
     importCancelled.set(false);
     message = "Finding music in your selected folder…";
     publish();
@@ -1452,22 +1419,17 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 () -> {
                   importing = false;
                   if (importCancelled.get()) {
-                    libraryImporting = false;
                     message = "Folder import cancelled.";
-                    completeImportProgress(false, message);
                     publish();
                     return;
                   }
-                  libraryImporting = false;
                   importSongs(files);
                 });
           } catch (Exception e) {
             main.post(
                 () -> {
                   importing = false;
-                  libraryImporting = false;
                   message = "The folder is unavailable, cancelled or exceeds the scan limit.";
-                  completeImportProgress(false, message);
                   publish();
                 });
           }
@@ -1567,62 +1529,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 () -> {
                   message = "Could not open scenic background";
                   publish();
-                });
-          }
-        });
-  }
-
-  void sceneResource(String name, int drawableResource) {
-    if (name == null || name.isEmpty() || drawableResource == 0) return;
-    scenicName = name;
-    stageKind = "scenic";
-    stageVideo = null;
-    long request = ++stageRequest;
-    visualGeneration++;
-    if (ready && stageStore != null)
-      io.execute(
-          () -> {
-            try {
-              stageStore.select("scenic");
-            } catch (Exception ignored) {
-            }
-          });
-    io.execute(
-        () -> {
-          android.graphics.Bitmap bitmap = null;
-          try {
-            android.graphics.BitmapFactory.Options options =
-                new android.graphics.BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            android.graphics.BitmapFactory.decodeResource(
-                context.getResources(), drawableResource, options);
-            if (options.outWidth <= 0 || options.outHeight <= 0)
-              throw new IOException("Invalid bundled scene artwork");
-            options.inSampleSize = 1;
-            while (options.outWidth / options.inSampleSize > 1600
-                || options.outHeight / options.inSampleSize > 1600) options.inSampleSize *= 2;
-            options.inJustDecodeBounds = false;
-            bitmap = android.graphics.BitmapFactory.decodeResource(
-                context.getResources(), drawableResource, options);
-            if (bitmap == null) throw new IOException("Could not decode bundled scene artwork");
-            android.graphics.Bitmap result = bitmap;
-            main.post(
-                () -> {
-                  if (request == stageRequest && scenicName.equals(name) && stageKind.equals("scenic")) {
-                    scenic = result;
-                    publish();
-                  } else if (!result.isRecycled()) {
-                    result.recycle();
-                  }
-                });
-          } catch (Exception error) {
-            if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
-            main.post(
-                () -> {
-                  if (request == stageRequest && scenicName.equals(name)) {
-                    message = "Could not open scenic background";
-                    publish();
-                  }
                 });
           }
         });

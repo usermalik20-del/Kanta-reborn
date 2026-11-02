@@ -2,6 +2,7 @@ package ph.kanta.reborn.score;
 
 import ph.kanta.reborn.core.MelodyScoreSession;
 import ph.kanta.reborn.core.Song;
+import ph.kanta.reborn.core.score.ScoreResultTier;
 import java.util.UUID;
 
 /**
@@ -11,6 +12,10 @@ import java.util.UUID;
  * and persists or displays it. The existing SessionController already produces
  * {@link ph.kanta.reborn.SessionController.CompletedScore} — this contract formalizes
  * the handoff for the karaoke stage overlays.
+ *
+ * <p>{@link CompletedScore#overall()} is the presented score (floored at
+ * {@link ScoreResultTier#FLOOR}); {@link CompletedScore#estimate} keeps the raw measurement so
+ * the breakdown never overstates what the microphone heard.
  */
 public interface ScoreSink {
 
@@ -35,9 +40,14 @@ public interface ScoreSink {
       this.estimate = estimate;
     }
 
-    /** Overall score 0-100. */
+    /** Presented overall score, 50-100. */
     public int overall() {
-      return estimate != null ? (int) estimate.overall : 0;
+      return ScoreResultTier.present(estimate != null ? estimate.overall : 0);
+    }
+
+    /** The unmodified 0-100 estimate, for diagnostics and logs. */
+    public int rawOverall() {
+      return estimate != null ? (int) Math.round(estimate.overall) : 0;
     }
 
     /** Pitch accuracy 0-100. */
@@ -55,13 +65,9 @@ public interface ScoreSink {
       return estimate != null ? estimate.matchedSlots : 0;
     }
 
-    /** Tier label. */
-    public String tier() {
-      int o = overall();
-      if (o >= 95) return "Perfect";
-      if (o >= 85) return "Great";
-      if (o >= 70) return "Good";
-      return "Miss";
+    /** The result band for the presented score. */
+    public ScoreResultTier tier() {
+      return ScoreResultTier.fromScore(overall());
     }
   }
 }

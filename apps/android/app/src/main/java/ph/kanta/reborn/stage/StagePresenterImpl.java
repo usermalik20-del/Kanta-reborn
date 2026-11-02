@@ -15,6 +15,8 @@ import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.core.Song;
 import ph.kanta.reborn.core.catalog.SongCatalog;
 import ph.kanta.reborn.core.score.ScoreCelebrationPlan;
+import ph.kanta.reborn.core.score.ScoreResultTier;
+import ph.kanta.reborn.core.score.ScoreRevealPlan;
 import ph.kanta.reborn.score.ScoreSink;
 
 /**
@@ -47,7 +49,6 @@ public final class StagePresenterImpl extends FrameLayout
   private final ScoreOverlay scoreOverlay;
   private final ScoreCelebrationView celebration;
   private final BackgroundStage backgroundStage;
-  private BackgroundStage.Source cameraFallbackSource = BackgroundStage.Source.SOLID;
   private final AdjustmentOverlay adjustmentOverlay;
   private final IntroCard introCard;
   private final SearchOverlay searchOverlay;
@@ -71,6 +72,9 @@ public final class StagePresenterImpl extends FrameLayout
   private int pendingCountdownSeconds;
   private boolean countdownActive = false;
   private boolean isPlaying = false;
+  /** A drum roll is playing; the score card is scheduled but not yet on screen. */
+  private Runnable pendingReveal;
+  private long revealGeneration;
 
   public StagePresenterImpl(Context context, SessionController session,
       SongCatalog catalog, ReservationQueue queue) {
@@ -292,21 +296,46 @@ public final class StagePresenterImpl extends FrameLayout
     // Hide any active overlays
     adjustmentOverlay.hide();
     introCard.dismiss();
+    cancelPendingReveal();
     celebration.cancel();
   }
 
   @Override
   public void showScore(ScoreResult score) {
-    // Deterministic per completion: the same score for the same song always plays the
-    // same choreography, so the celebration is reproducible and testable.
-    long seed =
-        (long) score.overallScore * 31L
-            + (score.song != null && score.song.id != null ? score.song.id.hashCode() : 0);
-    celebration.celebrate(score.overallScore, seed);
-    scoreOverlay.show(score, () -> {
-      // Score dismissed - the celebration has its own bounded duration.
-      celebration.cancel();
-    });
+    // A drum roll lands first, so the number arrives on the accent instead of appearing next
+    // to the last chord. The plan is framework-free; this method only schedules it.
+    cancelPendingReveal();
+    final long generation = revealGeneration;
+    final ScoreResult result = score;
+    session.playEffectCue(ScoreRevealPlan.drumrollSlot());
+    pendingReveal =
+        () -> {
+          pendingReveal = null;
+          if (generation != revealGeneration) return;
+          session.playEffectCue(ScoreRevealPlan.revealSlot(result.tier));
+          // Deterministic per completion: the same score for the same song always plays the
+          // same choreography, so the celebration is reproducible and testable.
+          long seed =
+              (long) result.overallScore * 31L
+                  + (result.song != null && result.song.id != null
+                      ? result.song.id.hashCode()
+                      : 0);
+          celebration.celebrate(result.overallScore, seed);
+          scoreOverlay.show(result, () -> {
+            // Score dismissed - the celebration has its own bounded duration.
+            celebration.cancel();
+          });
+        };
+    handler.postDelayed(pendingReveal, ScoreRevealPlan.DRUMROLL_MILLIS);
+  }
+
+  /** Drops a scheduled score card, so a stop or a second completion cannot reveal a stale one. */
+  private void cancelPendingReveal() {
+    revealGeneration++;
+    if (pendingReveal != null) {
+      handler.removeCallbacks(pendingReveal);
+      pendingReveal = null;
+    }
   }
 
   @Override
@@ -452,7 +481,7 @@ public final class StagePresenterImpl extends FrameLayout
   }
 
   /** The tier currently being celebrated, or null. */
-  public ScoreCelebrationPlan.Tier celebrationTier() {
+  public ScoreResultTier celebrationTier() {
     return celebration.currentTier();
   }
 
@@ -499,28 +528,15 @@ public final class StagePresenterImpl extends FrameLayout
     // BackgroundStage doesn't have this, but we can track it
   }
 
-  /** Prepares and returns the primary stage's CameraX preview, preserving its prior background. */
+  /** Returns the camera PreviewView from BackgroundStage. */
   public androidx.camera.view.PreviewView getCameraPreview() {
-    if (backgroundStage.getSource() != BackgroundStage.Source.CAMERA)
-      cameraFallbackSource = backgroundStage.getSource();
-    backgroundStage.setSource(BackgroundStage.Source.CAMERA);
     return backgroundStage.getCameraPreview();
-  }
-
-  /** Releases the primary preview and restores the background selected before camera opt-in. */
-  public void releaseCameraPreview() {
-    backgroundStage.releaseCameraPreview(cameraFallbackSource);
-    cameraFallbackSource = BackgroundStage.Source.SOLID;
-  }
-
-  /** Reports only an attached preview belonging to the active camera background. */
-  public boolean isCameraVisible() {
-    return backgroundStage.isCameraVisible();
   }
 
   @Override
   protected void onDetachedFromWindow() {
     super.onDetachedFromWindow();
+    cancelPendingReveal();
     handler.removeCallbacks(frameTicker);
     countdownStage.cancel();
     pitchGameOverlay.shutdown();

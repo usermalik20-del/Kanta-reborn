@@ -27,7 +27,6 @@ import ph.kanta.reborn.core.connect.KantaConnectInfo;
 import ph.kanta.reborn.core.connect.QrEncoder;
 import ph.kanta.reborn.stage.QrCodeView;
 import ph.kanta.reborn.settings.SettingsStore;
-import ph.kanta.reborn.ui.KantaTheme;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
@@ -43,9 +42,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       CYAN = 0xFF6FE5E8,
       GOLD = 0xFFF6CE77;
   private SessionController session;
-  private LinearLayout root, body, results, stagePane, navigationTabs;
-  private View appHeader;
-  private boolean returnToHomeAfterAccessory;
+  private LinearLayout root, body, results;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -54,9 +51,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private Button playButton, nextButton;
   private final Map<String, Button> navigationButtons = new HashMap<>();
   private Dialog fullscreen, companionDialog, youtubeDialog;
-  private TextView fullscreenTitle, fullscreenArtist, fullscreenTime, fullscreenKeyTempo, fullscreenQueue;
-  private ProgressBar fullscreenProgress;
-  private Button fullscreenPlayButton;
   private AlertDialog youtubeEntryDialog;
   private YouTubeEmbeddedPlayer youtubePlayer;
   private final YouTubePreviewLifecycle youtubeLifecycle = new YouTubePreviewLifecycle();
@@ -65,7 +59,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean cameraPermissionPending, microphonePermissionPending, voiceExpanded;
   private Presentation presentation;
   private DisplayManager displays;
-  private String tab = "Home", query = "", singer = "";
+  private String tab = "Control", query = "", singer = "";
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
@@ -75,12 +69,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private final ExecutorService searchWorker = Executors.newSingleThreadExecutor();
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
-  private int referenceSearchGeneration = 0;
-  private ph.kanta.reborn.ui.KantaNowPlayingScreen nowPlayingScreen;
-  private StageSurface nowPlayingStage;
-  private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
-  private int visualsSelectedTab;
-  private String searchSource = "All";
   private boolean preparingExport = false;
   private byte[] exportBytes;
   private String exportCode;
@@ -90,11 +78,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           session.observeMicrophone();
           refreshScoreReading();
           refreshMicrophoneReading();
-          refreshNowPlayingScreen();
           if (stagePresenter != null) stagePresenter.refresh();
-          if (nowPlayingStage != null) nowPlayingStage.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
-          refreshFullscreenControls();
           if (externalStage != null) externalStage.refresh();
           handler.postDelayed(this, 100);
         }
@@ -121,13 +106,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new OnBackPressedCallback(false) {
           @Override
           public void handleOnBackPressed() {
-            if (workspace != null && workspace.activeAccessory() != null) {
-              dismissAccessory();
-            } else if (isReferenceDestination(tab)) {
-              navigateHome();
-            } else {
-              setEnabled(false);
-            }
+            // Enabled only while a transient workspace accessory is visible.
+            dismissAccessory();
           }
         };
     getOnBackPressedDispatcher().addCallback(this, workspaceBackCallback);
@@ -148,10 +128,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     super.onStart();
     youtubeForeground = true;
     session.hostVisible(true);
-    if (stagePresenter != null)
-      stagePresenter.setVisualActive(
-          (fullscreen == null || !fullscreen.isShowing()) && !"Now Playing".equals(tab));
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(fullscreen == null || !fullscreen.isShowing());
+    if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
     if (fullscreenStage != null) fullscreenStage.setVisualActive(true);
     session.listen(this::render);
     handler.post(tick);
@@ -205,7 +182,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     session.listen(null);
     session.hostVisible(false);
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     if (fullscreenStage != null) fullscreenStage.setVisualActive(false);
     if (!isChangingConfigurations()) session.pause();
     if (presentation != null) presentation.dismiss();
@@ -326,28 +302,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     playButton.setText(session.playing ? "Pause" : "Play");
     playButton.setEnabled(session.ready && !session.loading);
     nextButton.setEnabled(session.ready && !session.loading);
-    boolean home = "Home".equals(tab);
-    boolean referenceDestination = isReferenceDestination(tab);
-    if (workspaceBackCallback != null
-        && (workspace == null || workspace.activeAccessory() == null))
-      workspaceBackCallback.setEnabled(referenceDestination);
-    if (appHeader != null) appHeader.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
-    if (stagePane != null) stagePane.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
-    if (navigationTabs != null) navigationTabs.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
       entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
-    }
-    if ("Now Playing".equals(tab) && nowPlayingScreen != null) {
-      refreshNowPlayingScreen();
-      return;
-    }
-    if (!"Now Playing".equals(tab) && nowPlayingStage != null) {
-      nowPlayingStage.setVisualActive(false);
-      camera.moveTo(stagePresenter);
-      if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
-      nowPlayingStage = null;
-      nowPlayingScreen = null;
     }
     body.removeAllViews();
     renderPanel();
@@ -356,7 +313,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void buildWindow() {
     root = column();
-    root.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
+    root.setBackgroundColor(NAVY);
     root.setPadding(dp(12), 0, dp(12), 0);
     root.setOnApplyWindowInsetsListener(
         (v, insets) -> {
@@ -370,12 +327,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     setContentView(root);
     root.requestApplyInsets();
     LinearLayout header = row();
-    appHeader = header;
     ImageView mark = new ImageView(this);
     mark.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
     mark.setContentDescription("KANTA");
     header.addView(mark, new LinearLayout.LayoutParams(dp(40), dp(40)));
-    TextView brand = text("KANTA · ᜃᜈ᜔ᜆ", 22, ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN);
+    TextView brand = text("KANTA · ᜃᜈ᜔ᜆ", 22, GOLD);
     brand.setTypeface(null, android.graphics.Typeface.BOLD);
     header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(button("Help", this::help));
@@ -384,7 +340,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     boolean wide = getResources().getConfiguration().screenWidthDp >= 700;
     main.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
     root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
-    stagePane = column();
+    LinearLayout stagePane = column();
     // Compact Workspace: the stage is the persistent base layer. Utilities are
     // transient accessories presented above it, so the player is never lost.
     workspace = new KantaWorkspace(this, null);
@@ -398,17 +354,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           @Override
           public void onAccessoryDeactivated(String accessoryId) {
             if (workspaceBackCallback != null) workspaceBackCallback.setEnabled(false);
+            // Hide stage presenter accessories when workspace dismisses them
             if (stagePresenter != null) {
               if (KantaWorkspace.ACCESSORY_SEARCH.equals(accessoryId)) {
                 stagePresenter.hideSearch();
               } else if (KantaWorkspace.ACCESSORY_QUEUE.equals(accessoryId)) {
                 stagePresenter.hideQueue();
               }
-            }
-            if (returnToHomeAfterAccessory) {
-              returnToHomeAfterAccessory = false;
-              tab = "Home";
-              handler.post(MainActivity.this::render);
             }
           }
         });
@@ -418,8 +370,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     SongCatalog catalog = new ph.kanta.reborn.core.catalog.SqliteSongCatalog(this, contentRoot, scanner);
     stagePresenter = new StagePresenterImpl(this, session, catalog, session.queue);
     stagePresenter.setTag("kanta.stage.primary");
-    stagePresenter.setOnClickListener(v -> { tab = "Now Playing"; render(); });
-    stagePresenter.setContentDescription("Karaoke stage. Tap to open Now Playing.");
+    stagePresenter.setOnClickListener(v -> fullscreen());
+    stagePresenter.setContentDescription("Karaoke stage. Double tap to open fullscreen.");
     workspace.addPersistentLayer(stagePresenter);
     // Register as ScoreSink
     session.setScoreSink(stagePresenter);
@@ -437,9 +389,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     addWeighted(transport, playButton);
     nextButton = button("Next", session::next);
     addWeighted(transport, nextButton);
-    Button openFullscreen = button("Fullscreen", this::fullscreen);
-    openFullscreen.setTag("kanta.fullscreen.open");
-    addWeighted(transport, openFullscreen);
+    addWeighted(transport, button("Fullscreen", this::fullscreen));
     stagePane.addView(transport);
     stagePane.addView(workspaceToolbar());
     if (wide) main.addView(stagePane, new LinearLayout.LayoutParams(0, -1, 1.2f));
@@ -456,8 +406,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (wide) main.addView(scroll, new LinearLayout.LayoutParams(0, -1, 1));
     else main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout tabs = row();
-    navigationTabs = tabs;
-    for (String name : new String[] {"Home", "My Set", "Loop", "Scenic", "Realm", "Control"}) {
+    for (String name : new String[] {"My Set", "Loop", "Scenic", "Realm", "Control"}) {
       Button b =
           button(
               name,
@@ -530,8 +479,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
    */
   private void presentAccessory(String accessoryId) {
     if (workspace == null) return;
-    if (workspace.activeAccessory() != null
-        && !workspace.activeAccessory().equals(accessoryId)) returnToHomeAfterAccessory = false;
     workspaceSearchGeneration++;
     workspace.activateAccessory(accessoryId);
     LinearLayout target = workspace.accessoryContent();
@@ -975,34 +922,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     microphoneReading = null;
     monitorReading = null;
     scoreReading = null;
-    nowPlayingScreen = null;
-    if (!"Home".equals(tab) && !isReferenceDestination(tab)) {
-      body.addView(text(session.message, 13, CYAN));
-      body.addView(button("YouTube video (online)", this::openYouTubeVideo));
-    }
+    body.addView(text(session.message, 13, CYAN));
+    body.addView(button("YouTube video (online)", this::openYouTubeVideo));
 
     switch (tab) {
-      case "Home":
-        homeDashboard();
-        break;
-      case "Search":
-        searchScreen();
-        break;
-      case "Queue":
-        queueScreen();
-        break;
-      case "Pitch & Tempo":
-        pitchTempoScreen();
-        break;
-      case "Mic & Voice":
-        micVoiceScreen();
-        break;
-      case "Visuals":
-        visualsScreen();
-        break;
-      case "Now Playing":
-        nowPlayingScreen();
-        break;
       case "My Set":
         mySet();
         break;
@@ -1020,444 +943,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
-
-  private void openHomeAccessory(String accessoryId) {
-    if (!"Home".equals(tab)) {
-      presentAccessory(accessoryId);
-      return;
-    }
-    tab = "Control";
-    render();
-    presentAccessory(accessoryId);
-    returnToHomeAfterAccessory = true;
-  }
-
-  private boolean isReferenceDestination(String destination) {
-    return "Search".equals(destination)
-        || "Queue".equals(destination)
-        || "Pitch & Tempo".equals(destination)
-        || "Mic & Voice".equals(destination)
-        || "Visuals".equals(destination)
-        || "Now Playing".equals(destination);
-  }
-
-  private void navigateHome() {
-    boolean wasVisuals = "Visuals".equals(tab);
-    tab = "Home";
-    if (wasVisuals) visualsSelectedTab = 0;
-    micVoiceScreen = null;
-    nowPlayingScreen = null;
-    render();
-  }
-
-  /** Now Playing projects live session state over a real StageSurface, never a sample backdrop. */
-  private void nowPlayingScreen() {
-    if (nowPlayingStage == null) {
-      nowPlayingStage = new StageSurface(this, session);
-      nowPlayingStage.setTag("kanta.now-playing.stage");
-      nowPlayingStage.setVisualActive(true);
-      if (stagePresenter != null) stagePresenter.setVisualActive(false);
-      camera.moveTo(nowPlayingStage);
-    }
-    nowPlayingScreen=new ph.kanta.reborn.ui.KantaNowPlayingScreen(this,new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener(){
-      @Override public void onBack(){navigateHome();}
-      @Override public void onFullscreen(){fullscreen();}
-      @Override public void onPlayPause(){session.toggle();}
-      @Override public void onPrevious(){}
-      @Override public void onNext(){session.next();}
-      @Override public void onShuffle(){}
-      @Override public void onRepeat(){}
-      @Override public void onQueue(){tab="Queue";render();}
-      @Override public void onEffects(){tab="Mic & Voice";render();}
-      @Override public void onCoach(){tab="Control";voiceExpanded=true;render();}
-      @Override public void onKeyDown(){session.controls(session.volume,session.tempo,Math.max(-12,session.pitch-1));}
-      @Override public void onKeyUp(){session.controls(session.volume,session.tempo,Math.min(12,session.pitch+1));}
-      @Override public void onTempoDown(){session.controls(session.volume,Math.max(.5f,session.tempo-.05f),session.pitch);}
-      @Override public void onTempoUp(){session.controls(session.volume,Math.min(2f,session.tempo+.05f),session.pitch);}
-      @Override public void onFavorite(){}
-      @Override public void onOverflow(){}
-    }, nowPlayingStage);
-
-    nowPlayingScreen.setTag("kanta.screen.now-playing");
-    body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-1));
-    refreshNowPlayingScreen();
-  }
-  private void refreshNowPlayingScreen() {
-    if(nowPlayingScreen==null||!"Now Playing".equals(tab))return;
-    Song current=session.current;
-    nowPlayingScreen.setSongInfo(current==null?"Nothing playing":current.title,
-        current==null?"Reserve a song to begin":(session.singer.isEmpty()?current.artist:session.singer));
-    long position=Math.max(0,session.position()),duration=Math.max(0,session.duration());
-    nowPlayingScreen.setTimes(formatPlaybackTime(position),duration>0?formatPlaybackTime(duration):"—");
-    nowPlayingScreen.setProgress(duration>0?Math.min(1f,position/(float)duration):0f);
-    nowPlayingScreen.setPlaying(session.playing);
-    nowPlayingScreen.setKey(session.pitch);nowPlayingScreen.setTempo(session.tempo);
-    nowPlayingScreen.setTransportCapabilities(session.queue.peek()!=null);
-    java.util.List<ph.kanta.reborn.core.MidiLyrics.Cue> cues=session.lyrics;
-    if(current==null)nowPlayingScreen.setLyrics("","No song is playing","Reserve a song to begin","");
-    else if(cues==null||cues.isEmpty())nowPlayingScreen.setLyrics("","No timed lyrics available","","");
-    else {
-      int active = ph.kanta.reborn.core.MidiLyrics.activeIndex(cues, position);
-      if (active < 0) {
-        String first = cues.get(0).line;
-        String second = cues.size() > 1 ? cues.get(1).line : "";
-        nowPlayingScreen.setLyrics("", "Get ready to sing…", first, second, 0);
-      } else {
-        String previous = active > 0 ? cues.get(active - 1).line : "";
-        String line = cues.get(active).line;
-        String next = active + 1 < cues.size() ? cues.get(active + 1).line : "";
-        String following = active + 2 < cues.size() ? cues.get(active + 2).line : "";
-        nowPlayingScreen.setLyrics(
-            previous, line, next, following,
-            ph.kanta.reborn.core.LyricWordAnimation.highlightedCharacters(cues.get(active), position));
-      }
-    }
-  }
-  private String formatPlaybackTime(long ms){long seconds=Math.max(0,ms/1000);return String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60);}
-
-  /** Full-screen visual picker backed by the existing scenic, camera and import owners. */
-  private void visualsScreen() {
-    ph.kanta.reborn.ui.KantaVisualsScreen screen =
-        new ph.kanta.reborn.ui.KantaVisualsScreen(
-            this,
-            new ph.kanta.reborn.ui.KantaVisualsScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
-              @Override public void onTabSelected(int index, String label) {
-                visualsSelectedTab = index;
-              }
-              @Override public void onBackgroundSelected(String name) {
-                if (!session.stageReady) return;
-                camera.stop();
-                switch (name) {
-                  case "Default": session.sceneResource("default", ph.kanta.reborn.R.drawable.kanta_stage_phone); break;
-                  case "Stage Lights": session.sceneResource("stageLights", ph.kanta.reborn.R.drawable.kanta_visual_stage_lights); break;
-                  case "Galaxy": session.sceneResource("galaxy", ph.kanta.reborn.R.drawable.kanta_visual_galaxy); break;
-                  case "Sunset": session.sceneResource("sunset", ph.kanta.reborn.R.drawable.kanta_visual_sunset); break;
-                  case "Ocean": session.sceneResource("ocean", ph.kanta.reborn.R.drawable.kanta_visual_ocean); break;
-                  case "City": session.sceneResource("city", ph.kanta.reborn.R.drawable.kanta_visual_city); break;
-                  case "Neon": session.sceneResource("neon", ph.kanta.reborn.R.drawable.kanta_visual_neon); break;
-                  case "Particles": session.sceneResource("particles", ph.kanta.reborn.R.drawable.kanta_visual_particles); break;
-                  default: return;
-                }
-              }
-              @Override public void onCameraToggle(boolean enabled) {
-                if (enabled != camera.enabled()) toggleCamera();
-              }
-              @Override public void onEffectSelected(String name) {
-                Toast.makeText(
-                    MainActivity.this,
-                    "Stage effect " + name + " is not available yet. Your current background is unchanged.",
-                    Toast.LENGTH_LONG).show();
-              }
-              @Override public void onCustomImport() { chooseCustomStageMedia(); }
-            });
-    screen.setTag("kanta.screen.visuals");
-    screen.setSelectedTab(visualsSelectedTab);
-    screen.setSelectedScene(session.scenicName);
-    screen.setCameraState(camera.enabled(), camera.streaming());
-    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
-  }
-
-  private void chooseCustomStageMedia() {
-    new AlertDialog.Builder(this)
-        .setTitle("Custom stage background")
-        .setItems(
-            new String[] {"Choose photo", "Choose video"},
-            (dialog, selected) -> {
-              Intent picker =
-                  new Intent(Intent.ACTION_OPEN_DOCUMENT)
-                      .addCategory(Intent.CATEGORY_OPENABLE)
-                      .setType(selected == 0 ? "image/*" : "video/*");
-              startActivityForResult(picker, selected == 0 ? PHOTO : VIDEO);
-            })
-        .setNegativeButton("Cancel", null)
-        .show();
-  }
-
-  /** The UI exposes only controls backed by the existing microphone and monitor owners. */
-  private void micVoiceScreen() {
-    micVoiceScreen =
-        new ph.kanta.reborn.ui.KantaMicVoiceScreen(
-            this,
-            new ph.kanta.reborn.ui.KantaMicVoiceScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
-              @Override public void onMicToggle(boolean enabled) {
-                if (enabled) toggleMicrophone();
-                else session.stopMicrophone();
-              }
-              @Override public void onMonitorToggle(boolean enabled) {
-                if (enabled) toggleMonitoring();
-                else session.stopMonitor();
-              }
-              @Override public void onMonitorGainChanged(float value) {
-                session.monitor.gain(value);
-              }
-              @Override public void onMonitorModeSelected(String mode) {
-                ph.kanta.reborn.core.VocalMonitorEffects.Mode selected;
-                switch (mode) {
-                  case "Room": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.ROOM; break;
-                  case "Hall": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.HALL; break;
-                  case "Echo": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.ECHO; break;
-                  default: selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY;
-                }
-                session.monitor.mode(selected);
-                session.publish();
-              }
-              @Override public void onScoringToggle(boolean enabled) {
-                session.setScoring(enabled);
-              }
-            });
-    micVoiceScreen.setTag("kanta.screen.mic-voice");
-    micVoiceScreen.setState(
-        session.microphone.enabled(),
-        session.microphone.capturing(),
-        session.monitor.enabled(),
-        session.monitor.audible(),
-        session.monitor.gain(),
-        session.monitor.mode().name(),
-        session.scoringEnabled,
-        session.scoreStatus());
-    body.addView(micVoiceScreen, new LinearLayout.LayoutParams(-1, -1));
-  }
-
-  private int artworkResourceForSong(Song song) {
-    int index = Math.floorMod(song.id.hashCode(), 8);
-    switch (index) {
-      case 0: return ph.kanta.reborn.R.drawable.kanta_art_01;
-      case 1: return ph.kanta.reborn.R.drawable.kanta_art_02;
-      case 2: return ph.kanta.reborn.R.drawable.kanta_art_03;
-      case 3: return ph.kanta.reborn.R.drawable.kanta_art_04;
-      case 4: return ph.kanta.reborn.R.drawable.kanta_art_05;
-      case 5: return ph.kanta.reborn.R.drawable.kanta_art_06;
-      case 6: return ph.kanta.reborn.R.drawable.kanta_art_07;
-      default: return ph.kanta.reborn.R.drawable.kanta_art_08;
-    }
-  }
-
-  /** Search projects the current catalog; it does not claim unsupported YouTube discovery. */
-  private void searchScreen() {
-    final java.util.ArrayList<Song> visibleSongs = new java.util.ArrayList<>();
-    final ph.kanta.reborn.ui.KantaSearchScreen[] screenRef =
-        new ph.kanta.reborn.ui.KantaSearchScreen[1];
-    ph.kanta.reborn.ui.KantaSearchScreen screen =
-        new ph.kanta.reborn.ui.KantaSearchScreen(
-            this,
-            new ph.kanta.reborn.ui.KantaSearchScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
-              @Override public void onSearchTextChanged(String value) {
-                query = value == null ? "" : value;
-                renderSearchResults(screenRef[0], visibleSongs);
-              }
-              @Override public void onTabSelected(int index, String label) {
-                searchSource = label;
-                renderSearchResults(screenRef[0], visibleSongs);
-              }
-              @Override public void onSing(String title, String artist) {
-                for (Song song : visibleSongs) {
-                  if (song.title.equals(title)
-                      && (song.artist.isEmpty() ? "Unknown artist" : song.artist).equals(artist)) {
-                    session.reserve(song, singer);
-                    Toast.makeText(MainActivity.this,
-                        "Added " + song.title + " to Queue", Toast.LENGTH_SHORT).show();
-                    return;
-                  }
-                }
-              }
-              @Override public void onSourceAll() {}
-              @Override public void onSourceKanta() {}
-              @Override public void onSourceYouTube() {
-                screenRef[0].showEmpty();
-                Toast.makeText(MainActivity.this,
-                    "YouTube discovery is not enabled. Paste a video link to open the official player.",
-                    Toast.LENGTH_LONG).show();
-                openYouTubeVideo();
-              }
-              @Override public void onSourceLocal() {}
-            });
-    screenRef[0] = screen;
-    screen.setTag("kanta.screen.search");
-    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
-    screen.setQuery(query);
-    renderSearchResults(screen, visibleSongs);
-  }
-
-  private void renderSearchResults(
-      ph.kanta.reborn.ui.KantaSearchScreen screen,
-      java.util.ArrayList<Song> visibleSongs) {
-    if (screen == null || !"Search".equals(tab)) return;
-    final int token = ++referenceSearchGeneration;
-    final String requested = query;
-    final String source = searchSource;
-    if ("YouTube".equals(source)) {
-      visibleSongs.clear();
-      screen.showEmpty();
-      return;
-    }
-    final java.util.List<Song> catalog = new java.util.ArrayList<>(session.songs);
-    screen.showLoading();
-    searchWorker.execute(() -> {
-      java.util.ArrayList<Song> matches = new java.util.ArrayList<>();
-      String[] terms = Song.searchTerms(requested);
-      for (Song song : catalog) {
-        if (Thread.currentThread().isInterrupted()) return;
-        if ("KANTA".equals(source) && !song.starter) continue;
-        if ("Local".equals(source) && song.starter) continue;
-        if (song.matchesTerms(terms)) matches.add(song);
-        if (matches.size() >= 50) break;
-      }
-      handler.post(() -> {
-        if (token != referenceSearchGeneration || !"Search".equals(tab)
-            || isFinishing() || isDestroyed()) return;
-        visibleSongs.clear();
-        visibleSongs.addAll(matches);
-        String[][] rows = new String[matches.size()][4];
-        for (int i = 0; i < matches.size(); i++) {
-          Song song = matches.get(i);
-          rows[i][0] = song.title;
-          rows[i][1] = song.artist.isEmpty() ? "Unknown artist" : song.artist;
-          rows[i][2] = song.starter ? "#30245B" : "#17334A";
-          rows[i][3] = String.valueOf(artworkResourceForSong(song));
-        }
-        screen.showResults(rows);
-      });
-    });
-  }
-
-  /** Queue is a projection of the single authoritative reservation FIFO. */
-  private void queueScreen() {
-    java.util.List<ReservationQueue.Entry> entries = session.queue.snapshot();
-    String[][] rows = new String[entries.size()][6];
-    for (int i = 0; i < entries.size(); i++) {
-      ReservationQueue.Entry entry = entries.get(i);
-      rows[i][0] = String.valueOf(i + 1);
-      rows[i][1] = entry.song.title;
-      rows[i][2] = entry.youtube == null
-          ? (entry.singer.isEmpty() ? entry.song.artist : entry.singer)
-          : "YouTube video";
-      rows[i][3] = "false";
-      rows[i][4] = entry.youtube == null ? "#30245B" : "#17334A";
-      rows[i][5] = String.valueOf(entry.youtube == null
-          ? artworkResourceForSong(entry.song) : ph.kanta.reborn.R.drawable.kanta_stage_tv);
-    }
-    ph.kanta.reborn.ui.KantaQueueScreen screen =
-        new ph.kanta.reborn.ui.KantaQueueScreen(
-            this,
-            new ph.kanta.reborn.ui.KantaQueueScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
-              @Override public void onClear() {
-                session.queue.clear();
-                session.saveQueue();
-                session.publish();
-                render();
-              }
-              @Override public void onAddSongs() {
-                tab = "Search";
-                searchSource = "All";
-                render();
-              }
-              @Override public void onRemove(int position) {
-                java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
-                if (position < 0 || position >= current.size()) return;
-                session.remove(current.get(position).id);
-                render();
-              }
-              @Override public void onItemClicked(int position) {
-                java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
-                if (position < 0 || position >= current.size()) return;
-                ReservationQueue.Entry selected = current.get(position);
-                if (selected.youtube != null) {
-                  Toast.makeText(MainActivity.this,
-                      "Host-controlled YouTube queue playback is not available yet.",
-                      Toast.LENGTH_LONG).show();
-                  return;
-                }
-                session.move(selected.id, 0);
-                session.next();
-                render();
-              }
-            });
-    screen.setTag("kanta.screen.queue");
-    screen.setCount(entries.size());
-    screen.setItems(rows);
-    screen.showAddSongsCTA();
-    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
-  }
-
-  /** All pitch and tempo changes are delegated to SessionController. */
-  private void pitchTempoScreen() {
-    final ph.kanta.reborn.ui.KantaPitchTempoScreen[] screenRef =
-        new ph.kanta.reborn.ui.KantaPitchTempoScreen[1];
-    ph.kanta.reborn.ui.KantaPitchTempoScreen screen =
-        new ph.kanta.reborn.ui.KantaPitchTempoScreen(
-            this,
-            new ph.kanta.reborn.ui.KantaPitchTempoScreen.Listener() {
-              private void refreshValues() {
-                if (screenRef[0] != null) {
-                  screenRef[0].setKey(session.pitch);
-                  screenRef[0].setTempo(session.tempo);
-                }
-              }
-              @Override public void onBack() { navigateHome(); }
-              @Override public void onReset() {
-                session.controls(session.volume, 1.0f, 0);
-                refreshValues();
-              }
-              @Override public void onKeyDown() {
-                session.controls(session.volume, session.tempo, Math.max(-12, session.pitch - 1));
-                refreshValues();
-              }
-              @Override public void onKeyUp() {
-                session.controls(session.volume, session.tempo, Math.min(12, session.pitch + 1));
-                refreshValues();
-              }
-              @Override public void onTempoDown() {
-                session.controls(session.volume, Math.max(0.5f, session.tempo - 0.05f), session.pitch);
-                refreshValues();
-              }
-              @Override public void onTempoUp() {
-                session.controls(session.volume, Math.min(2.0f, session.tempo + 0.05f), session.pitch);
-                refreshValues();
-              }
-              @Override public void onTempoChanged(float value) {
-                session.controls(session.volume, value, session.pitch);
-                refreshValues();
-              }
-            });
-    screenRef[0] = screen;
-    screen.setTag("kanta.screen.pitch-tempo");
-    screen.setKey(session.pitch);
-    screen.setTempo(session.tempo);
-    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
-  }
-
-  /** Reference-led home dashboard. Existing playback and workspace owners remain authoritative. */
-  private void homeDashboard() {
-    body.addView(
-        new ph.kanta.reborn.ui.HomeScreen(
-            this,
-            new ph.kanta.reborn.ui.HomeScreen.Listener() {
-              @Override public void onHome() {
-                tab = "Home";
-                render();
-              }
-              @Override public void onSettings() {
-                tab = "Control";
-                render();
-              }
-              @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
-              @Override public void onQueue() { tab = "Queue"; render(); }
-              @Override public void onYouTube() { openYouTubeVideo(); }
-              @Override public void onVisuals() { tab = "Visuals"; render(); }
-              @Override public void onMicVoice() { tab = "Mic & Voice"; render(); }
-              @Override public void onPitchTempo() { tab = "Pitch & Tempo"; render(); }
-              @Override public void onMySet() { tab = "My Set"; render(); }
-              @Override public void onFavorites() { tab = "My Set"; render(); }
-              @Override public void onRecent() { tab = "My Set"; render(); }
-              @Override public void onMore() { tab = "Control"; render(); }
-              @Override public void onScenic() { tab = "Scenic"; render(); }
-              @Override public void onRealm() { tab = "Realm"; render(); }
-            }));
-  }
 
   private void openYouTubeVideo() {
     if (!youtubeForeground || isFinishing() || isDestroyed()) return;
@@ -1940,55 +1425,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     folder.setEnabled(session.ready && !session.importing);
     body.addView(folder);
     if (session.importing) body.addView(button("Cancel import", session::cancelImports));
-    body.addView(text("Active SoundFont · " + session.soundFontName, 14, CYAN));
-    body.addView(text("SoundFonts", 20, GOLD));
-    for (LibraryRepository.SoundFontEntry bank : session.soundFonts) {
-      LinearLayout item = row();
-      item.addView(
-          text(bank.name, 14, Color.WHITE),
-          new LinearLayout.LayoutParams(0, -2, 1));
-      boolean active = bank.fileName.equals(session.activeSoundFontFileName());
-      if (active) item.addView(text("ACTIVE", 12, CYAN));
-      else item.addView(button("Use", () -> session.selectSoundFont(bank.fileName)));
-      body.addView(item);
-    }
+    body.addView(text("SoundFont: " + session.soundFontName, 14, CYAN));
     body.addView(
         text(
-            "Imported MIDI/KAR and audio", 20, GOLD));
-    List<Song> importedSongs = new ArrayList<>();
-    for (Song song : session.songs) if (!song.starter) importedSongs.add(song);
-    if (importedSongs.isEmpty()) {
-      body.addView(text("No personal songs imported yet. Add MIDI, KAR, MP3 or WAV files above.", 13, 0xFFAFB8D0));
-    } else {
-      int shown = Math.min(importedSongs.size(), 40);
-      body.addView(text(importedSongs.size() + " imported item(s)", 13, 0xFFAFB8D0));
-      for (int i = 0; i < shown; i++) {
-        Song song = importedSongs.get(i);
-        LinearLayout item = row();
-        item.addView(
-            text(song.title + (song.artist.isEmpty() ? "" : "\n" + song.artist), 14, Color.WHITE),
-            new LinearLayout.LayoutParams(0, -2, 1));
-        item.addView(button("Reserve", () -> session.reserve(song, "")));
-        body.addView(item);
-      }
-      if (importedSongs.size() > shown)
-        body.addView(text("The full collection remains searchable in Control.", 13, 0xFFAFB8D0));
-    }
-    body.addView(
-        button(
-            "Legacy ShubBlob container status",
-            () -> new AlertDialog.Builder(this)
-                .setTitle("Legacy ShubBlob import")
-                .setMessage(
-                    "This preview does not yet import legacy ShubBlob/kantablob containers. "
-                        + "The container is encrypted and its format has not been validated against "
-                        + "a real file. Import extracted MIDI/KAR files instead. Do not treat a "
-                        + "100% file copy as a successful container decode.")
-                .setPositiveButton("OK", null)
-                .show()));
-    body.addView(
-        text(
-            "SoundFont banks are validated before activation. MIDI/KAR imports are limited to 16 MiB and six hours; original files stay unchanged.",
+            "SoundFonts up to 32 MB. MIDI/KAR up to 16 MB and six hours. Original files stay"
+                + " unchanged.",
             13,
             0xFFAFB8D0));
 
@@ -2097,20 +1538,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void refreshMicrophoneReading() {
-    if (micVoiceScreen != null && "Mic & Voice".equals(tab)) {
-      MicrophoneInput.Reading reading = session.microphone.reading();
-      micVoiceScreen.setInputLevel(
-          reading == null ? 0f : (float) reading.rms,
-          !session.microphone.enabled()
-              ? "Microphone off"
-              : !session.microphone.capturing()
-                  ? "Starting microphone…"
-                  : reading == null ? "Listening for input…" : "Microphone input active");
-      micVoiceScreen.setMonitorState(
-          session.monitor.enabled(), session.monitor.audible(), session.monitor.gain(),
-          session.monitor.mode().name());
-      micVoiceScreen.setScoreState(session.scoringEnabled, session.scoreStatus());
-    }
     if (microphoneReading == null) return;
     MicrophoneInput.Reading value = session.microphone.reading();
     String label;
@@ -2188,7 +1615,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void scenic() {
     body.addView(text("Choose your stage", 22, Color.WHITE));
-    body.addView(
+    body.addView(        button(            "Background video library",            () -> {              if (!session.ready || session.importing) return;              session.message = "Opening your video library…";              publish();              new Thread(                  () -> {                    List<BgvLibrary.Entry> entries = session.scenicEntries();                    final List<BgvLibrary.Entry> downloaded = new ArrayList<>(entries);                    runOnUiThread(                        () -> {                          if (session.message != "Opening your video library…") return;                          session.message = "";                          LinearLayout list = new LinearLayout(this);                          list.setOrientation(LinearLayout.VERTICAL);                          for (BgvLibrary.Entry entry : downloaded) {                            TextView title = new TextView(this);                            title.setText(entry.title + " · " + entry.attribution());                            title.setTextColor(Color.WHITE);                            title.setPadding(12, 8, 12, 8);                            final String id = entry.id;                            title.setOnClickListener(                                v -> {                                  camera.stop();                                  session.importStage(                                      new android.net.Uri.Builder()                                          .scheme(ContentResolver.SCHEME_FILE)                                          .authority(id)                                          .build(),                                      true);                                  session.message = "Background set. Library updated.";                                  publish();                                });                            list.addView(title);                            Button remove =                                new Button(this);                            remove.setText("Remove");                            remove.setTag(id);                            remove.setOnClickListener(                                v -> {                                  session.deleteScenic(id);                                  finish();                                  startActivity(getIntent());                                });                            list.addView(remove);                          }                          AlertDialog.Builder builder =                              new AlertDialog.Builder(this);                          builder.setTitle("Background video library");                          builder.setView(list);                          builder.setNegativeButton("Close", null);                          builder.show();                        });                  }).start();            }));    body.addView(
         button(
             camera.enabled() ? "Turn off front camera" : "Turn on front camera",
             this::toggleCamera));
@@ -2404,150 +1831,28 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (fullscreen != null) fullscreen.dismiss();
   }
 
-  private String stageTime(long milliseconds) {
-    long seconds = Math.max(0, milliseconds / 1000);
-    return String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
-  }
-
-  /** Refreshes only the stage's live projection; transport and timing stay in SessionController. */
-  private void refreshFullscreenControls() {
-    if (fullscreen == null || !fullscreen.isShowing()) return;
-    if (fullscreenTitle != null)
-      fullscreenTitle.setText(session.current == null ? "Ready for your next song" : session.current.title);
-    if (fullscreenArtist != null)
-      fullscreenArtist.setText(
-          session.current == null ? "KANTA" :
-              (session.current.artist == null ? "" : session.current.artist)
-                  + (session.singer.isEmpty() ? "" : " · " + session.singer));
-    long duration = session.duration();
-    long position = session.position();
-    if (fullscreenProgress != null)
-      fullscreenProgress.setProgress(duration > 0
-          ? (int) Math.max(0, Math.min(1000, Math.round(position * 1000.0 / duration))) : 0);
-    if (fullscreenTime != null)
-      fullscreenTime.setText(stageTime(position) + " / " + (duration > 0 ? stageTime(duration) : "--:--"));
-    if (fullscreenKeyTempo != null)
-      fullscreenKeyTempo.setText("Key " + (session.pitch > 0 ? "+" : "") + session.pitch
-          + "   ·   Tempo " + Math.round(session.tempo * 100f) + "%");
-    if (fullscreenQueue != null)
-      fullscreenQueue.setText("Queue (" + session.queue.snapshot().size() + ")");
-    if (fullscreenPlayButton != null)
-      fullscreenPlayButton.setText(session.playing ? "Pause" : "Play");
-  }
-
   void fullscreen() {
     if (fullscreen != null && fullscreen.isShowing()) return;
     fullscreen = new Dialog(this, android.R.style.Theme_Material_NoActionBar_Fullscreen);
-    FrameLayout stageFrame = new FrameLayout(this);
-    stageFrame.setTag("kanta.fullscreen.stage");
-    stageFrame.setBackgroundColor(KantaTheme.BG_MAIN);
+    LinearLayout content = column();
+    content.setBackgroundColor(Color.BLACK);
     fullscreenStage = new StageSurface(this, session);
-    fullscreenStage.setFullscreenMode(true);
-    stageFrame.addView(fullscreenStage, new FrameLayout.LayoutParams(-1, -1));
-
-    LinearLayout overlay = column();
-    overlay.setPadding(dp(16), dp(12), dp(16), dp(16));
-    overlay.setFocusable(false);
-    LinearLayout header = row();
-    TextView stageHeading = text("NOW PLAYING", 13, KantaTheme.TEXT_PRIMARY);
-    stageHeading.setTypeface(null, android.graphics.Typeface.BOLD);
-    addWeighted(header, stageHeading);
-    Button close = button("Close", this::closeFullscreen);
-    close.setTag("kanta.fullscreen.close");
-    header.addView(close);
-    overlay.addView(header);
-
-    View spacer = new View(this);
-    overlay.addView(spacer, new LinearLayout.LayoutParams(-1, 0, 1));
-
-    LinearLayout details = column();
-    details.setPadding(dp(16), dp(14), dp(16), dp(14));
-    details.setBackground(KantaTheme.backgroundDrawable(0xE8081426, 18, KantaTheme.BORDER, 1,
-        getResources().getDisplayMetrics().density));
-    fullscreenTitle = text("Ready for your next song", 20, KantaTheme.TEXT_PRIMARY);
-    fullscreenTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-    fullscreenTitle.setTag("kanta.fullscreen.title");
-    fullscreenArtist = text("KANTA", 13, KantaTheme.TEXT_SECONDARY);
-    fullscreenArtist.setTag("kanta.fullscreen.artist");
-    details.addView(fullscreenTitle);
-    details.addView(fullscreenArtist);
-
-    fullscreenProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-    fullscreenProgress.setMax(1000);
-    fullscreenProgress.setProgress(0);
-    fullscreenProgress.setProgressTintList(ColorStateList.valueOf(KantaTheme.PRIMARY_CYAN));
-    fullscreenProgress.setProgressBackgroundTintList(ColorStateList.valueOf(KantaTheme.BORDER));
-    fullscreenProgress.setTag("kanta.fullscreen.progress");
-    LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(-1, dp(6));
-    progressParams.topMargin = dp(12);
-    progressParams.bottomMargin = dp(4);
-    details.addView(fullscreenProgress, progressParams);
-    fullscreenTime = text("0:00 / --:--", 11, KantaTheme.TEXT_SECONDARY);
-    fullscreenTime.setTag("kanta.fullscreen.time");
-    details.addView(fullscreenTime);
-
-    LinearLayout transport = row();
-    fullscreenQueue = text("Queue (0)", 12, KantaTheme.TEXT_SECONDARY);
-    fullscreenQueue.setTag("kanta.fullscreen.queue");
-    transport.addView(fullscreenQueue, new LinearLayout.LayoutParams(0, -2, 1));
-    fullscreenPlayButton = KantaTheme.primaryButton(this, "Play", v -> session.toggle());
-    fullscreenPlayButton.setTag("kanta.fullscreen.play-pause");
-    transport.addView(fullscreenPlayButton, new LinearLayout.LayoutParams(dp(104), dp(48)));
-    Button next = KantaTheme.secondaryButton(this, "Next", v -> session.next());
-    next.setTag("kanta.fullscreen.next");
-    LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(dp(88), dp(48));
-    nextParams.leftMargin = dp(8);
-    transport.addView(next, nextParams);
-    details.addView(transport);
-
-    LinearLayout performance = row();
-    Button keyDown = button("Key −", () -> session.setPitch(session.pitch - 1));
-    keyDown.setTag("kanta.fullscreen.key.decrement");
-    Button keyUp = button("Key +", () -> session.setPitch(session.pitch + 1));
-    keyUp.setTag("kanta.fullscreen.key.increment");
-    Button tempoDown = button("Slower", () -> session.setTempo(session.tempo - .05f));
-    tempoDown.setTag("kanta.fullscreen.tempo.decrement");
-    Button tempoUp = button("Faster", () -> session.setTempo(session.tempo + .05f));
-    tempoUp.setTag("kanta.fullscreen.tempo.increment");
-    addWeighted(performance, keyDown);
-    addWeighted(performance, keyUp);
-    addWeighted(performance, tempoDown);
-    addWeighted(performance, tempoUp);
-    LinearLayout.LayoutParams performanceParams = new LinearLayout.LayoutParams(-1, -2);
-    performanceParams.topMargin = dp(10);
-    details.addView(performance, performanceParams);
-    fullscreenKeyTempo = text("", 12, KantaTheme.PRIMARY_CYAN);
-    fullscreenKeyTempo.setGravity(Gravity.CENTER);
-    fullscreenKeyTempo.setTag("kanta.fullscreen.key-tempo");
-    details.addView(fullscreenKeyTempo);
-    overlay.addView(details);
-    stageFrame.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
-    fullscreen.setContentView(stageFrame);
+    content.addView(fullscreenStage, new LinearLayout.LayoutParams(-1, 0, 1));
+    LinearLayout controls = row();
+    addWeighted(controls, button("Play / Pause", session::toggle));
+    addWeighted(controls, button("Next", session::next));
+    addWeighted(controls, button("Close", this::closeFullscreen));
+    content.addView(controls);
+    fullscreen.setContentView(content);
     fullscreen.setOnDismissListener(
         d -> {
           fullscreenStage = null;
-          fullscreenTitle = null;
-          fullscreenArtist = null;
-          fullscreenTime = null;
-          fullscreenKeyTempo = null;
-          fullscreenQueue = null;
-          fullscreenProgress = null;
-          fullscreenPlayButton = null;
-          if ("Now Playing".equals(tab) && nowPlayingStage != null) {
-            nowPlayingStage.setVisualActive(true);
-            if (stagePresenter != null) stagePresenter.setVisualActive(false);
-            camera.moveTo(nowPlayingStage);
-          } else {
-            if (stagePresenter != null) stagePresenter.setVisualActive(true);
-            camera.moveTo(stagePresenter);
-          }
+          if (stagePresenter != null) stagePresenter.setVisualActive(true);
+          camera.moveTo(stagePresenter.getCameraPreview());
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     fullscreen.show();
-    if (fullscreen.getWindow() != null) fullscreen.getWindow().setLayout(-1, -1);
     camera.moveTo(fullscreenStage);
-    refreshFullscreenControls();
   }
 
   private void refreshDisplay() {
@@ -2657,12 +1962,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           uris.add(data.getClipData().getItemAt(i).getUri());
       } else if (data.getData() != null) uris.add(data.getData());
       showImportProgress();
-      attachImportProgressListener();
+      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+        @Override public void onProgress(long total, long copied, String status) {
+          updateImportProgress(total, copied, status);
+        }
+        @Override public void onComplete(boolean success, String message) {
+          hideImportProgress(message);
+        }
+      });
       session.importSongs(uris);
     }
     else if (request == FOLDER && data.getData() != null) {
       showImportProgress();
-      attachImportProgressListener();
+      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+        @Override public void onProgress(long total, long copied, String status) {
+          updateImportProgress(total, copied, status);
+        }
+        @Override public void onComplete(boolean success, String message) {
+          hideImportProgress(message);
+        }
+      });
       session.importFolder(data.getData());
     }
     else if (request == VOICE) {
@@ -2748,26 +2067,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   /** Dismisses the import dialog and reports the outcome the repository returned. */
-  private void attachImportProgressListener() {
-    session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
-      @Override
-      public void onProgress(long total, long copied, String status) {
-        updateImportProgress(total, copied, status);
-      }
-
-      @Override
-      public void onComplete(boolean success, String message) {
-        hideImportProgress(message);
-      }
-    });
-  }
-
-  private void dismissImportProgress() {
-    android.app.ProgressDialog dialog = importProgressDialog;
-    importProgressDialog = null;
-    if (dialog != null && dialog.isShowing()) dialog.dismiss();
-  }
-
   private void hideImportProgress(String message) {
     if (importProgressDialog != null && importProgressDialog.isShowing())
       importProgressDialog.dismiss();
