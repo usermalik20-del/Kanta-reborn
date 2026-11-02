@@ -174,9 +174,9 @@ public final class RuntimeChecks extends Instrumentation {
               clickText(activity.getWindow().getDecorView(), "My Set"),
               "My Set navigation control was not clickable"));
       await(
-          () -> state(() -> contains(activity.getWindow().getDecorView(), "Original KAR")
+          () -> contains(activity.getWindow().getDecorView(), "Original KAR")
               && contains(activity.getWindow().getDecorView(), "ACTIVE")
-              && contains(activity.getWindow().getDecorView(), "Use")),
+              && contains(activity.getWindow().getDecorView(), "Use"),
           "My Set did not show imported songs and SoundFont actions");
       capture("my-set-imported-library.png");
       runOnMainSync(
