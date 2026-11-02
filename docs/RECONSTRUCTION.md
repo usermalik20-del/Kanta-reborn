@@ -1,5 +1,10 @@
 # Reconstruction evidence and work ledger
 
+## Android library import discoverability — active repair candidate (2026-11-02)
+
+User testing of the latest preview found that SF2 copy progress reaches 100% but the UI offers no discoverable way to apply the bank; the same post-import visibility concern applies to MIDI/KAR and legacy ShubBlob files. Source review confirmed that LibraryRepository already persisted songs and only one active SF2 reference, while My Set rendered neither imported-song rows nor a SoundFont inventory/selector. The legacy Meg/ShubBlob path is separate from the active LibraryRepository and SessionController: SqliteSongCatalog.importFromLegacyContainer(...) is not wired into the UI, and its decoder has only synthetic-fixture evidence. This repair adds a persisted SoundFont inventory and explicit next-song bank selection, exposes imported catalog songs with Reserve actions in My Set, and explains that legacy containers are not supported by this preview rather than misclassifying a raw copy as a successful import. The safe branch is fix/android-library-import-discoverability-20261102; exact-head build, lint, core regressions, Android emulator checks and documentation validation remain required before merge or preview publication.
+
+
 ## Website crawler and scraping defense — merged and deployed (2026-11-01)
 
 Branch `feat/website-scraping-defense`, PR [#125](https://github.com/usermalik20-del/Kanta-reborn/pull/125),
