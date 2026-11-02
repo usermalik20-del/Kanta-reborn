@@ -21,8 +21,12 @@ public final class VocalMonitorEffects {
   public enum Mode {
     DRY,
     SMALL_ROOM,
+    /** Legacy alias retained for existing monitor controls. */
+    ROOM,
     STUDIO,
     CONCERT_HALL,
+    /** Legacy alias retained for existing monitor controls. */
+    HALL,
     CATHEDRAL,
     PLATE_REVERB,
     SLAP_ECHO,
@@ -32,8 +36,10 @@ public final class VocalMonitorEffects {
     public String label() {
       switch (this) {
         case SMALL_ROOM:
+        case ROOM:
           return "Small Room";
         case CONCERT_HALL:
+        case HALL:
           return "Concert Hall";
         case PLATE_REVERB:
           return "Plate Reverb";
@@ -105,12 +111,14 @@ public final class VocalMonitorEffects {
     mode = value;
     switch (value) {
       case SMALL_ROOM:
+      case ROOM:
         feedback = 0.70f; damping = 0.55f; wetMix = 0.20f; echoMix = 0.0f; preDelayFrames = 0; drive = 1.0f;
         break;
       case STUDIO:
         feedback = 0.78f; damping = 0.40f; wetMix = 0.24f; echoMix = 0.0f; preDelayFrames = 288; drive = 1.0f;
         break;
       case CONCERT_HALL:
+      case HALL:
         feedback = 0.86f; damping = 0.32f; wetMix = 0.30f; echoMix = 0.0f; preDelayFrames = 960; drive = 1.0f;
         break;
       case CATHEDRAL:

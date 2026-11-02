@@ -512,6 +512,11 @@ public final class StagePresenterImpl extends FrameLayout
     // LyricStage is always drawn
   }
 
+  /** Returns whether the primary stage currently shows a live camera stream. */
+  public boolean isCameraVisible() {
+    return backgroundStage.isCameraVisible();
+  }
+
   /** Delegates to BackgroundStage for camera mounting. */
   public void mountCamera(android.view.View preview) {
     // BackgroundStage manages its own PreviewView for camera

@@ -49,6 +49,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private long stageRequest;
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
   public List<Song> songs = Collections.emptyList();
+  volatile List<LibraryRepository.SoundFontEntry> soundFonts = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
   public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
@@ -82,7 +83,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   CompletedScore lastScore;
 
   public String singer = "", message = "Opening your library…";
-  boolean ready = false, loading = false, playing = false, importing = false;
+  boolean ready = false, loading = false, playing = false, importing = false, libraryImporting = false;
   private Listener listener;
   private ScoreSink scoreSink;
   public PlaybackBackend player, pending;
@@ -203,6 +204,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   queue.restore(restored);
                   selectedSoundFont = bank;
                   soundFontName = bankLabel;
+                  soundFonts = repository.soundFonts();
                   ready = true;
                   preparePads();
                   restoreStage();
@@ -230,6 +232,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void publish() {
+    if (repository != null) soundFonts = repository.soundFonts();
     if (!microphone.enabled()) monitor.stop();
     updateIntermission();
     if (listener != null) listener.changed();
@@ -260,7 +263,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   void importStage(android.net.Uri uri, boolean video) {
     if (!ready || !stageReady || importing) return;
-    importing = true;
+    importing = true; libraryImporting = true;
     importCancelled.set(false);
     long token = ++stageRequest;
     message = video ? "Copying your background video…" : "Copying your background photo…";
@@ -273,7 +276,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 stageStore.importMedia(uri, video, importCancelled::get);
             main.post(
                 () -> {
-                  importing = false;
+                  importing = false; libraryImporting = false;
                   if (token == stageRequest) {
                     applyStage(selection);
                     message = "Your background is ready. The original file is unchanged.";
@@ -283,7 +286,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           } catch (Exception failure) {
             main.post(
                 () -> {
-                  importing = false;
+                  importing = false; libraryImporting = false;
                   message =
                       "Stage import stopped or the media is unsupported. Your previous background"
                           + " is retained.";
@@ -1366,7 +1369,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   void importSongs(List<Uri> files) {
     if (!ready || importing) return;
     importCancelled.set(false);
-    importing = true;
+    importing = true; libraryImporting = true;
     message = "Importing your selected songs…";
     publish();
     io.execute(
@@ -1394,7 +1397,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 songs = loaded;
                 selectedSoundFont = bank;
                 soundFontName = bankLabel;
-                importing = false;
+                importing = false; libraryImporting = false;
                 message = result;
                 publish();
               });
@@ -1411,7 +1414,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   void importFolder(Uri tree) {
     if (!ready || importing) return;
-    importing = true;
+    importing = true; libraryImporting = true;
     importCancelled.set(false);
     message = "Finding music in your selected folder…";
     publish();
@@ -1422,7 +1425,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 DocumentTreeScanner.scan(context.getContentResolver(), tree, importCancelled::get);
             main.post(
                 () -> {
-                  importing = false;
+                  importing = false; libraryImporting = false;
                   if (importCancelled.get()) {
                     message = "Folder import cancelled.";
                     publish();
@@ -1433,7 +1436,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           } catch (Exception e) {
             main.post(
                 () -> {
-                  importing = false;
+                  importing = false; libraryImporting = false;
                   message = "The folder is unavailable, cancelled or exceeds the scan limit.";
                   publish();
                 });
