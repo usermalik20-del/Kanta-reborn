@@ -372,3 +372,6 @@ The repair candidate makes stage ownership explicit during teardown: CameraStage
 ## Android library import progress lifecycle — 2026-11-02
 
 Source review found that `LibraryRepository.importBatch` emits progress on the app-owned I/O executor while `MainActivity` directly updated `ProgressDialog` and `Toast`. A folder-scan exception/cancellation also bypassed the listener completion callback. The repair moves callback delivery to `SessionController`'s main Looper, keeps the current listener replaceable across Activity stop/start, clears it at every terminal path, and makes the folder scan report failure/cancellation completion. `RuntimeChecks` now protects main-thread delivery, listener release and scan-failure completion. Hosted Android build, lint and emulator acceptance are required on the PR head; no hosted result is claimed here.
+
+
+**PR #136 validation follow-up (2026-11-02):** the first hosted Android run, [#41370531275](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370531275), reached Java compilation and caught a mutable-counter lambda capture in the new completion callback. The repair snapshots the success result before posting to the main Looper; the exact-head rerun is pending. No domain-test or emulator pass is claimed from the failed run.

@@ -1364,6 +1364,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   + (failed > 0
                       ? ". " + failed + " unsupported or unreadable file(s) were skipped."
                       : ".");
+          final boolean importSucceeded = failed == 0;
           main.post(
               () -> {
                 songs = loaded;
@@ -1372,7 +1373,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 importing = false;
                 libraryImporting = false;
                 message = result;
-                completeImportProgress(failed == 0, result);
+                completeImportProgress(importSucceeded, result);
                 publish();
               });
         });

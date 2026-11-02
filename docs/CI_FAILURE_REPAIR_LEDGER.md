@@ -957,3 +957,20 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** select the newest matching artifact by `created_at` (`sort_by(.created_at) | last`) and fail explicitly if none exists. The workflow contract test now requires this selection behavior. Keep the platform-specific source SHA, packaging run, retention and page independent; do not rewrite the peer platform's published provenance.
 
 **Acceptance:** the contract and website validation workflows must pass; then rerun the existing Android publication run against current main and verify the manifest/page commit plus Vercel production deployment. A created packaging ZIP alone is not a published APK.
+
+
+## Android — import progress callback compile failure (2026-11-02)
+
+**Fingerprint:** Android validation job `android`, step `Build, lint and domain regression tests`; compiler diagnostic `local variables referenced from a lambda expression must be final or effectively final` at `SessionController.java:1375` on `completeImportProgress(failed == 0, result)`.
+
+**Affected SHA / first observed run:** PR #136 head `be3dee3e32a67c0bb35de36265d8a016e5cb3c52`, Android validation run [#41370531275](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370531275), job `125039834469`. The Java compile failed before domain tests or emulator acceptance ran.
+
+**Cause (confirmed):** the import loop mutates the local `failed` counter. The new main-handler completion lambda captured that mutable counter directly, which Java rejects because it is not effectively final.
+
+**Fix:** snapshot the terminal result into `final boolean importSucceeded = failed == 0` before posting the main-thread callback, then capture that immutable value. No import counting or rollback behavior changes.
+
+**Regression coverage:** the existing PR #136 `RuntimeChecks` additions still assert main-Looper progress/completion, listener release after batch completion, and failure completion for an unavailable SAF tree. The compiler gate itself protects the lambda-capture correction.
+
+**Validation:** the first exact-head Android run failed at compilation as recorded above. The corrected candidate's Android build/lint/domain and emulator results are pending; do not mark this repair verified until a green run on the corrected head SHA.
+
+**Recurrence rule:** when posting a completion callback from an import worker, snapshot mutable counters before the lambda. Do not capture loop-mutated state directly. Status: `candidate`.
