@@ -131,6 +131,8 @@ jobs:
             files/camera_optin.png
             files/voice_settings.png
             files/final_ui.png
+            files/my-set-imported-library.png
+            files/my-set-active-soundfont.png
             browser-remote.png
             emulator.log
           if-no-files-found: ignore

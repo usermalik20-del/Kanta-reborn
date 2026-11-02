@@ -974,3 +974,18 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Validation:** the first exact-head run failed at compilation as recorded above. Corrected PR #136 head `ac5e393cff3d1dcee09b4ae424c634b6243bb6f3` passed Android validation run [#41370798485](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798485), job `125040643876`: build, lint, 65,402 core regression checks, Chrome companion/browser interoperability, private IPv4 validation and 228 emulator runtime checks all passed. Runtime diagnostics artifact [#13109625430](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798485) was uploaded. Website validation run [#41370798446](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798446) also passed documentation synchronization and website checks. Status: `verified` on the corrected code SHA.
 
 **Recurrence rule:** when posting a completion callback from an import worker, snapshot mutable counters before the lambda. Do not capture loop-mutated state directly. Status: `verified` on `ac5e393cff3d1dcee09b4ae424c634b6243bb6f3`.
+
+
+## Android library UI instrumentation count — 2026-11-02
+
+**Fingerprint:** `RuntimeChecks` failed at the existing controller audio-import completion assertion after the new My Set test had imported two MIDI/KAR fixtures into the live session. The production import and new My Set/SoundFont UI checks had completed; the later test still expected the old clean-install catalog size (4) rather than the expanded fixture catalog size (6). **First correction:** the expected count was changed from four to six, but the second emulator run showed that this still over-counted. `DocumentTreeScanner`'s fixture root already includes `Original tone.wav`; the later controller audio import is a content-hash duplicate and does not add another row. **Final repair:** expect five rows (three starters, one imported KAR and one imported WAV). This is a test-fixture sequencing correction, not a production import failure. Re-run the complete Android validation on the corrected exact head.
+
+
+## Android My Set runtime test navigation cleanup — 2026-11-02
+
+**Fingerprint:** The Android emulator process crashed with a main-thread `NullPointerException` in `RuntimeChecks.java` when the later voice-settings test called `findViewWithTag("kanta.voice.settings").performClick()`. The new My Set assertions had changed the activity's selected tab from Control to My Set, while the older voice-settings test assumed Control was still selected. **Repair:** explicitly return to the Control tab after the My Set/SoundFont UI assertions, before the existing downstream session and voice tests. The app code was not the crash source; the instrumentation's cross-test UI state was not restored. Re-run the exact-head Android emulator acceptance.
+
+
+## Android UI screenshot artifact documentation sync — 2026-11-02
+
+**Fingerprint:** Website documentation-sync run `41393816911` failed because the Android workflow artifact path list was expanded to retain the new My Set and active-SoundFont screenshots, but the same change did not update root `AGENTS.md`. The workflow ownership and implementation docs were already synchronized; the missing policy note was specifically the artifact-retention requirement. **Repair:** root `AGENTS.md` now requires both captured My Set screenshots to remain in the Android validation artifact. Re-run documentation-sync and Android validation on the resulting head.

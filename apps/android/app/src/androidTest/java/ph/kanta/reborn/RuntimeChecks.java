@@ -54,6 +54,18 @@ public final class RuntimeChecks extends Instrumentation {
     return false;
   }
 
+  private boolean clickText(View view, String text) {
+    if (view instanceof android.widget.Button
+        && ((android.widget.Button) view).getText().toString().equals(text))
+      return view.performClick();
+    if (view instanceof ViewGroup) {
+      ViewGroup group = (ViewGroup) view;
+      for (int i = 0; i < group.getChildCount(); i++)
+        if (clickText(group.getChildAt(i), text)) return true;
+    }
+    return false;
+  }
+
   @Override
   public void onStart() {
     Bundle result = new Bundle();
@@ -118,6 +130,28 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           !isolated.soundFontName().equals("KANTA original tone"),
           "SoundFont override not retained");
+      check(
+          isolated.soundFonts().size() == 2
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta-tone.sf2"))
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals(isolated.soundFont().getName())),
+          "Imported and bundled SoundFonts are not discoverable");
+      String importedBank = isolated.soundFont().getName();
+      isolated.selectSoundFont("kanta-tone.sf2");
+      check(
+          isolated.soundFont().getName().equals("kanta-tone.sf2")
+              && isolated.soundFontName().equals("KANTA original tone"),
+          "Bundled SoundFont could not be selected");
+      isolated.selectSoundFont(importedBank);
+      LibraryRepository reloadedBanks =
+          new LibraryRepository(getTargetContext().createDeviceProtectedStorageContext());
+      reloadedBanks.load();
+      check(
+          reloadedBanks.soundFont().getName().equals(importedBank)
+              && reloadedBanks.soundFonts().size() == 2,
+          "Active SoundFont selection or inventory did not survive reload");
+      check(
+          isolated.songs().stream().anyMatch(value -> !value.starter && value.fileName.endsWith(".mid")),
+          "Imported MIDI/KAR was not added to the playable song catalog");
       try (InputStream original =
           getTargetContext().getContentResolver().openInputStream(FixtureProvider.file("song"))) {
         Song copy =
@@ -131,6 +165,40 @@ public final class RuntimeChecks extends Instrumentation {
                 java.nio.file.Files.readAllBytes(new File(isolated.media, copy.fileName).toPath())),
             "Imported source bytes changed");
       }
+      runOnMainSync(() -> session.importSongs(files));
+      await(
+          () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 2,
+          "SessionController did not publish imported songs and SoundFonts");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "My Set"),
+              "My Set navigation control was not clickable"));
+      await(
+          () -> contains(activity.getWindow().getDecorView(), "Original KAR")
+              && contains(activity.getWindow().getDecorView(), "ACTIVE")
+              && contains(activity.getWindow().getDecorView(), "Use"),
+          "My Set did not show imported songs and SoundFont actions");
+      capture("my-set-imported-library.png");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Use"),
+              "SoundFont Use action was not visible/clickable"));
+      await(
+          () -> session.soundFontName.equals("KANTA original tone"),
+          "SoundFont selector did not activate the bundled bank");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Use"),
+              "Imported SoundFont Use action was not visible/clickable"));
+      await(
+          () -> !session.soundFontName.equals("KANTA original tone"),
+          "SoundFont selector did not reactivate the imported bank");
+      capture("my-set-active-soundfont.png");
+      runOnMainSync(
+          () -> check(
+              clickText(activity.getWindow().getDecorView(), "Control"),
+              "Control navigation was not restored after My Set assertions"));
+
       AtomicBoolean progressSeen = new AtomicBoolean();
       AtomicBoolean progressOnMain = new AtomicBoolean(true);
       AtomicBoolean importCompleted = new AtomicBoolean();
@@ -157,7 +225,7 @@ public final class RuntimeChecks extends Instrumentation {
           });
       await(
           () -> !session.importing && !session.libraryImporting
-              && importCompleted.get() && session.songs.size() == 4,
+              && importCompleted.get() && session.songs.size() == 5,
           "Controller audio import or progress completion failed");
       check(
           progressSeen.get() && progressOnMain.get()
