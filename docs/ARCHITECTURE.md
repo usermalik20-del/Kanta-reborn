@@ -653,3 +653,8 @@ The combined `verified-downloads.yml` workflow is now a contract-only workflow; 
 ## Android library import progress lifecycle — 2026-11-02
 
 The repository performs file-provider I/O on its import workers, but it does not own Activity presentation. `SessionController` now dispatches repository progress and completion through its main-Looper handler and resolves the current Activity listener at delivery time. The listener is cleared on completion, cancellation, folder-scan failure and Activity stop; a returning Activity reattaches only while a library import remains active. This avoids worker-thread View/Toast access and prevents the application-scoped repository from retaining a destroyed Activity.
+
+
+## Android SoundFont storage budget — 2026-11-02
+
+SoundFont import uses the provider-reported size for a preflight check when available, then rechecks free space during streaming because document providers may omit or under-report size. Every write must preserve a 64 MiB free-space reserve; the final check verifies the reserve itself rather than double-counting the copied file. No fixed 32 MiB file-size ceiling is imposed; native structural validation and bounded loader allocation remain authoritative.
