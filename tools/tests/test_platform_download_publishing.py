@@ -34,8 +34,9 @@ class PlatformPublisherTests(unittest.TestCase):
         self.unrelated_source = self.git("commit-tree", tree, "-m", "unrelated source")
         (self.root / "apps/web/downloads.json").write_text(json.dumps({
             "repository": "usermalik20-del/Kanta-reborn",
+            "packagingRun": 800,
             "android": {"source": self.old_source, "downloadUrl": "android-old"},
-            "ios": {"source": self.old_source, "downloadUrl": "ios-old"},
+            "ios": {"source": self.old_source, "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/802"},
             "platforms": {
                 "android": {"source": self.old_source, "run": 10},
                 "ios": {"source": self.old_source, "run": 20},
