@@ -1000,3 +1000,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Regression coverage:** canceled enqueue lookup; canceled Next asset resolution; cancellation during native load and recovery; canceled snapshot polling during natural auto-advance; cancellation before native load preserving the current playing asset; and audio-session preparation failure preserving the current playing backend.
 
 **Prior-branch validation evidence:** PR #144 head `f4de237a58250024082018e8933e8ed66b87d677` passed iOS validation run [#41385876764](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876764), iOS smoke [#41385876632](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876632), unsigned archive [#41385876753](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876753), iPhone/iPad acceptance [#41385876648](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876648), and documentation sync [#41385876770](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876770). Those checks validate the prior PR head only; the reconciled current-main branch must pass fresh exact-head gates before merge.
+
+
+## Android reference-led UI PR #149 — bundled scene resource adapter missing on current main (2026-11-02)
+
+**Fingerprint:** Android validation run [41441404880](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41441404880), job `125263891088`, exact head `a591b9f5f8b0151b5f76f2c8a1d323bce1612c4e`; `:app:compileDebugJavaWithJavac` reported eight unresolved calls to `SessionController.sceneResource(String, int)` from `MainActivity`'s Visuals destination.
+
+**Cause:** the draft UI branch had added the bundled-artwork adapter to its older `SessionController`, but the reconciliation intentionally retained the newer main-branch controller to preserve the merged import, SoundFont inventory and storage-safety work. The adapter therefore did not come across with the presentation slice. This was a real integration boundary omission, not an Android resource-generation or Gradle dependency failure.
+
+**Repair:** port only `sceneResource(String, int)` onto the current main-branch `SessionController`. It uses the existing stage generation token, IO executor, `StageMediaStore` selection, bounded bitmap decode and main-thread publication path; stale results are recycled rather than replacing a newer selected scene. No older controller or repository file was restored.
+
+**Regression:** the reference Visuals walkthrough selects the bundled Stage Lights resource and asserts that the existing `SessionController` publishes the selected scene. Re-run the full exact-head Android validation and emulator capture flow; do not treat the earlier website/download checks as Android acceptance.
