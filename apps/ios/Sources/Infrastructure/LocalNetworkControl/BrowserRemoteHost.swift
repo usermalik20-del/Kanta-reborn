@@ -68,7 +68,10 @@ public final class BrowserRemoteHost: ObservableObject {
         guard !preparing, !active else { return }
         stop()
         guard (try? CompanionProtocol.privateAddress(localAddress)) != nil,
-              Set(assets.keys) == Set(["/", "/remote.js", "/remote.css"]), assets.values.allSatisfy({ $0.count <= 131072 }) else {
+              Set(assets.keys) == Set(["/", "/remote.js", "/remote.css"] + (1...8).map { String(format: "/assets/covers/%02d.webp", $0) }),
+              ["/", "/remote.js", "/remote.css"].allSatisfy({ (assets[$0]?.count ?? 0) <= 131072 }),
+              (1...8).allSatisfy({ (assets[String(format: "/assets/covers/%02d.webp", $0)]?.count ?? 0) > 0 && (assets[String(format: "/assets/covers/%02d.webp", $0)]?.count ?? 0) <= 160000 }),
+              (1...8).reduce(0, { $0 + (assets[String(format: "/assets/covers/%02d.webp", $1)]?.count ?? 0) }) <= 1500000 else {
             status = "Select this device's private Wi-Fi IPv4 address."; return
         }
         let run = generation; self.assets = assets; status = "Preparing private HTTPS host…"
@@ -166,7 +169,14 @@ public final class BrowserRemoteHost: ObservableObject {
         if let site = request.headers["sec-fetch-site"], !["same-origin", "none"].contains(site) { reply(403, Data(), "text/plain", connection, id); return }
         if request.method == "GET", request.body.isEmpty {
             guard let asset = assets[request.path] else { reply(404, Data(), "text/plain", connection, id); return }
-            let type = request.path == "/" ? "text/html; charset=utf-8" : (request.path == "/remote.js" ? "text/javascript; charset=utf-8" : "text/css; charset=utf-8")
+            let type: String
+            switch request.path {
+            case "/": type = "text/html; charset=utf-8"
+            case "/remote.js": type = "text/javascript; charset=utf-8"
+            case "/remote.css": type = "text/css; charset=utf-8"
+            case let path where path.range(of: "^/assets/covers/0[1-8]\\.webp$", options: .regularExpression) != nil: type = "image/webp"
+            default: reply(404, Data(), "text/plain", connection, id); return
+            }
             reply(200, asset, type, connection, id); return
         }
         guard request.method == "POST", request.headers["content-type"] == "application/octet-stream", origin == address else { reply(403, Data(), "text/plain", connection, id); return }

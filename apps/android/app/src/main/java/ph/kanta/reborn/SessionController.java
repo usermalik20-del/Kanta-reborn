@@ -1305,11 +1305,12 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   public long position() {
-    try {
-      return player == null ? 0 : player.position();
-    } catch (IllegalStateException e) {
-      return 0;
-    }
+    try { return player == null ? 0 : player.position(); }
+    catch (IllegalStateException e) { return 0; }
+  }
+  public long duration() {
+    try { return Math.max(0, player == null ? currentDuration : player.duration()); }
+    catch (IllegalStateException e) { return Math.max(0,currentDuration); }
   }
 
   public RenderedPlaybackClock getClock() {
@@ -1488,6 +1489,63 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 () -> {
                   message = "Could not open scenic background";
                   publish();
+                });
+          }
+        });
+  }
+
+  /** Selects a bundled drawable through the same stage generation and publication owner. */
+  void sceneResource(String name, int drawableResource) {
+    if (name == null || name.isEmpty() || drawableResource == 0) return;
+    scenicName = name;
+    stageKind = "scenic";
+    stageVideo = null;
+    long request = ++stageRequest;
+    visualGeneration++;
+    if (ready && stageStore != null)
+      io.execute(
+          () -> {
+            try {
+              stageStore.select("scenic");
+            } catch (Exception ignored) {
+            }
+          });
+    io.execute(
+        () -> {
+          android.graphics.Bitmap bitmap = null;
+          try {
+            android.graphics.BitmapFactory.Options options =
+                new android.graphics.BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeResource(
+                context.getResources(), drawableResource, options);
+            if (options.outWidth <= 0 || options.outHeight <= 0)
+              throw new IOException("Invalid bundled scene artwork");
+            options.inSampleSize = 1;
+            while (options.outWidth / options.inSampleSize > 1600
+                || options.outHeight / options.inSampleSize > 1600) options.inSampleSize *= 2;
+            options.inJustDecodeBounds = false;
+            bitmap = android.graphics.BitmapFactory.decodeResource(
+                context.getResources(), drawableResource, options);
+            if (bitmap == null) throw new IOException("Could not decode bundled scene artwork");
+            android.graphics.Bitmap result = bitmap;
+            main.post(
+                () -> {
+                  if (request == stageRequest && scenicName.equals(name) && stageKind.equals("scenic")) {
+                    scenic = result;
+                    publish();
+                  } else if (!result.isRecycled()) {
+                    result.recycle();
+                  }
+                });
+          } catch (Exception error) {
+            if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
+            main.post(
+                () -> {
+                  if (request == stageRequest && scenicName.equals(name)) {
+                    message = "Could not open scenic background";
+                    publish();
+                  }
                 });
           }
         });

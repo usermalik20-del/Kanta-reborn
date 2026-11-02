@@ -3,9 +3,15 @@ package ph.kanta.reborn.ui;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 
 import ph.kanta.reborn.ui.components.KantaIconButton;
 import ph.kanta.reborn.ui.components.KantaProgressBar;
@@ -34,10 +40,11 @@ public class KantaNowPlayingScreen extends LinearLayout {
   private final Context context;
   private final float density;
   private final Listener listener;
-  private String songTitle = "Morning Light";
-  private String songArtist = "KANTA";
+  private final View stageView;
+  private String songTitle = "Nothing playing";
+  private String songArtist = "Reserve a song to begin";
   private String currentTime = "0:00";
-  private String duration = "3:45";
+  private String duration = "—";
   private float progress = 0f;
   private boolean playing = false;
   private int key = 0;
@@ -48,10 +55,15 @@ public class KantaNowPlayingScreen extends LinearLayout {
   private KantaStepper keyStepper, tempoStepper;
   private TextView lyricLine1, lyricLine2, lyricLine3, lyricLine4;
   public KantaNowPlayingScreen(Context context, Listener listener) {
+    this(context, listener, null);
+  }
+
+  public KantaNowPlayingScreen(Context context, Listener listener, View stageView) {
     super(context);
     this.context = context;
     this.density = context.getResources().getDisplayMetrics().density;
     this.listener = listener;
+    this.stageView = stageView;
     setOrientation(VERTICAL);
     setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
     build();
@@ -62,6 +74,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     top.setGravity(Gravity.CENTER_VERTICAL);
     top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
     KantaIconButton back = new KantaIconButton(context);
+    back.setTag("kanta.screen.now-playing.back");
     back.setText("\u2190"); back.setTextSize(18);
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
     TextView nowPlaying = new TextView(context);
@@ -73,28 +86,40 @@ public class KantaNowPlayingScreen extends LinearLayout {
     np.weight = 1;
     nowPlaying.setLayoutParams(np);
     KantaIconButton fullscreen = new KantaIconButton(context);
+    fullscreen.setTag("kanta.now-playing.fullscreen");
     fullscreen.setText("\u2306"); fullscreen.setTextSize(18);
     fullscreen.setOnClickListener(v -> { if (listener != null) listener.onFullscreen(); });
     top.addView(back); top.addView(nowPlaying); top.addView(fullscreen);
     addView(top);
-    LinearLayout stage = new LinearLayout(context);
-    stage.setOrientation(VERTICAL);
-    stage.setGravity(Gravity.CENTER);
-    stage.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED);
+    FrameLayout stage = new FrameLayout(context);
+    stage.setBackground(ph.kanta.reborn.ui.KantaTheme.stageBackground(context, false));
     LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
     stageParams.weight = 1;
     stage.setLayoutParams(stageParams);
+    if (stageView != null) {
+      if (stageView.getParent() instanceof ViewGroup) {
+        ((ViewGroup) stageView.getParent()).removeView(stageView);
+      }
+      stage.addView(stageView, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+    }
     LinearLayout lyrics = new LinearLayout(context);
     lyrics.setOrientation(VERTICAL);
     lyrics.setGravity(Gravity.CENTER);
     lyrics.setPadding((int)(32*density), 0, (int)(32*density), 0);
-    lyricLine1 = lyric("Previous line lyric text here", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 18);
-    lyricLine2 = lyric("Current line \u2014 bright white", ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY, 24);
-    lyricLine3 = lyric("Next upcoming line", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 18);
-    lyricLine4 = lyric("Following upcoming line", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 18);
+    lyricLine1 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
+    lyricLine2 = lyric("No timed lyrics loaded", ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY, 23);
+    lyricLine3 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
+    lyricLine4 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
     lyrics.addView(lyricLine1); lyrics.addView(lyricLine2);
     lyrics.addView(lyricLine3); lyrics.addView(lyricLine4);
-    stage.addView(lyrics);
+    if (stageView == null) {
+      FrameLayout.LayoutParams lyricParams = new FrameLayout.LayoutParams(
+          LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+      stage.addView(lyrics, lyricParams);
+    } else {
+      // StageSurface already owns the selected background, camera/video layers and timed lyrics.
+      lyrics.setVisibility(View.GONE);
+    }
     addView(stage);
     LinearLayout info = new LinearLayout(context);
     info.setOrientation(HORIZONTAL);
@@ -116,6 +141,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     info.addView(infoCol);
     KantaIconButton favorite = new KantaIconButton(context);
     favorite.setText("\u2605"); favorite.setTextSize(20);
+    favorite.setEnabled(false); favorite.setAlpha(.4f);
     favorite.setOnClickListener(v -> { if (listener != null) listener.onFavorite(); });
     LinearLayout.LayoutParams favParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
     favParams.weight = 1; favParams.gravity = Gravity.END;
@@ -123,6 +149,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     info.addView(favorite);
     KantaIconButton overflow = new KantaIconButton(context);
     overflow.setText("\u22EE"); overflow.setTextSize(20);
+    overflow.setEnabled(false); overflow.setAlpha(.4f);
     overflow.setOnClickListener(v -> { if (listener != null) listener.onOverflow(); });
     info.addView(overflow);
     addView(info);
@@ -223,10 +250,10 @@ public class KantaNowPlayingScreen extends LinearLayout {
       navParams.bottomMargin = (int)(6*density);
       b.setLayoutParams(navParams);
       switch (n[2]) {
-        case "onQueue": b.setOnClickListener(v -> { if (listener != null) listener.onQueue(); }); break;
-        case "onLyrics": /* already active */ break;
-        case "onEffects": b.setOnClickListener(v -> { if (listener != null) listener.onEffects(); }); break;
-        case "onCoach": b.setOnClickListener(v -> { if (listener != null) listener.onCoach(); }); break;
+        case "onQueue": b.setTag("kanta.now-playing.queue"); b.setOnClickListener(v -> { if (listener != null) listener.onQueue(); }); break;
+        case "onLyrics": b.setTag("kanta.now-playing.lyrics"); break;
+        case "onEffects": b.setTag("kanta.now-playing.effects"); b.setOnClickListener(v -> { if (listener != null) listener.onEffects(); }); break;
+        case "onCoach": b.setTag("kanta.now-playing.coach"); b.setOnClickListener(v -> { if (listener != null) listener.onCoach(); }); break;
       }
       bottomNav.addView(b);
     }
@@ -251,10 +278,20 @@ public class KantaNowPlayingScreen extends LinearLayout {
     if (artistView != null) artistView.setText(artist);
   }
   public void setLyrics(String l1, String l2, String l3, String l4) {
-    if (lyricLine1 != null) lyricLine1.setText(l1);
-    if (lyricLine2 != null) lyricLine2.setText(l2);
-    if (lyricLine3 != null) lyricLine3.setText(l3);
-    if (lyricLine4 != null) lyricLine4.setText(l4);
+    setLyrics(l1, l2, l3, l4, 0f);
+  }
+  public void setLyrics(String l1, String l2, String l3, String l4, float highlightedCharacters) {
+    if (lyricLine1 != null) lyricLine1.setText(l1 == null ? "" : l1);
+    if (lyricLine2 != null) {
+      String line = l2 == null ? "" : l2;
+      SpannableString styled = new SpannableString(line);
+      int end = Math.max(0, Math.min(line.length(), (int) Math.floor(Math.max(0f, highlightedCharacters))));
+      if (end > 0) styled.setSpan(new ForegroundColorSpan(
+          ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+      lyricLine2.setText(styled);
+    }
+    if (lyricLine3 != null) lyricLine3.setText(l3 == null ? "" : l3);
+    if (lyricLine4 != null) lyricLine4.setText(l4 == null ? "" : l4);
   }
   public void setProgress(float p) { progress = p; if (progressBar != null) progressBar.setProgress(p); }
   public void setTimes(String current, String dur) {
@@ -262,7 +299,8 @@ public class KantaNowPlayingScreen extends LinearLayout {
     if (currentTimeView != null) currentTimeView.setText(current);
     if (durationView != null) durationView.setText(dur);
   }
-  public void setPlaying(boolean p) { playing = p; if (transport != null) transport.setPlaying(p); }
-  public void setKey(int k) { key = k; if (keyStepper != null) keyStepper.setValue(String.valueOf(key)); }
-  public void setTempo(float t) { tempo = t; if (tempoStepper != null) tempoStepper.setValue(String.format("%.0f%%", t * 100f)); }
+  public void setPlaying(boolean p) { if(playing==p)return;playing=p;if(transport!=null)transport.setPlaying(p); }
+  public void setTransportCapabilities(boolean canNext){if(transport==null)return;transport.setShuffleEnabled(false);transport.setPreviousEnabled(false);transport.setNextEnabled(canNext);transport.setRepeatEnabled(false);}
+  public void setKey(int k){key=k;if(keyStepper!=null)keyStepper.setValue(key>0?"+"+key:String.valueOf(key));}
+  public void setTempo(float t){tempo=t;if(tempoStepper!=null)tempoStepper.setValue(String.format(java.util.Locale.ROOT,"%.0f%%",t*100f));}
 }

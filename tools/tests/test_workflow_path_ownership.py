@@ -83,6 +83,14 @@ class WorkflowOwnershipTests(unittest.TestCase):
                 self.assertIn("'!apps/ios/PublicSite/**'", section)
                 self.assertIn("'!apps/ios/Docs/**'", section)
 
+    def test_shared_browser_assets_do_not_allocate_native_ui_walkthroughs(self):
+        for name in ("ios-visual-walkthrough.yml", "ios-smoke.yml"):
+            source = workflow(name)
+            pull_request = event_section(source, "pull_request")
+            self.assertIn("'!apps/ios/Resources/CompanionRemote/**'", pull_request)
+        walkthrough = event_section(workflow("ios-visual-walkthrough.yml"), "push")
+        self.assertIn("'!apps/ios/Resources/CompanionRemote/**'", walkthrough)
+
     def test_ios_feature_branches_use_pull_request_event_once(self):
         source = workflow("ios-validation.yml")
         push = event_section(source, "push")

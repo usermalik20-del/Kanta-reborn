@@ -9,7 +9,19 @@ const require=createRequire(import.meta.url);
 const root=path.resolve(import.meta.dirname,'..');
 const native=path.join(root,'apps/android/app/src/main/assets/companion');
 const ios=path.join(root,'apps/ios/Resources/CompanionRemote');
+const iosProject=await readFile(path.join(root,'apps/ios/project.yml'),'utf8');
+assert.match(iosProject,/- path: Resources\/CompanionRemote/,'iOS project does not package the mirrored companion directory');
 for(const name of ['index.html','remote.js','remote.css'])assert.deepEqual(await readFile(path.join(native,name)),await readFile(path.join(ios,name)),`Platform asset drift: ${name}`);
+let coverBytes=0;
+for(let index=1;index<=8;index++){
+  const name=`${String(index).padStart(2,'0')}.webp`;
+  const androidCover=await readFile(path.join(native,'art','covers',name));
+  const iosCover=await readFile(path.join(ios,'art','covers',name));
+  assert.ok(androidCover.length>0&&androidCover.length<=160000,`Invalid Android cover size: ${name}`);
+  assert.deepEqual(androidCover,iosCover,`Platform cover-art drift: ${name}`);
+  coverBytes+=androidCover.length;
+}
+assert.ok(coverBytes<=1500000,'Bundled cover artwork exceeds the companion byte budget');
 const protocol=require(path.join(native,'remote.js'));
 assert.throws(()=>protocol.encodeRequest('bad','reserve','fixture'));
 assert.throws(()=>protocol.encodeRequest(crypto.randomUUID(),'search',''));
@@ -82,6 +94,8 @@ try{
   assert.equal(await evaluate("new Set([...document.querySelectorAll('[data-digit]')].map(b=>b.dataset.digit)).size"),10);
   await evaluate("document.querySelector('[data-digit=\"0\"]').click();document.querySelector('[data-digit=\"0\"]').click();document.querySelector('[data-digit=\"1\"]').click();document.getElementById('search-form').requestSubmit()");
   await wait("document.getElementById('results').textContent.includes('Morning Light') && !document.getElementById('lookup').disabled");
+  await wait("[...document.querySelectorAll('#results .cover-art')].length>0 && [...document.querySelectorAll('#results .cover-art')].every(image=>image.complete&&image.naturalWidth>0)");
+  await wait("document.getElementById('now-art').complete && document.getElementById('now-art').naturalWidth>0");
   assert.equal(await evaluate("document.querySelectorAll('#results script').length"),0,'Host metadata became executable HTML');
   await evaluate("document.querySelector('#results button').click()");await wait("document.querySelectorAll('#queue .row').length===1 && !document.getElementById('lookup').disabled");
   await evaluate("document.querySelector('#results button').click()");await wait("document.querySelectorAll('#queue .row').length===2 && !document.getElementById('lookup').disabled");
@@ -90,7 +104,17 @@ try{
   await evaluate("document.getElementById('play-pause').click()");await wait("document.getElementById('transport-state').textContent==='Paused / stopped' && !document.getElementById('play-pause').disabled");
   await evaluate("document.getElementById('stop').click()");await wait("!document.getElementById('stop').disabled");
   assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,'Phone layout overflows');
-  for(const width of [320,768,1024]){await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,`Layout overflow at ${width}`);}
+  for(const width of [320,390,768,1024]){await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,`Layout overflow at ${width}`);}
+  await cdp('Emulation.setDeviceMetricsOverride',{width:1280,height:960,deviceScaleFactor:1,mobile:false});
+  assert.equal(await evaluate("document.querySelector('.sidebar').offsetWidth>0"),true,'Desktop sidebar is hidden');
+  assert.equal(await evaluate("document.querySelector('.now-column').offsetWidth>0"),true,'Desktop Now Playing panel is hidden');
+  assert.equal(await evaluate("document.querySelectorAll('.cover-art').length>0"),true,'Search result covers are missing');
+  assert.equal(await evaluate("[...document.querySelectorAll('.cover-art')].every(image=>image.complete&&image.naturalWidth>0)"),true,'A cover image failed to load over the companion host');
+  assert.equal(await evaluate("document.getElementById('now-art').complete&&document.getElementById('now-art').naturalWidth>0"),true,'Now Playing cover failed to load');
+  assert.deepEqual(await evaluate("(async()=>{const response=await fetch('/assets/covers/01.webp');return [response.status,response.headers.get('content-type')]})()"),[200,'image/webp'],'Static cover route did not return an image/webp response');
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.remote-layout')).gridTemplateColumns.split(' ').length===3"),true,'Desktop layout is not three columns');
+  assert.equal(await evaluate("document.querySelector('.remote-layout').getBoundingClientRect().width>1000"),true,'Desktop layout did not expand');
+  assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true,'Desktop layout overflows');
   if(process.env.KANTA_BROWSER_SCREENSHOT){await evaluate("document.getElementById('pairing').hidden=true");const shot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});await writeFile(process.env.KANTA_BROWSER_SCREENSHOT,Buffer.from(shot.data,'base64'));}
   await evaluate("document.getElementById('disconnect').click()");await wait("document.getElementById('controller').hidden && !document.getElementById('pairing').hidden");
   assert.equal(await evaluate("document.getElementById('code').value"),'');

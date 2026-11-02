@@ -957,3 +957,135 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** select the newest matching artifact by `created_at` (`sort_by(.created_at) | last`) and fail explicitly if none exists. The workflow contract test now requires this selection behavior. Keep the platform-specific source SHA, packaging run, retention and page independent; do not rewrite the peer platform's published provenance.
 
 **Acceptance:** the contract and website validation workflows must pass; then rerun the existing Android publication run against current main and verify the manifest/page commit plus Vercel production deployment. A created packaging ZIP alone is not a published APK.
+
+
+## Android PR #134 — Home workspace dismissal did not restore Home (2026-11-01)
+
+**Affected run:** Android validation [#41309024920](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41309024920), PR #134 head `9d12188602d0dd730d173cd1f13d22fe583f8c8d`. Build, lint, domain regression, package permission, browser companion and interoperability checks passed. Emulator instrumentation crashed at `RuntimeChecks.java:85` with `Home dashboard More destination missing`.
+
+**Root cause:** opening a Home workspace feature correctly switched to the stage-owning Control destination before presenting the existing workspace accessory, but dismissing the accessory left the user on Control. The runtime test exposed that the Home navigation context had been discarded. The earlier test then attempted to click a Home-only action after the Home screen had been removed.
+
+**Repair:** MainActivity now retains a one-shot return-to-Home intent for accessories opened from Home. When that accessory is dismissed through the existing workspace lifecycle callback, the app returns to Home after the dismissal callback completes. Switching directly between active accessories clears the return intent so a replacement accessory is not hidden. Runtime instrumentation now asserts that Home Search opens the existing accessory and that Back returns to the Home dashboard before exercising More and the legacy stage.
+
+**Validation:** the failed run remains recorded; a new exact-head Android build and emulator run must pass. No prior green result is carried forward.
+
+
+## Android PR #134 — missing generated resource imports after adaptive asset integration (2026-11-01)
+
+**Affected run:** [Android validation #41314360456](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41314360456), branch `feat/android-kanta-reference-fidelity`, commit `9769349c513f81aaeeb33a4ee718069fb250abde`. The build reached `compileDebugJavaWithJavac` and failed with 19 `package R does not exist` errors in `HomeScreen.java` and `KantaTheme.java`.
+
+**Root cause:** both classes are in the `ph.kanta.reborn.ui` subpackage. Android generates the app resource class in the application namespace package `ph.kanta.reborn.R`; unlike `StageView` in the namespace package, the UI classes cannot resolve `R` without an explicit import. The vector and WebP resource files themselves were not the cause.
+
+**Repair:** add explicit `import ph.kanta.reborn.R;` imports to the two UI classes that reference generated resources. Keep the app namespace and resource ownership unchanged.
+
+**Validation:** a new Android-owned workflow run must compile, lint, execute domain checks and complete the emulator runtime gate on the repaired head. The failed run remains recorded; it is not reclassified as flaky or ignored.
+
+
+## Android PR #134 — Home screenshot upload allowlist omitted new captures (2026-11-01)
+
+**Affected run:** Android validation [#41316345984](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41316345984) passed all checks, including emulator runtime instrumentation, but the downloaded `android-reconstruction-checks` artifact did not contain the two newly named Home screenshots. The instrumentation had written them to app-private storage and `tools/run-android-runtime.py` had collected them, but `.github/workflows/android-validation.yml` still had a fixed artifact path list containing only the earlier screenshots.
+
+**Root cause:** the artifact uploader uses an explicit path allowlist; adding a capture to the test and collector does not automatically include it in the uploaded ZIP.
+
+**Repair:** add `files/home_dashboard.png` and `files/home_dashboard_restored.png` to the Android workflow's upload-artifact paths. Add an operating rule requiring both the collector and workflow allowlist to be updated when runtime screenshots are added.
+
+**Validation:** rerun the Android-owned workflow on the exact repaired head, download its artifact and verify both file entries and image contents. A green job alone does not prove the new captures were uploaded.
+
+
+## Android Now Playing integration — duplicate playback duration accessor (2026-11-01)
+
+**Affected run:** [Android validation #41323703605](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41323703605), exact head `984bf94195921236d7a0552b680de01f8ecefdba`. The archived `android-build-failure-log` artifact records a Java compiler error at `SessionController.java:1315`: `method duration() is already defined in class SessionController`.
+
+**Root cause:** the branch already had a package-private `duration()` accessor returning the parsed MIDI duration. The Now Playing integration added a public accessor that also delegates to `PlaybackBackend.duration()` so audio and MIDI durations can both be displayed. Both methods had the same signature.
+
+**Repair:** retain the public backend-aware accessor and remove the older package-private duplicate. The retained implementation returns the active backend duration when a player exists and falls back to the parsed MIDI duration otherwise. No playback state or duration source is discarded.
+
+**Validation:** current-head Android validation must pass compilation, lint, domain regression and emulator runtime checks. The original failed compile remains recorded and is not treated as a flaky test.
+## Android PR #134 — Now Playing lyric progress type mismatch (2026-11-01)
+
+**Affected run:** Android validation [#41324196420](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41324196420), run number 496, exact head `56bcb5b7e35c875480f2673c71a0b805e25fe102`. The `Build, lint and domain regression tests` step failed during `compileDebugJavaWithJavac` at `MainActivity.java:1112`: `LyricWordAnimation.highlightedCharacters(...)` returns `float`, but `KantaNowPlayingScreen.setLyrics(...)` accepted only `int`. The later camera, browser and emulator steps were correctly skipped after the deterministic compile failure.
+
+**Root cause:** the new Now Playing lyric projection passed the fractional character position from the source-timed lyric animation into a presentation API that had retained an integer-only signature. The caller and callee did not agree on the value type; truncating at the call site would also discard the smooth fractional progression supplied by the core timing helper.
+
+**Repair candidate:** `KantaNowPlayingScreen.setLyrics` now accepts a `float` highlight position and floors it only at the final text-span boundary, where Android requires an integer character index. The existing source-timed interpolation remains fractional until rendering. The same screen mounts the supplied live `StageSurface` as its stage child and suppresses the duplicate fallback lyric overlay when the live stage is present.
+
+**Regression coverage:** exact-head Android validation must compile the full app, run lint and core regression, then complete real-Chrome companion checks and emulator instrumentation. The Now Playing instrumentation must find the live `StageSurface` in the attached view hierarchy and verify clean dismissal. Do not count the successful pre-failure static checks as build or runtime acceptance.
+
+**Validation:** repair commit `6b891fd6650c02a6e56c28b0753c7e687f78d67e`; candidate pending exact-head hosted validation. The original failure remains recorded.
+## Android PR #134 — scenic resource request generation narrowed from long to int (2026-11-01)
+
+**Affected run:** Android validation [#41324929503](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41324929503), run number 503, exact head `8918279d05c9b8a8e7321739b8c67857a4ecbe6e`. The `Build, lint and domain regression tests` step failed during `compileDebugJavaWithJavac` at `SessionController.java:1503`: `stageRequest` is a `long`, but the new bundled-scene loader assigned its incremented value to an `int`.
+
+**Root cause:** the new resource-backed scenic selection reused the existing generation counter but declared its request token with a narrower type. This was a compile-time type mismatch, not an emulator or asset decoding failure.
+
+**Repair candidate:** `sceneResource` now stores the incremented request token as `long`, matching the authoritative `stageRequest` field and preserving the stale-result guard without narrowing or overflow.
+
+**Regression coverage:** exact-head Android validation must compile, lint, run domain regressions, verify the browser companion over real Chrome and complete emulator instrumentation. The generated Stage Lights selection must publish the new bitmap, and all eight browser cover files must load through the pinned host. The original failed run remains recorded.
+
+**Validation:** repair commit `030bb38473a92e080a9d7342b9f875ead92e41fa`; candidate pending exact-head hosted validation.
+## Android PR #134 — duplicate primaryStage local in runtime instrumentation (2026-11-01)
+
+**Affected run:** Android validation [#41325541925](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41325541925), run number 511, exact head `3078d30f7ec05ec159a24d3b0a347b322bb745d5`. The `Build, lint and domain regression tests` step compiled the main app and completed all 65,402 core regression checks, then failed at `compileDebugAndroidTestJavaWithJavac`: `RuntimeChecks.onStart()` declared `View primaryStage` twice (the original persistent-stage reference at line 224 and a redundant second local at line 440).
+
+**Root cause:** the fullscreen lifecycle assertion re-declared the persistent `StagePresenterImpl` reference instead of checking the already-captured view. This was a Java local-variable scope conflict in instrumentation, not a production source or playback regression.
+
+**Repair candidate:** removed the redundant declaration and replaced it with an explicit identity assertion that `stableStage` still references the original `primaryStage` before entering fullscreen. The existing post-fullscreen restoration assertions continue to use that same authoritative view reference.
+
+**Validation:** rerun Android validation on the repair commit; instrumentation compilation, Chrome companion checks and emulator screenshots must all complete before acceptance.
+
+
+
+## Android PR #134 — browser cover assets were packaged but not served (2026-11-01)
+
+**Affected run:** Android validation #513, run `41325935952`, head `7b5a8d1e919e5134a7e889a59a7ab487fe991241`. Gradle build, lint, core regression and camera/offline checks passed; real-Chrome failed at `Search result covers are missing`, so emulator instrumentation was correctly skipped. The 45 MB artifact contained the debug APK and test APK but no screenshot captures because the browser gate failed first.
+
+**Root cause:** the eight WebP files were present in both app bundles and passed byte-parity/size checks, but both HTTPS hosts exposed only `/`, `/remote.js`, and `/remote.css`. The companion markup also used decorative CSS stage art and generated no image elements. This was a missing product capability, not an intermittent browser issue.
+
+**Repair:** add exact eight-path artwork routing to Android and iOS hosts, enforce per-file and aggregate limits at host startup, package the same files into the iOS host resource map, and render deterministic cover images in search results, queue rows, and Now Playing. Extend TLS regression coverage to assert successful image/webp delivery and rejection of an unlisted ninth path. Pairing, TLS pinning, command ownership and the transport protocol remain unchanged.
+
+**Validation:** exact-head Android validation must pass real Chrome and then emulator runtime instrumentation; its artifact must contain all eight native screen captures and `browser-remote.png`. iOS validation and unsigned archive must remain green. No merge or APK publication until acceptance is verified.
+
+
+## Android PR #134 — Mic & Voice screenshot idle timeout (2026-11-01)
+
+**Affected run:** Android validation #518, run `41327810681`, exact head `763c78326912ddc35d7ef5bb5b19014dd00767aa`. Android compilation, lint, 65k+ domain regressions, HTTPS companion in real Chrome, browser interoperability and private-interface checks passed. Emulator acceptance stopped at `mic_voice_screen.png`: `UiAutomation.waitForIdle(250, 5000)` timed out.
+
+**Root cause:** MainActivity intentionally refreshes microphone presentation every 100 ms. Mic & Voice's setters reapplied identical TextView text, SeekBar progress, selected-mode backgrounds and meter-bar backgrounds on every tick. Those redundant view mutations continuously emitted accessibility/UI changes, preventing the screenshot harness from observing an idle window. This was not an audio capture failure or a rendering crash.
+
+**Repair:** make Mic & Voice view updates idempotent: update labels only when their text changes, update meter bars only when the active-bar count changes, avoid resetting unchanged SeekBar progress and monitor/score button state, and skip reapplying an already-selected effect mode. Keep the 100 ms microphone/score refresh cadence and actual capture/monitor owners unchanged.
+
+**Validation:** rerun the full Android emulator walkthrough. All eight requested native captures and `browser-remote.png` must be present in `android-reconstruction-checks`; verify Mic & Voice, Now Playing and fullscreen screenshots before accepting the PR.
+
+
+## Android PR #134 — instrumentation published UI state off the main Looper (2026-11-01)
+
+**Affected run:** Android validation #519, run `41328474202`, head `931e79cc75ceaab9917ed2cf3b50d66552b97b9`. The Mic & Voice idle screenshot timeout was resolved by idempotent state projection. The next run then failed immediately after verifying Room mode with `AndroidRuntimeException: Animators may only be run on Looper threads`; the stack entered `MainActivity.render()` from `SessionController.publish()` at `RuntimeChecks.onStart()` line 177.
+
+**Root cause:** the instrumentation thread reset `session.monitor.mode(DRY)` and called `session.publish()` directly. Publication synchronously invokes the MainActivity changed callback, which removes/rebuilds views. Android TextView drawable state animators require the main Looper, so the test invoked view lifecycle work from the wrong thread.
+
+**Repair:** move both the monitor reset and `session.publish()` into `runOnMainSync`. This preserves the test's intent (restore Dry mode before leaving Mic & Voice) while respecting the production UI-thread ownership contract. Other publication calls in this test already execute inside main-thread blocks.
+
+**Validation:** rerun Android validation and verify the complete screenshot set and runtime acceptance artifact.
+
+
+### Screenshot acceptance correction (2026-11-02)
+
+**Finding:** manual inspection of the successful Android validation artifact showed that `queue_screen.png`, `pitch_tempo_screen.png`, and `visuals_screen.png` displayed the Home dashboard even though the runtime job passed. The original walkthrough waited only for a destination tag to exist in the view tree and captured immediately; that did not prove the destination was visible or that the compositor had committed its frame.
+
+**Repair:** the runtime capture helper now requires each destination view to be attached, shown by its ancestors, and have a non-empty global visible rectangle. It waits for UI idle and a bounded compositor settling interval before taking the screenshot. This turns the screenshot artifact into an actual visual acceptance gate rather than a file-presence check.
+
+**Acceptance:** rerun Android validation on the exact new PR head. Inspect all eight named native screen captures and `browser-remote.png`; verify Queue, Pitch & Tempo and Visuals no longer show Home. Do not merge or publish an APK until the new artifact is visually reviewed and all platform checks are green.
+
+## Android PR #134 — runtime screenshot capture declaration swallowed by escaped newlines (2026-11-02)
+
+**Fingerprint:** Android validation / `compileDebugAndroidTestJavaWithJavac`; compiler reports `cannot find symbol: variable image` at `RuntimeChecks.java:1254,1257,1260`. First observed run: [41330231062](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41330231062), job `124918944663`, affected head `9255c24bf06b327dc633eb0dfe1499aa75963824`.
+
+**Cause:** the compositor-settle comment and the two executable statements that follow were written as one physical Java source line containing literal `\\n` sequences. Java therefore treated `SystemClock.sleep(350);` and the `Bitmap image` declaration as comment text. The subsequent null-check, PNG compression and recycle statements then referenced a variable that did not exist in executable scope. This is a source serialization/escaping defect, not an emulator, camera or screenshot API failure.
+
+**Fix:** restore actual line breaks before the compositor delay and screenshot declaration. Preserve the null check, PNG output, and bitmap recycle behavior. No test gate is weakened.
+
+**Regression coverage:** the existing Android instrumentation compile gate catches the undeclared symbol; the runtime walkthrough must subsequently produce its expected screenshot set.
+
+**Validation:** candidate until the exact repair commit passes Android validation, including instrumentation compilation, real-Chrome browser interoperability, emulator runtime checks and screenshot artifact verification. iOS workflows remain independent and are not rerun by Android-only changes.
+
+**Recurrence rule:** inspect physical source lines whenever generated patch content contains escaped newline sequences; do not treat a green workflow on another SHA as validation of this repair.

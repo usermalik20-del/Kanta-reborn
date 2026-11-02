@@ -31,7 +31,14 @@ final class BrowserCompanion {
         java.net.InetAddress local=java.net.InetAddress.getByAddress(CompanionProtocol.privateAddress(address));
         if(java.net.NetworkInterface.getByInetAddress(local)==null)throw new IOException("Not a local interface");
         byte[] page=asset("index.html"),script=asset("remote.js"),style=asset("remote.css");
-        candidate=new BrowserRemoteServer(address,page,script,style,request->apply(ticket,request));
+        Map<String,byte[]> artwork=new LinkedHashMap<>();int artworkBytes=0;
+        for(int index=1;index<=8;index++){
+          String name=String.format(Locale.ROOT,"%02d.webp",index);
+          byte[] cover=asset("art/covers/"+name,160000);artworkBytes+=cover.length;
+          if(artworkBytes>1500000)throw new IOException("Artwork bundle limit");
+          artwork.put("/assets/covers/"+name,cover);
+        }
+        candidate=new BrowserRemoteServer(address,page,script,style,artwork,request->apply(ticket,request));
         BrowserRemoteServer ready=candidate;
         session.main.post(()->{
           if(ticket!=generation||!session.foreground){ready.close();return;}
@@ -42,10 +49,11 @@ final class BrowserCompanion {
       }catch(Exception e){if(candidate!=null)candidate.close();session.main.post(()->{if(ticket==generation){stop();status="Could not start HTTPS hosting. Check the selected Wi-Fi address.";notifyChanged();}});}
     });
   }
-  private byte[] asset(String name)throws IOException {
+  private byte[] asset(String name)throws IOException {return asset(name,131072);}
+  private byte[] asset(String name,int maximum)throws IOException {
     try(InputStream input=session.context.getAssets().open("companion/"+name)){
       ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int n;
-      while((n=input.read(buffer))!=-1){out.write(buffer,0,n);if(out.size()>131072)throw new IOException("Asset limit");}
+      while((n=input.read(buffer))!=-1){out.write(buffer,0,n);if(out.size()>maximum)throw new IOException("Asset limit");}
       return out.toByteArray();
     }
   }

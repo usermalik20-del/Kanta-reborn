@@ -1,3 +1,15 @@
+## Android reference-led UI integration context — 2026-11-01
+
+**Working branch:** `feat/android-kanta-reference-fidelity`. The previous UI batch introduced `ph.kanta.reborn.ui` screens and components but did not mount them in the production `MainActivity` composition. The actual app still uses a native Java / Android Views root: `MainActivity` composes `KantaWorkspace`, a persistent `StagePresenterImpl`, a session strip/transport and a scrollable destination panel. `SessionController` remains the playback/session/queue owner. The initial safe-branch correction mounts `HomeScreen` as the Home destination and routes its actions to existing owners. It hides (does not destroy) the stage pane and legacy navigation row while Home is selected, restoring them for other destinations. Opening a workspace accessory from Home records a one-shot return intent; the workspace dismissal callback restores Home after closing the accessory. Switching active accessories clears that intent. The feature grid is now 3 columns × 2 rows.
+
+**Important integration boundary:** `HomeScreen`, `KantaSearchScreen`, `KantaQueueScreen`, `KantaPitchTempoScreen`, `KantaMicVoiceScreen` and `KantaVisualsScreen` are mounted. Search filters the live SessionController catalog and reserves through the session owner; Queue projects ReservationQueue and mutates by stable reservation UUID; Pitch & Tempo routes changes through SessionController.controls. Mic & Voice delegates to MicrophoneInput, verified-route MicrophoneMonitor and actual score status; Visuals uses the ten existing scenic assets, CameraStage and the existing stage-media import workflow. YouTube catalog discovery is not implemented. `KantaNowPlayingScreen` is mounted when the user taps the persistent stage and embeds a live `StageSurface` for the selected scene/video/camera and synchronized lyrics. Its metadata, progress, transport and performance controls project SessionController. Fullscreen uses a separate StageSurface with a bottom control overlay; both preserve StageSurface as the lyric renderer. `KantaFullscreenStage` remains an unused presentation candidate.
+
+**Browser companion:** `index.html`, `remote.css` and `remote.js` now provide a desktop sidebar/library/Now Playing layout and narrow-screen single-column reflow. The pinned transport, pairing, certificate verification, command allowlist, host-owned state and session expiry remain unchanged. Unsupported host controls remain disabled rather than issuing invented protocol commands.
+
+**Acceptance still pending:** current-head Android build/lint/core regression/emulator workflow; screenshot comparison of all six mounted destinations and the browser remote; visual verification at controlled handset/tablet/desktop widths; remaining Now Playing and fullscreen visual comparison; APK artifact inspection. No visual-fidelity, emulator, device or release claim is made until those checks pass.
+
+---
+
 # Codebase Context Packet — KANTA Reborn
 
 ## Android camera lifecycle repair context — 2026-11-01
@@ -352,3 +364,46 @@ The compact workspace now uses KANTA Karaoke branding in Host navigation/header,
 The compact persistent workspace's accessibility repair removes the identifier from the interactive transport parent and labels the Host-controls action “More controls” to avoid collision with Settings. The branch was synchronized with main while preserving the workspace implementation and its repair documentation, then merged as `41c8ddde`. Reconstruction, focused smoke, unsigned archive and both independent device walkthroughs passed on the merged source SHA, and the result shipped in GitHub Release `v0.1.0-workspace-redesign`.
 
 The Android implementation mirrors the same architecture and the same two accessibility rules: `KantaWorkspace.java` owns the persistent stage layer and the single-active transient accessories, and each actionable child keeps its own `contentDescription` while the container does not override it. The Android toolbar's control-opening entry is labelled “Controls”, never “Settings”.
+
+## Android Mic & Voice and Visuals destination integration — 2026-11-01
+
+The safe reference branch now mounts `KantaMicVoiceScreen` and `KantaVisualsScreen` as full-screen Home destinations. Mic & Voice delegates microphone permission/start/stop to `MainActivity.toggleMicrophone()` and `SessionController.startMicrophone/stopMicrophone`; monitoring output selection and teardown use the existing verified-route `MicrophoneMonitor`, gain and the implemented Dry/Room/Hall/Echo modes. The screen polls the real input meter and `SessionController.scoreStatus()`; it never invents coach scores. The previous screen's drawn-but-inert reverb/echo tracks and unsupported Warm/Bright FX labels were removed.
+
+Visuals now renders thumbnails from the ten existing `assets/scenic/*.png` images, selects those existing scenes through `SessionController.scene()`, and routes Camera through the existing CameraStage permission/lifecycle owner. Custom media opens the existing user-selected photo/video import path. Stage post-processing effects are explicitly reported as not implemented rather than exposing nonfunctional controls. New generated KANTA artwork can later replace/add to these thumbnails without changing the scene-selection or camera ownership contracts.
+
+
+**Current safe-branch integration:** Search, Queue, Pitch & Tempo, Mic & Voice and Visuals are mounted full-screen destinations. Mic & Voice uses live microphone/monitor/score status and verified headset-only monitor output; Visuals uses the existing ten scenic assets, CameraStage and stage-media import. Generated image assets are still pending and are not a blocker to the functional wiring. Now Playing/fullscreen presentation and desktop browser remote redesign remain open.
+
+## Mic & Voice and Visuals runtime acceptance — 2026-11-01
+
+Android instrumentation now captures the mounted Mic & Voice and Visuals destinations in addition to Home, Search, Queue and Pitch & Tempo. It selects the existing Bamboo Mist scenic asset and asserts the selection reaches SessionController, then selects the Room vocal-monitor processor mode and asserts the existing MicrophoneMonitor owner receives it. The test does not request microphone/camera permissions or fabricate input/coach readings. Both named screenshots are required by the Android runtime collector and artifact allowlist.
+
+## Browser remote desktop layout — safe branch in progress
+
+The Android-hosted browser companion now uses a reference-aligned responsive shell: a desktop sidebar, central host-library/search/queue column and right-side Now Playing panel. Narrow viewports collapse to a single-column mobile controller. The existing element IDs, pairing verification, fingerprint-pinned transport, session expiry, command identities, request bounds, host-owned state and protocol allowlist are retained. Unsupported Remotes/Settings, camera, microphone, key/tempo and fullscreen controls remain visibly unavailable; the remote does not fabricate commands or duplicate Android state.
+
+## Shared browser companion asset contract — 2026-11-01
+
+The Android and iOS apps package the same browser companion files from `apps/android/app/src/main/assets/companion/` and `apps/ios/Resources/CompanionRemote/`. Keep `index.html`, `remote.css` and `remote.js` byte-identical. The companion remains a bounded LAN controller with explicit fingerprint verification, host-owned state, pairing/session expiry and no cloud relay. Its responsive desktop layout is presentation-only; it must not add commands outside the existing protocol allowlist or claim host-only features are remotely available. The shared asset parity and real-Chrome browser contract are checked by `tools/verify-companion-browser.mjs`.
+
+## Fullscreen Now Playing stage integration — 2026-11-01
+
+The Android fullscreen surface now keeps the real `StageSurface` as the full-bleed background/lyric owner and adds a live metadata/transport overlay. Song title, artist, playback time, MIDI duration when available, queue count, key and tempo are projected from `SessionController`; Play/Pause, Next, key and tempo commands delegate to that owner. The overlay does not add Previous, seek, shuffle or repeat controls that are absent from the active Android contract. Runtime instrumentation captures `fullscreen_stage.png`, exercises key increment/reset through the live session and verifies dismissal; the runner and Android workflow require the screenshot in the artifact. Audio formats without an available source duration display `--:--` rather than an invented duration.
+
+## Fullscreen stage acceptance — 2026-11-01
+
+The active fullscreen player is the existing `StageSurface` (lyrics/background/camera/video owner) with a live `SessionController` projection for title, artist, source time, MIDI duration when known, queue count, key and tempo. Play/Pause, Next, key and tempo controls delegate to the existing session. Previous and seeking remain absent; unsupported duration is shown as unknown. The runtime walkthrough opens the actual Dialog window, captures the fullscreen stage, exercises key increment/reset and verifies dismissal. `fullscreen_stage.png` is mandatory in the runner collector and CI artifact.
+
+
+**Now Playing:** `MainActivity` opens the dedicated `KantaNowPlayingScreen` when the persistent stage is tapped. The screen reads the live `SessionController` song, singer, playback clock, backend duration and timed MIDI cues. Playback, Next, key, tempo, Queue, Mic & Voice and fullscreen are delegated to existing owners. Unsupported transport and favorite actions are disabled; no sample lyrics or demo song metadata are shipped.
+
+Now Playing is a real destination opened by tapping the persistent stage. Its `KantaNowPlayingScreen` embeds a live `StageSurface` rather than a static mock backdrop; selected scenic/video/camera output and synchronized lyric rendering remain with the existing StageSurface owner. Session updates refresh the Now Playing metadata/transport projection without rebuilding the screen or restarting the stage surface. The runtime collector and Android artifact allowlist now require `now_playing_screen.png` as well as `fullscreen_stage.png`.
+
+## Generated KANTA artwork integration — 2026-11-01
+
+The existing drawable-nodpi art pack is now used by production UI rather than remaining an unused resource set. Home Quick Play uses the My Set/Favorites/Recent collection artwork; Search results and Queue rows use deterministic stable song-ID mappings to the eight generated covers. Visuals uses the seven supplied cinematic backgrounds plus the existing stage artwork for Default, and selecting a tile calls `SessionController.sceneResource` to decode/publish the actual drawable through the existing stage owner. The runtime test selects Stage Lights and waits for the new Bitmap instance to replace the prior scene. No additional upload is needed for these existing 18 assets; future new artwork can be added through the same resource mapping and screen APIs.
+## Browser remote cover-art delivery — 2026-11-01
+
+The eight supplied WebP covers are packaged alongside the browser companion in Android `assets/companion/art/covers/` and mirrored byte-for-byte into iOS `Resources/CompanionRemote/art/covers/`. The Android `BrowserRemoteServer` and iOS `BrowserRemoteHost` serve only the exact `/assets/covers/01.webp` through `/assets/covers/08.webp` allowlist, with per-file and aggregate byte limits; no new remote commands or host-state authority are introduced.
+
+The real-Chrome companion check verifies that search-result covers and the Now Playing cover load successfully over the pinned HTTPS host. The browser host fixture uses the same bundled files, so a missing resource fails the browser contract instead of silently falling back to decorative placeholders.

@@ -32,6 +32,10 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     setMinimumHeight((int) (220 * getResources().getDisplayMetrics().density));
   }
 
+  void setFullscreenMode(boolean value) {
+    lyrics.setFullscreenMode(value);
+  }
+
   void setVisualActive(boolean value) {
     active = value;
     if (!value) {

@@ -19,8 +19,9 @@ Tests and production source must describe the same behavior. Keep recovered test
 | Android lyric animation | Source-fragment interpolation, active-fragment range and freshness-bounded pitch energy for the stage views | `coreRegression` JavaExec (`LyricWordAnimationRegressionTests`) |
 | Android Bluetooth monitor routing | Route-identity rules, the extended readiness bound used for Bluetooth links, and its expiry | `coreRegression` JavaExec (`CoreRegressionTests.monitorChecks`); device acceptance still open |
 | Android native SoundFont | Validated SF2 references, bounded allocations, audible pitch, truncation and mutation handling | C11 ASan/UBSan host harness |
-| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, persistent-stage rendering, dispatcher-based workspace back dismissal, and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
-| Browser interoperability | Fresh Android export through the captured browser decrypt function | Node after Android regression fixture generation |
+| Android runtime instrumentation | Real JNI/AudioTrack, FIFO commit, cancellation, controls, pause/resume, failed prepare, Home/Search/Queue/Pitch & Tempo/Visuals/Mic & Voice/Now Playing/fullscreen-stage navigation and screenshots, live pitch reset, scenic selection, monitor-mode routing, live Now Playing StageSurface and lyrics, fullscreen key increment/reset and dismissal, persistent-stage rendering, dispatcher-based workspace back dismissal and durable catalog/media rollback after cancelled multi-file imports | Clean API 35 emulator install; custom Instrumentation, no external test library |
+| Android adaptive UI resources | Native vector drawable XML, WebP resource decoding/packaging, and resource references used by Home, fullscreen and persistent stage views | `assembleDebug` + `lintDebug`; visual composition remains a separate screenshot/emulator acceptance gate |
+| Browser interoperability | Android/iOS companion HTML, CSS and JS byte parity; TLS fingerprint-gated pairing, bounded requests, live search/reservation/cancellation/playback, and responsive 320–1440px mobile/desktop layouts in real Chrome | `tools/verify-companion-browser.mjs` in Android validation |
 | Prompt bank contract | Pinned upstream metadata, cache boundary outside the repository, no vendored upstream text | Python unittest in the Android validation job |
 
 ## Website route and responsive navigation contract
@@ -375,11 +376,8 @@ owned by `SessionController` and `StagePresenterImpl`.
 - Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`,
   `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`,
   `KantaMediaRow`, `KantaTransportControls`) instantiate with correct colors, radii and states
-- Screens (`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
-  `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`)
-  wire their `Listener` callbacks into `MainActivity`, which delegates to existing backend methods
-- Browser remote restyling preserves all 22 element IDs queried by `remote.js` and keeps the wire
-  protocol, action allowlist, pairing flow and fingerprint verification unchanged
+- The production Home dashboard and Search, Queue, Pitch & Tempo, Mic & Voice and Visuals destinations are mounted by `MainActivity`; their callbacks route into existing workspace, session, queue, microphone, monitor, camera and media-import owners. Runtime instrumentation captures each destination and verifies representative live-state mutations.
+- Browser remote validation preserves all 22 element IDs queried by `remote.js`, validates the pairing/command protocol and fingerprint checks, and does not imply desktop-layout or visual acceptance.
 
 ### What is NOT tested by these checks
 
@@ -408,3 +406,58 @@ Run `python3 -m unittest tools.tests.test_platform_download_publishing` with the
 The `Platform-specific verified download publishing` workflow is triggered by successful main-branch Android validation or iOS unsigned-archive completion. Android publication requires only the exact-SHA Android validation artifact. iOS publication additionally waits for the exact-SHA iOS simulator walkthrough. Confirm workflow-run name, branch, source SHA, artifact run identity, artifact digest and retention metadata before accepting a published download.
 - `publish-platform-download.py` must write `apkSha256` (Android) or `ipaSha256` (iOS) as the application digest key in `downloads.json`, matching the key names `verify-website.py` expects in its download-manifest verification loop. Using any other key name (e.g. `appSha256`) causes `KeyError` and fails publication.
 - `publish-platform-download.py` updates only the selected platform's top-level and nested manifest entry, including its own source SHA, packaging run, artifact, checksum and retention metadata. Never synchronize source revisions across Android and iOS: each platform may be released from a different accepted main-branch commit. `verify-website.py` validates each page against that platform's own source SHA and packaging run. The final website verification and Vercel dispatch occur only after the selected platform's page and shared manifest validate.
+
+## Android Mic & Voice and Visuals destination integration — 2026-11-01
+
+The safe reference branch now mounts `KantaMicVoiceScreen` and `KantaVisualsScreen` as full-screen Home destinations. Mic & Voice delegates microphone permission/start/stop to `MainActivity.toggleMicrophone()` and `SessionController.startMicrophone/stopMicrophone`; monitoring output selection and teardown use the existing verified-route `MicrophoneMonitor`, gain and the implemented Dry/Room/Hall/Echo modes. The screen polls the real input meter and `SessionController.scoreStatus()`; it never invents coach scores. The previous screen's drawn-but-inert reverb/echo tracks and unsupported Warm/Bright FX labels were removed.
+
+Visuals now renders thumbnails from the ten existing `assets/scenic/*.png` images, selects those existing scenes through `SessionController.scene()`, and routes Camera through the existing CameraStage permission/lifecycle owner. Custom media opens the existing user-selected photo/video import path. Stage post-processing effects are explicitly reported as not implemented rather than exposing nonfunctional controls. New generated KANTA artwork can later replace/add to these thumbnails without changing the scene-selection or camera ownership contracts.
+
+## Mic & Voice and Visuals runtime acceptance — 2026-11-01
+
+Android instrumentation now captures the mounted Mic & Voice and Visuals destinations in addition to Home, Search, Queue and Pitch & Tempo. It selects the existing Bamboo Mist scenic asset and asserts the selection reaches SessionController, then selects the Room vocal-monitor processor mode and asserts the existing MicrophoneMonitor owner receives it. The test does not request microphone/camera permissions or fabricate input/coach readings. Both named screenshots are required by the Android runtime collector and artifact allowlist.
+
+The Android runtime screenshot artifact allowlist is updated in lockstep with the required capture collector: `visuals_screen.png` and `mic_voice_screen.png` are mandatory captures, not optional files.
+
+## Browser remote desktop layout — safe branch in progress
+
+The Android-hosted browser companion now uses a reference-aligned responsive shell: a desktop sidebar, central host-library/search/queue column and right-side Now Playing panel. Narrow viewports collapse to a single-column mobile controller. The existing element IDs, pairing verification, fingerprint-pinned transport, session expiry, command identities, request bounds, host-owned state and protocol allowlist are retained. Unsupported Remotes/Settings, camera, microphone, key/tempo and fullscreen controls remain visibly unavailable; the remote does not fabricate commands or duplicate Android state.
+
+The browser screenshot capture uses a 1280px desktop viewport after the real-Chrome checks have exercised 320px, 390px, 768px and 1024px narrow/reflow widths. The test checks the desktop sidebar and Now Playing column, horizontal overflow, pairing verification, queue mutations and supported playback commands. This is layout and protocol acceptance, not a visual pixel-match sign-off.
+
+## Fullscreen Now Playing stage integration — 2026-11-01
+
+The Android fullscreen surface now keeps the real `StageSurface` as the full-bleed background/lyric owner and adds a live metadata/transport overlay. Song title, artist, playback time, MIDI duration when available, queue count, key and tempo are projected from `SessionController`; Play/Pause, Next, key and tempo commands delegate to that owner. The overlay does not add Previous, seek, shuffle or repeat controls that are absent from the active Android contract. Runtime instrumentation captures `fullscreen_stage.png`, exercises key increment/reset through the live session and verifies dismissal; the runner and Android workflow require the screenshot in the artifact. Audio formats without an available source duration display `--:--` rather than an invented duration.
+
+## Fullscreen stage acceptance — 2026-11-01
+
+The active fullscreen player is the existing `StageSurface` (lyrics/background/camera/video owner) with a live `SessionController` projection for title, artist, source time, MIDI duration when known, queue count, key and tempo. Play/Pause, Next, key and tempo controls delegate to the existing session. Previous and seeking remain absent; unsupported duration is shown as unknown. The runtime walkthrough opens the actual Dialog window, captures the fullscreen stage, exercises key increment/reset and verifies dismissal. `fullscreen_stage.png` is mandatory in the runner collector and CI artifact.
+
+Now Playing is a real destination opened by tapping the persistent stage. Its `KantaNowPlayingScreen` embeds a live `StageSurface` rather than a static mock backdrop; selected scenic/video/camera output and synchronized lyric rendering remain with the existing StageSurface owner. Session updates refresh the Now Playing metadata/transport projection without rebuilding the screen or restarting the stage surface. The runtime collector and Android artifact allowlist now require `now_playing_screen.png` as well as `fullscreen_stage.png`.
+
+The mirrored static browser companion resources under `apps/ios/Resources/CompanionRemote/**` are shared with Android and are validated by the Android real-Chrome/parity suite plus the iOS package/build flows that actually bundle them. They are explicitly excluded from the native iPhone/iPad UI walkthrough and focused native simulator smoke triggers because those tests exercise native navigation/audio lifecycle, not the static browser page. The exact negative path rule is enforced by `tools/tests/test_workflow_path_ownership.py`.
+
+## Generated KANTA artwork integration — 2026-11-01
+
+The existing drawable-nodpi art pack is now used by production UI rather than remaining an unused resource set. Home Quick Play uses the My Set/Favorites/Recent collection artwork; Search results and Queue rows use deterministic stable song-ID mappings to the eight generated covers. Visuals uses the seven supplied cinematic backgrounds plus the existing stage artwork for Default, and selecting a tile calls `SessionController.sceneResource` to decode/publish the actual drawable through the existing stage owner. The runtime test selects Stage Lights and waits for the new Bitmap instance to replace the prior scene. No additional upload is needed for these existing 18 assets; future new artwork can be added through the same resource mapping and screen APIs.
+## Browser remote cover-art delivery — 2026-11-01
+
+The eight supplied WebP covers are packaged alongside the browser companion in Android `assets/companion/art/covers/` and mirrored byte-for-byte into iOS `Resources/CompanionRemote/art/covers/`. The Android `BrowserRemoteServer` and iOS `BrowserRemoteHost` serve only the exact `/assets/covers/01.webp` through `/assets/covers/08.webp` allowlist, with per-file and aggregate byte limits; no new remote commands or host-state authority are introduced.
+
+The real-Chrome companion check verifies that search-result covers and the Now Playing cover load successfully over the pinned HTTPS host. The browser host fixture uses the same bundled files, so a missing resource fails the browser contract instead of silently falling back to decorative placeholders.
+
+The companion browser gate also checks that all eight WebP cover assets are present in both platform bundles, byte-identical, within the per-file and aggregate budgets, and load successfully over the pinned HTTPS host.
+
+The same browser gate asserts that XcodeGen includes `Resources/CompanionRemote` in the iOS app bundle, preventing a correct source mirror from being omitted during packaging.
+
+
+Browser companion cover delivery is part of the real-Chrome gate: Android and iOS HTTPS hosts serve only the eight exact `/assets/covers/01.webp`–`08.webp` routes as `image/webp`, reject unlisted paths, and enforce 160 KB per-file / 1.5 MB aggregate limits. Search-result, queue and Now Playing images are checked for successful loading before capture.
+
+
+The Mic & Voice screenshot acceptance depends on idempotent screen-state projection. The 100 ms microphone refresh may continue to observe the capture owner, but identical labels, meter states, gain values, effect selections and scoring controls must not be reapplied to the view tree; this preserves a stable accessibility-idle window without slowing live input updates.
+
+
+Instrumentation that calls `SessionController.publish()` must do so on the Android main Looper because publication synchronously reaches the Activity's view-render callback. Keep test-owned state resets and their publication in the same `runOnMainSync` block.
+
+
+The named Android reference-screen captures are accepted only after the destination view is attached, shown through its ancestor hierarchy, and has a non-empty global visible rectangle. The screenshot helper allows the compositor to commit the new frame before capture; a matching view tag alone is not sufficient evidence that a destination was actually displayed.

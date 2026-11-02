@@ -22,11 +22,21 @@ final class StageView extends View {
   private int cachedWidth = -1;
   private float cachedSize;
   private boolean externalMedia;
+  private boolean fullscreenMode;
+  private final Bitmap portraitArtwork;
+  private final Bitmap landscapeArtwork;
   private final float[] stars = new float[192];
 
   StageView(Context context, SessionController session) {
     super(context);
     this.session = session;
+    BitmapFactory.Options artworkOptions = new BitmapFactory.Options();
+    artworkOptions.inSampleSize = 2;
+    artworkOptions.inPreferredConfig = Bitmap.Config.RGB_565;
+    portraitArtwork = BitmapFactory.decodeResource(
+        getResources(), R.drawable.kanta_stage_phone, artworkOptions);
+    landscapeArtwork = BitmapFactory.decodeResource(
+        getResources(), R.drawable.kanta_stage_tv, artworkOptions);
     setMinimumHeight(dp(220));
     Random random = new Random(0x4b414e54);
     for (int i = 0; i < stars.length; i++) stars[i] = random.nextFloat();
@@ -43,6 +53,11 @@ final class StageView extends View {
 
   void mediaVisible(boolean visible) {
     externalMedia = visible;
+    invalidate();
+  }
+
+  void setFullscreenMode(boolean enabled) {
+    fullscreenMode = enabled;
     invalidate();
   }
 
@@ -64,7 +79,10 @@ final class StageView extends View {
     super.onDraw(canvas);
     float w = getWidth(), h = getHeight();
     if (!externalMedia) canvas.drawColor(Color.rgb(13, 18, 42));
-    Bitmap scene = session.scenic;
+    Bitmap selectedScene = session.scenic;
+    Bitmap scene = selectedScene != null && !selectedScene.isRecycled()
+        ? selectedScene
+        : (w >= h ? landscapeArtwork : portraitArtwork);
     if (!externalMedia && scene != null && !scene.isRecycled()) {
       float scale = Math.max(w / scene.getWidth(), h / scene.getHeight());
       float sw = w / scale, sh = h / scale;
@@ -111,24 +129,26 @@ final class StageView extends View {
       highlightLayout = cue == null ? null : layout(cue.line, width, font, 0xFFF6CE77);
       nextLayout = layout(next, width, font * .7f, 0xFFB9D8E8);
     }
-    drawLayout(canvas, currentLayout, w / 2, h * .46f);
+    float currentLyricY = h * (fullscreenMode ? (w >= h ? .24f : .32f) : .46f);
+    float nextLyricY = h * (fullscreenMode ? (w >= h ? .41f : .49f) : .70f);
+    drawLayout(canvas, currentLayout, w / 2, currentLyricY);
     if (cue != null && highlightLayout != null) {
       drawProgressiveHighlight(
           canvas,
           currentLayout,
           highlightLayout,
           w / 2,
-          h * .46f,
+          currentLyricY,
           LyricWordAnimation.highlightedCharacters(cue, session.position()));
-      drawPitchWave(canvas, currentLayout, w / 2, h * .46f, cue, session.position());
+      drawPitchWave(canvas, currentLayout, w / 2, currentLyricY, cue, session.position());
     }
-    if (!next.isEmpty()) drawLayout(canvas, nextLayout, w / 2, h * .70f);
+    if (!next.isEmpty()) drawLayout(canvas, nextLayout, w / 2, nextLyricY);
     if (session.current == null)
       line(
           canvas,
           "Reserve your next song in CONTROL",
           w / 2,
-          h * 0.68f,
+          h * (fullscreenMode ? .48f : .68f),
           w - dp(40),
           font * 0.6f,
           0xFFB9D8E8);

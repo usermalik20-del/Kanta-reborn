@@ -223,3 +223,12 @@ operations off-main and fence stale permission callbacks. Preserve audio session
 ownership by the karaoke/scoring/voice services. Keep privacy text synchronized.
 PR #47's real-capture work remains included; its updated tests require fresh
 macOS CI execution before merge. See Docs/STAGE_UI_ACCEPTANCE.md.
+
+## Shared browser companion asset contract — 2026-11-01
+
+The Android and iOS apps package the same browser companion files from `apps/android/app/src/main/assets/companion/` and `apps/ios/Resources/CompanionRemote/`. Keep `index.html`, `remote.css` and `remote.js` byte-identical. The companion remains a bounded LAN controller with explicit fingerprint verification, host-owned state, pairing/session expiry and no cloud relay. Its responsive desktop layout is presentation-only; it must not add commands outside the existing protocol allowlist or claim host-only features are remotely available. The shared asset parity and real-Chrome browser contract are checked by `tools/verify-companion-browser.mjs`.
+
+
+## Shared companion remote parity
+
+The Android-hosted companion at `apps/android/app/src/main/assets/companion/` and the iOS-bundled companion at `Resources/CompanionRemote/` are packaged copies of the same browser remote contract. Intentional shared UI, accessibility, responsive-layout or protocol changes must update both copies in the same pull request and run `tools/verify-companion-browser.mjs`. Keep the DOM IDs consumed by `remote.js`, fingerprint verification, pairing expiry, command identity, request bounds and host-owned state aligned. Do not add remote commands for host controls that are not in the protocol allowlist; render those controls as unavailable instead.
