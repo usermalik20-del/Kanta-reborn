@@ -1033,3 +1033,10 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** restore the one-argument capture implementation (UI idle wait, bounded compositor settle, screenshot null check, PNG write and bitmap recycle), keep exactly one `capture(String, String)` overload, and rename the walkthrough-only stage reference to `referencePrimaryStage`. The screenshot helper still requires a visible destination tag before capture; no assertions or runtime gates are removed.
 
 **Validation:** re-run Android instrumentation compilation, then the emulator walkthrough and inspect the uploaded nine-screen artifact set on the exact repaired head.
+
+## PR #149 — My Set/SoundFont screenshot artifact omission (2026-11-02)
+
+- **Detection:** Inspection of the exact-head `android-reconstruction-checks` ZIP from run `41443168080` found all nine new reference-led destination screenshots, but not `my-set-imported-library.png` or `my-set-active-soundfont.png`.
+- **Cause:** `RuntimeChecks.java` already captured both My Set/SoundFont screenshots, while `tools/run-android-runtime.py` did not retrieve them and `.github/workflows/android-validation.yml` did not include them in its artifact allowlist.
+- **Repair:** Add both filenames to the runner's required app-private retrieval list and to the workflow's `files/` upload paths. Update the Android README, architecture, testing and reconstruction guidance to define the eleven-file evidence contract.
+- **Verification:** The original run was green but is historical evidence only; a fresh exact-head Android emulator run must prove both captures are nonempty and present in the uploaded artifact.
