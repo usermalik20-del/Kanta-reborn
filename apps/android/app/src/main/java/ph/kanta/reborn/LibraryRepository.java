@@ -22,6 +22,11 @@ final class LibraryRepository {
   static final String[] STARTERS = {"morning-light", "sing-together", "starlight-echo"};
   static final String[] TITLES = {"Morning Light", "Sing Together", "Starlight Echo"};
 
+  static final class SoundFontEntry {
+    final String fileName, name;
+    SoundFontEntry(String fileName, String name) { this.fileName = fileName; this.name = name; }
+  }
+
   static final class SavedSet {
     final String id, name;
     final List<String> songs;
@@ -38,6 +43,7 @@ final class LibraryRepository {
   private final AtomicFile state;
   private final ArrayList<Song> songs = new ArrayList<>();
   private final ArrayList<SavedSet> sets = new ArrayList<>();
+  private final ArrayList<SoundFontEntry> soundFonts = new ArrayList<>();
   private final Set<String> removed = new HashSet<>();
   private List<ReservationQueue.Entry> queue = new ArrayList<>();
   private String selectedBank = "kanta-tone.sf2", bankName = "KANTA original tone";
@@ -66,6 +72,19 @@ final class LibraryRepository {
       if (bank.matches("[a-f0-9]{64}\\.sf2") && new File(media, bank).isFile()) {
         selectedBank = bank;
         bankName = root.optString("soundfontName", "Imported SoundFont");
+      }
+      JSONArray banks = root.optJSONArray("soundfonts");
+      if (banks != null) {
+        if (banks.length() > 256) throw new IOException("Too many saved SoundFonts");
+        for (int i = 0; i < banks.length(); i++) {
+          JSONObject item = banks.getJSONObject(i);
+          String file = item.optString("file", "");
+          String name = item.optString("name", "Imported SoundFont");
+          if ((file.equals("kanta-tone.sf2") || file.matches("[a-f0-9]{64}\\.sf2"))
+              && new File(media, file).isFile()
+              && soundFonts.stream().noneMatch(value -> value.fileName.equals(file)))
+            soundFonts.add(new SoundFontEntry(file, name));
+        }
       }
       JSONArray rows = root.getJSONArray("songs");
       if (rows.length() > 150000) throw new IOException("Too many library rows");
@@ -125,6 +144,12 @@ final class LibraryRepository {
         temp.delete();
         throw new IOException("Cannot install original tone");
       }
+    }
+    if (soundFonts.stream().noneMatch(value -> value.fileName.equals("kanta-tone.sf2")))
+      soundFonts.add(0, new SoundFontEntry("kanta-tone.sf2", "KANTA original tone"));
+    if (soundFonts.stream().noneMatch(value -> value.fileName.equals(selectedBank))) {
+      selectedBank = "kanta-tone.sf2";
+      bankName = "KANTA original tone";
     }
     for (int i = 0; i < STARTERS.length; i++) {
       String id = "starter:" + STARTERS[i], file = STARTERS[i] + ".mid";
@@ -189,6 +214,23 @@ final class LibraryRepository {
     return bankName;
   }
 
+  List<SoundFontEntry> soundFonts() {
+    return Collections.unmodifiableList(new ArrayList<>(soundFonts));
+  }
+
+  void selectSoundFont(String fileName) throws Exception {
+    SoundFontEntry selected = null;
+    for (SoundFontEntry entry : soundFonts)
+      if (entry.fileName.equals(fileName)) { selected = entry; break; }
+    if (selected == null || !new File(media, selected.fileName).isFile())
+      throw new IOException("That SoundFont is no longer available. Import it again.");
+    String oldFile = selectedBank, oldName = bankName;
+    selectedBank = selected.fileName;
+    bankName = selected.name;
+    try { persist(); }
+    catch (Exception failure) { selectedBank = oldFile; bankName = oldName; throw failure; }
+  }
+
   private Song importSong(Uri uri) throws Exception {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening song...");
@@ -206,7 +248,10 @@ final class LibraryRepository {
         lower.endsWith(".kar") || lower.endsWith(".mid") || lower.endsWith(".midi")
             ? "mid"
             : lower.endsWith(".mp3") ? "mp3" : lower.endsWith(".wav") ? "wav" : null;
-    if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music");
+    if (lower.endsWith(".shubblob") || lower.endsWith(".kantablob")
+        || lower.endsWith(".shubidx") || lower.endsWith(".kantidx"))
+      throw new IOException("Legacy ShubBlob containers are not supported by this preview. Import extracted MIDI/KAR files instead.");
+    if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music, or a valid SF2 SoundFont.");
     File temp = File.createTempFile("import-", ".tmp", media);
     boolean installed = false;
     try {
@@ -368,6 +413,8 @@ final class LibraryRepository {
         if (c != null && c.moveToFirst() && !c.isNull(0))
           bankName = c.getString(0).substring(0, Math.min(120, c.getString(0).length()));
       }
+      soundFonts.removeIf(value -> value.fileName.equals(destination.getName()));
+      soundFonts.add(new SoundFontEntry(destination.getName(), bankName));
       if (!batching) persist();
       if (created && batching) batchFiles.add(destination);
     } catch (Exception | LinkageError e) {
@@ -451,6 +498,7 @@ final class LibraryRepository {
       throws Exception {
     ArrayList<Song> before = new ArrayList<>(songs);
     String oldBank = selectedBank, oldName = bankName;
+    ArrayList<SoundFontEntry> oldSoundFonts = new ArrayList<>(soundFonts);
     int good = 0, failed = 0;
     batching = true;
     cancelled = cancellation;
@@ -480,6 +528,8 @@ final class LibraryRepository {
       songs.addAll(before);
       selectedBank = oldBank;
       bankName = oldName;
+      soundFonts.clear();
+      soundFonts.addAll(oldSoundFonts);
       for (File file : batchFiles) file.delete();
       throw e;
     } finally {
@@ -558,6 +608,10 @@ final class LibraryRepository {
               .put("file", s.fileName)
               .put("starter", s.starter));
     root.put("songs", rows);
+    JSONArray banks = new JSONArray();
+    for (SoundFontEntry entry : soundFonts)
+      banks.put(new JSONObject().put("file", entry.fileName).put("name", entry.name));
+    root.put("soundfonts", banks);
     root.put("removed", new JSONArray(removed));
     JSONArray q = new JSONArray();
     for (ReservationQueue.Entry e : queue)
