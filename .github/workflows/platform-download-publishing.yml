@@ -5,6 +5,7 @@ on:
       - KANTA Android validation
       - KANTA iOS unsigned artifacts
     types: [completed]
+    branches: [main]
 permissions:
   contents: read
   actions: read

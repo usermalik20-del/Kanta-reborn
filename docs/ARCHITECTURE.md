@@ -648,3 +648,8 @@ iOS IPA publication is owned by the successful `KANTA iOS unsigned artifacts` wo
 Both publishers write only their own platform download page and platform entry in `apps/web/downloads.json`. The publisher reads the latest main branch after acquiring a shared publication concurrency group, merges its platform entry, and preserves the other platform's current metadata. It then validates the website and dispatches the existing Vercel production deployment. A failed validation or rejected non-fast-forward push leaves the previous live download unchanged.
 
 The combined `verified-downloads.yml` workflow is now a contract-only workflow; it must not package or publish either platform. Shared website deployment is downstream of a successful platform-specific metadata publication, not a reason to run both native build pipelines.
+
+
+## Platform download publisher trigger filtering
+
+The platform-specific download publisher listens only for Android validation and iOS unsigned-archive completions from `main` by applying `branches: [main]` directly to the `workflow_run` trigger. Its job-level success, branch and workflow-name checks remain defense in depth. This prevents feature-branch pull-request completions from creating skipped publisher workflow runs; the publisher still never packages or deploys the peer platform.
