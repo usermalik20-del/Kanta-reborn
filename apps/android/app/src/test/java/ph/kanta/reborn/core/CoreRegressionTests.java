@@ -757,10 +757,46 @@ public final class CoreRegressionTests {
     check(queue.peek().id.equals(two.id) && preview.active() != null, "Explicit local mutation affected online state");
   }
 
+  private static void soundFontStorageChecks() {
+    long mib = 1024L * 1024;
+    long available = 1024 * mib;
+    check(SoundFontStoragePolicy.canCopy(available, 600 * mib),
+        "A bank leaving 424 MiB free was rejected by the storage policy");
+    check(!SoundFontStoragePolicy.canCopy(available, 961 * mib),
+        "A bank that consumes the reserved free space was accepted");
+    check(SoundFontStoragePolicy.canCopy(
+        SoundFontStoragePolicy.MINIMUM_FREE_BYTES + 65536, 65536),
+        "A chunk that leaves the full reserve was rejected");
+    check(!SoundFontStoragePolicy.canCopy(
+        SoundFontStoragePolicy.MINIMUM_FREE_BYTES + 65535, 65536),
+        "A chunk that consumes the reserve was accepted");
+    check(SoundFontStoragePolicy.canContinueCopying(
+        SoundFontStoragePolicy.MINIMUM_FREE_BYTES
+            + SoundFontStoragePolicy.RECHECK_INTERVAL_BYTES + 65536,
+        -1, 65536),
+        "An unknown-size stream with one full lookahead interval was rejected");
+    check(!SoundFontStoragePolicy.canContinueCopying(
+        SoundFontStoragePolicy.MINIMUM_FREE_BYTES
+            + SoundFontStoragePolicy.RECHECK_INTERVAL_BYTES + 65535,
+        -1, 65536),
+        "An unknown-size stream could consume its reserve before the next recheck");
+    check(SoundFontStoragePolicy.canContinueCopying(
+        available, 600 * mib - 65536, 65536),
+        "A reported remaining file size with sufficient storage was rejected");
+    check(!SoundFontStoragePolicy.canContinueCopying(
+        available, Long.MAX_VALUE, 65536),
+        "An overflowing reported remaining size was accepted");
+    check(SoundFontStoragePolicy.hasReserve(SoundFontStoragePolicy.MINIMUM_FREE_BYTES),
+        "The exact minimum reserve was rejected");
+    check(!SoundFontStoragePolicy.hasReserve(SoundFontStoragePolicy.MINIMUM_FREE_BYTES - 1),
+        "A below-minimum reserve was accepted");
+  }
+
   public static void main(String[] args) throws Exception {
     youtubeLifecycleChecks();
     microphonePitchChecks();
     monitorChecks();
+    soundFontStorageChecks();
     scoringChecks(args[0]);
     pitchCorrectionChecks();
     ReservationQueue queue = new ReservationQueue();
