@@ -1250,7 +1250,9 @@ public final class RuntimeChecks extends Instrumentation {
     } catch (java.util.concurrent.TimeoutException timeout) {
       throw new IOException("UI did not settle before screenshot: " + name, timeout);
     }
-    // Let the compositor commit the destination frame after synchronous view-tree changes.\n    SystemClock.sleep(350);\n    Bitmap image = getUiAutomation().takeScreenshot();
+    // Let the compositor commit the destination frame after synchronous view-tree changes.
+    SystemClock.sleep(350);
+    Bitmap image = getUiAutomation().takeScreenshot();
     if (image == null) throw new IOException("Missing runtime screenshot");
     try (FileOutputStream output =
         new FileOutputStream(new File(getTargetContext().getFilesDir(), name))) {
