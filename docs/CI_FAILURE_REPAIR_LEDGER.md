@@ -1075,3 +1075,17 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** the runtime capture helper now requires each destination view to be attached, shown by its ancestors, and have a non-empty global visible rectangle. It waits for UI idle and a bounded compositor settling interval before taking the screenshot. This turns the screenshot artifact into an actual visual acceptance gate rather than a file-presence check.
 
 **Acceptance:** rerun Android validation on the exact new PR head. Inspect all eight named native screen captures and `browser-remote.png`; verify Queue, Pitch & Tempo and Visuals no longer show Home. Do not merge or publish an APK until the new artifact is visually reviewed and all platform checks are green.
+
+## Android PR #134 — runtime screenshot capture declaration swallowed by escaped newlines (2026-11-02)
+
+**Fingerprint:** Android validation / `compileDebugAndroidTestJavaWithJavac`; compiler reports `cannot find symbol: variable image` at `RuntimeChecks.java:1254,1257,1260`. First observed run: [41330231062](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41330231062), job `124918944663`, affected head `9255c24bf06b327dc633eb0dfe1499aa75963824`.
+
+**Cause:** the compositor-settle comment and the two executable statements that follow were written as one physical Java source line containing literal `\\n` sequences. Java therefore treated `SystemClock.sleep(350);` and the `Bitmap image` declaration as comment text. The subsequent null-check, PNG compression and recycle statements then referenced a variable that did not exist in executable scope. This is a source serialization/escaping defect, not an emulator, camera or screenshot API failure.
+
+**Fix:** restore actual line breaks before the compositor delay and screenshot declaration. Preserve the null check, PNG output, and bitmap recycle behavior. No test gate is weakened.
+
+**Regression coverage:** the existing Android instrumentation compile gate catches the undeclared symbol; the runtime walkthrough must subsequently produce its expected screenshot set.
+
+**Validation:** candidate until the exact repair commit passes Android validation, including instrumentation compilation, real-Chrome browser interoperability, emulator runtime checks and screenshot artifact verification. iOS workflows remain independent and are not rerun by Android-only changes.
+
+**Recurrence rule:** inspect physical source lines whenever generated patch content contains escaped newline sequences; do not treat a green workflow on another SHA as validation of this repair.
