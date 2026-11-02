@@ -675,3 +675,9 @@ The website download manifest has separate Android and iOS release records. Each
 
 
 The platform-specific download publisher commits only the manifest and the matching platform page, then explicitly dispatches the Vercel production workflow. Its job-scoped `actions: write` permission is required for that dispatch because GitHub suppresses downstream workflow triggers from ordinary `GITHUB_TOKEN`-originated pushes. Do not broaden the permission to unrelated jobs or platform workflows.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+The Android reference-led UI and shared companion changes were reconciled onto current `main`. Android presentation delegates to `SessionController` and existing stage owners, while iOS/browser companion surfaces remain independently validated. The saved-state fallback opens the Home dashboard when no tab is persisted.
+
+The reconciled reference-led UI uses the current-main `SessionController` API surface, including SoundFont inventory/selection and main-Looper import progress; no second state owner is introduced.

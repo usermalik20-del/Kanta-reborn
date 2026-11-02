@@ -134,7 +134,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     session = ((KantaApplication) getApplication()).session;
     camera = new CameraStage(this, session);
     if (saved != null) {
-      tab = saved.getString("tab", "Control");
+      tab = saved.getString("tab", "Home");
       query = saved.getString("query", "");
       singer = saved.getString("singer", "");
     }

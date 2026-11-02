@@ -208,3 +208,9 @@ The HTTPS browser host permits up to four active guests. A correct pairing code 
 The Home dashboard and dedicated Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing screens are mounted as native Android Views destinations. They delegate playback, FIFO reservations, SoundFont selection, imports, microphone/monitor state and stage changes to the existing `SessionController` and repository owners; they do not introduce a second queue or playback state machine. The supplied artwork and drawable mapping are listed in [KANTA Android adaptive assets](../../docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md).
 
 The Android runtime walkthrough captures `home_dashboard.png`, `home_dashboard_restored.png`, `search_screen.png`, `queue_screen.png`, `pitch_tempo_screen.png`, `visuals_screen.png`, `mic_voice_screen.png`, `fullscreen_stage.png` and `now_playing_screen.png`. It also retains `my-set-imported-library.png` and `my-set-active-soundfont.png` to prove imported-song visibility and active SoundFont selection. Each destination capture must prove that its tagged view is actually visible before taking the screenshot. These are CI acceptance artifacts, not a claim of physical-device acceptance or a published APK.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+The reference-led Android UI and companion changes were reconciled onto current `main`. `MainActivity` remains the composition boundary; `HomeScreen` and destination screens delegate playback, queue, import, microphone and stage state to existing owners. Exact-head Android runtime validation is required after reconciliation.
+
+The reconciled PR retains current-main `SessionController` SoundFont inventory, active-bank selection and import-progress APIs; the reference-led screens remain presentation-only adapters.
