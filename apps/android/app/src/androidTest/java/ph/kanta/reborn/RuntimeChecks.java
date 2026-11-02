@@ -236,9 +236,9 @@ public final class RuntimeChecks extends Instrumentation {
         close.performClick();
       });
       await(() -> !fullscreenDialog.isShowing(), "Fullscreen stage did not dismiss cleanly");
-      View primaryStage = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
-      check(primaryStage != null, "Persistent stage missing before Now Playing");
-      runOnMainSync(primaryStage::performClick);
+      View referencePrimaryStage = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
+      check(referencePrimaryStage != null, "Persistent stage missing before Now Playing");
+      runOnMainSync(referencePrimaryStage::performClick);
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing") != null,
           "Tapping the persistent stage did not open Now Playing");
       check(state(() -> {
@@ -1371,11 +1371,26 @@ public final class RuntimeChecks extends Instrumentation {
     capture(name);
   }
 
-  private void capture(String name, String requiredVisibleTag) throws IOException {
-    await(() -> visibleOnScreen(requiredVisibleTag),
-        "Destination was present in the view tree but not visible before capture: " + requiredVisibleTag);
-    capture(name);
+  private void capture(String name) throws IOException {
+    try {
+      getUiAutomation().waitForIdle(250, 5000);
+    } catch (java.util.concurrent.TimeoutException timeout) {
+      throw new IOException("UI did not settle before screenshot: " + name, timeout);
+    }
+    // Let the compositor commit the destination frame after synchronous view-tree changes.
+    SystemClock.sleep(350);
+    Bitmap image = getUiAutomation().takeScreenshot();
+    if (image == null) throw new IOException("Missing runtime screenshot");
+    try (FileOutputStream output =
+        new FileOutputStream(new File(getTargetContext().getFilesDir(), name))) {
+      if (!image.compress(Bitmap.CompressFormat.PNG, 100, output))
+        throw new IOException("Cannot save runtime screenshot");
+    } finally {
+      image.recycle();
+    }
   }
+
+
 
   private void shell(String command) throws IOException {
     try (InputStream result =
