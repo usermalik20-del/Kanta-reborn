@@ -658,3 +658,8 @@ The repository performs file-provider I/O on its import workers, but it does not
 ## Android SoundFont storage budget — 2026-11-02
 
 SoundFont import uses the provider-reported size for a preflight check when available, then rechecks free space during streaming because document providers may omit or under-report size. Every write must preserve a 64 MiB free-space reserve; the final check verifies the reserve itself rather than double-counting the copied file. No fixed 32 MiB file-size ceiling is imposed; native structural validation and bounded loader allocation remain authoritative.
+
+
+## iOS cancellation-safe playback transactions — 2026-11-02
+
+The iOS `LocalKaraokeController` operation gate serializes commands across actor reentrancy, but every user-initiated transaction must recheck cancellation after awaited library lookups and native preparation. Queue/history/playback identity commits only after successful preparation. If cancellation or audio-session setup failure occurs before `engine.load` begins, leave the current backend untouched. Once native loading starts, stop the uncommitted asset and mark the still-committed current song for reload on the next Play; the current item and FIFO reservation remain unchanged. Natural-completion auto-advance is controller-owned and must not be canceled by a view snapshot poll.

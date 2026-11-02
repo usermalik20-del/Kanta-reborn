@@ -989,3 +989,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 ## Android UI screenshot artifact documentation sync — 2026-11-02
 
 **Fingerprint:** Website documentation-sync run `41393816911` failed because the Android workflow artifact path list was expanded to retain the new My Set and active-SoundFont screenshots, but the same change did not update root `AGENTS.md`. The workflow ownership and implementation docs were already synchronized; the missing policy note was specifically the artifact-retention requirement. **Repair:** root `AGENTS.md` now requires both captured My Set screenshots to remain in the Android validation artifact. Re-run documentation-sync and Android validation on the resulting head.
+
+
+## iOS playback cancellation reconciliation — 2026-11-02
+
+**Finding:** user-initiated enqueue/Next/Previous operations could resume after cancellation at an awaited library lookup or native preparation boundary and start or commit a replacement song. A separate audio-session setup failure before `engine.load` must not stop the currently playing backend. Natural-completion auto-advance must remain independent of cancellation in a short-lived UI snapshot poll.
+
+**Repair:** the reconciled branch rechecks cancellation after async lookups and preparation, preserves the current item and FIFO reservation until a successful commit, retires only an uncommitted backend after native loading has begun, and marks the prior item for reload only when replacement loading may have changed the backend. Audio-session configuration failure before load leaves current playback untouched. Auto-advance remains controller-owned.
+
+**Regression coverage:** canceled enqueue lookup; canceled Next asset resolution; cancellation during native load and recovery; canceled snapshot polling during natural auto-advance; cancellation before native load preserving the current playing asset; and audio-session preparation failure preserving the current playing backend.
+
+**Prior-branch validation evidence:** PR #144 head `f4de237a58250024082018e8933e8ed66b87d677` passed iOS validation run [#41385876764](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876764), iOS smoke [#41385876632](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876632), unsigned archive [#41385876753](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876753), iPhone/iPad acceptance [#41385876648](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876648), and documentation sync [#41385876770](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876770). Those checks validate the prior PR head only; the reconciled current-main branch must pass fresh exact-head gates before merge.
