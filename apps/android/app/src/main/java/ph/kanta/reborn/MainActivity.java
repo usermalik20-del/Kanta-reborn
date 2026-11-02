@@ -60,7 +60,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean cameraPermissionPending, microphonePermissionPending, voiceExpanded;
   private Presentation presentation;
   private DisplayManager displays;
-  private String tab = "Home", query = "", singer = "";
+  private String tab = "Home", query = "", singer = "", searchSource = "All";
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
@@ -930,6 +930,24 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       case "Home":
         homeDashboard();
         break;
+      case "Search":
+        searchScreen();
+        break;
+      case "Queue":
+        queueScreen();
+        break;
+      case "Visuals":
+        visualsScreen();
+        break;
+      case "Pitch & Tempo":
+        pitchTempoScreen();
+        break;
+      case "Mic & Voice":
+        micVoiceScreen();
+        break;
+      case "Now Playing":
+        nowPlayingScreen();
+        break;
       case "My Set":
         mySet();
         break;
@@ -1198,7 +1216,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 tab = "Control";
                 render();
               }
-              @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
+              @Override public void onSearch() { tab = "Search"; render(); }
               @Override public void onQueue() { tab = "Queue"; render(); }
               @Override public void onYouTube() { openYouTubeVideo(); }
               @Override public void onVisuals() { tab = "Visuals"; render(); }
@@ -1211,6 +1229,141 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onScenic() { tab = "Scenic"; render(); }
               @Override public void onRealm() { tab = "Realm"; render(); }
             }));
+  }
+
+
+
+  private void navigateHome() {
+    tab = "Home";
+    render();
+  }
+
+  private void searchScreen() {
+    ph.kanta.reborn.ui.KantaSearchScreen screen =
+        new ph.kanta.reborn.ui.KantaSearchScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaSearchScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onSearchTextChanged(String value) {
+                query = value == null ? "" : value;
+                render();
+              }
+              @Override public void onSing(String title, String artist) {
+                for (Song song : session.songs) {
+                  if (song.title.equals(title)
+                      && (song.artist.isEmpty() ? "Unknown artist" : song.artist).equals(artist)) {
+                    session.reserve(song, singer);
+                    return;
+                  }
+                }
+              }
+            });
+    screen.setTag("kanta.screen.search");
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+    screen.setQuery(query);
+    search();
+  }
+
+  private void queueScreen() {
+    java.util.List<ReservationQueue.Entry> entries = session.queue.snapshot();
+    ph.kanta.reborn.ui.KantaQueueScreen screen =
+        new ph.kanta.reborn.ui.KantaQueueScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaQueueScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onClear() {
+                session.queue.clear();
+                render();
+              }
+              @Override public void onRemove(int position) {
+                java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
+                if (position < 0 || position >= current.size()) return;
+                session.remove(current.get(position).id);
+                render();
+              }
+            });
+    screen.setTag("kanta.screen.queue");
+    screen.setCount(entries.size());
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  private void visualsScreen() {
+    ph.kanta.reborn.ui.KantaVisualsScreen screen =
+        new ph.kanta.reborn.ui.KantaVisualsScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaVisualsScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onSceneSelected(String name) {
+                session.scene(name);
+                render();
+              }
+            });
+    screen.setTag("kanta.screen.visuals");
+    screen.setScenicName(session.scenicName);
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  private void pitchTempoScreen() {
+    ph.kanta.reborn.ui.KantaPitchTempoScreen screen =
+        new ph.kanta.reborn.ui.KantaPitchTempoScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaPitchTempoScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onReset() {
+                session.controls(session.volume, 1.0f, 0);
+                render();
+              }
+              @Override public void onKeyDown() {
+                session.controls(session.volume, session.tempo, Math.max(-12, session.pitch - 1));
+                render();
+              }
+              @Override public void onKeyUp() {
+                session.controls(session.volume, session.tempo, Math.min(12, session.pitch + 1));
+                render();
+              }
+              @Override public void onTempoDown() {
+                session.controls(session.volume, Math.max(0.5f, session.tempo - 0.05f), session.pitch);
+                render();
+              }
+              @Override public void onTempoUp() {
+                session.controls(session.volume, Math.min(2.0f, session.tempo + 0.05f), session.pitch);
+                render();
+              }
+            });
+    screen.setTag("kanta.screen.pitch-tempo");
+    screen.setKey(session.pitch);
+    screen.setTempo(session.tempo);
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  private void micVoiceScreen() {
+    ph.kanta.reborn.ui.KantaMicVoiceScreen screen =
+        new ph.kanta.reborn.ui.KantaMicVoiceScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaMicVoiceScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+              @Override public void onMicrophoneToggle() {
+                session.toggleMicrophone();
+                render();
+              }
+              @Override public void onMonitorToggle() {
+                session.toggleMonitoring();
+                render();
+              }
+            });
+    screen.setTag("kanta.screen.mic-voice");
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  private void nowPlayingScreen() {
+    ph.kanta.reborn.ui.KantaNowPlayingScreen screen =
+        new ph.kanta.reborn.ui.KantaNowPlayingScreen(
+            this,
+            new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener() {
+              @Override public void onBack() { navigateHome(); }
+            });
+    screen.setTag("kanta.screen.now-playing");
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
   }
 
   private void control() {
