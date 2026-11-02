@@ -110,6 +110,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   SessionController(Context context) {
     this.context = context;
+    try {
+      bgvLibrary = new BgvLibrary(context);
+    } catch (IOException failure) {
+      throw new IllegalStateException("Cannot open scenic video storage", failure);
+    }
     companion = new CompanionControl(this);
     browserCompanion = new BrowserCompanion(this);
     kantaConnectHost = new KantaConnectHost(context, new KantaConnectHost.HostAdapter() {
