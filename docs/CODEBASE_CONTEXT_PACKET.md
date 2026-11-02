@@ -1,5 +1,16 @@
 # Codebase Context Packet — KANTA Reborn
 
+## Android library import-discoverability repair candidate — 2026-11-02
+
+**Candidate tree before this context refresh:** `8ccf6a7e068d2df954576a77a19e93702a1a9670` on `fix/android-library-import-discoverability-20261102`, based on main `6e303a165558546eea8c56a8c3a5986791e95992`. Android remains Java 17 + Android Views, one `SessionController` queue/playback owner, one serial `LibraryRepository` IO owner, app-private hash-addressed media, JSON metadata through `AtomicFile`, TinySoundFont via JNI/AudioTrack, and no Room/Compose/FluidSynth dependency.
+
+**Observed gap:** My Set previously showed only the current SoundFont label and starter-song actions; it did not expose imported song rows or a bank selector. `LibraryRepository` persisted only one active SoundFont filename/name, so older imported banks could not be selected later. The separate legacy `SqliteSongCatalog.importFromLegacyContainer(...)` API is not called by the active library/session path. `MegContainerImporter`/`MkmdDecoder` have synthetic-fixture coverage only; no real `kantidx`/`kantablob` has been decoded on a device.
+
+**Candidate repair:** repository metadata now carries a bounded SoundFont inventory alongside the active bank, preserves legacy single-bank metadata during migration, and restores the previous inventory/selection on failed import batches. `SessionController` publishes the inventory and routes bank selection through the repository IO owner; `SoundFontPlayback` receives the selected bank when preparing the next song, so an active song is not interrupted. My Set now lists imported personal songs with Reserve actions and each SoundFont with Active/Use affordances. The UI explicitly explains that legacy ShubBlob/kantablob/index containers are not supported by this preview; it does not treat a copied container as a playable song.
+
+**Validation status:** code and instrumentation changes are committed on a safe branch, but no checks have yet been run on the final branch head. Required: Android compile/build, lint, framework-free core regressions, native SoundFont sanitizer, emulator runtime checks including mixed import and bank switch/reload, plus website documentation-sync validation. Physical-device playback and real legacy-container acceptance remain separate and unverified.
+
+
 ## Android camera lifecycle repair context — 2026-11-01
 
 **Candidate source:** `fix/android-camera-preview-release-pr130`, derived from PR #130 head `accfa77fc3a1cdd3a72cfbc354b17675e204f608`. The Android app is Java 17 with Android Views, minSdk 26 / targetSdk 36, Android Gradle Plugin 8.13.2, Activity 1.10.1 and CameraX 1.5.3 (`camera-camera2`, `camera-lifecycle`, `camera-view`). `MainActivity` owns `CameraStage`; `SessionController` owns the opt-in foreground state; CameraStage binds only CameraX Preview and targets either the primary `StagePresenterImpl` / `BackgroundStage` or fullscreen `StageSurface`.
