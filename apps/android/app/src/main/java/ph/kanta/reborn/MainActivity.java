@@ -1460,7 +1460,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         Song song = importedSongs.get(i);
         LinearLayout item = row();
         item.addView(
-            text(song.title + (song.artist.isEmpty() ? "" : "\\n" + song.artist), 14, Color.WHITE),
+            text(song.title + (song.artist.isEmpty() ? "" : "\n" + song.artist), 14, Color.WHITE),
             new LinearLayout.LayoutParams(0, -2, 1));
         item.addView(button("Reserve", () -> session.reserve(song, "")));
         body.addView(item);
