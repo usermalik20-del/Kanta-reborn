@@ -107,6 +107,23 @@ def publish():
     path = ROOT / "apps/web/downloads.json"
     manifest = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     require_forward_source(platform, source, source_run, manifest)
+    # Older manifests stored one shared packagingRun. Recover each peer platform's
+    # actual run from its immutable artifact URL before advancing the shared pointer.
+    # This keeps Android and iOS provenance independent across later publications.
+    for peer in ("android", "ios"):
+        peer_entry = manifest.get(peer)
+        if peer != platform and isinstance(peer_entry, dict) and "packagingRun" not in peer_entry:
+            peer_url = peer_entry.get("downloadUrl", "")
+            match = re.fullmatch(
+                r"https://github\.com/" + re.escape(REPO)
+                + r"/actions/runs/([1-9][0-9]*)/artifacts/[1-9][0-9]*",
+                peer_url,
+            )
+            if not match:
+                raise ValueError(
+                    f"Cannot recover the existing {peer} packaging run from its artifact URL"
+                )
+            peer_entry["packagingRun"] = int(match.group(1))
     manifest.setdefault("repository", REPO)
     manifest["verifiedAt"] = now.date().isoformat()
     manifest["signInRequired"] = True

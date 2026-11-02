@@ -34,8 +34,9 @@ class PlatformPublisherTests(unittest.TestCase):
         self.unrelated_source = self.git("commit-tree", tree, "-m", "unrelated source")
         (self.root / "apps/web/downloads.json").write_text(json.dumps({
             "repository": "usermalik20-del/Kanta-reborn",
-            "android": {"source": self.old_source, "downloadUrl": "android-old"},
-            "ios": {"source": self.old_source, "downloadUrl": "ios-old"},
+            "packagingRun": 800,
+            "android": {"source": self.old_source, "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/801"},
+            "ios": {"source": self.old_source, "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/802"},
             "platforms": {
                 "android": {"source": self.old_source, "run": 10},
                 "ios": {"source": self.old_source, "run": 20},
@@ -84,7 +85,9 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertEqual(result["ios"]["source"], self.old_source)
         self.assertEqual(result["platforms"]["ios"]["source"], self.old_source)
         self.assertEqual(result["platforms"]["ios"]["run"], 20)
-        self.assertEqual(result["ios"]["downloadUrl"], "ios-old")
+        self.assertEqual(result["ios"]["packagingRun"], 800)
+        self.assertEqual(result["ios"]["downloadUrl"], "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/802")
+        self.assertEqual(result["android"]["packagingRun"], 900)
         self.assertIn("Old", (self.root / "apps/web/ios-download.html").read_text())
         self.assertEqual(result["android"]["downloadUrl"].rsplit("/", 1)[-1], "901")
         self.assertIn("Keep page content", (self.root / "apps/web/android.html").read_text())
@@ -101,7 +104,9 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertEqual(result["android"]["source"], self.old_source)
         self.assertEqual(result["platforms"]["android"]["source"], self.old_source)
         self.assertEqual(result["platforms"]["android"]["run"], 10)
-        self.assertEqual(result["android"]["downloadUrl"], "android-old")
+        self.assertEqual(result["android"]["packagingRun"], 800)
+        self.assertEqual(result["ios"]["packagingRun"], 900)
+        self.assertEqual(result["android"]["downloadUrl"], "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/801")
         self.assertIn("Old", (self.root / "apps/web/android.html").read_text())
         self.assertEqual(result["ios"]["source"], self.new_source)
         self.assertTrue(result["ios"]["personalSigningRequired"])

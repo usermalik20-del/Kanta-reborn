@@ -1040,3 +1040,11 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 - **Cause:** `RuntimeChecks.java` already captured both My Set/SoundFont screenshots, while `tools/run-android-runtime.py` did not retrieve them and `.github/workflows/android-validation.yml` did not include them in its artifact allowlist.
 - **Repair:** Add both filenames to the runner's required app-private retrieval list and to the workflow's `files/` upload paths. Update the Android README, architecture, testing and reconstruction guidance to define the eleven-file evidence contract.
 - **Verification:** The original run was green but is historical evidence only; a fresh exact-head Android emulator run must prove both captures are nonempty and present in the uploaded artifact.
+
+
+## Platform download publisher — shared packaging-run pointer overwrote peer provenance (2026-11-02)
+
+- **Fingerprint:** Android platform publishing workflow run [41449342463](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463) failed during website verification after the APK package artifact had uploaded.
+- **Cause:** the download manifest kept one top-level `packagingRun`. The verifier used that value as a fallback when a platform entry lacked its own packaging run. Publishing Android advanced the shared value, so the unchanged iOS entry was checked against the new Android artifact run and its old download URL was rejected.
+- **Repair:** give every platform entry an explicit `packagingRun`; migrate legacy peer entries by parsing their existing immutable GitHub artifact URL before changing the shared compatibility pointer; make the verifier reject missing platform-scoped provenance instead of falling back to the global field.
+- **Regression:** publisher tests exercise Android and iOS publication independently, verify peer platform source/run/package URL/page preservation, and assert each newly published entry records its own packaging run. Website validation and the publisher workflow must pass on the exact repair commit before the new APK is considered published.
