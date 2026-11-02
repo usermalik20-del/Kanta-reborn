@@ -551,6 +551,7 @@ private actor BlockingKaraokeLibrary: KaraokeLibraryAccess {
 
 
 
+@MainActor
 @Test func canceledBeforeNativeLoadKeepsCurrentPlaybackRunning() async throws {
     let first = LibrarySong(id: SongID(rawValue: "cancel-preload-current"), title: "Current", mediaKind: .wav)
     let second = LibrarySong(id: SongID(rawValue: "cancel-preload-next"), title: "Next", mediaKind: .wav)

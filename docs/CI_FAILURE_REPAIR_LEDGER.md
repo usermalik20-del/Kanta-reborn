@@ -957,3 +957,16 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** select the newest matching artifact by `created_at` (`sort_by(.created_at) | last`) and fail explicitly if none exists. The workflow contract test now requires this selection behavior. Keep the platform-specific source SHA, packaging run, retention and page independent; do not rewrite the peer platform's published provenance.
 
 **Acceptance:** the contract and website validation workflows must pass; then rerun the existing Android publication run against current main and verify the manifest/page commit plus Vercel production deployment. A created packaging ZIP alone is not a published APK.
+
+
+## PR #138 — cancellation regression fixture actor isolation (2026-11-02)
+
+**Fingerprint:** iOS validation run [#41373808606](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41373808606), job `ios`, failed while compiling `LocalKaraokeControllerTests.swift:557` with “main actor-isolated initializer 'init()' cannot be called from outside of the actor”. The Swift test-target compile step failed; Swift package tests were therefore skipped. The independent unsigned simulator app build passed.
+
+**Root cause:** the new `canceledBeforeNativeLoadKeepsCurrentPlaybackRunning` test constructed `KaraokeAudioOwnership` from a nonisolated async test. The production type is explicitly `@MainActor` because it owns audio-session arbitration callbacks.
+
+**Repair:** annotate the test with `@MainActor`, matching the existing actor-isolated tests that construct and exercise the same ownership type. No production isolation or runtime behavior is changed.
+
+**Regression protection:** retain the cancellation test's assertions for current playback identity, queue reservation preservation, continued playback and the absence of an uncommitted native load.
+
+**Validation:** the failing exact-head compile was reproduced from hosted run #41373808606. The annotation and ledger repair are committed on the existing PR #138 branch; a fresh exact-head Swift package build/test and simulator walkthrough remain pending. Do not infer test success from the earlier simulator app build.
