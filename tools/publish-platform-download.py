@@ -115,7 +115,7 @@ def publish():
         if peer != platform and isinstance(peer_entry, dict) and "packagingRun" not in peer_entry:
             peer_url = peer_entry.get("downloadUrl", "")
             match = re.fullmatch(
-                r"https://github\\.com/" + re.escape(REPO)
+                r"https://github\.com/" + re.escape(REPO)
                 + r"/actions/runs/([1-9][0-9]*)/artifacts/[1-9][0-9]*",
                 peer_url,
             )
@@ -128,7 +128,7 @@ def publish():
     manifest["verifiedAt"] = now.date().isoformat()
     manifest["signInRequired"] = True
     manifest.setdefault("platforms", {})
-    entry = {"source": source, "run": source_run, "packagingRun": run_id, "artifact": int(info["artifact"]),
+    entry = {"source": source, "run": source_run, "artifact": int(info["artifact"]),
              "packagingRun": run_id, "packagingArtifact": package_id, "downloadUrl": url,
              "retentionDays": days,
              "artifactName": "KANTA-" + ("Android-preview-download" if platform == "android" else "iOS-personal-unsigned-download"),
