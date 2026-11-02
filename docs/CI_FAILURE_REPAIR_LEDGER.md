@@ -974,3 +974,16 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Validation:** the first exact-head run failed at compilation as recorded above. Corrected PR #136 head `ac5e393cff3d1dcee09b4ae424c634b6243bb6f3` passed Android validation run [#41370798485](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798485), job `125040643876`: build, lint, 65,402 core regression checks, Chrome companion/browser interoperability, private IPv4 validation and 228 emulator runtime checks all passed. Runtime diagnostics artifact [#13109625430](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798485) was uploaded. Website validation run [#41370798446](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798446) also passed documentation synchronization and website checks. Status: `verified` on the corrected code SHA.
 
 **Recurrence rule:** when posting a completion callback from an import worker, snapshot mutable counters before the lambda. Do not capture loop-mutated state directly. Status: `verified` on `ac5e393cff3d1dcee09b4ae424c634b6243bb6f3`.
+
+
+## PR #138 — cancellation regression fixture actor isolation (2026-11-02)
+
+**Fingerprint:** iOS validation run [#41373808606](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41373808606), job `ios`, failed while compiling `LocalKaraokeControllerTests.swift:557` with “main actor-isolated initializer 'init()' cannot be called from outside of the actor”. The Swift test-target compile step failed; Swift package tests were therefore skipped. The independent unsigned simulator app build passed.
+
+**Root cause:** the new `canceledBeforeNativeLoadKeepsCurrentPlaybackRunning` test constructed `KaraokeAudioOwnership` from a nonisolated async test. The production type is explicitly `@MainActor` because it owns audio-session arbitration callbacks.
+
+**Repair:** annotate the test with `@MainActor`, matching the existing actor-isolated tests that construct and exercise the same ownership type. No production isolation or runtime behavior is changed.
+
+**Regression protection:** retain the cancellation test's assertions for current playback identity, queue reservation preservation, continued playback and the absence of an uncommitted native load.
+
+**Validation:** the failing exact-head compile was reproduced from hosted run #41373808606. The annotation and ledger repair are committed on the existing PR #138 branch; a fresh exact-head Swift package build/test and simulator walkthrough remain pending. Do not infer test success from the earlier simulator app build.
