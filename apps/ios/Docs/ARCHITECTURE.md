@@ -1246,3 +1246,8 @@ Keep the stage as the highest-priority visual surface and keep its background no
 ## KANTA Host branding and borderless stage — 2026-10-26
 
 Visible Host branding is KANTA Karaoke, with the KANTA brand mark rendered on the Host greeting and the player header. External-stage standby and Bonjour discovery use the same product name. The embedded stage/player is full-bleed horizontally on compact devices, with no decorative border on the stage or persistent player. Preserve the existing single HostViewModel, presentation gate and LocalKaraokeController owners; module names are not product-facing copy and remain unchanged.
+
+
+## Cancellation-safe controller transactions — 2026-11-02
+
+Actor isolation does not make a multi-await playback transaction atomic. LocalKaraokeController rechecks cancellation after library lookups and backend preparation, then commits queue/history/playback identity only after successful preparation. If cancellation occurs before engine.load begins, leave the committed current engine untouched. Once native loading starts, a canceled uncommitted asset is stopped and needsPlaybackReload forces the still-committed current song to be reloaded on the next Play; the queue reservation and playback identity are not consumed. Snapshot-triggered natural-completion auto-advance is controller-owned rather than view-poll-owned, so cancellation of an observer cannot strand Up Next.

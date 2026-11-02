@@ -648,3 +648,8 @@ iOS IPA publication is owned by the successful `KANTA iOS unsigned artifacts` wo
 Both publishers write only their own platform download page and platform entry in `apps/web/downloads.json`. The publisher reads the latest main branch after acquiring a shared publication concurrency group, merges its platform entry, and preserves the other platform's current metadata. It then validates the website and dispatches the existing Vercel production deployment. A failed validation or rejected non-fast-forward push leaves the previous live download unchanged.
 
 The combined `verified-downloads.yml` workflow is now a contract-only workflow; it must not package or publish either platform. Shared website deployment is downstream of a successful platform-specific metadata publication, not a reason to run both native build pipelines.
+
+
+## iOS cancellation-safe playback transactions — 2026-11-02
+
+The iOS LocalKaraokeController operation gate serializes commands across actor reentrancy, but every user-initiated transaction must still recheck cancellation after awaited library lookups and native preparation. Queue/history/playback identity commits only after successful preparation. If cancellation occurs before engine.load begins, leave the current backend untouched. Once native loading starts, stop the uncommitted asset and mark the still-committed current song for reload on the next Play; the current item and FIFO reservation remain unchanged. Natural-completion auto-advance is controller-owned and must not be canceled by a view snapshot poll.
