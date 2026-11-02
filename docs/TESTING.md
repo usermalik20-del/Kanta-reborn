@@ -415,3 +415,8 @@ The `Platform-specific verified download publishing` workflow listens only to An
 ## Android library import progress regression — 2026-11-02
 
 The hosted Android `RuntimeChecks` acceptance verifies that repository progress and completion callbacks run on the main Looper, that the repository releases the Activity-scoped listener after completion, and that an unavailable SAF folder reports a main-thread completion instead of leaving the import progress UI open. The assertions run in the existing emulator instrumentation gate; they do not replace Android build, lint or runtime acceptance.
+
+
+## Android SoundFont storage regression — 2026-11-02
+
+The framework-free CoreRegressionTests suite covers the SoundFont storage policy: a 600 MiB bank is accepted when 1 GiB is available (leaving 424 MiB), a copy that would consume the 64 MiB reserve is rejected, and the same policy is applied to streaming chunks when provider size is unknown or inaccurate. The Android importer also performs a reported-size preflight, periodic StatFs rechecks, and a final reserve check. Run the normal Android core regression, build, lint, and emulator runtime gates.
