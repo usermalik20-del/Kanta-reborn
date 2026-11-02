@@ -160,3 +160,5 @@ The iOS controller treats user-initiated library lookup and native playback prep
 ## Android reference-led interface — validation candidate
 
 The Android native UI integration now mounts the KANTA Home dashboard and dedicated Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing destinations from the existing `MainActivity`. These screens remain presentation surfaces: playback, FIFO reservations, SoundFont selection, import and stage media continue through the existing `SessionController` and storage owners. The supplied adaptive artwork is documented in [the Android asset manifest](docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md). CI is being extended to capture the actual visible destinations; this source integration is not a released APK or physical-device acceptance.
+
+Verified platform download publishing commits only the changed platform's manifest entry and download page, then explicitly dispatches the production Vercel workflow. The Android and iOS packaging/deployment flows remain independent.
