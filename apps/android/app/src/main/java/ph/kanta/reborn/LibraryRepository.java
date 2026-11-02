@@ -307,30 +307,41 @@ final class LibraryRepository {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening SoundFont...");
 
-    File temp = File.createTempFile("bank-", ".tmp", media);
+    File temp = null;
     boolean created = false;
     File destination = null;
     String oldBank = selectedBank, oldName = bankName;
     try {
+      long availableBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
+      if (fileSize > 0 && !SoundFontStoragePolicy.canCopy(availableBytes, fileSize))
+        throw new IOException("Insufficient storage space for SoundFont");
+      temp = File.createTempFile("bank-", ".tmp", media);
       MessageDigest hash = MessageDigest.getInstance("SHA-256");
       try (InputStream in = context.getContentResolver().openInputStream(uri);
           FileOutputStream out = new FileOutputStream(temp)) {
         if (in == null) throw new IOException("Cannot open SoundFont");
         byte[] bytes = new byte[65536];
         long total = 0;
+        long nextSpaceCheck = 0;
         int count;
         while ((count = in.read(bytes)) != -1) {
           total += count;
           notifyProgress(fileSize, total, "Copying: " + formatBytes(total) + " / " + formatBytes(fileSize));
           if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
             throw new InterruptedIOException();
+          if (total >= nextSpaceCheck) {
+            long currentAvailable = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
+            if (!SoundFontStoragePolicy.canCopy(currentAvailable, count))
+              throw new IOException("Insufficient storage space for SoundFont");
+            nextSpaceCheck = total + SoundFontStoragePolicy.RECHECK_INTERVAL_BYTES;
+          }
           hash.update(bytes, 0, count);
           out.write(bytes, 0, count);
         }
         notifyProgress(fileSize, total, "Validating...");
-        // Size validated by native loader; check disk space only
         long freeBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
-        if (total > freeBytes - 64 * 1024 * 1024) throw new IOException("Insufficient storage space for SoundFont");
+        if (!SoundFontStoragePolicy.hasReserve(freeBytes))
+          throw new IOException("Insufficient storage space for SoundFont");
         out.getFD().sync();
       }
       notifyProgress(fileSize, fileSize, "Validating structure...");
@@ -364,7 +375,7 @@ final class LibraryRepository {
       if (created && destination != null) destination.delete();
       throw e;
     } finally {
-      temp.delete();
+      if (temp != null) temp.delete();
     }
     notifyProgress(fileSize, fileSize, "Import complete");
     notifyComplete(true, "Import complete");
