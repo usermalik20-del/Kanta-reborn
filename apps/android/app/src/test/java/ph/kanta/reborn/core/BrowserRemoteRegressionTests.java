@@ -39,7 +39,8 @@ public final class BrowserRemoteRegressionTests {
   }
   private static String body(String reply){return reply.substring(reply.indexOf("\r\n\r\n")+4);}
   private static BrowserRemoteServer host(AtomicInteger effects)throws Exception{
-    BrowserRemoteServer server=new BrowserRemoteServer("127.0.0.1",0,"<h1>Remote</h1>".getBytes(StandardCharsets.UTF_8),new byte[0],new byte[0],request->{effects.incrementAndGet();return ("{\"request\":\""+request.id+"\"}").getBytes(StandardCharsets.UTF_8);},true);server.start();return server;
+    Map<String,byte[]> artwork=Collections.singletonMap("/assets/covers/01.webp",new byte[]{'R','I','F','F'});
+    BrowserRemoteServer server=new BrowserRemoteServer("127.0.0.1",0,"<h1>Remote</h1>".getBytes(StandardCharsets.UTF_8),new byte[0],new byte[0],artwork,request->{effects.incrementAndGet();return ("{\"request\":\""+request.id+"\"}").getBytes(StandardCharsets.UTF_8);},true);server.start();return server;
   }
   public static int run()throws Exception{
     checks=0;AtomicInteger effects=new AtomicInteger();
@@ -47,6 +48,9 @@ public final class BrowserRemoteRegressionTests {
       String shell=exchange(host,"GET","/",null,null,new byte[0]);
       check(shell.startsWith("HTTP/1.1 200"),"Shell did not load over TLS");
       check(shell.contains("frame-ancestors 'none'")&&shell.contains("Cache-Control: no-store")&&!shell.contains(host.code()),"Shell leaked credential or lacks hardening");
+      String cover=exchange(host,"GET","/assets/covers/01.webp",null,null,new byte[0]);
+      check(cover.startsWith("HTTP/1.1 200")&&cover.contains("Content-Type: image/webp"),"Allowlisted cover artwork did not load over TLS");
+      check(exchange(host,"GET","/assets/covers/09.webp",null,null,new byte[0]).startsWith("HTTP/1.1 404"),"Unlisted artwork route was exposed");
       check(exchange(host,"GET","/../private",null,null,new byte[0]).startsWith("HTTP/1.1 404"),"Path traversal accepted");
       byte[] request=new CompanionProtocol.Request(UUID.randomUUID(),"reserve","song","Singer").encode();
       check(exchange(host,"POST","/command",host.address(),null,request).startsWith("HTTP/1.1 401"),"Unauthenticated command accepted");

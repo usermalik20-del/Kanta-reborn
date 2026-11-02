@@ -10,6 +10,7 @@ on:
       - '!apps/ios/AGENTS.md'
       - '!apps/ios/Docs/**'
       - '!apps/ios/PublicSite/**'
+      - '!apps/ios/Resources/CompanionRemote/**'
       - 'tools/check-ios-presentation-contract.py'
       - 'tools/verify-ios-smoke-results.py'
       - 'tools/verify-test-layout.py'

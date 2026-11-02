@@ -228,3 +228,7 @@ macOS CI execution before merge. See Docs/STAGE_UI_ACCEPTANCE.md.
 ## Cancellation-safe playback transactions — 2026-11-02
 
 The LocalKaraokeController remains the sole playback and FIFO owner. User-initiated commands must recheck cancellation after asynchronous library lookups and native preparation awaits, and before committing queue/history/playback identity. If cancellation arrives before engine.load begins, leave the committed backend playing. Once engine.load begins, stop a potentially replaced backend, retain the prior controller item and reservation, and mark the current item for reload before the next Play. Natural-completion auto-advance is controller-owned and must not inherit cancellation from a short-lived UI snapshot poll. Keep regressions for canceled enqueue lookup, Next asset resolution, native preparation, recovery of the prior song, and natural auto-advance surviving a canceled snapshot poll.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+The companion-resource changes in PR #134 are shared-contract work only. iOS resources and host code remain under the iOS validation boundary; no Android validation result is evidence of iOS acceptance.

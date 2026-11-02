@@ -318,3 +318,7 @@ Android reference-led UI screenshot acceptance is part of the Android-owned emul
 
 
 The platform download publisher has narrowly scoped `actions: write` permission because it must dispatch the separate Vercel production workflow after committing a verified platform-owned download page. Keep this permission job-scoped; all other publisher access remains read-only unless required to commit the manifest/page.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+The Android reference-led UI and companion changes remain subject to the repository platform ownership and exact-head validation rules. Reconciliation with current `main` is not merge, release, signing or device acceptance.
