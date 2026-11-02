@@ -551,6 +551,39 @@ private actor BlockingKaraokeLibrary: KaraokeLibraryAccess {
 
 
 
+@Test func canceledBeforeNativeLoadKeepsCurrentPlaybackRunning() async throws {
+    let first = LibrarySong(id: SongID(rawValue: "cancel-preload-current"), title: "Current", mediaKind: .wav)
+    let second = LibrarySong(id: SongID(rawValue: "cancel-preload-next"), title: "Next", mediaKind: .wav)
+    let ownership = KaraokeAudioOwnership()
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(
+        engine: engine,
+        library: FakeKaraokeLibrary(songs: [first, second]),
+        audioOwnership: ownership
+    )
+    try await controller.send(.enqueue(songID: first.id))
+    try await controller.send(.enqueue(songID: second.id))
+    try await controller.send(.play)
+    let before = await controller.snapshot()
+
+    await MainActor.run {
+        ownership.configurePlaybackSession = {
+            _ = withUnsafeCurrentTask { $0?.cancel() }
+        }
+    }
+    let pending = Task { try await controller.send(.next) }
+    await #expect(throws: CancellationError.self) { try await pending.value }
+
+    let after = await controller.snapshot()
+    #expect(after.nowPlaying?.id == first.id)
+    #expect(after.transport == .playing)
+    #expect(after.queue.map(\.song.id) == [second.id])
+    #expect(after.playbackID == before.playbackID)
+    #expect(await engine.numberOfLoads() == 1)
+}
+
+
+
 @Test func concurrentSnapshotsAdvanceExactlyOneReservation() async throws {
     let song = LibrarySong(id: SongID(rawValue: "repeat"), title: "Repeat", mediaKind: .wav)
     let engine = FakeAudioPlaybackEngine()

@@ -362,9 +362,11 @@ public actor LocalKaraokeController: KaraokeController {
         shouldPlay: Bool,
         cancellationSensitive: Bool = true
     ) async throws {
+        var loadStarted = false
         do {
             try await audioOwnership?.prepareNativeAudio()
             if cancellationSensitive { try Task.checkCancellation() }
+            loadStarted = true
             try await engine.load(asset)
             if cancellationSensitive { try Task.checkCancellation() }
             if shouldPlay {
@@ -373,8 +375,12 @@ public actor LocalKaraokeController: KaraokeController {
             }
             needsPlaybackReload = false
         } catch {
-            await engine.stop()
-            needsPlaybackReload = true
+            // A cancellation before engine.load must leave the committed song playing.
+            // Once loading starts, the backend may have replaced its asset and must be retired.
+            if loadStarted || !(error is CancellationError) {
+                await engine.stop()
+                needsPlaybackReload = true
+            }
             throw error
         }
     }
