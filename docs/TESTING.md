@@ -443,3 +443,6 @@ The Android emulator runtime walkthrough opens each reference-led destination fr
 ## Independent platform download publication
 
 Each Android and iOS manifest entry owns its own `packagingRun`, artifact ID, URL and checksum. The top-level `packagingRun` is a legacy compatibility fallback only while a platform entry has no scoped value; the verifier still requires that platform's artifact URL to match the fallback run. Every new publication writes a scoped value, and legacy peer provenance is migrated from the peer's immutable artifact URL. When migrating a legacy manifest, the publisher recovers the peer platform's packaging run from that peer's immutable GitHub artifact URL before advancing the shared pointer. Regression tests cover Android and iOS publication in both directions and require the untouched platform's source, package URL, run provenance and page to remain intact.
+
+
+The Android packaged ZIP includes the application APK and a `SHA256.txt` file containing the APK digest. The publisher-generated Android download section must disclose that file, and the website verifier enforces the public copy against the packaged bundle contract.
