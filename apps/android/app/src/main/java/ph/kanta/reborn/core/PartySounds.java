@@ -35,7 +35,7 @@ public final class PartySounds {
   /** Effect slots the score reveal reuses by name, so the two stay in step. */
   public static final int APPLAUSE = 0, CHEERING = 1, DRUM_ROLL = 2, AIR_HORN = 3, LAUGHTER = 4, TA_DA = 5, DING = 6, SAD_TROMBONE = 7;
 
-  private static final int RATE = 44100;
+  private static final int RATE = 22050;
   private static final int FRAMES = RATE * 2;
   /** Deterministic noise source: the same LCG every call, never java.util.Random. */
   private static final int NOISE_SEED = 0x4B414E54;
