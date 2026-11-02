@@ -408,3 +408,5 @@ The first reconciled PR #149 Android compile exposed one missing adapter: the ne
 ## PR #134 merge reconciliation — 2026-11-02
 
 PR #134 remains a validation candidate, not a release claim. Its reference-led Android destinations and companion changes were merged with current `main`; the fixed Home default (`bfa605d`) and exact-head Android runtime result remain part of the evidence before merge.
+
+The PR reconciliation restored current-main `SessionController` APIs after resolving the branch divergence. Android compile and runtime evidence must be collected on the resulting exact head.

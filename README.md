@@ -166,3 +166,5 @@ Verified platform download publishing commits only the changed platform's manife
 ## PR #134 merge reconciliation — 2026-11-02
 
 The reference-led Android UI and companion changes were reconciled onto current `main` after the Home-launch fallback repair. The exact PR head must pass the Android runtime walkthrough and shared documentation-sync gate before merge; this is not a release or device-acceptance claim.
+
+The reconciled PR retains the current-main `SessionController` SoundFont inventory and import-progress APIs while preserving the reference-led UI composition.
