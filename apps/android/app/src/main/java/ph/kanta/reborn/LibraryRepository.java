@@ -86,6 +86,10 @@ final class LibraryRepository {
             soundFonts.add(new SoundFontEntry(file, name));
         }
       }
+      // Migrate the pre-inventory format without losing the previously active imported bank.
+      if (new File(media, selectedBank).isFile()
+          && soundFonts.stream().noneMatch(value -> value.fileName.equals(selectedBank)))
+        soundFonts.add(new SoundFontEntry(selectedBank, bankName));
       JSONArray rows = root.getJSONArray("songs");
       if (rows.length() > 150000) throw new IOException("Too many library rows");
       Set<String> ids = new HashSet<>();
