@@ -221,7 +221,7 @@ public final class RuntimeChecks extends Instrumentation {
           });
       await(
           () -> !session.importing && !session.libraryImporting
-              && importCompleted.get() && session.songs.size() == 4,
+              && importCompleted.get() && session.songs.size() == 6,
           "Controller audio import or progress completion failed");
       check(
           progressSeen.get() && progressOnMain.get()
