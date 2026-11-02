@@ -711,7 +711,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   public boolean downloadScenic(String clipId) {
     ScenicClip clip = ScenicCatalog.byId(clipId);
     if (clip == null) return false;
-    return bgvLibrary.download(clip, id -> {
+    return bgvLibrary.download(clip, (id, ok, message) -> {
       // UI will be updated via the listener callback on the main thread.
       publish();
     });

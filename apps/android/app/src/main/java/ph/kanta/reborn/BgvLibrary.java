@@ -99,6 +99,16 @@ final class BgvLibrary {
   private volatile long copied, total;
   private volatile String activeId = "";
 
+  /** True when a download is currently running. */
+  private synchronized boolean busy() {
+    return !activeId.isEmpty();
+  }
+
+  /** Current status line for UI (idle, progress, or completion message). */
+  String progressLine() {
+    return status;
+  }
+
   BgvLibrary(Context context) throws IOException {
     this.context = context.getApplicationContext();
     root = new File(context.getFilesDir(), "bgv");

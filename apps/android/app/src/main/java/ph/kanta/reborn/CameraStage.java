@@ -155,7 +155,7 @@ final class CameraStage {
     if (previousSurface instanceof StageSurface && previousView != null) {
       ((StageSurface) previousSurface).unmountCamera(previousView);
     } else if (previousSurface instanceof ph.kanta.reborn.stage.StagePresenterImpl) {
-      ((ph.kanta.reborn.stage.StagePresenterImpl) previousSurface).releaseCameraPreview();
+      ((ph.kanta.reborn.stage.StagePresenterImpl) previousSurface).unmountCamera(previousView);
     }
 
     cameraStates = null;
