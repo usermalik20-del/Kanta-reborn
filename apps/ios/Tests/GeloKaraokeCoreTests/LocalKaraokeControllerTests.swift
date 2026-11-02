@@ -390,6 +390,200 @@ private struct FakeKaraokeLibrary: KaraokeLibraryAccess {
     }
 }
 
+private actor BlockingKaraokeLibrary: KaraokeLibraryAccess {
+    private enum Lookup: Equatable { case song, asset }
+    private let songsByID: [SongID: LibrarySong]
+    private var blockedLookup: Lookup?
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    init(songs: [LibrarySong]) {
+        songsByID = Dictionary(uniqueKeysWithValues: songs.map { ($0.id, $0) })
+    }
+
+    func blockNextSongLookup() { blockedLookup = .song }
+    func blockNextAssetLookup() { blockedLookup = .asset }
+    func isBlocked() -> Bool { waiter != nil }
+
+    func releaseBlockedLookup() {
+        waiter?.resume()
+        waiter = nil
+    }
+
+    private func waitIfRequested(_ lookup: Lookup) async {
+        guard blockedLookup == lookup else { return }
+        blockedLookup = nil
+        await withCheckedContinuation {
+            (continuation: CheckedContinuation<Void, Never>) in
+            waiter = continuation
+        }
+    }
+
+    func song(id: SongID) async throws -> LibrarySong? {
+        await waitIfRequested(.song)
+        return songsByID[id]
+    }
+
+    func playbackAsset(for songID: SongID) async throws -> AudioPlaybackAsset {
+        await waitIfRequested(.asset)
+        guard let song = songsByID[songID] else {
+            throw LocalKaraokeControllerError.songNotFound(songID)
+        }
+        return AudioPlaybackAsset(
+            songID: songID,
+            url: URL(fileURLWithPath: "/tmp/\(songID.rawValue)"),
+            mediaKind: song.mediaKind
+        )
+    }
+}
+
+@Test func canceledEnqueueDoesNotMutateQueueAfterLibraryLookup() async throws {
+    let song = LibrarySong(id: SongID(rawValue: "cancel-enqueue"), title: "Cancel", mediaKind: .wav)
+    let library = BlockingKaraokeLibrary(songs: [song])
+    let controller = LocalKaraokeController(
+        engine: FakeAudioPlaybackEngine(), library: library
+    )
+    await library.blockNextSongLookup()
+    let pending = Task { try await controller.send(.enqueue(songID: song.id)) }
+    for _ in 0..<1_000 {
+        if await library.isBlocked() { break }
+        await Task.yield()
+    }
+    #expect(await library.isBlocked())
+    pending.cancel()
+    await library.releaseBlockedLookup()
+    await #expect(throws: CancellationError.self) { try await pending.value }
+    let snapshot = await controller.snapshot()
+    #expect(snapshot.queue.isEmpty)
+}
+
+@Test func canceledNextDoesNotStartResolvedAssetOrConsumeReservation() async throws {
+    let first = LibrarySong(id: SongID(rawValue: "cancel-current"), title: "Current", mediaKind: .wav)
+    let second = LibrarySong(id: SongID(rawValue: "cancel-next"), title: "Next", mediaKind: .wav)
+    let library = BlockingKaraokeLibrary(songs: [first, second])
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(engine: engine, library: library)
+    try await controller.send(.enqueue(songID: first.id))
+    try await controller.send(.enqueue(songID: second.id))
+    try await controller.send(.play)
+    let before = await controller.snapshot()
+
+    await library.blockNextAssetLookup()
+    let pending = Task { try await controller.send(.next) }
+    for _ in 0..<1_000 {
+        if await library.isBlocked() { break }
+        await Task.yield()
+    }
+    #expect(await library.isBlocked())
+    pending.cancel()
+    await library.releaseBlockedLookup()
+    await #expect(throws: CancellationError.self) { try await pending.value }
+
+    let after = await controller.snapshot()
+    #expect(after.nowPlaying?.id == first.id)
+    #expect(after.queue.map(\.song.id) == [second.id])
+    #expect(after.playbackID == before.playbackID)
+    #expect(await engine.numberOfLoads() == 1)
+}
+
+@Test func canceledNextDuringNativePreparationRetiresUncommittedAsset() async throws {
+    let first = LibrarySong(id: SongID(rawValue: "cancel-load-current"), title: "Current", mediaKind: .wav)
+    let second = LibrarySong(id: SongID(rawValue: "cancel-load-next"), title: "Next", mediaKind: .wav)
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(
+        engine: engine, library: FakeKaraokeLibrary(songs: [first, second])
+    )
+    try await controller.send(.enqueue(songID: first.id))
+    try await controller.send(.enqueue(songID: second.id))
+    try await controller.send(.play)
+    let before = await controller.snapshot()
+
+    await engine.blockNextLoad()
+    let pending = Task { try await controller.send(.next) }
+    for _ in 0..<1_000 {
+        if await engine.isLoadBlocked() { break }
+        await Task.yield()
+    }
+    #expect(await engine.isLoadBlocked())
+    pending.cancel()
+    await engine.releaseLoad()
+    await #expect(throws: CancellationError.self) { try await pending.value }
+
+    let interrupted = await controller.snapshot()
+    #expect(interrupted.nowPlaying?.id == first.id)
+    #expect(interrupted.queue.map(\.song.id) == [second.id])
+    #expect(interrupted.playbackID == before.playbackID)
+    #expect(interrupted.transport == .stopped)
+
+    try await controller.send(.play)
+    let resumed = await controller.snapshot()
+    #expect(resumed.nowPlaying?.id == first.id)
+    #expect(resumed.transport == .playing)
+    #expect(resumed.queue.map(\.song.id) == [second.id])
+}
+
+
+@Test func canceledSnapshotPollDoesNotAbortNaturalAutoAdvance() async throws {
+    let first = LibrarySong(id: SongID(rawValue: "cancel-poll-current"), title: "Current", mediaKind: .wav)
+    let second = LibrarySong(id: SongID(rawValue: "cancel-poll-next"), title: "Next", mediaKind: .wav)
+    let library = BlockingKaraokeLibrary(songs: [first, second])
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(engine: engine, library: library)
+    try await controller.send(.enqueue(songID: first.id))
+    try await controller.send(.enqueue(songID: second.id))
+    try await controller.send(.play)
+    await engine.finishCurrentNaturally()
+
+    await library.blockNextAssetLookup()
+    let poll = Task { await controller.snapshot() }
+    for _ in 0..<1_000 {
+        if await library.isBlocked() { break }
+        await Task.yield()
+    }
+    #expect(await library.isBlocked())
+    poll.cancel()
+    await library.releaseBlockedLookup()
+
+    let snapshot = await poll.value
+    #expect(snapshot.nowPlaying?.id == second.id)
+    #expect(snapshot.queue.isEmpty)
+    #expect(snapshot.transport == .playing)
+}
+
+
+
+@MainActor
+@Test func canceledBeforeNativeLoadKeepsCurrentPlaybackRunning() async throws {
+    let first = LibrarySong(id: SongID(rawValue: "cancel-preload-current"), title: "Current", mediaKind: .wav)
+    let second = LibrarySong(id: SongID(rawValue: "cancel-preload-next"), title: "Next", mediaKind: .wav)
+    let ownership = KaraokeAudioOwnership()
+    let engine = FakeAudioPlaybackEngine()
+    let controller = LocalKaraokeController(
+        engine: engine,
+        library: FakeKaraokeLibrary(songs: [first, second]),
+        audioOwnership: ownership
+    )
+    try await controller.send(.enqueue(songID: first.id))
+    try await controller.send(.enqueue(songID: second.id))
+    try await controller.send(.play)
+    let before = await controller.snapshot()
+
+    await MainActor.run {
+        ownership.configurePlaybackSession = {
+            _ = withUnsafeCurrentTask { $0?.cancel() }
+        }
+    }
+    let pending = Task { try await controller.send(.next) }
+    await #expect(throws: CancellationError.self) { try await pending.value }
+
+    let after = await controller.snapshot()
+    #expect(after.nowPlaying?.id == first.id)
+    #expect(after.transport == .playing)
+    #expect(after.queue.map(\.song.id) == [second.id])
+    #expect(after.playbackID == before.playbackID)
+    #expect(await engine.numberOfLoads() == 1)
+}
+
+
 
 @Test func concurrentSnapshotsAdvanceExactlyOneReservation() async throws {
     let song = LibrarySong(id: SongID(rawValue: "repeat"), title: "Repeat", mediaKind: .wav)
