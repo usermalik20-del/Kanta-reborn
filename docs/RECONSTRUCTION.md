@@ -404,3 +404,7 @@ The reference-led Android UI work is being reconciled from draft PR #134 onto a 
 The first reconciled PR #149 Android compile exposed one missing adapter: the new Visuals screen called `SessionController.sceneResource(String, int)`, which existed only on the old draft branch. The repair ports that single adapter into the current main-branch controller, preserving its latest import/SoundFont/storage changes and routing bitmap decode through the existing stage generation and publication owner. The original compile failure is recorded in `docs/CI_FAILURE_REPAIR_LEDGER.md`; exact-head Android validation must pass again after the repair.
 
 **PR #149 screenshot artifact reconciliation (2026-11-02):** Exact-head emulator instrumentation generated `my-set-imported-library.png` and `my-set-active-soundfont.png`, but the reconciled collector and Android workflow artifact allowlist initially omitted them. The runner now retrieves both as required captures and the artifact allowlist retains them alongside the nine reference-led destination screenshots. Fresh exact-head Android validation must confirm all eleven files in the uploaded artifact; the earlier green run on `a5af972` predates this repair.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+PR #134 remains a validation candidate, not a release claim. Its reference-led Android destinations and companion changes were merged with current `main`; the fixed Home default (`bfa605d`) and exact-head Android runtime result remain part of the evidence before merge.

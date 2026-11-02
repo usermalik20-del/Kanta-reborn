@@ -449,3 +449,7 @@ The Android packaged ZIP includes the application APK and a `SHA256.txt` file co
 
 
 The platform publisher must dispatch `vercel-deploy.yml` after its verified website commit. GitHub's `GITHUB_TOKEN` does not start downstream workflows from the publisher's push, so the publisher job requires narrowly scoped `actions: write` permission for the explicit workflow-dispatch API call; retain read-only Actions access everywhere else.
+
+## PR #134 merge reconciliation — 2026-11-02
+
+After reconciling PR #134 with current `main`, rerun documentation sync and complete Android validation on the resulting SHA. The manual Android run on `bfa605d` proved the Home-launch repair; it does not substitute for later-head validation.
