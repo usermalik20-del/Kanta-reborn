@@ -322,3 +322,5 @@ The platform download publisher has narrowly scoped `actions: write` permission 
 ## PR #134 merge reconciliation — 2026-11-02
 
 The Android reference-led UI and companion changes remain subject to the repository platform ownership and exact-head validation rules. Reconciliation with current `main` is not merge, release, signing or device acceptance.
+
+The Android library discoverability reconciliation preserves the workflow ownership gate and requires exact-head Android validation before merge.

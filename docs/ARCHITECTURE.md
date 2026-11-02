@@ -681,3 +681,5 @@ The platform-specific download publisher commits only the manifest and the match
 The Android reference-led UI and shared companion changes were reconciled onto current `main`. Android presentation delegates to `SessionController` and existing stage owners, while iOS/browser companion surfaces remain independently validated. The saved-state fallback opens the Home dashboard when no tab is persisted.
 
 The reconciled reference-led UI uses the current-main `SessionController` API surface, including SoundFont inventory/selection and main-Looper import progress; no second state owner is introduced.
+
+The library discoverability reconciliation keeps catalog, SoundFont selection and playback state owned by the current Android repositories and SessionController.

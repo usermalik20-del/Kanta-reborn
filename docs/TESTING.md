@@ -455,3 +455,5 @@ The platform publisher must dispatch `vercel-deploy.yml` after its verified webs
 After reconciling PR #134 with current `main`, rerun documentation sync and complete Android validation on the resulting SHA. The manual Android run on `bfa605d` proved the Home-launch repair; it does not substitute for later-head validation.
 
 The reconciled exact head must compile against current-main `SessionController` SoundFont and import-progress APIs before the Android runtime walkthrough is accepted.
+
+The library discoverability PR must rerun documentation sync, Android build/lint/core regression and emulator UI evidence on its reconciled exact head.
