@@ -158,7 +158,7 @@ public final class VocalMonitorEffects {
 
   private float sample(float raw) {
     float dry = Float.isFinite(raw) ? Math.max(-1f, Math.min(1f, raw)) : 0f;
-    if (mode == Mode.DRY) return dry;
+    if (mode == Mode.DRY) return Math.max(-0.9f, Math.min(0.9f, dry));
 
     float value;
     if (mode == Mode.SLAP_ECHO) {
