@@ -1248,9 +1248,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 MainActivity.this.query = query == null ? "" : query;
                 render();
               }
-              @Override public void onTabSelected(int index, String label) {
-                if (listener != null) listener.onTabSelected(index, label);
-              }
+              @Override public void onTabSelected(int index, String label) {}
               @Override public void onSing(String title, String artist) {
                 for (Song song : session.songs) {
                   if (song.title.equals(title)
@@ -1369,17 +1367,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             new ph.kanta.reborn.ui.KantaMicVoiceScreen.Listener() {
               @Override public void onBack() { navigateHome(); }
               @Override public void onMicToggle(boolean enabled) {
-                session.microphone.setEnabled(enabled);
+                if (enabled) session.startMicrophone(); else session.stopMicrophone();
                 render();
               }
               @Override public void onMonitorToggle(boolean enabled) {
-                session.monitor.setEnabled(enabled);
+                if (enabled) {
+                  if (!session.foreground || !session.microphone.capturing()) {
+                    session.message = "Turn on microphone input before enabling monitoring.";
+                    session.publish();
+                    return;
+                  }
+                  session.startMonitor(session.monitor.outputs().get(0));
+                } else {
+                  session.stopMonitor();
+                }
                 render();
               }
               @Override public void onMonitorGainChanged(float value) {}
               @Override public void onMonitorModeSelected(String mode) {}
               @Override public void onScoringToggle(boolean enabled) {
-                session.score.setEnabled(enabled);
+                session.setScoring(enabled);
                 render();
               }
             });
