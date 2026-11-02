@@ -1,5 +1,50 @@
 # Reconstruction evidence and work ledger
 
+## Karaoke Stage v2 — active candidate (2026-11-02)
+
+Branch `feature/karaoke-stage-v3` (superseding PR #153) implements the karaoke stage upgrade, rebuilt on current `main`:
+
+### Vocal Monitor Effects (8 presets)
+`VocalMonitorEffects` now provides eight high-quality presets replacing the original four:
+- **DRY** — no processing
+- **SMALL_ROOM** — intimate space, short decay
+- **STUDIO** — controlled, neutral
+- **CONCERT_HALL** — large space, long decay
+- **CATHEDRAL** — vast space, very long decay
+- **PLATE_REVERB** — classic plate character
+- **SLAP_ECHO** — distinct repeat, rhythmic
+- **WARM_TAPE** — saturation + gentle compression
+
+All modes include a DC blocker (1-pole HPF at ~20 Hz) and soft-clipping (tanh).
+
+### Party Sounds (8 distinct pads)
+`PartySounds` synthesizes eight genuinely distinct pads; the original Drum Roll = Applause bug is fixed. Each pad has unique timbre: Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding, Sad Trombone.
+
+### Scoring System (5 tiers, 50–100 floor)
+- **EXCELLENT_SINGER** (100) — gold celebration
+- **GREAT_SINGER** (90) — cyan celebration
+- **GOOD_SINGER** (80) — violet celebration
+- **RISING_STAR** (65) — warm celebration
+- **KEEP_PRACTICING** (50) — minimal celebration
+
+`ScoreSink.overall()` returns 50–100; `rawOverall()` preserves 0–100; `tier()` uses `ScoreResultTier`.
+
+### Score Reveal Animation
+- **ScoreRevealPlan**: drumroll (1.9 s) → count-up to final score (0.9 s) → label fade (0.42 s)
+- **ScoreOverlay**: count-up animation with reduced-motion fallback (instant final score)
+- **StagePresenterImpl**: drumroll → scheduled reveal → deterministic celebration flow
+
+### Scenic Background Video Library (new in the Scenic tab)
+- **ScenicCatalog**: 10 curated clips from Wikimedia Commons CC0 and NASA public domain (all HEAD-verified)
+- **ScenicClip**: immutable value object with a validated id, title, channel, credit, licence, source page, https download URL, expected size and container
+- **BgvLibrary**: `HttpURLConnection` downloader with a SHA-256 integrity check (recorded on the stored entry), progress reporting and delete; writes to `files/bgv/`
+- **SessionController**: `bgvLibrary` field + `downloadScenic()`, `deleteScenic()`, `scenicDownloadStatus()`, `scenicEntries()`, `scenicLibraryAvailable()`. A storage failure leaves the library unavailable instead of failing session start-up.
+- **MainActivity**: "Background video library" button in Scenic tab → dialog listing downloaded clips with attribution, "Use as background", Remove
+
+The candidate is rebuilt on current `main`: the reference-led Home/destination composition, the CameraX preview lifecycle and the persisted SoundFont inventory stay exactly as merged, and only the stage, scoring, effects and scenic-library changes are layered on top.
+
+---
+
 ## Android library import discoverability — active repair candidate (2026-11-02)
 
 User testing of the latest preview found that SF2 copy progress reaches 100% but the UI offers no discoverable way to apply the bank; the same post-import visibility concern applies to MIDI/KAR and legacy ShubBlob files. Source review confirmed that LibraryRepository already persisted songs and only one active SF2 reference, while My Set rendered neither imported-song rows nor a SoundFont inventory/selector. The legacy Meg/ShubBlob path is separate from the active LibraryRepository and SessionController: SqliteSongCatalog.importFromLegacyContainer(...) is not wired into the UI, and its decoder has only synthetic-fixture evidence. This repair adds a persisted SoundFont inventory and explicit next-song bank selection, exposes imported catalog songs with Reserve actions in My Set, and explains that legacy containers are not supported by this preview rather than misclassifying a raw copy as a successful import. The safe branch is fix/android-library-import-discoverability-20261102; The first exact-head Android run passed build, lint, core regressions, native sanitizers, Chrome and browser interoperability. The emulator then passed the new My Set/SoundFont UI interactions and failed a later pre-existing audio-import assertion because its expected catalog count did not include the two new imported test fixtures; the first correction to six still over-counted because the fixture folder already contains the same WAV later imported by the controller test; the expected total is now five, matching the three starters plus the imported KAR and WAV. The final count correction is five (three starters, one KAR and one WAV). The next emulator run then exposed a separate test-harness state leak: the My Set navigation test left the activity on My Set, so a later voice-settings assertion dereferenced a missing Control-only view. The instrumentation now restores Control immediately after the My Set assertions, and the Android validation artifact retains dedicated My Set/import and active-SoundFont screenshots. Both fixture-count and tab-state failures are recorded in the CI repair ledger. Re-run exact-head Android emulator checks and documentation validation before merge or preview publication.
@@ -410,3 +455,5 @@ The first reconciled PR #149 Android compile exposed one missing adapter: the ne
 PR #134 remains a validation candidate, not a release claim. Its reference-led Android destinations and companion changes were merged with current `main`; the fixed Home default (`bfa605d`) and exact-head Android runtime result remain part of the evidence before merge.
 
 The PR reconciliation restored current-main `SessionController` APIs after resolving the branch divergence. Android compile and runtime evidence must be collected on the resulting exact head.
+
+The exact-head karaoke-stage candidate includes the Home-launch default repair; Android runtime validation must prove the dashboard is mounted before destination walkthroughs.

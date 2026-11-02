@@ -3,6 +3,7 @@ package ph.kanta.reborn.stage;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -14,6 +15,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import ph.kanta.reborn.core.Song;
+import ph.kanta.reborn.core.score.ScoreResultTier;
+import ph.kanta.reborn.core.score.ScoreRevealPlan;
 import java.util.Locale;
 
 /**
@@ -43,6 +46,8 @@ public final class ScoreOverlay extends FrameLayout {
   private Runnable onDismiss;
 
   private boolean isVisible = false;
+  private ValueAnimator counter;
+  private boolean reducedMotion;
 
   public ScoreOverlay(Context context) {
     this(context, null);
@@ -93,6 +98,7 @@ public final class ScoreOverlay extends FrameLayout {
     dividerPaint.setStrokeWidth(1 * density);
     dividerPaint.setColor(0xFF1A1A1A);
 
+    reducedMotion = isReducedMotion(context);
     initViews(context);
   }
 
@@ -147,19 +153,22 @@ public final class ScoreOverlay extends FrameLayout {
     container.addView(closeButton);
   }
 
-  /** Shows the score result. */
+  /** Shows the score result: the number counts up, then the band lands under it. */
   public void show(StagePresenter.ScoreResult result, Runnable onDismiss) {
     this.onDismiss = onDismiss;
     this.isVisible = true;
 
-    scoreValueView.setText(String.format(Locale.getDefault(), "%d", result.overallScore));
-    tierLabelView.setText(result.tier);
-    tierLabelView.setTextColor(getTierColor(result.tier));
+    final int target = result.overallScore;
+    final int floor = ScoreResultTier.FLOOR;
+    final int tierColor = getTierColor(result.tier);
+    tierLabelView.setText(result.tier.label());
+    tierLabelView.setTextColor(tierColor);
 
-    // Build breakdown rows
+    // Build breakdown rows. Pitch and timing stay the raw measurement, so the floor placed on
+    // the headline number never inflates what the microphone actually heard.
     breakdownContainer.removeAllViews();
-    addBreakdownRow("Pitch", result.pitchScore, getTierColor(result.tier));
-    addBreakdownRow("Timing", result.timingScore, getTierColor(result.tier));
+    addBreakdownRow("Pitch", result.pitchScore, tierColor);
+    addBreakdownRow("Timing", result.timingScore, tierColor);
     addBreakdownRow("Bonus", result.bonusScore, 0xFFFFB03A);
 
     // Animate in
@@ -174,6 +183,59 @@ public final class ScoreOverlay extends FrameLayout {
         .setDuration(ANIM_DURATION_MS)
         .setListener(null)
         .start();
+
+    cancelCounter();
+    if (reducedMotion) {
+      // Honour "Reduce Motion": show the finished state without the count-up.
+      scoreValueView.setText(String.format(Locale.getDefault(), "%d", target));
+      tierLabelView.setAlpha(1f);
+      return;
+    }
+    scoreValueView.setText(String.format(Locale.getDefault(), "%d", floor));
+    tierLabelView.setAlpha(0f);
+    counter = ValueAnimator.ofFloat(0f, 1f);
+    counter.setDuration(ScoreRevealPlan.COUNT_UP_MILLIS);
+    counter.addUpdateListener(
+        animation -> {
+          int value = ScoreRevealPlan.value(floor, target, (float) animation.getAnimatedValue());
+          scoreValueView.setText(String.format(Locale.getDefault(), "%d", value));
+        });
+    counter.addListener(
+        new AnimatorListenerAdapter() {
+          @Override
+          public void onAnimationEnd(Animator animation) {
+            counter = null;
+            scoreValueView.setText(String.format(Locale.getDefault(), "%d", target));
+            tierLabelView
+                .animate()
+                .alpha(1f)
+                .setDuration(ScoreRevealPlan.LABEL_MILLIS)
+                .setListener(null)
+                .start();
+          }
+        });
+    counter.start();
+  }
+
+  private void cancelCounter() {
+    if (counter != null) {
+      counter.cancel();
+      counter = null;
+    }
+  }
+
+  private static boolean isReducedMotion(Context context) {
+    float scale;
+    try {
+      scale =
+          android.provider.Settings.Global.getFloat(
+              context.getContentResolver(),
+              android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+              1f);
+    } catch (RuntimeException failure) {
+      return false;
+    }
+    return scale == 0f;
   }
 
   private void addBreakdownRow(String label, int value, int color) {
@@ -206,11 +268,13 @@ public final class ScoreOverlay extends FrameLayout {
     breakdownContainer.addView(row);
   }
 
-  private int getTierColor(String tier) {
+  private int getTierColor(ScoreResultTier tier) {
+    if (tier == null) return 0xFFCCCCCC;
     switch (tier) {
-      case "Perfect": return 0xFF3DE0A8; // success
-      case "Great": return 0xFF4DE3F0; // cyan
-      case "Good": return 0xFFFFB03A; // warning
+      case EXCELLENT_SINGER: return 0xFFF6CE77; // brand gold
+      case GREAT_SINGER: return 0xFF4DE3F0; // cyan
+      case GOOD_SINGER: return 0xFF3DE0A8; // success
+      case RISING_STAR: return 0xFFFFB03A; // warning
       default: return 0xFFFF5A6E; // destructive
     }
   }
@@ -219,6 +283,7 @@ public final class ScoreOverlay extends FrameLayout {
   public void dismiss() {
     if (!isVisible) return;
     isVisible = false;
+    cancelCounter();
 
     animate()
         .alpha(0f)

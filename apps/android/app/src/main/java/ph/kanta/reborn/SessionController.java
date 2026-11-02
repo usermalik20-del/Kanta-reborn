@@ -13,6 +13,9 @@ import ph.kanta.reborn.score.ScoreSink;
 import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
+import ph.kanta.reborn.core.bgv.ScenicCatalog;
+import ph.kanta.reborn.core.bgv.ScenicClip;
+import ph.kanta.reborn.BgvLibrary;
 
 /** One app-lifetime state owner. All MediaPlayer access stays on the main Looper. */
 public final class SessionController implements ph.kanta.reborn.core.PitchSource {
@@ -110,6 +113,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   boolean realm;
   final PartyAudio party;
   final MicrophoneInput microphone;
+  /** Scenic video library; null when its private storage cannot be opened. */
+  final BgvLibrary bgvLibrary;
   final MicrophoneMonitor monitor;
   public final android.content.SharedPreferences options;
   boolean foreground, loopEnabled, auxiliaryInterrupted, assigningPad;
@@ -125,6 +130,15 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   SessionController(Context context) {
     this.context = context;
+    BgvLibrary library = null;
+    try {
+      library = new BgvLibrary(context);
+    } catch (IOException failure) {
+      // The scenic video picker is an optional surface. Losing its private directory must not
+      // take the whole session — and the user's music — down with it.
+      library = null;
+    }
+    bgvLibrary = library;
     companion = new CompanionControl(this);
     browserCompanion = new BrowserCompanion(this);
     kantaConnectHost = new KantaConnectHost(context, new KantaConnectHost.HostAdapter() {
@@ -724,6 +738,46 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     loopEnabled = false;
     party.stopAll();
     publish();
+  }
+
+  /** Downloads a built-in scenic clip. Returns true if the download was started. */
+  public boolean downloadScenic(String clipId) {
+    if (bgvLibrary == null) return false;
+    ScenicClip clip = ScenicCatalog.byId(clipId);
+    if (clip == null) return false;
+    return bgvLibrary.download(clip, (id, ok, status) -> publish());
+  }
+
+  /** Deletes a previously downloaded clip from the library. */
+  public boolean deleteScenic(String clipId) {
+    return bgvLibrary != null && bgvLibrary.delete(clipId);
+  }
+
+  /** Returns the current download status line, or empty when the library is unavailable. */
+  public String scenicDownloadStatus() {
+    return bgvLibrary == null ? "" : bgvLibrary.progressLine();
+  }
+
+  /** Returns the downloaded scenic clip entries for the library UI, oldest library first. */
+  public synchronized List<BgvLibrary.Entry> scenicEntries() {
+    return bgvLibrary == null ? Collections.emptyList() : bgvLibrary.entries();
+  }
+
+  /** Whether the scenic video library is available on this device. */
+  public boolean scenicLibraryAvailable() {
+    return bgvLibrary != null;
+  }
+
+  /**
+   * Plays one party effect slot for a stage cue such as the score reveal.
+   *
+   * <p>The stage owns presentation but not audio, so it asks the single audio owner instead of
+   * reaching for the pads itself. A negative slot is ignored, and an unavailable pad is silent
+   * rather than an error: a missing cue must never block the score card.
+   */
+  public void playEffectCue(int slot) {
+    if (slot < 0 || slot >= PartySounds.TITLES.size()) return;
+    triggerPad(slot);
   }
 
   void partyVolumes(float sfx, float intermission) {

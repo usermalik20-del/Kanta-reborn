@@ -669,6 +669,49 @@ The iOS `LocalKaraokeController` operation gate serializes commands across actor
 
 `MainActivity` owns native destination composition and routes Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing into the existing Android Views presentation layer under `ph.kanta.reborn.ui`. The screens emit intents to `SessionController` or existing stage/media owners; they must not own a competing playback clock, queue, import catalog or microphone session. Now Playing embeds the existing live `StageSurface`; fullscreen uses the same stage owner. Keep My Set's imported-song visibility and persisted SoundFont inventory/select action intact when evolving the navigation. Browser companion markup and its iOS mirror remain a separate shared-protocol change and are intentionally excluded from this Android-native UI batch.
 
+## Karaoke Stage v2 (candidate) — 2026-11-02
+
+The `feature/karaoke-stage-v3` branch (which supersedes PR #153) implements the karaoke stage upgrade for Android, rebuilt on current `main`:
+
+### Vocal Monitor Effects (8 presets)
+`VocalMonitorEffects` (`ph.kanta.reborn.core`) now provides eight high-quality presets replacing the original four:
+- **DRY** — no processing
+- **SMALL_ROOM** — intimate space, short decay
+- **STUDIO** — controlled, neutral
+- **CONCERT_HALL** — large space, long decay
+- **CATHEDRAL** — vast space, very long decay
+- **PLATE_REVERB** — classic plate character
+- **SLAP_ECHO** — distinct repeat, rhythmic
+- **WARM_TAPE** — saturation + gentle compression
+
+All modes include a DC blocker (1-pole HPF at ~20 Hz) and soft-clipping (tanh). The monitor-only delay network preserves dry pitch/scoring input bypass.
+
+### Party Sounds (8 distinct pads)
+`PartySounds` (`ph.kanta.reborn.core`) synthesizes eight genuinely distinct pads; the original Drum Roll = Applause bug is fixed. Each pad has unique timbre: Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding, Sad Trombone.
+
+### Scoring System (5 tiers, 50–100 floor)
+- **EXCELLENT_SINGER** (100) — gold celebration
+- **GREAT_SINGER** (90) — cyan celebration
+- **GOOD_SINGER** (80) — violet celebration
+- **RISING_STAR** (65) — warm celebration
+- **KEEP_PRACTICING** (50) — minimal celebration
+
+`ScoreSink.overall()` returns 50–100; `rawOverall()` preserves 0–100; `tier()` uses `ScoreResultTier` (`ph.kanta.reborn.core.score`).
+
+### Score Reveal Animation
+- **ScoreRevealPlan** (`ph.kanta.reborn.core.score`): drumroll (1.9 s) → count-up to final score (0.9 s) → label fade (0.42 s)
+- **ScoreOverlay** (`ph.kanta.reborn.stage`): count-up animation with reduced-motion fallback (instant final score)
+- **StagePresenterImpl** (`ph.kanta.reborn.stage`): drumroll → scheduled reveal → deterministic celebration flow via `ScoreCelebrationPlan`
+
+### Scenic Background Video Library (new in the Scenic tab)
+- **ScenicCatalog** (`ph.kanta.reborn.core.bgv`): 10 curated clips from Wikimedia Commons CC0 and NASA public domain (all HEAD-verified)
+- **ScenicClip** (`ph.kanta.reborn.core.bgv`): immutable value object with a validated id, title, channel, credit, licence, source page, https download URL, expected size and container
+- **BgvLibrary** (`ph.kanta.reborn`): `HttpURLConnection` downloader with a SHA-256 integrity check (recorded on the stored entry), progress reporting and delete; writes to `files/bgv/`
+- **SessionController** (`ph.kanta.reborn`): `bgvLibrary` field + `downloadScenic()`, `deleteScenic()`, `scenicDownloadStatus()`, `scenicEntries()`, `scenicLibraryAvailable()`. A storage failure leaves the library unavailable instead of failing session start-up.
+- **MainActivity** (`ph.kanta.reborn`): "Background video library" button in Scenic tab → dialog listing downloaded clips with attribution, "Use as background", Remove
+
+The candidate is rebuilt on current `main`: the reference-led Home/destination composition, the CameraX preview lifecycle and the persisted SoundFont inventory stay exactly as merged, and only the stage, scoring, effects and scenic-library changes are layered on top.
+
 ## Independent platform download provenance
 
 The website download manifest has separate Android and iOS release records. Each record owns its source validation run, packaging workflow run, artifact ID, download URL, checksum and retention metadata. The top-level packaging run is retained as a strictly validated legacy fallback only for entries without a scoped value; the artifact URL must match it. Every new publication writes a scoped value and migrates the untouched peer's run from its existing artifact URL. Publishing one platform may update only its page and release record; legacy peer provenance is migrated from that peer's existing artifact URL before the shared compatibility pointer advances. The website verifier requires a platform-scoped packaging run so one platform's publication cannot silently rewrite the other platform's artifact link.
@@ -681,3 +724,5 @@ The platform-specific download publisher commits only the manifest and the match
 The Android reference-led UI and shared companion changes were reconciled onto current `main`. Android presentation delegates to `SessionController` and existing stage owners, while iOS/browser companion surfaces remain independently validated. The saved-state fallback opens the Home dashboard when no tab is persisted.
 
 The reconciled reference-led UI uses the current-main `SessionController` API surface, including SoundFont inventory/selection and main-Looper import progress; no second state owner is introduced.
+
+The karaoke-stage candidate keeps Home as the launch composition boundary before applying saved accessory/navigation state, matching the runtime walkthrough contract.

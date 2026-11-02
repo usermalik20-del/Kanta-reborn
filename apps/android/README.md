@@ -154,6 +154,50 @@ Validation state: `LyricWordAnimationRegressionTests` is wired into the existing
 
 The optional voice-output route accepts Bluetooth SCO and BLE headsets next to wired headphones, USB audio and analog/aux line-out. Headset-class devices are safe to monitor because the microphone belongs to the same worn device; speaker-class routes (built-in speaker, Bluetooth A2DP speakers, HDMI/ARC) stay blocked because the microphone hears them. A Bluetooth activation asks Android for the communication route (API 31 and newer) and plays the effect chain as voice-communication audio, then releases that request when monitoring stops. Bluetooth sound is mono call quality with higher delay, link negotiation takes one to three seconds, and platforms older than Android 12 are not offered a Bluetooth output at all. The Bluetooth device's own microphone is not captured by the app yet: microphone input still comes from the phone. Physical routing, feedback, sound quality and round-trip latency remain unverified on real hardware.
 
+## Karaoke Stage v2 (candidate)
+
+Branch `feature/karaoke-stage-v3` carries the karaoke stage upgrade, rebuilt on current `main`:
+
+### Vocal Monitor Effects (8 presets)
+`VocalMonitorEffects` now provides eight high-quality presets replacing the original four:
+- **DRY** — no processing
+- **SMALL_ROOM** — intimate space, short decay
+- **STUDIO** — controlled, neutral
+- **CONCERT_HALL** — large space, long decay
+- **CATHEDRAL** — vast space, very long decay
+- **PLATE_REVERB** — classic plate character
+- **SLAP_ECHO** — distinct repeat, rhythmic
+- **WARM_TAPE** — saturation + gentle compression
+
+All modes include a DC blocker (1-pole HPF at ~20 Hz) and soft-clipping (tanh).
+
+### Party Sounds (8 distinct pads)
+`PartySounds` synthesizes eight genuinely distinct pads; the original Drum Roll = Applause bug is fixed. Each pad has unique timbre: Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding, Sad Trombone.
+
+### Scoring System (5 tiers, 50–100 floor)
+- **EXCELLENT_SINGER** (100) — gold celebration
+- **GREAT_SINGER** (90) — cyan celebration
+- **GOOD_SINGER** (80) — violet celebration
+- **RISING_STAR** (65) — warm celebration
+- **KEEP_PRACTICING** (50) — minimal celebration
+
+`ScoreSink.overall()` returns 50–100; `rawOverall()` preserves 0–100; `tier()` uses `ScoreResultTier`.
+
+### Score Reveal Animation
+- **ScoreRevealPlan**: drumroll (1.9 s) → count-up to final score (0.9 s) → label fade (0.42 s)
+- **ScoreOverlay**: count-up animation with reduced-motion fallback (instant final score)
+- **StagePresenterImpl**: drumroll → scheduled reveal → deterministic celebration flow
+
+### Scenic Background Video Library (new in the Scenic tab)
+- **ScenicCatalog**: 10 curated clips from Wikimedia Commons CC0 and NASA public domain (all HEAD-verified)
+- **ScenicClip**: immutable value object with a validated id, title, channel, credit, licence, source page, https download URL, expected size and container
+- **BgvLibrary**: `HttpURLConnection` downloader with a SHA-256 integrity check (recorded on the stored entry), progress reporting and delete; writes to `files/bgv/`
+- **SessionController**: `bgvLibrary` field + `downloadScenic()`, `deleteScenic()`, `scenicDownloadStatus()`, `scenicEntries()`, `scenicLibraryAvailable()`. A storage failure leaves the library unavailable instead of failing session start-up.
+- **MainActivity**: "Background video library" button in Scenic tab → dialog listing downloaded clips with attribution, "Use as background", Remove
+
+The candidate is rebuilt on current `main`: the reference-led Home/destination composition, the CameraX preview lifecycle and the persisted SoundFont inventory stay exactly as merged, and only the stage, scoring, effects and scenic-library changes are layered on top.
+
+
 ## Multi-file import durability
 
 Multi-file song and SoundFont imports stage metadata until the complete batch succeeds. The repository performs one atomic metadata commit after all items finish; cancellation or commit failure restores the prior catalog and removes staged media. Regression coverage reloads the durable catalog after cancellation and verifies that only the original starter entries remain, with every referenced media file present. Single-file imports retain their immediate persistence behavior. Repository progress is delivered through the main-Looper `SessionController` dispatcher; Activity-scoped listeners detach on stop, rebind while a library import remains active, and clear after completion or folder-scan failure. Runtime instrumentation checks main-thread progress/completion delivery and the failure completion path.
@@ -214,3 +258,5 @@ The Android runtime walkthrough captures `home_dashboard.png`, `home_dashboard_r
 The reference-led Android UI and companion changes were reconciled onto current `main`. `MainActivity` remains the composition boundary; `HomeScreen` and destination screens delegate playback, queue, import, microphone and stage state to existing owners. Exact-head Android runtime validation is required after reconciliation.
 
 The reconciled PR retains current-main `SessionController` SoundFont inventory, active-bank selection and import-progress APIs; the reference-led screens remain presentation-only adapters.
+
+The karaoke-stage candidate initializes the reference-led Home dashboard on launch; saved navigation is applied only after the dashboard default is established.

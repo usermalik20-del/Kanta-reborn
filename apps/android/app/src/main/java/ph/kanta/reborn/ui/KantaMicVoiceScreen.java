@@ -25,7 +25,14 @@ public final class KantaMicVoiceScreen extends LinearLayout {
   private TextView micStatus, monitorStatus, levelLabel, gainValue, scoreStatus;
   private Button micToggle, monitorToggle, scoringToggle;
   private SeekBar gainSlider;
-  private final Button[] modeButtons = new Button[4];
+  /**
+   * Monitor-effect presets, taken straight from the engine so a chip can never desynchronise from
+   * the preset it selects. The label is the engine's own user-facing name.
+   */
+  private static final ph.kanta.reborn.core.VocalMonitorEffects.Mode[] MODES =
+      ph.kanta.reborn.core.VocalMonitorEffects.Mode.values();
+
+  private final Button[] modeButtons = new Button[MODES.length];
   private float inputLevel;
   private int lastActiveBars = -1;
   private String lastInputMessage;
@@ -137,14 +144,20 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     TextView fxTitle = bodyText("Monitor effect");
     fxTitle.setPadding(0, dp(10), 0, dp(6));
     monitorCard.addView(fxTitle);
-    LinearLayout modes = new LinearLayout(context);
-    modes.setGravity(Gravity.CENTER_VERTICAL);
-    String[] names = {"Dry", "Room", "Hall", "Echo"};
-    for (int i = 0; i < names.length; i++) {
-      final String name = names[i];
+    // Ten presets do not fit one phone row; three per line stays readable at 12sp.
+    LinearLayout modes = null;
+    for (int i = 0; i < MODES.length; i++) {
+      if (i % 3 == 0) {
+        modes = new LinearLayout(context);
+        modes.setGravity(Gravity.CENTER_VERTICAL);
+        monitorCard.addView(modes);
+      }
+      final String name = MODES[i].label();
       Button chip = actionButton(name);
       chip.setTextSize(12);
-      chip.setTag("kanta.monitor.mode." + name.toLowerCase(java.util.Locale.ROOT));
+      chip.setTag(
+          "kanta.monitor.mode."
+              + name.toLowerCase(java.util.Locale.ROOT).replace(' ', '-'));
       chip.setOnClickListener(v -> {
         if (listener != null) listener.onMonitorModeSelected(name);
         selectMode(name);
@@ -155,7 +168,6 @@ public final class KantaMicVoiceScreen extends LinearLayout {
       p.rightMargin = dp(3);
       modes.addView(chip, p);
     }
-    monitorCard.addView(modes);
     TextView monitorNote = bodyText(
         "Monitoring is opt-in and requires a verified wired, USB or Bluetooth headset route. "
             + "Speaker outputs are blocked to prevent feedback.");
@@ -279,8 +291,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     selectedMode = selected;
     for (int i = 0; i < modeButtons.length; i++) {
       if (modeButtons[i] == null) continue;
-      String key = new String[] {"DRY", "ROOM", "HALL", "ECHO"}[i];
-      boolean active = key.equals(selected);
+      boolean active = MODES[i].name().equals(selected);
       modeButtons[i].setTextColor(active ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_SECONDARY);
       modeButtons[i].setBackground(KantaTheme.backgroundDrawable(
           active ? KantaTheme.SURFACE_ELEVATED : KantaTheme.SURFACE, 10,

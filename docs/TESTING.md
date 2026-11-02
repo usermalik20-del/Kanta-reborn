@@ -31,6 +31,58 @@ The website validation job runs `tools/verify-website.py` and `tools/tests/test_
 
 `LyricWordAnimationRegressionTests` runs inside the existing `coreRegression` task. It covers the framework-free part of the candidate stage animation: a fragment boundary remains a hard source event, the span between boundaries interpolates smoothly, the active-fragment range advances only at source boundaries, and pitch energy decays to zero when the estimate is absent, stale or out of band. These checks do not exercise `Canvas`, `StaticLayout`, `ValueAnimator` or emoji rendering; visual, reduced-motion, APK/lint and emulator acceptance remain separate gates on the Android validation workflow.
 
+## Karaoke Stage v2 regression checks (candidate) — 2026-11-02
+
+The karaoke-stage candidate adds or updates the following host-JVM coverage. All of it runs inside
+the existing `coreRegression` Gradle JavaExec task, so no device, emulator or clock is needed:
+
+### ScoreCelebrationRegressionTests (updated to the five-band ladder)
+
+Asserts `ScoreCelebrationPlan.forScore()` against `ScoreResultTier`:
+
+- EXCELLENT_SINGER: 120 confetti, 6 balloons, 5 stars, 4200 ms
+- GREAT_SINGER: 72 confetti, 3 balloons, 3 stars, 3200 ms
+- GOOD_SINGER: 36 confetti, 1 balloon, 1 star, 2200 ms
+- RISING_STAR: 24 confetti, 0 balloons, 2 stars, 1600 ms
+- KEEP_PRACTICING: 0 confetti, 0 balloons, 0 stars, 0 ms
+
+It also asserts band boundaries, out-of-range clamping, that a lower band never outlasts a higher
+one, that motion is deterministic for a fixed seed, and that the particle list is immutable.
+
+### ScoreRevealRegressionTests (new)
+
+Covers the reveal choreography before any device is involved:
+
+- the reveal always opens on `PartySounds.DRUM_ROLL`, and the drum roll is the longest beat
+- `revealSlot()` returns the fanfare for EXCELLENT_SINGER, applause for GREAT_SINGER,
+  GOOD_SINGER and RISING_STAR, and no cue for KEEP_PRACTICING or an absent band
+- `totalMillis()` is the drum roll plus the count-up plus the label for every band
+- `counts()` starts on the floor, ends exactly on the score, never counts backwards, and a
+  one-tick reveal shows the final score
+- the cubic ease-out front-loads its progress; a non-finite or out-of-range progress falls back to
+  the floor instead of corrupting the counter; a reveal with no ticks is refused
+
+### ScenicCatalogRegressionTests (new)
+
+Treats the built-in scenic catalogue as a security boundary, because every entry opens a socket to
+a third party:
+
+- every entry has a unique id and file name, a readable title, an attribution naming its licence,
+  an https source page and download URL, and a known expected size
+- every entry passes its own download gate: https only, allow-listed host, known container, size
+  within `MAX_BYTES`
+- an unlisted host, an unknown container and a clip above the size cap are all refused
+- `hostOf()` strips an explicit port, refuses userinfo, and returns null for a missing or
+  schemeless URL; `channels()`/`inChannel()`/`byId()` stay mutually consistent
+
+### Unchanged suites
+
+`LyricWordAnimationRegressionTests` and `monitorChecks` run unchanged from `main`; the
+karaoke-stage candidate does not alter lyric animation or the monitor route guard.
+
+Visual, reduced-motion, APK/lint and emulator acceptance remain separate gates on the Android
+validation workflow.
+
 ## Android compile gate and masked symbol errors
 
 A `javac` parse error stops the compiler before symbol resolution, so a file that fails to parse hides every unresolved type it also contains. The pitch-settings landing fixed four `#` comments and a truncated method body, and only then revealed that `SettingsStore` had no import. Treat the first clean parse as an unverified compile: after removing syntax errors, re-check every type the change introduces against its import and re-run the build before calling the source sound. Brace-balance and string-aware scanners detect structure only and never prove a file compiles; the Android `Build, lint and domain regression tests` step is the gate.
@@ -455,3 +507,5 @@ The platform publisher must dispatch `vercel-deploy.yml` after its verified webs
 After reconciling PR #134 with current `main`, rerun documentation sync and complete Android validation on the resulting SHA. The manual Android run on `bfa605d` proved the Home-launch repair; it does not substitute for later-head validation.
 
 The reconciled exact head must compile against current-main `SessionController` SoundFont and import-progress APIs before the Android runtime walkthrough is accepted.
+
+The karaoke-stage runtime gate begins by asserting the Home dashboard is visible; launch-default changes must be validated on the exact PR head.

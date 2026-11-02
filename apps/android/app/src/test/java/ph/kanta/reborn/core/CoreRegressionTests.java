@@ -11,6 +11,7 @@ import ph.kanta.reborn.core.legacy.MkmdDecoderRegressionTests;
 import ph.kanta.reborn.core.connect.KantaConnectInfoRegressionTests;
 import ph.kanta.reborn.core.connect.QrEncoderRegressionTests;
 import ph.kanta.reborn.core.score.ScoreCelebrationRegressionTests;
+import ph.kanta.reborn.core.score.ScoreRevealRegressionTests;
 
 /** No framework/JUnit dependency: run on a server JVM before allocating cloud CI. */
 public final class CoreRegressionTests {
@@ -1162,6 +1163,8 @@ public final class CoreRegressionTests {
     checks += QrEncoderRegressionTests.run();
     checks += KantaConnectInfoRegressionTests.run();
     checks += ScoreCelebrationRegressionTests.run();
+    checks += ScoreRevealRegressionTests.run();
+    checks += ScenicCatalogRegressionTests.run();
     System.out.println("KANTA Android core: " + checks + " regression checks passed");
   }
 }
