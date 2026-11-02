@@ -31,6 +31,34 @@ The website validation job runs `tools/verify-website.py` and `tools/tests/test_
 
 `LyricWordAnimationRegressionTests` runs inside the existing `coreRegression` task. It covers the framework-free part of the candidate stage animation: a fragment boundary remains a hard source event, the span between boundaries interpolates smoothly, the active-fragment range advances only at source boundaries, and pitch energy decays to zero when the estimate is absent, stale or out of band. These checks do not exercise `Canvas`, `StaticLayout`, `ValueAnimator` or emoji rendering; visual, reduced-motion, APK/lint and emulator acceptance remain separate gates on the Android validation workflow.
 
+## Karaoke Stage v2 regression checks (candidate) — 2026-11-02
+
+Branch `feature/karaoke-stage-v2` (PR #153) adds the following regression coverage:
+
+### ScoreCelebrationRegressionTests
+Validates the 5-tier celebration plans from `ScoreCelebrationPlan.forScore()`:
+- EXCELLENT_SINGER (100): 120 confetti, 6 balloons, 5 stars, 4200 ms, gold hue (42°)
+- GREAT_SINGER (90): 72 confetti, 3 balloons, 3 stars, 3200 ms, cyan hue (186°)
+- GOOD_SINGER (80): 36 confetti, 1 balloon, 1 star, 2200 ms, violet hue (268°)
+- RISING_STAR (65): 18 confetti, 0 balloons, 0 stars, 1200 ms, warm hue (30°)
+- KEEP_PRACTICING (50): 0 confetti, 0 balloons, 0 stars, 0 ms, no particles
+- Deterministic: same seed produces identical particle layouts
+
+### LyricWordAnimationRegressionTests
+Extended to cover the new scoring integration:
+- Fragment boundary remains a hard source event
+- Span between boundaries interpolates smoothly
+- Active-fragment range advances only at source boundaries
+- Pitch energy decays to zero when estimate is absent, stale, or out of band
+
+### CoreRegressionTests
+Wired new regression tests:
+- `monitorChecks`: validates Bluetooth readiness deadline bounds (1500 ms wired, 6000 ms Bluetooth)
+- `ScoreCelebrationRegressionTests` added to suite
+- `LyricWordAnimationRegressionTests` added to suite
+
+All tests execute in the existing `coreRegression` Gradle JavaExec task. Visual, reduced-motion, APK/lint and emulator acceptance remain separate gates on the Android validation workflow.
+
 ## Android compile gate and masked symbol errors
 
 A `javac` parse error stops the compiler before symbol resolution, so a file that fails to parse hides every unresolved type it also contains. The pitch-settings landing fixed four `#` comments and a truncated method body, and only then revealed that `SettingsStore` had no import. Treat the first clean parse as an unverified compile: after removing syntax errors, re-check every type the change introduces against its import and re-run the build before calling the source sound. Brace-balance and string-aware scanners detect structure only and never prove a file compiles; the Android `Build, lint and domain regression tests` step is the gate.

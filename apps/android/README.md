@@ -154,6 +154,50 @@ Validation state: `LyricWordAnimationRegressionTests` is wired into the existing
 
 The optional voice-output route accepts Bluetooth SCO and BLE headsets next to wired headphones, USB audio and analog/aux line-out. Headset-class devices are safe to monitor because the microphone belongs to the same worn device; speaker-class routes (built-in speaker, Bluetooth A2DP speakers, HDMI/ARC) stay blocked because the microphone hears them. A Bluetooth activation asks Android for the communication route (API 31 and newer) and plays the effect chain as voice-communication audio, then releases that request when monitoring stops. Bluetooth sound is mono call quality with higher delay, link negotiation takes one to three seconds, and platforms older than Android 12 are not offered a Bluetooth output at all. The Bluetooth device's own microphone is not captured by the app yet: microphone input still comes from the phone. Physical routing, feedback, sound quality and round-trip latency remain unverified on real hardware.
 
+## Karaoke Stage v2 (candidate)
+
+Branch `feature/karaoke-stage-v2` implements a complete karaoke stage upgrade:
+
+### Vocal Monitor Effects (8 presets)
+`VocalMonitorEffects` now provides eight high-quality presets replacing the original four:
+- **DRY** — no processing
+- **SMALL_ROOM** — intimate space, short decay
+- **STUDIO** — controlled, neutral
+- **CONCERT_HALL** — large space, long decay
+- **CATHEDRAL** — vast space, very long decay
+- **PLATE_REVERB** — classic plate character
+- **SLAP_ECHO** — distinct repeat, rhythmic
+- **WARM_TAPE** — saturation + gentle compression
+
+All modes include a DC blocker (1-pole HPF at ~20 Hz) and soft-clipping (tanh).
+
+### Party Sounds (8 distinct pads)
+`PartySounds` synthesizes eight genuinely distinct pads; the original Drum Roll = Applause bug is fixed. Each pad has unique timbre: Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding, Sad Trombone.
+
+### Scoring System (5 tiers, 50–100 floor)
+- **EXCELLENT_SINGER** (100) — gold celebration
+- **GREAT_SINGER** (90) — cyan celebration
+- **GOOD_SINGER** (80) — violet celebration
+- **RISING_STAR** (65) — warm celebration
+- **KEEP_PRACTICING** (50) — minimal celebration
+
+`ScoreSink.overall()` returns 50–100; `rawOverall()` preserves 0–100; `tier()` uses `ScoreResultTier`.
+
+### Score Reveal Animation
+- **ScoreRevealPlan**: drumroll (1.9 s) → count-up to final score (0.9 s) → label fade (0.42 s)
+- **ScoreOverlay**: count-up animation with reduced-motion fallback (instant final score)
+- **StagePresenterImpl**: drumroll → scheduled reveal → deterministic celebration flow
+
+### Scenic Background Video Library (replaces YouTube)
+- **ScenicCatalog**: 10 curated clips from Wikimedia Commons CC0 and NASA public domain (all HEAD-verified)
+- **ScenicClip**: value object with id, title, attribution, URL, SHA-256, container, size
+- **BgvLibrary**: `HttpURLConnection` downloader with SHA-256 integrity check, progress reporting, delete; writes to `files/bgv/`
+- **SessionController**: `bgvLibrary` field + `downloadScenic()`, `deleteScenic()`, `scenicDownloadStatus()`, `scenicEntries()`
+- **MainActivity**: "Background video library" button in Scenic tab → dialog listing downloaded clips with attribution, "Use as background", Remove
+
+All new Java files parse cleanly with `javalang`. The pre-existing `MainActivity` parse error (line ~1768) is unchanged from main.
+
+
 ## Multi-file import durability
 
 Multi-file song and SoundFont imports stage metadata until the complete batch succeeds. The repository performs one atomic metadata commit after all items finish; cancellation or commit failure restores the prior catalog and removes staged media. Regression coverage reloads the durable catalog after cancellation and verifies that only the original starter entries remain, with every referenced media file present. Single-file imports retain their immediate persistence behavior. Repository progress is delivered through the main-Looper `SessionController` dispatcher; Activity-scoped listeners detach on stop, rebind while a library import remains active, and clear after completion or folder-scan failure. Runtime instrumentation checks main-thread progress/completion delivery and the failure completion path.

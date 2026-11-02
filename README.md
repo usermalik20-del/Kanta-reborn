@@ -70,6 +70,50 @@ controls not in the companion protocol allowlist. The wire protocol and pairing 
 See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) and [docs/TESTING.md](../docs/TESTING.md) for the
 design-system contract and test boundaries.
 
+## Karaoke Stage v2 (candidate)
+
+Android branch `feature/karaoke-stage-v2` implements a complete karaoke stage upgrade:
+
+### Vocal Monitor Effects (8 presets)
+`VocalMonitorEffects` now provides eight high-quality presets replacing the original four:
+- **DRY** — no processing
+- **SMALL_ROOM** — intimate space, short decay
+- **STUDIO** — controlled, neutral
+- **CONCERT_HALL** — large space, long decay
+- **CATHEDRAL** — vast space, very long decay
+- **PLATE_REVERB** — classic plate character
+- **SLAP_ECHO** — distinct repeat, rhythmic
+- **WARM_TAPE** — saturation + gentle compression
+
+All modes include a DC blocker (1-pole HPF at ~20 Hz) and soft-clipping (tanh).
+
+### Party Sounds (8 distinct pads)
+`PartySounds` synthesizes eight genuinely distinct pads; the original Drum Roll = Applause bug is fixed. Each pad has unique timbre: Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding, Sad Trombone.
+
+### Scoring System (5 tiers, 50–100 floor)
+- **EXCELLENT_SINGER** (100) — gold celebration
+- **GREAT_SINGER** (90) — cyan celebration
+- **GOOD_SINGER** (80) — violet celebration
+- **RISING_STAR** (65) — warm celebration
+- **KEEP_PRACTICING** (50) — minimal celebration
+
+`ScoreSink.overall()` returns 50–100; `rawOverall()` preserves 0–100; `tier()` uses `ScoreResultTier`.
+
+### Score Reveal Animation
+- **ScoreRevealPlan**: drumroll (1.9 s) → count-up to final score (0.9 s) → label fade (0.42 s)
+- **ScoreOverlay**: count-up animation with reduced-motion fallback (instant final score)
+- **StagePresenterImpl**: drumroll → scheduled reveal → deterministic celebration flow
+
+### Scenic Background Video Library (replaces YouTube)
+- **ScenicCatalog**: 10 curated clips from Wikimedia Commons CC0 and NASA public domain (all HEAD-verified)
+- **ScenicClip**: value object with id, title, attribution, URL, SHA-256, container, size
+- **BgvLibrary**: `HttpURLConnection` downloader with SHA-256 integrity check, progress reporting, delete; writes to `files/bgv/`
+- **SessionController**: `bgvLibrary` field + `downloadScenic()`, `deleteScenic()`, `scenicDownloadStatus()`, `scenicEntries()`
+- **MainActivity**: "Background video library" button in Scenic tab → dialog listing downloaded clips with attribution, "Use as background", Remove
+
+All new Java files parse cleanly with `javalang`. The pre-existing `MainActivity` parse error (line ~1768) is unchanged from main.
+
+
 | `docs/CODEBASE_CONTEXT_PACKET.md` | Actual stack, storage, playback, networking and performance risks |
 
 ### Compact Workspace implementation
