@@ -1244,9 +1244,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             this,
             new ph.kanta.reborn.ui.KantaSearchScreen.Listener() {
               @Override public void onBack() { navigateHome(); }
-              @Override public void onSearchTextChanged(String value) {
-                query = value == null ? "" : value;
+              @Override public void onSearchTextChanged(String query) {
+                MainActivity.this.query = query == null ? "" : query;
                 render();
+              }
+              @Override public void onTabSelected(int index, String label) {
+                if (listener != null) listener.onTabSelected(index, label);
               }
               @Override public void onSing(String title, String artist) {
                 for (Song song : session.songs) {
@@ -1257,6 +1260,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                   }
                 }
               }
+              @Override public void onSourceAll() {}
+              @Override public void onSourceKanta() {}
+              @Override public void onSourceYouTube() {}
+              @Override public void onSourceLocal() {}
             });
     screen.setTag("kanta.screen.search");
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
@@ -1275,10 +1282,22 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 session.queue.clear();
                 render();
               }
+              @Override public void onAddSongs() {
+                tab = "Search";
+                render();
+              }
               @Override public void onRemove(int position) {
                 java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
                 if (position < 0 || position >= current.size()) return;
                 session.remove(current.get(position).id);
+                render();
+              }
+              @Override public void onItemClicked(int position) {
+                java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
+                if (position < 0 || position >= current.size()) return;
+                ReservationQueue.Entry selected = current.get(position);
+                session.move(selected.id, 0);
+                session.next();
                 render();
               }
             });
@@ -1293,13 +1312,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             this,
             new ph.kanta.reborn.ui.KantaVisualsScreen.Listener() {
               @Override public void onBack() { navigateHome(); }
-              @Override public void onSceneSelected(String name) {
+              @Override public void onTabSelected(int index, String label) {}
+              @Override public void onBackgroundSelected(String name) {
                 session.scene(name);
                 render();
               }
+              @Override public void onCameraToggle(boolean enabled) {}
+              @Override public void onEffectSelected(String name) {}
+              @Override public void onCustomImport() {}
             });
     screen.setTag("kanta.screen.visuals");
-    screen.setScenicName(session.scenicName);
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
   }
 
@@ -1329,6 +1351,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 session.controls(session.volume, Math.min(2.0f, session.tempo + 0.05f), session.pitch);
                 render();
               }
+              @Override public void onTempoChanged(float value) {
+                session.controls(session.volume, value, session.pitch);
+                render();
+              }
             });
     screen.setTag("kanta.screen.pitch-tempo");
     screen.setKey(session.pitch);
@@ -1342,12 +1368,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             this,
             new ph.kanta.reborn.ui.KantaMicVoiceScreen.Listener() {
               @Override public void onBack() { navigateHome(); }
-              @Override public void onMicrophoneToggle() {
-                session.toggleMicrophone();
+              @Override public void onMicToggle(boolean enabled) {
+                session.microphone.setEnabled(enabled);
                 render();
               }
-              @Override public void onMonitorToggle() {
-                session.toggleMonitoring();
+              @Override public void onMonitorToggle(boolean enabled) {
+                session.monitor.setEnabled(enabled);
+                render();
+              }
+              @Override public void onMonitorGainChanged(float value) {}
+              @Override public void onMonitorModeSelected(String mode) {}
+              @Override public void onScoringToggle(boolean enabled) {
+                session.score.setEnabled(enabled);
                 render();
               }
             });
@@ -1361,6 +1393,33 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             this,
             new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener() {
               @Override public void onBack() { navigateHome(); }
+              @Override public void onFullscreen() { fullscreen(); }
+              @Override public void onPlayPause() { session.toggle(); }
+              @Override public void onPrevious() {}
+              @Override public void onNext() { session.next(); }
+              @Override public void onShuffle() {}
+              @Override public void onRepeat() {}
+              @Override public void onQueue() { tab = "Queue"; render(); }
+              @Override public void onEffects() { tab = "Mic & Voice"; render(); }
+              @Override public void onCoach() {}
+              @Override public void onKeyDown() {
+                session.controls(session.volume, session.tempo, Math.max(-12, session.pitch - 1));
+                render();
+              }
+              @Override public void onKeyUp() {
+                session.controls(session.volume, session.tempo, Math.min(12, session.pitch + 1));
+                render();
+              }
+              @Override public void onTempoDown() {
+                session.controls(session.volume, Math.max(0.5f, session.tempo - 0.05f), session.pitch);
+                render();
+              }
+              @Override public void onTempoUp() {
+                session.controls(session.volume, Math.min(2.0f, session.tempo + 0.05f), session.pitch);
+                render();
+              }
+              @Override public void onFavorite() {}
+              @Override public void onOverflow() {}
             });
     screen.setTag("kanta.screen.now-playing");
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
