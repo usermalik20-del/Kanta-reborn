@@ -90,7 +90,9 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertEqual(result["android"]["packagingRun"], 900)
         self.assertIn("Old", (self.root / "apps/web/ios-download.html").read_text())
         self.assertEqual(result["android"]["downloadUrl"].rsplit("/", 1)[-1], "901")
-        self.assertIn("Keep page content", (self.root / "apps/web/android.html").read_text())
+        android_page = (self.root / "apps/web/android.html").read_text()
+        self.assertIn("Keep page content", android_page)
+        self.assertIn("SHA256.txt is included", android_page)
         self.assertIn("Old", (self.root / "apps/web/ios-download.html").read_text())
 
     def test_ios_publish_requires_walkthrough_and_preserves_android(self):
