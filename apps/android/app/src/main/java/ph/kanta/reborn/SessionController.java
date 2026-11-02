@@ -64,6 +64,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
   public List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
+  List<LibraryRepository.SoundFontEntry> soundFonts = Collections.emptyList();
   public List<MidiLyrics.Cue> lyrics = Collections.emptyList();
   final ArrayList<Song> played = new ArrayList<>();
   Song current;
@@ -204,11 +205,13 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             String bankLabel = repository.soundFontName();
             List<Song> loaded = repository.songs();
             List<LibraryRepository.SavedSet> sets = repository.sets();
+            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
             List<ReservationQueue.Entry> restored = repository.queue();
             main.post(
                 () -> {
                   songs = loaded;
                   savedSets = sets;
+                  soundFonts = banks;
                   queue.restore(restored);
                   selectedSoundFont = bank;
                   soundFontName = bankLabel;
@@ -1357,6 +1360,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           List<Song> loaded = repository.songs();
           File bank = repository.soundFont();
           String bankLabel = repository.soundFontName();
+          List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
           String result =
               "Imported "
                   + good
@@ -1370,12 +1374,35 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 songs = loaded;
                 selectedSoundFont = bank;
                 soundFontName = bankLabel;
+                soundFonts = banks;
                 importing = false;
                 libraryImporting = false;
                 message = result;
                 completeImportProgress(importSucceeded, result);
                 publish();
               });
+        });
+  }
+
+  void selectSoundFont(String fileName) {
+    if (!ready || importing) return;
+    io.execute(
+        () -> {
+          try {
+            repository.selectSoundFont(fileName);
+            File bank = repository.soundFont();
+            String label = repository.soundFontName();
+            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
+            main.post(() -> {
+              selectedSoundFont = bank;
+              soundFontName = label;
+              soundFonts = banks;
+              message = "Active SoundFont: " + label + ". Changes apply to the next song.";
+              publish();
+            });
+          } catch (Exception failure) {
+            main.post(() -> { message = "Could not activate that SoundFont. " + failure.getMessage(); publish(); });
+          }
         });
   }
 
