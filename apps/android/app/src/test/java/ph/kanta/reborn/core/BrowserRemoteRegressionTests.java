@@ -67,8 +67,16 @@ public final class BrowserRemoteRegressionTests {
     }
     try(BrowserRemoteServer first=host(effects);BrowserRemoteServer second=host(effects)){
       check(!first.fingerprint().equals(second.fingerprint())&&!first.code().equals(second.code()),"Identity or pairing code reused between hosts");
-      for(int i=0;i<4;i++)check(exchange(first,"POST","/pair",first.address(),null,first.code().getBytes(StandardCharsets.US_ASCII)).startsWith("HTTP/1.1 200"),"Guest capacity below four");
-      check(exchange(first,"POST","/pair",first.address(),null,first.code().getBytes(StandardCharsets.US_ASCII)).startsWith("HTTP/1.1 403"),"Guest capacity unbounded");
+      ArrayList<String> guestTokens=new ArrayList<>();
+      for(int i=0;i<4;i++){
+        String paired=exchange(first,"POST","/pair",first.address(),null,first.code().getBytes(StandardCharsets.US_ASCII));
+        check(paired.startsWith("HTTP/1.1 200"),"Guest capacity below four");
+        guestTokens.add(body(paired));
+      }
+      for(int i=0;i<3;i++)
+        check(exchange(first,"POST","/pair",first.address(),null,first.code().getBytes(StandardCharsets.US_ASCII)).startsWith("HTTP/1.1 403"),"Guest capacity unbounded");
+      check(exchange(first,"POST","/leave",first.address(),guestTokens.get(0),new byte[0]).startsWith("HTTP/1.1 200"),"Leaving guest did not free capacity");
+      check(exchange(first,"POST","/pair",first.address(),null,first.code().getBytes(StandardCharsets.US_ASCII)).startsWith("HTTP/1.1 200"),"Capacity rejections consumed the incorrect-code lockout budget");
     }
     AtomicInteger oversizedEffects=new AtomicInteger();
     try(BrowserRemoteServer oversized=new BrowserRemoteServer("127.0.0.1",0,new byte[0],new byte[0],new byte[0],r->{oversizedEffects.incrementAndGet();return new byte[16385];},true)){

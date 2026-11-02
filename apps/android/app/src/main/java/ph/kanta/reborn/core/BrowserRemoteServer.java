@@ -27,7 +27,7 @@ public final class BrowserRemoteServer implements AutoCloseable {
   private final long started=System.nanoTime();
   private final String code,authority,origin,fingerprint;
   private volatile boolean closed;
-  private int failures;
+  private int failedPairingCodes;
   private static final class Reply { final byte[] request,body; Reply(byte[] r,byte[] b){request=r.clone();body=b.clone();} }
   private static final class Guest {
     final long created=System.nanoTime(); final Map<UUID,Reply> replies=new HashMap<>(); int bytes;
@@ -110,10 +110,13 @@ public final class BrowserRemoteServer implements AutoCloseable {
     byte[] body=new byte[length];new DataInputStream(in).readFully(body);
     guests.entrySet().removeIf(e->!e.getValue().valid());
     if(first[1].equals("/pair")){
-      boolean allowed=failures<3&&System.nanoTime()-started<TimeUnit.MINUTES.toNanos(5)&&guests.size()<4;
-      if(!allowed||!MessageDigest.isEqual(code.getBytes(StandardCharsets.US_ASCII),body)){
-        failures++;reply(peer,403,"text/plain",new byte[0]);return;
+      if(failedPairingCodes>=3||System.nanoTime()-started>=TimeUnit.MINUTES.toNanos(5)||closed){
+        reply(peer,403,"text/plain",new byte[0]);return;
       }
+      if(!MessageDigest.isEqual(code.getBytes(StandardCharsets.US_ASCII),body)){
+        failedPairingCodes++;reply(peer,403,"text/plain",new byte[0]);return;
+      }
+      if(guests.size()>=4){reply(peer,403,"text/plain",new byte[0]);return;}
       String token=randomToken();guests.put(token,new Guest());reply(peer,200,"text/plain",token.getBytes(StandardCharsets.US_ASCII));return;
     }
     String authorization=headers.getOrDefault("authorization","");

@@ -92,7 +92,7 @@ GitHub Actions is partitioned by source ownership. Website changes run website v
 - The six diagnostic `NSLog` probes previously present in iOS shipping source are confirmed absent from the current tree.
 - **Website crawler policy: deployed and verified on 2026-11-01, with follow-ups open.** `/robots.txt` serves the policy, a declared crawler receives `403` on an HTML route and on static assets, `Googlebot` and a normal browser still receive the rendered page, and `X-Robots-Tag` is present on static responses and, after the follow-up fix, on rendered ones. Rate limiting and per-request gating of static assets still need an edge/WAF layer, and no legal clause exists yet. See [scraping defense](docs/WEBSITE_SCRAPING_DEFENSE.md).
 - Physical-device quality, physical two-device companion networking, voice quality/feedback/latency, scoring calibration, camera/external-display acceptance and production signing remain separate open gates.
-- Companion control is experimental: Android-to-Android only, no forward secrecy, no independent security review, and no iOS interoperability.
+- Companion control is experimental: Android-to-Android only, no forward secrecy, no independent security review, and no iOS interoperability. Browser guests are limited to four active sessions; a valid code rejected only because capacity is full does not consume the three-incorrect-code lockout budget.
 
 ## Documentation
 
