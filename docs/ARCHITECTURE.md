@@ -653,3 +653,8 @@ The combined `verified-downloads.yml` workflow is now a contract-only workflow; 
 ## Android library import progress lifecycle — 2026-11-02
 
 The repository performs file-provider I/O on its import workers, but it does not own Activity presentation. `SessionController` now dispatches repository progress and completion through its main-Looper handler and resolves the current Activity listener at delivery time. The listener is cleared on completion, cancellation, folder-scan failure and Activity stop; a returning Activity reattaches only while a library import remains active. This avoids worker-thread View/Toast access and prevents the application-scoped repository from retaining a destroyed Activity.
+
+
+## iOS cancellation-safe playback transactions — 2026-11-02
+
+The iOS LocalKaraokeController operation gate serializes commands across actor reentrancy, but every user-initiated transaction must still recheck cancellation after awaited library lookups and native preparation. Queue/history/playback identity commits only after successful preparation. If cancellation occurs before engine.load begins, leave the current backend untouched. Once native loading starts, stop the uncommitted asset and mark the still-committed current song for reload on the next Play; the current item and FIFO reservation remain unchanged. Natural-completion auto-advance is controller-owned and must not be canceled by a view snapshot poll.
