@@ -1022,3 +1022,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** replace the entire bounded `sceneResource` method region with the complete source implementation, verify the closing method boundary before writing, and keep `loadSet` outside the replacement. No test was weakened.
 
 **Validation:** fresh Android build/lint/domain and emulator walkthrough must pass on the next exact head.
+
+
+## Android reference-led UI PR #149 — screenshot helper overload and local-name collisions (2026-11-02)
+
+**Fingerprint:** Android validation run [41442430933](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41442430933), job `125268058173`; `compileDebugAndroidTestJavaWithJavac` reported a duplicate `capture(String, String)` method, missing one-argument `capture(String)` calls, and a duplicate `primaryStage` local in `RuntimeChecks.onStart()`.
+
+**Cause:** while porting the visible-screen screenshot helper, the overload extractor matched the two-argument method twice and replaced the original one-argument capture implementation. The inserted walkthrough also reused a local name already declared by the preserved main-branch runtime tests.
+
+**Repair:** restore the one-argument capture implementation (UI idle wait, bounded compositor settle, screenshot null check, PNG write and bitmap recycle), keep exactly one `capture(String, String)` overload, and rename the walkthrough-only stage reference to `referencePrimaryStage`. The screenshot helper still requires a visible destination tag before capture; no assertions or runtime gates are removed.
+
+**Validation:** re-run Android instrumentation compilation, then the emulator walkthrough and inspect the uploaded nine-screen artifact set on the exact repaired head.
