@@ -253,7 +253,7 @@ import Testing
     let after = await controller.snapshot()
     #expect(after.nowPlaying?.id == first.id)
     #expect(after.transport == .playing)
-    #expect(after.queue.map(\\.song.id) == [second.id])
+    #expect(after.queue.map(\.song.id) == [second.id])
     #expect(after.playbackID == before.playbackID)
     #expect(await engine.numberOfLoads() == 1)
 }
