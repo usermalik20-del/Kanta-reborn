@@ -1619,6 +1619,14 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
             main.post(
                 () -> {
+                  if (request == stageRequest && scenicName.equals(name)) {
+                    message = "Could not open scenic background";
+                    publish();
+                  }
+                });
+          }
+        });
+  }
 
   void loadSet(LibraryRepository.SavedSet set) {
     Map<String, Song> catalog = new HashMap<>();
