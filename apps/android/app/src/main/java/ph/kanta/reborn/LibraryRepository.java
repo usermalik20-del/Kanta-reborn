@@ -356,6 +356,7 @@ final class LibraryRepository {
     boolean created = false;
     File destination = null;
     String oldBank = selectedBank, oldName = bankName;
+    ArrayList<SoundFontEntry> oldSoundFonts = new ArrayList<>(soundFonts);
     try {
       long availableBytes = new android.os.StatFs(media.getAbsolutePath()).getAvailableBytes();
       if (fileSize > 0 && !SoundFontStoragePolicy.canCopy(availableBytes, fileSize))
@@ -413,14 +414,17 @@ final class LibraryRepository {
         if (c != null && c.moveToFirst() && !c.isNull(0))
           bankName = c.getString(0).substring(0, Math.min(120, c.getString(0).length()));
       }
-      soundFonts.removeIf(value -> value.fileName.equals(destination.getName()));
-      soundFonts.add(new SoundFontEntry(destination.getName(), bankName));
+      String destinationName = destination.getName();
+      soundFonts.removeIf(value -> value.fileName.equals(destinationName));
+      soundFonts.add(new SoundFontEntry(destinationName, bankName));
       if (!batching) persist();
       if (created && batching) batchFiles.add(destination);
     } catch (Exception | LinkageError e) {
       notifyComplete(false, e.getMessage());
       selectedBank = oldBank;
       bankName = oldName;
+      soundFonts.clear();
+      soundFonts.addAll(oldSoundFonts);
       if (created && destination != null) destination.delete();
       throw e;
     } finally {
