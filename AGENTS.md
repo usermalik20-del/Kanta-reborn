@@ -315,3 +315,6 @@ Keep native build and public download publication independent. Android APK publi
 
 
 Android reference-led UI screenshot acceptance is part of the Android-owned emulator flow. When `RuntimeChecks.java` captures the Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals, fullscreen and Now Playing destinations, update both `tools/run-android-runtime.py` and `.github/workflows/android-validation.yml` in the same change. Each destination must be visibly attached/on-screen before capture; the uploaded Android artifact must retain all nine named screenshots in `apps/android/README.md` plus the existing My Set import and active-SoundFont captures. Do not trigger iOS workflows for this Android-only work; keep shared browser companion changes separate and validate only the exact platform contracts they touch.
+
+
+The platform download publisher has narrowly scoped `actions: write` permission because it must dispatch the separate Vercel production workflow after committing a verified platform-owned download page. Keep this permission job-scoped; all other publisher access remains read-only unless required to commit the manifest/page.
