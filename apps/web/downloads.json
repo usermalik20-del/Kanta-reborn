@@ -3,9 +3,9 @@
   "verifiedAt": "2026-11-02",
   "retentionDays": 30,
   "signInRequired": true,
-  "source": "dd0570ef92d4a2c21979bdc9e5ed0b689cf89c38",
-  "packagingRun": 41449342463,
-  "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463",
+  "source": "49d92657d67e88c38a9327acaa7c5d9e6aea1472",
+  "packagingRun": 41474398118,
+  "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41474398118",
   "walkthroughRun": 41280807337,
   "android": {
     "source": "dd0570ef92d4a2c21979bdc9e5ed0b689cf89c38",
@@ -22,20 +22,21 @@
     "bytes": 51914315
   },
   "ios": {
-    "source": "fe57a8826f721fbeede9c7a7e59f224eff33cee3",
-    "run": 41280807363,
-    "artifact": 13072479396,
-    "packagingArtifact": 13073651500,
+    "source": "49d92657d67e88c38a9327acaa7c5d9e6aea1472",
+    "run": 41473591605,
+    "artifact": 13157256208,
+    "packagingRun": 41474398118,
+    "packagingArtifact": 13157543816,
+    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41474398118/artifacts/13157543816",
+    "retentionDays": 30,
     "artifactName": "KANTA-iOS-personal-unsigned-download",
-    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41281111931/artifacts/13073651500",
     "signed": false,
+    "sha256": "95471bb58625150f6e691a5bd97aded81b8ab11850ae87d96288397b20f364bf",
+    "ipaSha256": "d6e9a68e6af988d5e787df8105b0e24321eb31801e979fb69901dd5d6e482704",
+    "bytes": 25979163,
     "personalSigningRequired": true,
     "icloudAvailable": false,
-    "sha256": "4a4fa24a97615a7b16286dbb46e50119b03436ef865c090f2f11d46e58faf90a",
-    "ipaSha256": "7d7ae06b32369bf43302346a1bb31e34661882c20757209da5a278d289983d2b",
-    "walkthroughRun": 41280807337,
-    "bytes": 25136904,
-    "packagingRun": 41281111931
+    "walkthroughRun": 41473591538
   },
   "platforms": {
     "android": {
@@ -51,6 +52,23 @@
       "sha256": "745d08801ce4928e9d653058a96248c627569f192466f667033a1a239c6da1b7",
       "apkSha256": "41541df8dc9fb436f54fac6259cf3b93a20f3320ff7d1440c2fc08432b5c73f1",
       "bytes": 51914315
+    },
+    "ios": {
+      "source": "49d92657d67e88c38a9327acaa7c5d9e6aea1472",
+      "run": 41473591605,
+      "artifact": 13157256208,
+      "packagingRun": 41474398118,
+      "packagingArtifact": 13157543816,
+      "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41474398118/artifacts/13157543816",
+      "retentionDays": 30,
+      "artifactName": "KANTA-iOS-personal-unsigned-download",
+      "signed": false,
+      "sha256": "95471bb58625150f6e691a5bd97aded81b8ab11850ae87d96288397b20f364bf",
+      "ipaSha256": "d6e9a68e6af988d5e787df8105b0e24321eb31801e979fb69901dd5d6e482704",
+      "bytes": 25979163,
+      "personalSigningRequired": true,
+      "icloudAvailable": false,
+      "walkthroughRun": 41473591538
     }
   }
 }
