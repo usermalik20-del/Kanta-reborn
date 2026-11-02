@@ -1000,3 +1000,43 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Regression coverage:** canceled enqueue lookup; canceled Next asset resolution; cancellation during native load and recovery; canceled snapshot polling during natural auto-advance; cancellation before native load preserving the current playing asset; and audio-session preparation failure preserving the current playing backend.
 
 **Prior-branch validation evidence:** PR #144 head `f4de237a58250024082018e8933e8ed66b87d677` passed iOS validation run [#41385876764](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876764), iOS smoke [#41385876632](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876632), unsigned archive [#41385876753](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876753), iPhone/iPad acceptance [#41385876648](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876648), and documentation sync [#41385876770](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41385876770). Those checks validate the prior PR head only; the reconciled current-main branch must pass fresh exact-head gates before merge.
+
+
+## Android reference-led UI PR #149 — bundled scene resource adapter missing on current main (2026-11-02)
+
+**Fingerprint:** Android validation run [41441404880](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41441404880), job `125263891088`, exact head `a591b9f5f8b0151b5f76f2c8a1d323bce1612c4e`; `:app:compileDebugJavaWithJavac` reported eight unresolved calls to `SessionController.sceneResource(String, int)` from `MainActivity`'s Visuals destination.
+
+**Cause:** the draft UI branch had added the bundled-artwork adapter to its older `SessionController`, but the reconciliation intentionally retained the newer main-branch controller to preserve the merged import, SoundFont inventory and storage-safety work. The adapter therefore did not come across with the presentation slice. This was a real integration boundary omission, not an Android resource-generation or Gradle dependency failure.
+
+**Repair:** port only `sceneResource(String, int)` onto the current main-branch `SessionController`. It uses the existing stage generation token, IO executor, `StageMediaStore` selection, bounded bitmap decode and main-thread publication path; stale results are recycled rather than replacing a newer selected scene. No older controller or repository file was restored.
+
+**Regression:** the reference Visuals walkthrough selects the bundled Stage Lights resource and asserts that the existing `SessionController` publishes the selected scene. Re-run the full exact-head Android validation and emulator capture flow; do not treat the earlier website/download checks as Android acceptance.
+
+
+## Android reference-led UI PR #149 — scene adapter patch range truncated (2026-11-02)
+
+**Fingerprint:** Follow-up Android validation run [41441803068](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41441803068), job `125265729605`, exact head `3b2ee4d85fce6dfcae2520dde08bcf203f545d2a`; `SessionController.java` reported an illegal method start and end-of-file while parsing at lines 1623–1638.
+
+**Cause:** the first source-port operation copied only the beginning of `sceneResource` because the retrieved line range ended before the method's closing body. This was an incomplete patch application, not a defect in the stage design.
+
+**Repair:** replace the entire bounded `sceneResource` method region with the complete source implementation, verify the closing method boundary before writing, and keep `loadSet` outside the replacement. No test was weakened.
+
+**Validation:** fresh Android build/lint/domain and emulator walkthrough must pass on the next exact head.
+
+
+## Android reference-led UI PR #149 — screenshot helper overload and local-name collisions (2026-11-02)
+
+**Fingerprint:** Android validation run [41442430933](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41442430933), job `125268058173`; `compileDebugAndroidTestJavaWithJavac` reported a duplicate `capture(String, String)` method, missing one-argument `capture(String)` calls, and a duplicate `primaryStage` local in `RuntimeChecks.onStart()`.
+
+**Cause:** while porting the visible-screen screenshot helper, the overload extractor matched the two-argument method twice and replaced the original one-argument capture implementation. The inserted walkthrough also reused a local name already declared by the preserved main-branch runtime tests.
+
+**Repair:** restore the one-argument capture implementation (UI idle wait, bounded compositor settle, screenshot null check, PNG write and bitmap recycle), keep exactly one `capture(String, String)` overload, and rename the walkthrough-only stage reference to `referencePrimaryStage`. The screenshot helper still requires a visible destination tag before capture; no assertions or runtime gates are removed.
+
+**Validation:** re-run Android instrumentation compilation, then the emulator walkthrough and inspect the uploaded nine-screen artifact set on the exact repaired head.
+
+## PR #149 — My Set/SoundFont screenshot artifact omission (2026-11-02)
+
+- **Detection:** Inspection of the exact-head `android-reconstruction-checks` ZIP from run `41443168080` found all nine new reference-led destination screenshots, but not `my-set-imported-library.png` or `my-set-active-soundfont.png`.
+- **Cause:** `RuntimeChecks.java` already captured both My Set/SoundFont screenshots, while `tools/run-android-runtime.py` did not retrieve them and `.github/workflows/android-validation.yml` did not include them in its artifact allowlist.
+- **Repair:** Add both filenames to the runner's required app-private retrieval list and to the workflow's `files/` upload paths. Update the Android README, architecture, testing and reconstruction guidance to define the eleven-file evidence contract.
+- **Verification:** The original run was green but is historical evidence only; a fresh exact-head Android emulator run must prove both captures are nonempty and present in the uploaded artifact.

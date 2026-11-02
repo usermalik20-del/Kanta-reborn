@@ -587,7 +587,7 @@ The request-time renderer also removes any legacy static `/analytics.js` script 
 
 `android-validation.yml` owns the Android source/build/runtime gate. Its manual-dispatch input selects only the Git ref; the full acceptance suite remains mandatory and cannot be replaced by a screenshot-only mode. Push and pull-request triggers remain separate top-level workflow events. `tools/run-android-runtime.py` owns emulator provisioning, private-network readiness, APK installation, instrumentation execution and evidence collection. The private-IPv4 guard is a prerequisite boundary: only its missing-network failure is conditional; installation and instrumentation execute after the guard succeeds. UI screenshots are copied to the workspace's `files/` directory, matching the artifact upload paths. The workflow and runner do not own application playback, queue, persistence or sensor state.
 
-Every named UI walkthrough screenshot is required evidence. The runner copies it from app-private storage into `files/` and fails closed when retrieval is unsuccessful or the file is empty; the artifact path and runtime destination must remain identical.
+Every named UI walkthrough screenshot is required evidence: all nine reference-led destinations plus the My Set imported-library and active-SoundFont captures. The runner copies each from app-private storage into `files/` and fails closed when retrieval is unsuccessful or the file is empty; the artifact path and runtime destination must remain identical.
 
 ## Android stage presenter and camera target contract — 2026-11-01
 
@@ -663,3 +663,8 @@ SoundFont import uses the provider-reported size for a preflight check when avai
 ## iOS cancellation-safe playback transactions — 2026-11-02
 
 The iOS `LocalKaraokeController` operation gate serializes commands across actor reentrancy, but every user-initiated transaction must recheck cancellation after awaited library lookups and native preparation. Queue/history/playback identity commits only after successful preparation. If cancellation or audio-session setup failure occurs before `engine.load` begins, leave the current backend untouched. Once native loading starts, stop the uncommitted asset and mark the still-committed current song for reload on the next Play; the current item and FIFO reservation remain unchanged. Natural-completion auto-advance is controller-owned and must not be canceled by a view snapshot poll.
+
+
+## Android reference-led presentation integration — 2026-11-02
+
+`MainActivity` owns native destination composition and routes Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing into the existing Android Views presentation layer under `ph.kanta.reborn.ui`. The screens emit intents to `SessionController` or existing stage/media owners; they must not own a competing playback clock, queue, import catalog or microphone session. Now Playing embeds the existing live `StageSurface`; fullscreen uses the same stage owner. Keep My Set's imported-song visibility and persisted SoundFont inventory/select action intact when evolving the navigation. Browser companion markup and its iOS mirror remain a separate shared-protocol change and are intentionally excluded from this Android-native UI batch.

@@ -162,7 +162,7 @@ Multi-file song and SoundFont imports stage metadata until the complete batch su
 
 The hosted Android gate installs the debug APK and instrumentation APK only after the emulator has booted and acquired a private IPv4 address. A missing address is a terminal prerequisite failure; it must not contain or skip the acceptance sequence. After the prerequisite guard, the runner installs both APKs, executes `RuntimeChecks`, captures the stage and camera evidence, and copies the named UI walkthrough captures into the repository-root `files/` artifact directory. The CI workflow uploads that directory. The runner control-flow contract is covered by `tools/tests/test_android_runtime_runner.py` and is executed in Android validation. The repair is pending exact-head hosted acceptance.
 
-The runner treats all eight named UI walkthrough screenshots as required evidence. It retrieves each file from the app-private directory into `files/` and fails if a capture is absent or empty; it never silently skips a missing screenshot.
+The runner treats all nine reference-led destination screenshots plus the two dedicated My Set/SoundFont screenshots as required evidence. It retrieves each file from the app-private directory into `files/` and fails if a capture is absent or empty; it never silently skips a missing screenshot.
 
 ## Stage presenter and camera runtime ownership — 2026-11-01
 
@@ -201,3 +201,10 @@ See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [docs/TESTING.md](../
 ## Browser companion guest pairing capacity — 2026-11-02
 
 The HTTPS browser host permits up to four active guests. A correct pairing code rejected only because all guest slots are occupied does not consume the three-incorrect-code lockout budget. Once a guest leaves or expires while the five-minute pairing window remains open, another guest can pair. Three incorrect pairing codes still lock pairing until hosting restarts. The real TLS `BrowserRemoteRegressionTests` covers capacity denial, recovery after Leave, and the separate incorrect-code lockout through the existing `coreRegression` JavaExec suite.
+
+
+## Reference-led native UI integration — validation candidate
+
+The Home dashboard and dedicated Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing screens are mounted as native Android Views destinations. They delegate playback, FIFO reservations, SoundFont selection, imports, microphone/monitor state and stage changes to the existing `SessionController` and repository owners; they do not introduce a second queue or playback state machine. The supplied artwork and drawable mapping are listed in [KANTA Android adaptive assets](../../docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md).
+
+The Android runtime walkthrough captures `home_dashboard.png`, `home_dashboard_restored.png`, `search_screen.png`, `queue_screen.png`, `pitch_tempo_screen.png`, `visuals_screen.png`, `mic_voice_screen.png`, `fullscreen_stage.png` and `now_playing_screen.png`. It also retains `my-set-imported-library.png` and `my-set-active-soundfont.png` to prove imported-song visibility and active SoundFont selection. Each destination capture must prove that its tagged view is actually visible before taking the screenshot. These are CI acceptance artifacts, not a claim of physical-device acceptance or a published APK.
