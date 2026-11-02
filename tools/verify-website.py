@@ -404,8 +404,12 @@ def main():
             build = manifest[platform]
             platform_source = build["source"]
             assert re.fullmatch(r"[0-9a-f]{40}", platform_source), filename + " source SHA is malformed"
-            assert isinstance(build.get("packagingRun"), int) and build["packagingRun"] > 0, filename + " platform packaging run is missing"
-            platform_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["packagingRun"])
+            # Legacy manifests may use the shared run only while their artifact URL
+            # still resolves to that exact run. New publications write an explicit
+            # platform-scoped packagingRun and never depend on this compatibility path.
+            platform_packaging_run = build.get("packagingRun", manifest["packagingRun"])
+            assert isinstance(platform_packaging_run, int) and platform_packaging_run > 0, filename + " platform packaging run is missing"
+            platform_run_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(platform_packaging_run)
             source_artifact_url = "https://github.com/" + manifest["repository"] + "/actions/runs/" + str(build["run"])
             packaged_artifact_url = platform_run_url + "/artifacts/" + str(build["packagingArtifact"])
             page_source = (WEB / filename).read_text(encoding="utf-8")
