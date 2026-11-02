@@ -1011,3 +1011,14 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 **Repair:** port only `sceneResource(String, int)` onto the current main-branch `SessionController`. It uses the existing stage generation token, IO executor, `StageMediaStore` selection, bounded bitmap decode and main-thread publication path; stale results are recycled rather than replacing a newer selected scene. No older controller or repository file was restored.
 
 **Regression:** the reference Visuals walkthrough selects the bundled Stage Lights resource and asserts that the existing `SessionController` publishes the selected scene. Re-run the full exact-head Android validation and emulator capture flow; do not treat the earlier website/download checks as Android acceptance.
+
+
+## Android reference-led UI PR #149 — scene adapter patch range truncated (2026-11-02)
+
+**Fingerprint:** Follow-up Android validation run [41441803068](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41441803068), job `125265729605`, exact head `3b2ee4d85fce6dfcae2520dde08bcf203f545d2a`; `SessionController.java` reported an illegal method start and end-of-file while parsing at lines 1623–1638.
+
+**Cause:** the first source-port operation copied only the beginning of `sceneResource` because the retrieved line range ended before the method's closing body. This was an incomplete patch application, not a defect in the stage design.
+
+**Repair:** replace the entire bounded `sceneResource` method region with the complete source implementation, verify the closing method boundary before writing, and keep `loadSet` outside the replacement. No test was weakened.
+
+**Validation:** fresh Android build/lint/domain and emulator walkthrough must pass on the next exact head.
