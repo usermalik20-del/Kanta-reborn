@@ -298,3 +298,14 @@ Local Java core: 524 checks passed, including 45 actual TLS checks. API 36 compi
 ### First-head diagnostics and repair candidate
 
 Source 339b8f6 passed hosted Android APK/instrumentation assembly, lint, native sanitizer, 524 core checks and permission/notices checks. Reconstruction 39126848617 failed Swift test compilation (missing explicit throwing-parser try) and Chrome's first unverified-pairing assertion; emulator execution was skipped. Smoke 39126848616 failed the lazy AppServices initializer's isolation diagnostic. Repairs preserve every assertion, compose the host explicitly, match WebKit completion annotations, establish real-browser document/foreground readiness and retain nonsecret diagnostics. Android preparation is claimed before dispatch, and oversized replies now enter the operation ledger as bounded errors on both platforms to prevent duplicate side effects. The expanded local core suite passes 528 checks, including 49 real TLS checks. Changed-head hosted results remain pending; see the failure/repair ledger for confirmed causes versus hypotheses.
+
+
+## Android SoundFont storage-budget repair — 2026-11-02
+
+**Finding (CONFIRMED):** SF2 import double-counted the copied file in its post-copy free-space condition, rejecting valid large banks. It also copied before checking available storage, so a provider with unknown or inaccurate size could temporarily fill app storage.
+
+**Root cause:** the post-copy comparison used total copied bytes against free bytes that already excluded those same bytes, and there was no reported-size preflight or streaming reserve check.
+
+**Fix:** add a pure SoundFontStoragePolicy, preflight provider-reported size, periodically recheck available bytes during streaming, and require at least 64 MiB remaining after copy. Keep native structure/sample validation and the existing no-fixed-file-size policy.
+
+**Regression protection:** CoreRegressionTests cover a 600 MiB bank with 1 GiB available, rejection when the reserve would be consumed, and the streaming-chunk boundary. Hosted Android build, lint, core regression and emulator runtime checks are pending on the PR head.

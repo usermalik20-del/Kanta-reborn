@@ -375,3 +375,8 @@ Source review found that `LibraryRepository.importBatch` emits progress on the a
 
 
 **PR #136 validation follow-up (2026-11-02):** the first hosted Android run, [#41370531275](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370531275), caught a mutable-counter lambda capture before tests ran. The follow-up snapshots the success result before posting to the main Looper. Corrected code head `ac5e393cff3d1dcee09b4ae424c634b6243bb6f3` passed [Android validation #41370798485](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798485) with 65,402 core regression checks and 228 emulator runtime checks, and [website validation #41370798446](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41370798446) passed documentation synchronization. The compile failure and repair are retained in the CI failure ledger.
+
+
+## Android SoundFont storage safety — 2026-11-02
+
+Current-main audit found that the SF2 post-copy check compared the copied file size against the remaining free space, effectively requiring roughly twice the file size plus a 64 MiB reserve. This rejected valid large banks even when sufficient space remained. The importer also had no preflight for known file sizes, so an unknown/oversized provider stream could temporarily exhaust app storage before the post-copy check. The repair preflights reported sizes, rechecks free space while streaming unknown/under-reported sources, and preserves a 64 MiB reserve without imposing a fixed file-size ceiling. CoreRegressionTests cover both the large-bank acceptance case and reserve enforcement. Exact-head Android CI/runtime validation is tracked by the dedicated PR; no emulator acceptance is claimed until those checks finish.

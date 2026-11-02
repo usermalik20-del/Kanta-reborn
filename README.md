@@ -141,3 +141,8 @@ Android validation and APK packaging/deployment are triggered by Android-owned s
 ### Independent Android and iOS downloads
 
 Android APK publication follows successful Android validation only. iOS unsigned IPA publication follows the iOS archive and additionally requires same-commit iPhone and iPad simulator walkthrough acceptance. Each release updates only its own download page and preserves the other platform's source revision and published artifact. The manifest and verifier validate each platform against its own build and packaging provenance. If a publication attempt uploaded an artifact before failing, a retry may produce multiple same-name artifacts; the workflow must select the newest by `created_at` rather than assuming the name is unique. The website is deployed after the selected platform's metadata passes website validation.
+
+
+## Android SoundFont storage safety — 2026-11-02
+
+SF2 import now checks the reported size before copying, periodically rechecks free storage while streaming, and preserves a 64 MiB free-space reserve for unknown or under-reported providers. The old post-copy comparison double-counted the imported file and rejected valid large banks; the corrected policy does not impose a fixed file-size ceiling and retains native structure/sample validation. Core regression coverage and exact-head Android validation are tracked in the dedicated pull request.
