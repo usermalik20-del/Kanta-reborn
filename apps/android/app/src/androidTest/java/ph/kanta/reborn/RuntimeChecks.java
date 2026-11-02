@@ -118,6 +118,28 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           !isolated.soundFontName().equals("KANTA original tone"),
           "SoundFont override not retained");
+      check(
+          isolated.soundFonts().size() == 2
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta-tone.sf2"))
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals(isolated.soundFont().getName())),
+          "Imported and bundled SoundFonts are not discoverable");
+      String importedBank = isolated.soundFont().getName();
+      isolated.selectSoundFont("kanta-tone.sf2");
+      check(
+          isolated.soundFont().getName().equals("kanta-tone.sf2")
+              && isolated.soundFontName().equals("KANTA original tone"),
+          "Bundled SoundFont could not be selected");
+      isolated.selectSoundFont(importedBank);
+      LibraryRepository reloadedBanks =
+          new LibraryRepository(getTargetContext().createDeviceProtectedStorageContext());
+      reloadedBanks.load();
+      check(
+          reloadedBanks.soundFont().getName().equals(importedBank)
+              && reloadedBanks.soundFonts().size() == 2,
+          "Active SoundFont selection or inventory did not survive reload");
+      check(
+          isolated.songs().stream().anyMatch(value -> !value.starter && value.fileName.endsWith(".mid")),
+          "Imported MIDI/KAR was not added to the playable song catalog");
       try (InputStream original =
           getTargetContext().getContentResolver().openInputStream(FixtureProvider.file("song"))) {
         Song copy =
