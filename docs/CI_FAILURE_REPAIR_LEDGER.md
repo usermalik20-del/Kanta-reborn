@@ -984,3 +984,8 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 ## Android My Set runtime test navigation cleanup — 2026-11-02
 
 **Fingerprint:** The Android emulator process crashed with a main-thread `NullPointerException` in `RuntimeChecks.java` when the later voice-settings test called `findViewWithTag("kanta.voice.settings").performClick()`. The new My Set assertions had changed the activity's selected tab from Control to My Set, while the older voice-settings test assumed Control was still selected. **Repair:** explicitly return to the Control tab after the My Set/SoundFont UI assertions, before the existing downstream session and voice tests. The app code was not the crash source; the instrumentation's cross-test UI state was not restored. Re-run the exact-head Android emulator acceptance.
+
+
+## Android UI screenshot artifact documentation sync — 2026-11-02
+
+**Fingerprint:** Website documentation-sync run `41393816911` failed because the Android workflow artifact path list was expanded to retain the new My Set and active-SoundFont screenshots, but the same change did not update root `AGENTS.md`. The workflow ownership and implementation docs were already synchronized; the missing policy note was specifically the artifact-retention requirement. **Repair:** root `AGENTS.md` now requires both captured My Set screenshots to remain in the Android validation artifact. Re-run documentation-sync and Android validation on the resulting head.
