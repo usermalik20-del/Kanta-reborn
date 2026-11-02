@@ -446,3 +446,6 @@ Each Android and iOS manifest entry owns its own `packagingRun`, artifact ID, UR
 
 
 The Android packaged ZIP includes the application APK and a `SHA256.txt` file containing the APK digest. The publisher-generated Android download section must disclose that file, and the website verifier enforces the public copy against the packaged bundle contract.
+
+
+The platform publisher must dispatch `vercel-deploy.yml` after its verified website commit. GitHub's `GITHUB_TOKEN` does not start downstream workflows from the publisher's push, so the publisher job requires narrowly scoped `actions: write` permission for the explicit workflow-dispatch API call; retain read-only Actions access everywhere else.

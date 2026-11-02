@@ -1056,3 +1056,11 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 - **Cause:** the packager includes `SHA256.txt` inside the Android ZIP, and the website verifier requires the public page to say so. The generated download section still described only the debug-signed preview and omitted the checksum-file disclosure.
 - **Repair:** update the Android publisher's generated section to state that `SHA256.txt` is included, and assert that generated page copy in the publisher regression test. This keeps the published description tied to the actual package contents.
 - **Validation:** rerun website validation and verified-download contracts, then retry the existing failed Android publisher job against the merged fix. Verify the committed manifest and live page after Vercel deploy.
+
+
+## Platform publisher — Vercel workflow dispatch denied by token scope (2026-11-02)
+
+- **Fingerprint:** Android publisher run [41449342463, attempt 3](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41449342463) packaged and uploaded the Android bundle, verified the website files, and committed the platform download update, but the final Vercel workflow dispatch returned HTTP 403.
+- **Cause:** the publisher job had `actions: read`, but GitHub's workflow-dispatch endpoint requires Actions write permission. The ordinary publisher push is intentionally performed with `GITHUB_TOKEN` and therefore does not trigger another workflow automatically.
+- **Repair:** elevate only the publisher job to `actions: write` so it can explicitly dispatch the Vercel deployment after its verified commit. Keep the permission scoped to that job and preserve platform isolation.
+- **Validation:** rerun the publisher after merge; confirm the download commit lands on main, Vercel deployment succeeds, and the live Android page points to the newly uploaded package.

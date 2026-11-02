@@ -672,3 +672,6 @@ The iOS `LocalKaraokeController` operation gate serializes commands across actor
 ## Independent platform download provenance
 
 The website download manifest has separate Android and iOS release records. Each record owns its source validation run, packaging workflow run, artifact ID, download URL, checksum and retention metadata. The top-level packaging run is retained as a strictly validated legacy fallback only for entries without a scoped value; the artifact URL must match it. Every new publication writes a scoped value and migrates the untouched peer's run from its existing artifact URL. Publishing one platform may update only its page and release record; legacy peer provenance is migrated from that peer's existing artifact URL before the shared compatibility pointer advances. The website verifier requires a platform-scoped packaging run so one platform's publication cannot silently rewrite the other platform's artifact link.
+
+
+The platform-specific download publisher commits only the manifest and the matching platform page, then explicitly dispatches the Vercel production workflow. Its job-scoped `actions: write` permission is required for that dispatch because GitHub suppresses downstream workflow triggers from ordinary `GITHUB_TOKEN`-originated pushes. Do not broaden the permission to unrelated jobs or platform workflows.
