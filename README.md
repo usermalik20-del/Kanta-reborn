@@ -155,3 +155,8 @@ SF2 import now checks the reported size before copying, periodically rechecks fr
 ## iOS playback cancellation hardening — 2026-11-02
 
 The iOS controller treats user-initiated library lookup and native playback preparation as cancellation-aware transactions: canceled Next/queue operations preserve their reservation and committed current song, while partially prepared backends are retired safely. Natural-completion auto-advance remains controller-owned rather than tied to a view's snapshot-poll lifetime. Regression coverage includes cancellation before and during native load, recovery, audio-session setup failure before load, and observer cancellation during natural completion. The reconciled branch requires fresh exact-head Swift package, smoke, unsigned archive, and iPhone/iPad simulator acceptance before merge.
+
+
+## Android reference-led interface — validation candidate
+
+The Android native UI integration now mounts the KANTA Home dashboard and dedicated Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing destinations from the existing `MainActivity`. These screens remain presentation surfaces: playback, FIFO reservations, SoundFont selection, import and stage media continue through the existing `SessionController` and storage owners. The supplied adaptive artwork is documented in [the Android asset manifest](docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md). CI is being extended to capture the actual visible destinations; this source integration is not a released APK or physical-device acceptance.
