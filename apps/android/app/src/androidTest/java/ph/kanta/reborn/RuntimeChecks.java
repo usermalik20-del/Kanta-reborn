@@ -7,6 +7,7 @@ import android.os.*;
 import android.view.*;
 import android.widget.TextView;
 import java.io.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import ph.kanta.reborn.core.*;
@@ -130,12 +131,69 @@ public final class RuntimeChecks extends Instrumentation {
                 java.nio.file.Files.readAllBytes(new File(isolated.media, copy.fileName).toPath())),
             "Imported source bytes changed");
       }
+      AtomicBoolean progressSeen = new AtomicBoolean();
+      AtomicBoolean progressOnMain = new AtomicBoolean(true);
+      AtomicBoolean importCompleted = new AtomicBoolean();
+      AtomicBoolean completionOnMain = new AtomicBoolean();
+      AtomicBoolean importSucceeded = new AtomicBoolean();
       runOnMainSync(
-          () ->
-              session.importSongs(
-                  java.util.Collections.singletonList(FixtureProvider.file("audio"))));
+          () -> {
+            session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+              @Override
+              public void onProgress(long total, long copied, String status) {
+                progressSeen.set(true);
+                if (Looper.myLooper() != Looper.getMainLooper()) progressOnMain.set(false);
+              }
+
+              @Override
+              public void onComplete(boolean success, String message) {
+                importSucceeded.set(success);
+                completionOnMain.set(Looper.myLooper() == Looper.getMainLooper());
+                importCompleted.set(true);
+              }
+            });
+            session.importSongs(
+                java.util.Collections.singletonList(FixtureProvider.file("audio")));
+          });
       await(
-          () -> !session.importing && session.songs.size() == 4, "Controller audio import failed");
+          () -> !session.importing && !session.libraryImporting
+              && importCompleted.get() && session.songs.size() == 4,
+          "Controller audio import or progress completion failed");
+      check(
+          progressSeen.get() && progressOnMain.get()
+              && completionOnMain.get() && importSucceeded.get(),
+          "Library import progress/completion callbacks did not run on the main Looper");
+      check(
+          field(field(session, "repository"), "progressListener") == null,
+          "Completed import retained its Activity-scoped progress listener");
+      AtomicBoolean folderCompleted = new AtomicBoolean();
+      AtomicBoolean folderCompletionOnMain = new AtomicBoolean();
+      AtomicBoolean folderSucceeded = new AtomicBoolean(true);
+      runOnMainSync(
+          () -> {
+            session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+              @Override
+              public void onProgress(long total, long copied, String status) {}
+
+              @Override
+              public void onComplete(boolean success, String message) {
+                folderSucceeded.set(success);
+                folderCompletionOnMain.set(Looper.myLooper() == Looper.getMainLooper());
+                folderCompleted.set(true);
+              }
+            });
+            session.importFolder(
+                android.net.Uri.parse("content://missing.kanta.reborn/tree/root"));
+          });
+      await(
+          () -> !session.importing && !session.libraryImporting && folderCompleted.get(),
+          "Folder scan failure did not finish the import progress lifecycle");
+      check(
+          !folderSucceeded.get() && folderCompletionOnMain.get(),
+          "Folder scan failure did not report completion on the main Looper");
+      check(
+          field(field(session, "repository"), "progressListener") == null,
+          "Failed folder scan retained its Activity-scoped progress listener");
       Song loopSong =
           session.songs.stream()
               .filter(SessionController::isAudio)

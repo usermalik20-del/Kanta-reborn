@@ -44,7 +44,7 @@ final class LibraryRepository {
   private boolean batching;
   private java.util.function.BooleanSupplier cancelled = () -> false;
   private final ArrayList<File> batchFiles = new ArrayList<>();
-  private ImportProgressListener progressListener;
+  private volatile ImportProgressListener progressListener;
 
   LibraryRepository(Context context) throws IOException {
     this.context = context;

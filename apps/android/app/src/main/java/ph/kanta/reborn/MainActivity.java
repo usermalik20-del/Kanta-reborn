@@ -132,6 +132,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
     if (fullscreenStage != null) fullscreenStage.setVisualActive(true);
     session.listen(this::render);
+    if (session.libraryImporting) {
+      showImportProgress();
+      attachImportProgressListener();
+    }
     handler.post(tick);
     displays.registerDisplayListener(displayListener, handler);
     refreshDisplay();
@@ -180,6 +184,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     cameraPermissionPending = false;
     microphonePermissionPending = false;
     camera.stop();
+    session.setImportProgressListener(null);
+    dismissImportProgress();
     session.listen(null);
     session.hostVisible(false);
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
@@ -195,6 +201,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   protected void onDestroy() {
     searchGeneration++;
     searchWorker.shutdownNow();
+    session.setImportProgressListener(null);
+    dismissImportProgress();
     if (fullscreen != null) fullscreen.dismiss();
     super.onDestroy();
   }
@@ -1963,26 +1971,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           uris.add(data.getClipData().getItemAt(i).getUri());
       } else if (data.getData() != null) uris.add(data.getData());
       showImportProgress();
-      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
-        @Override public void onProgress(long total, long copied, String status) {
-          updateImportProgress(total, copied, status);
-        }
-        @Override public void onComplete(boolean success, String message) {
-          hideImportProgress(message);
-        }
-      });
+      attachImportProgressListener();
       session.importSongs(uris);
     }
     else if (request == FOLDER && data.getData() != null) {
       showImportProgress();
-      session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
-        @Override public void onProgress(long total, long copied, String status) {
-          updateImportProgress(total, copied, status);
-        }
-        @Override public void onComplete(boolean success, String message) {
-          hideImportProgress(message);
-        }
-      });
+      attachImportProgressListener();
       session.importFolder(data.getData());
     }
     else if (request == VOICE) {
@@ -2036,6 +2030,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
+  private void attachImportProgressListener() {
+    session.setImportProgressListener(new LibraryRepository.ImportProgressListener() {
+      @Override
+      public void onProgress(long total, long copied, String status) {
+        updateImportProgress(total, copied, status);
+      }
+
+      @Override
+      public void onComplete(boolean success, String message) {
+        hideImportProgress(message);
+      }
+    });
+  }
+
+  private void dismissImportProgress() {
+    android.app.ProgressDialog dialog = importProgressDialog;
+    importProgressDialog = null;
+    if (dialog != null && dialog.isShowing()) dialog.dismiss();
+  }
+
   /** Shows the blocking import dialog. Imports run off the main thread, so it must not be
    * cancelable by tapping outside: the work cannot actually be interrupted from here. */
   private void showImportProgress() {
@@ -2069,9 +2083,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   /** Dismisses the import dialog and reports the outcome the repository returned. */
   private void hideImportProgress(String message) {
-    if (importProgressDialog != null && importProgressDialog.isShowing())
-      importProgressDialog.dismiss();
-    if (message != null && !message.isEmpty())
+    dismissImportProgress();
+    if (message != null && !message.isEmpty() && !isFinishing() && !isDestroyed())
       Toast.makeText(this, message, Toast.LENGTH_LONG).show();
   }
 

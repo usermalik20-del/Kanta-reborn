@@ -36,6 +36,23 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   String scenicName = "bayanDawn";
   private boolean savingSet = false;
   private LibraryRepository repository;
+  private LibraryRepository.ImportProgressListener importProgressListener;
+  private final LibraryRepository.ImportProgressListener importProgressDispatcher =
+      new LibraryRepository.ImportProgressListener() {
+        @Override
+        public void onProgress(long total, long copied, String status) {
+          main.post(
+              () -> {
+                LibraryRepository.ImportProgressListener current = importProgressListener;
+                if (current != null) current.onProgress(total, copied, status);
+              });
+        }
+
+        @Override
+        public void onComplete(boolean success, String message) {
+          main.post(() -> completeImportProgress(success, message));
+        }
+      };
   private StageMediaStore stageStore;
   StageMediaStore.Selection stageSelection;
   boolean stageReady;
@@ -80,6 +97,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   public String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
+  boolean libraryImporting = false;
   private Listener listener;
   private ScoreSink scoreSink;
   public PlaybackBackend player, pending;
@@ -195,6 +213,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   selectedSoundFont = bank;
                   soundFontName = bankLabel;
                   ready = true;
+                  if (importProgressListener != null)
+                    repository.setImportProgressListener(importProgressDispatcher);
                   preparePads();
                   restoreStage();
                   message = "Your music. Your stage.";
@@ -1321,6 +1341,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     if (!ready || importing) return;
     importCancelled.set(false);
     importing = true;
+    libraryImporting = true;
     message = "Importing your selected songs…";
     publish();
     io.execute(
@@ -1349,14 +1370,26 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 selectedSoundFont = bank;
                 soundFontName = bankLabel;
                 importing = false;
+                libraryImporting = false;
                 message = result;
+                completeImportProgress(failed == 0, result);
                 publish();
               });
         });
   }
 
   void setImportProgressListener(LibraryRepository.ImportProgressListener listener) {
-    repository.setImportProgressListener(listener);
+    importProgressListener = listener;
+    if (repository != null)
+      repository.setImportProgressListener(
+          listener == null ? null : importProgressDispatcher);
+  }
+
+  private void completeImportProgress(boolean success, String message) {
+    LibraryRepository.ImportProgressListener listener = importProgressListener;
+    importProgressListener = null;
+    if (repository != null) repository.setImportProgressListener(null);
+    if (listener != null) listener.onComplete(success, message);
   }
 
   void cancelImports() {
@@ -1366,6 +1399,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   void importFolder(Uri tree) {
     if (!ready || importing) return;
     importing = true;
+    libraryImporting = true;
     importCancelled.set(false);
     message = "Finding music in your selected folder…";
     publish();
@@ -1378,17 +1412,22 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 () -> {
                   importing = false;
                   if (importCancelled.get()) {
+                    libraryImporting = false;
                     message = "Folder import cancelled.";
+                    completeImportProgress(false, message);
                     publish();
                     return;
                   }
+                  libraryImporting = false;
                   importSongs(files);
                 });
           } catch (Exception e) {
             main.post(
                 () -> {
                   importing = false;
+                  libraryImporting = false;
                   message = "The folder is unavailable, cancelled or exceeds the scan limit.";
+                  completeImportProgress(false, message);
                   publish();
                 });
           }
