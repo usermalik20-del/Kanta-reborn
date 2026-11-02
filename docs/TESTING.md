@@ -415,3 +415,8 @@ The `Platform-specific verified download publishing` workflow listens only to An
 ## Android library import progress regression — 2026-11-02
 
 The hosted Android `RuntimeChecks` acceptance verifies that repository progress and completion callbacks run on the main Looper, that the repository releases the Activity-scoped listener after completion, and that an unavailable SAF folder reports a main-thread completion instead of leaving the import progress UI open. The assertions run in the existing emulator instrumentation gate; they do not replace Android build, lint or runtime acceptance.
+
+
+## Android browser companion pairing lifecycle
+
+`BrowserRemoteRegressionTests` runs through `CoreRegressionTests` in the existing `coreRegression` JavaExec task and exercises the real generated TLS identity and socket server. The guest-cap regression fills all four slots, performs three valid-code attempts while capacity is full, leaves one guest, and proves a new guest can pair within the five-minute pairing window. Separate wrong-code cases must still lock pairing after three incorrect codes. Capacity rejection must not weaken the wrong-code lockout or change guest count, token expiry, request authorization, or revocation behavior.
