@@ -648,3 +648,8 @@ iOS IPA publication is owned by the successful `KANTA iOS unsigned artifacts` wo
 Both publishers write only their own platform download page and platform entry in `apps/web/downloads.json`. The publisher reads the latest main branch after acquiring a shared publication concurrency group, merges its platform entry, and preserves the other platform's current metadata. It then validates the website and dispatches the existing Vercel production deployment. A failed validation or rejected non-fast-forward push leaves the previous live download unchanged.
 
 The combined `verified-downloads.yml` workflow is now a contract-only workflow; it must not package or publish either platform. Shared website deployment is downstream of a successful platform-specific metadata publication, not a reason to run both native build pipelines.
+
+
+## Android SoundFont storage budget — 2026-11-02
+
+SoundFont import uses the provider-reported size for a preflight check when available, then rechecks free space during streaming because document providers may omit or under-report size. Every write must preserve a 64 MiB free-space reserve; the final check verifies the reserve itself rather than double-counting the copied file. No fixed 32 MiB file-size ceiling is imposed; native structural validation and bounded loader allocation remain authoritative.
