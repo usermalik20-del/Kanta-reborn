@@ -415,3 +415,8 @@ The `Platform-specific verified download publishing` workflow listens only to An
 ## Android library import progress regression — 2026-11-02
 
 The hosted Android `RuntimeChecks` acceptance verifies that repository progress and completion callbacks run on the main Looper, that the repository releases the Activity-scoped listener after completion, and that an unavailable SAF folder reports a main-thread completion instead of leaving the import progress UI open. The assertions run in the existing emulator instrumentation gate; they do not replace Android build, lint or runtime acceptance.
+
+
+## iOS controller cancellation regressions — 2026-11-02
+
+The Swift package suite includes deterministic cancellation coverage for a suspended library song lookup during enqueue, a suspended asset lookup during Next, cancellation while the native backend is loading the next asset, natural-completion auto-advance while its snapshot poll is canceled, and cancellation during audio-session preparation before engine.load. The tests require no queue/current-item/playback-identity commit after user-command cancellation, require an uncommitted backend asset to be stopped only after loading has begun, verify that the prior current song remains playing when cancellation precedes load, verify reload recovery after a partial replacement, and prove that observer cancellation does not strand Up Next. These tests require the normal swift build --build-tests and swift test --no-parallel gates; simulator app build remains a separate result.
