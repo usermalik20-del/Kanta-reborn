@@ -137,3 +137,8 @@ Android validation and APK packaging/deployment are triggered by Android-owned s
 ### Independent Android and iOS downloads
 
 Android APK publication follows successful Android validation only. iOS unsigned IPA publication follows the iOS archive and additionally requires same-commit iPhone and iPad simulator walkthrough acceptance. Each release updates only its own download page and preserves the other platform's source revision and published artifact. The manifest and verifier validate each platform against its own build and packaging provenance. If a publication attempt uploaded an artifact before failing, a retry may produce multiple same-name artifacts; the workflow must select the newest by `created_at` rather than assuming the name is unique. The website is deployed after the selected platform's metadata passes website validation.
+
+
+## iOS playback cancellation hardening — 2026-11-02
+
+The iOS controller treats user-initiated library lookup and native playback preparation as cancellation-aware transactions: a canceled Next/queue operation does not consume its reservation or replace the committed current song, and a partially prepared backend is retired before the previous song can be reloaded. Natural-completion auto-advance remains controller-owned rather than tied to a view's snapshot-poll lifetime. Three deterministic Swift regressions cover the cancellation and recovery paths; exact-head hosted validation is tracked by the dedicated pull request.
