@@ -196,3 +196,8 @@ honest disabled state for controls not in the companion protocol allowlist. The 
 pairing flow are unchanged.
 
 See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [docs/TESTING.md](../../docs/TESTING.md).
+
+
+## Browser companion guest pairing capacity — 2026-11-02
+
+The HTTPS browser host permits up to four active guests. A correct pairing code rejected only because all guest slots are occupied does not consume the three-incorrect-code lockout budget. Once a guest leaves or expires while the five-minute pairing window remains open, another guest can pair. Three incorrect pairing codes still lock pairing until hosting restarts. The real TLS `BrowserRemoteRegressionTests` covers capacity denial, recovery after Leave, and the separate incorrect-code lockout through the existing `coreRegression` JavaExec suite.
