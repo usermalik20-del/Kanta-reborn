@@ -1,6 +1,7 @@
 package ph.kanta.reborn.stage;
 
 import ph.kanta.reborn.core.Song;
+import ph.kanta.reborn.core.score.ScoreResultTier;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.core.MidiLyrics;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
