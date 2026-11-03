@@ -60,4 +60,8 @@ public class KantaSearchBar extends LinearLayout {
   public void addTextChangedListener(TextWatcher watcher) { input.addTextChangedListener(watcher); }
   public void setOnEditorActionListener(android.widget.TextView.OnEditorActionListener listener) { input.setOnEditorActionListener(listener); }
   public EditText getEditText() { return input; }
+  /** Keeps text entry focusable while preventing the system IME from covering the UI. */
+  public void setEmbeddedKeyboardMode(boolean enabled) {
+    input.setShowSoftInputOnFocus(!enabled);
+  }
 }

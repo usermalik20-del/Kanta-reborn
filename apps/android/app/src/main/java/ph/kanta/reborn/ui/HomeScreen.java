@@ -15,6 +15,9 @@ import android.widget.TextView;
 public class HomeScreen extends LinearLayout {
   public interface Listener {
     void onHome();
+    void onSing();
+    void onPerformance();
+    void onExperience();
     void onSettings();
     void onSearch();
     void onQueue();
@@ -121,7 +124,7 @@ public class HomeScreen extends LinearLayout {
     searchField.setBackground(KantaTheme.backgroundDrawable(
         KantaTheme.SURFACE_ELEVATED, 14, KantaTheme.BORDER, 1, density));
     searchField.setMinHeight(dp(54));
-    searchField.setOnClickListener(v -> { if (listener != null) listener.onSearch(); });
+    searchField.setOnClickListener(v -> { if (listener != null) listener.onSing(); });
     searchRow.addView(searchField, new LayoutParams(0, dp(54), 1));
 
     ImageView code = new ImageView(context);
@@ -134,34 +137,7 @@ public class HomeScreen extends LinearLayout {
     searchRow.addView(code, codeParams);
     addView(searchRow);
 
-    TextView featureLabel = sectionLabel("Explore KANTA");
-    addView(featureLabel);
-    LinearLayout grid = new LinearLayout(context);
-    grid.setOrientation(VERTICAL);
-    grid.setPadding(dp(12), 0, dp(12), 0);
-    String[] featureLabels = {"Search", "Queue", "YouTube", "Visuals", "Mic & Voice", "Pitch & Tempo"};
-    int[] featureIcons = {
-      R.drawable.kanta_search_outline,
-      R.drawable.kanta_queue_outline,
-      android.R.drawable.ic_media_play,
-      R.drawable.kanta_visuals_outline,
-      R.drawable.kanta_microphone_outline,
-      R.drawable.kanta_pitch_outline
-    };
-    int[] featureActions = {0, 1, 2, 3, 4, 5};
-    for (int row = 0; row < 2; row++) {
-      LinearLayout rowLayout = new LinearLayout(context);
-      rowLayout.setOrientation(HORIZONTAL);
-      for (int col = 0; col < 3; col++) {
-        int index = row * 3 + col;
-        Button card = featureCard(featureLabels[index], featureIcons[index], featureActions[index]);
-        LinearLayout.LayoutParams cardParams = new LayoutParams(0, dp(94), 1);
-        cardParams.setMargins(dp(4), dp(4), dp(4), dp(4));
-        rowLayout.addView(card, cardParams);
-      }
-      grid.addView(rowLayout, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-    }
-    addView(grid);
+
 
     addView(sectionLabel("Quick Play"));
     LinearLayout quickRow = new LinearLayout(context);
@@ -177,18 +153,21 @@ public class HomeScreen extends LinearLayout {
     }
     addView(quickRow);
 
+    View bottomSpacer = new View(context);
+    addView(bottomSpacer, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1));
+
     LinearLayout bottom = new LinearLayout(context);
     bottom.setOrientation(HORIZONTAL);
     bottom.setGravity(Gravity.CENTER);
     bottom.setBackground(KantaTheme.backgroundDrawable(
         KantaTheme.BG_ELEVATED, 18, KantaTheme.BORDER, 1, density));
     bottom.setPadding(dp(4), dp(5), dp(4), dp(5));
-    String[] labels = {"Home", "My Set", "Scenic", "Realm", "More"};
+    String[] labels = {"Home", "Sing", "Performance", "Experience", "More"};
     int[] icons = {
       R.drawable.kanta_home_filled,
-      R.drawable.kanta_library_outline,
+      R.drawable.kanta_search_outline,
+      R.drawable.kanta_microphone_outline,
       R.drawable.kanta_visuals_outline,
-      R.drawable.kanta_remote_outline,
       R.drawable.kanta_more_outline
     };
     for (int i = 0; i < labels.length; i++) {
@@ -216,6 +195,30 @@ public class HomeScreen extends LinearLayout {
     LayoutParams bottomParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
     bottomParams.setMargins(dp(12), dp(2), dp(12), dp(10));
     addView(bottom, bottomParams);
+  }
+
+  private Button groupCard(String title, String detail, String icon, int action) {
+    Button card = new Button(context);
+    card.setAllCaps(false);
+    card.setText(icon + "\n" + title + "\n" + detail);
+    card.setTextSize(10);
+    card.setGravity(Gravity.CENTER);
+    card.setTextColor(KantaTheme.TEXT_PRIMARY);
+    card.setTypeface(null, Typeface.BOLD);
+    card.setPadding(dp(2), dp(2), dp(2), dp(2));
+    card.setBackground(KantaTheme.backgroundDrawable(
+        KantaTheme.SURFACE_ELEVATED, 13, KantaTheme.BORDER, 1, density));
+    card.setContentDescription(title + ". " + detail);
+    card.setOnClickListener(v -> {
+      if (listener == null) return;
+      if (action == 0) listener.onSing();
+      else if (action == 1) listener.onPerformance();
+      else listener.onExperience();
+    });
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(68), 1);
+    params.setMargins(dp(4), 0, dp(4), 0);
+    card.setLayoutParams(params);
+    return card;
   }
 
   private LinearLayout collectionCard(String title, String detail, int artwork, int action) {
@@ -303,9 +306,9 @@ public class HomeScreen extends LinearLayout {
     if (listener == null) return;
     switch (destination) {
       case 0: listener.onHome(); break;
-      case 1: listener.onMySet(); break;
-      case 2: listener.onScenic(); break;
-      case 3: listener.onRealm(); break;
+      case 1: listener.onSing(); break;
+      case 2: listener.onPerformance(); break;
+      case 3: listener.onExperience(); break;
       case 4: listener.onMore(); break;
       default: break;
     }

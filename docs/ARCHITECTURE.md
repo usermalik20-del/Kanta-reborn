@@ -704,3 +704,9 @@ The Android reference-led UI and shared companion changes were reconciled onto c
 The reconciled reference-led UI uses the current-main `SessionController` API surface, including SoundFont inventory/selection and main-Looper import progress; no second state owner is introduced.
 
 The merged karaoke-stage implementation keeps Home as the launch composition boundary before applying saved accessory/navigation state, matching the runtime walkthrough contract.
+
+## Android user-goal navigation candidate — 2026-11-03
+
+The Android reference-led presentation is being grouped into five user-facing destinations: Home, Sing, Performance, Experience and More. Sing is the entry point for Search, KANTA/YouTube/Local sources, Favorites, Recent, My Set/playlists and Queue. Performance groups Now Playing/lyrics, Key & Tempo, Voice and Singing Coach. Experience groups backgrounds, camera, effects, Scenic/Realm presentation, Party Mode and display/fullscreen. More owns advanced settings, companion, diagnostics and help.
+
+This is a presentation boundary only. `MainActivity` selects destinations, `GroupScreen` renders group actions, and existing screens continue to issue commands to the authoritative `SessionController`, stage presenter, catalog and microphone/monitor owners. Search uses a bounded embedded keypad with numeric and letter layouts; it suppresses the system IME and does not change search ownership or persistence.

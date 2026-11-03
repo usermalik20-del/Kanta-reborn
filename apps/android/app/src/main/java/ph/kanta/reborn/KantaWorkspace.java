@@ -165,12 +165,13 @@ public final class KantaWorkspace extends FrameLayout {
     header.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
 
     Button close = new Button(context);
-    close.setText("Done");
+    close.setText("✕");
     close.setAllCaps(false);
     close.setTextColor(Color.WHITE);
-    close.setTextSize(14);
-    close.setMinimumHeight(dp(40));
-    close.setBackgroundTintList(ColorStateList.valueOf(CYAN));
+    close.setTextSize(16);
+    close.setMinimumHeight(dp(36));
+    close.setMinimumWidth(dp(36));
+    close.setBackground(null);
     close.setContentDescription("Close " + title);
     close.setOnClickListener(v -> deactivateAccessory());
     header.addView(close);

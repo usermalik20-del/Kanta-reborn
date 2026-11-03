@@ -238,3 +238,9 @@ The reference-led Android UI and companion changes were reconciled onto current 
 The reconciled PR retains current-main `SessionController` SoundFont inventory, active-bank selection and import-progress APIs; the reference-led screens remain presentation-only adapters.
 
 The karaoke-stage candidate initializes the reference-led Home dashboard on launch; saved navigation is applied only after the dashboard default is established.
+
+## Three-group navigation candidate
+
+The current Android UI candidate uses five primary destinations: **Home | Sing | Performance | Experience | More**. Sing is the doorway to KANTA, YouTube and Local discovery, My Set/playlists, Favorites, Recent and Queue. Performance owns the Now Playing/lyrics surface plus Voice, Key & Tempo and Singing Coach. Experience owns Background, Camera, Effects, Scenic, Party Mode and Display. More contains advanced settings and tools. The grouping is presentation-only; `SessionController`, `StagePresenterImpl`, catalog persistence and the microphone owner remain authoritative.
+
+Search uses an embedded KANTA keypad toggled from the search row. Numeric and compact letter layouts share a fixed-height footprint; the search field suppresses the system IME so the device keyboard cannot cover results.

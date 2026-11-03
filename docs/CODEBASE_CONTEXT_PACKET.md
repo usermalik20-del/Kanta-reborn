@@ -380,3 +380,9 @@ The current-main iOS controller had cancellation gaps across awaited library loo
 - **Platform boundary:** browser companion markup, iOS mirrored resources and iOS host changes are excluded from this Android-native UI slice and require a separately reviewed shared-contract change.
 
 **Reconciliation integration note:** the first PR #149 compile found that the reference Visuals destination needed `SessionController.sceneResource(String, int)`. This adapter has now been ported to the current main controller and uses the existing stage generation/IO/publication path. Fresh Android validation is required on the repaired head.
+
+## Android three-group UI candidate — 2026-11-03
+
+The uncommitted Android UI branch `feature/three-user-groups-ui` adds `GroupScreen` and changes `MainActivity`/`HomeScreen` navigation to Home | Sing | Performance | Experience | More. Existing destination screens remain reachable through group actions; `SessionController`, `StagePresenterImpl`, catalog persistence and microphone/monitor ownership are unchanged. `KantaSearchScreen` uses `InlineKeyboard` and `KantaSearchBar.setEmbeddedKeyboardMode(true)` to keep numeric and letter entry inside a fixed-height app-owned keypad instead of invoking the system IME. Home is mounted match-parent with a weighted spacer so its bottom navigation fills the viewport. Existing local edits to `KantaWorkspace` and `HomeScreen` were present before this branch and are included for review.
+
+Validation so far: `git diff --check`, Java syntax parsing for new/changed leaf UI classes, product branding checks, and `tools/check-android-workspace-contract.py` (50 checks) pass. Local Gradle compilation is unavailable because the device JVM exits with `getcpu(2) system call not supported by kernel`. Exact-head Android build, emulator runtime and physical-device acceptance remain outstanding.

@@ -194,8 +194,8 @@ for method in (
     check(method in activity, "Android retains %s" % method)
 
 check(
-    'for (String name : new String[] {"My Set", "Loop", "Scenic", "Realm", "Control"})' in activity,
-    "Android retains the five existing navigation destinations",
+    'for (String name : new String[] {"Home", "Sing", "Performance", "Experience", "More"})' in activity,
+    "Android retains the five user-facing navigation destinations",
 )
 check(
     "new OnBackPressedCallback(false)" in activity

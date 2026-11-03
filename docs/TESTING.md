@@ -515,3 +515,7 @@ After reconciling PR #134 with current `main`, rerun documentation sync and comp
 The reconciled exact head must compile against current-main `SessionController` SoundFont and import-progress APIs before the Android runtime walkthrough is accepted.
 
 The karaoke-stage runtime gate begins by asserting the Home dashboard is visible; launch-default changes must be validated on the exact PR head.
+
+## Android three-group UI candidate — validation requirements
+
+The grouped navigation must retain visible and actionable Home, Sing, Performance, Experience and More destinations. Runtime coverage must enter Search, Queue, Key & Tempo, Visuals and Voice through their group landing actions, then verify the existing destination tags and controller effects. Search keypad coverage must verify numeric entry, letter-layout switching, backspace and submit without an Android IME covering the result list. The Home screenshot must show the viewport-filling bottom navigation rather than an early content termination. These source changes are not compiled, emulator-accepted or physical-device-accepted until the exact-head Android workflow passes.
