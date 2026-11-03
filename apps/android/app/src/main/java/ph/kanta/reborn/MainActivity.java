@@ -37,7 +37,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       PHOTO = 14,
       VIDEO = 15,
       CAMERA = 16,
-      MICROPHONE = 17;
+      MICROPHONE = 17,
+      LEGACY_INDEX = 18,
+      LEGACY_BLOB = 19;
   private static final int NAVY = 0xFF0B1023,
       PANEL = 0xFF19213E,
       CYAN = 0xFF6FE5E8,
@@ -66,6 +68,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private Presentation presentation;
   private DisplayManager displays;
   private String tab = "Home", query = "", singer = "";
+  private Uri pendingLegacyIndex;
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
@@ -2079,15 +2082,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     body.addView(
         button(
-            "Legacy ShubBlob container status",
-            () -> new AlertDialog.Builder(this)
-                .setTitle("Legacy ShubBlob import")
-                .setMessage(
-                    "This preview does not yet import legacy ShubBlob/kantablob containers. "
-                        + "The container is encrypted and its format has not been validated against "
-                        + "a real file. Import extracted MIDI/KAR files instead. Do not treat a "
-                        + "100% file copy as a successful container decode.")
-                .setPositiveButton("OK", null)
+            "Import legacy idx + blob",
+            this::pickLegacyIndex)
                 .show()));
     body.addView(
         text(
@@ -2492,6 +2488,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     queue();
   }
 
+  private void pickLegacyIndex() {
+    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
+    startActivityForResult(intent, LEGACY_INDEX);
+  }
+
+  private void pickLegacyBlob() {
+    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
+    startActivityForResult(intent, LEGACY_BLOB);
+  }
+
   private void chooseAudio(String title, java.util.function.Consumer<Song> selected) {
     List<Song> audio = new ArrayList<>();
     for (Song song : session.songs) if (SessionController.isAudio(song)) audio.add(song);
@@ -2813,6 +2819,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     if ((request == PHOTO || request == VIDEO) && data.getData() != null) {
       session.importStage(data.getData(), request == VIDEO);
+      return;
+    }
+    if (request == LEGACY_INDEX && data.getData() != null) {
+      pendingLegacyIndex = data.getData();
+      pickLegacyBlob();
+      return;
+    }
+    if (request == LEGACY_BLOB && data.getData() != null) {
+      if (pendingLegacyIndex == null) { Toast.makeText(this, "Choose the index file first.", Toast.LENGTH_LONG).show(); return; }
+      showImportProgress();
+      attachImportProgressListener();
+      session.importLegacyPair(pendingLegacyIndex, data.getData());
+      pendingLegacyIndex = null;
       return;
     }
     if (request == MUSIC) {

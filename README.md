@@ -167,7 +167,7 @@ Android APK publication follows successful Android validation only. iOS unsigned
 
 ## Android library import discoverability — 2026-11-02
 
-The Android My Set surface now lists imported MIDI/KAR/audio items with direct Reserve actions and shows the installed SoundFont inventory with an explicit active-bank indicator and Use action. SoundFont inventory and active selection are persisted together; changing banks affects subsequent playback, not a song already in progress. The legacy ShubBlob/kantablob and index-container formats remain explicitly unsupported in the preview UI: the decoder has no real-container acceptance evidence and must not report a raw container copy as an imported song. Extracted MIDI/KAR files remain the supported route until a real, safely decoded container is demonstrated. The changed-head Android emulator/runtime gate is required before this UI is called verified.
+The Android My Set surface now lists imported MIDI/KAR/audio items with direct Reserve actions and shows the installed SoundFont inventory with an explicit active-bank indicator and Use action. SoundFont inventory and active selection are persisted together; changing banks affects subsequent playback, not a song already in progress. Paired ShubBlob/kantablob and index-container import is now implemented as a separate My Set flow: choose the index, then the paired blob. The file-backed importer scans bounded MKMD records, decrypts and inflates only validated payloads, and materializes MIDI/WAV/MP3 copies through the existing LibraryRepository. Single-file selection still rejects container files; physical-device and exact-head Android validation remain required.
 
 ## Android SoundFont storage safety — 2026-11-02
 

@@ -445,3 +445,8 @@ The Search destination adds an in-app keypad toggle. Numeric and letter keys use
 ## Supplied UI and SoundFont asset candidate — 2026-11-03
 
 The supplied UI upgrade archive contributes multicolor Android VectorDrawables and gradient button selectors. Home and Voice use them directly without tinting. The two supplied procedural SF2 banks are bundled as starter assets and surfaced in the existing SoundFont inventory; they are not silently selected over the current bank. The OpenStage audit pack's lock file and license requirements are preserved under `docs/audio-candidates/openstage/`; the KANTA-created procedural bank is included under the restricted project asset license, while unverified third-party audio candidates are not copied into the application.
+
+
+## Legacy ShubBlob paired import candidate — 2026-11-03
+
+The supplied real pair (`shubidx` plus `shubblob`) established that the earlier rejection was not licensing-related. The blob contains aligned encrypted MKMD records; the Android candidate now has a bounded file-backed importer using the compatibility AES-256-CBC/raw-deflate contract, title records from the paired index, and LibraryRepository persistence. The legacy path is selected only through the paired-file My Set flow; standalone `.idx`/`.blob` selection remains rejected. Exact-head Android compilation, a retained synthetic regression fixture, emulator acceptance and physical-device import/playback remain required.

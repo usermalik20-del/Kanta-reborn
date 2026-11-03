@@ -714,3 +714,7 @@ This is a presentation boundary only. `MainActivity` selects destinations, `Grou
 ## Android supplied UI and SoundFont assets — 2026-11-03
 
 The Android UI candidate consumes the supplied multicolor VectorDrawables directly; tinting is intentionally avoided because it destroys per-path colors. `LibraryRepository` remains the single SoundFont inventory owner and now installs the two supplied procedural banks (`KANTA KaraokeLive GM v3` and `KANTA LiveStage GM v2`) into its existing app-private media directory and persisted inventory. Playback still opens only the selected bank through the existing SessionController/native adapter. The KANTA-created procedural portion is a runtime asset under the restricted project license; the pinned third-party sample candidates remain excluded until per-file audio licensing is verified.
+
+## Paired ShubBlob import candidate — 2026-11-03
+
+The Android legacy path now has a separate file-backed importer for user-supplied `shubidx` + `shubblob` pairs. It scans 1024-aligned MKMD records without loading the blob into memory, applies the fixed compatibility AES-256-CBC/raw-deflate contract only after bounded header validation, pairs decoded records with index titles, and persists materialized MIDI/WAV/MP3 files through `LibraryRepository`. The single-file import path still rejects `.idx`/`.blob`; the paired UI is the only entry point. This is a source candidate until exact-head Android compilation, real-container runtime acceptance, storage/cancellation tests and physical-device playback pass.

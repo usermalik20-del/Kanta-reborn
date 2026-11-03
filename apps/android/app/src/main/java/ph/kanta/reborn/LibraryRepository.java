@@ -214,6 +214,26 @@ final class LibraryRepository {
     return Collections.unmodifiableList(new ArrayList<>(songs));
   }
 
+  int importLegacyResult(ph.kanta.reborn.core.legacy.MegContainerImporter.ImportResult result) throws IOException {
+    if (result == null || result.songs.isEmpty()) return 0;
+    if (songs.size() + result.songs.size() > 150000) throw new IOException("Library capacity reached");
+    int code = 300000;
+    java.util.HashSet<String> codes = new java.util.HashSet<>();
+    for (Song song : songs) codes.add(song.code);
+    for (ph.kanta.reborn.core.legacy.MegContainerImporter.DecodedSong decoded : result.songs) {
+      File source = new File(decoded.fileUri.getPath());
+      String suffix = decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".wav") ? ".wav"
+          : decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".mp3") ? ".mp3" : ".mid";
+      File destination = new File(media, "legacy-" + decoded.id + suffix);
+      if (!source.isFile() || !source.renameTo(destination)) throw new IOException("Cannot install decoded legacy song");
+      while (codes.contains(String.valueOf(code))) code++;
+      codes.add(String.valueOf(code));
+      songs.add(new Song("legacy:" + decoded.id, decoded.title, "", String.valueOf(code), destination.getName(), false));
+    }
+    persist();
+    return result.songs.size();
+  }
+
   List<SavedSet> sets() {
     return Collections.unmodifiableList(new ArrayList<>(sets));
   }
@@ -281,7 +301,7 @@ final class LibraryRepository {
             : lower.endsWith(".mp3") ? "mp3" : lower.endsWith(".wav") ? "wav" : null;
     if (lower.endsWith(".shubblob") || lower.endsWith(".kantablob")
         || lower.endsWith(".shubidx") || lower.endsWith(".kantidx"))
-      throw new IOException("Legacy ShubBlob containers are not supported by this preview. Import extracted MIDI/KAR files instead.");
+      throw new IOException("Select “Import legacy idx + blob” in My Set and choose the paired files.");
     if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music, or a valid SF2 SoundFont.");
     File temp = File.createTempFile("import-", ".tmp", media);
     boolean installed = false;

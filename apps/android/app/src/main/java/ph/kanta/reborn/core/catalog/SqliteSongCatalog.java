@@ -392,7 +392,7 @@ public final class SqliteSongCatalog implements SongCatalog {
   }
 
   /**
-   * Future importer hook for the legacy Meg container (kantidx/kantablob).
+   * Legacy catalog hook retained for the separate paired importer flow.
    *
    * <p>Not called from rebuild() — folder scan is the single authoritative catalog
    * (dim-3, Option 3b). The Meg container becomes an optional user-initiated importer
@@ -404,9 +404,9 @@ public final class SqliteSongCatalog implements SongCatalog {
    * classify payloads, and materialize decoded files into library-private storage.
    */
   private void indexFromLegacyContainer(SQLiteDatabase db, Uri rootUri) {
-    // Placeholder: legacy container importer not yet implemented.
+    // The active SessionController/LibraryRepository flow owns paired imports.
     // dim-3 Option 3b: this is a separate user-initiated importer flow, not catalog rebuild.
-    Log.i(TAG, "Legacy container importer not yet implemented (dim-3 Option 3b)");
+    Log.i(TAG, "Legacy container catalog rebuild remains separate from the paired importer flow (dim-3 Option 3b)");
   }
 
   private long insertVolume(SQLiteDatabase db, String name) {
