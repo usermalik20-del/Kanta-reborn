@@ -1,5 +1,9 @@
 # Reconstruction evidence and work ledger
 
+## Android large SoundFont RAM ceiling — local candidate
+
+Owner requested a larger budget for full-tail SoundFonts. Changed only the native tracked-allocation ceiling from 128 MiB to 1536 MiB, with existing validation, overflow rejection and allocation-failure cleanup retained. Added lightweight exact-cap, over-cap, grow/shrink realloc and SIZE_MAX accounting cases to the existing native harness; they simulate live allocation totals rather than allocating gigabytes. Local C11 compilation with strict warnings passed; starter-tone pitch/transposition, truncation rejection, six malformed-table cases and 2000 mutation checks passed, and allocation accounting returned to zero. Layout preflight passed. Local Android doctor reports missing Java 17/platform/AAPT2/D8/apksigner; APK/lint/emulator and ASan/UBSan are not established by this run. The large external piano remains unbundled and playback/device acceptance is open. Raising a software cap cannot fix the local iSH malloc/mmap capacity limitation or guarantee low-memory Android TV operation. This is not deployed or released.
+
 ## Karaoke Stage v2 — merged Android preview
 
 PR [#155](https://github.com/usermalik20-del/Kanta-reborn/pull/155) merged as `6db012c34f97b64b4692e09ee709fe4e439e2a71` on 2026-11-03, superseding PR #153. This is Android preview functionality, not a new tagged/store release or physical-device acceptance. It preserves the existing Home destinations, camera lifecycle and SoundFont inventory.
