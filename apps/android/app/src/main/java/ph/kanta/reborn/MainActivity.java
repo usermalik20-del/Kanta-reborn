@@ -2081,10 +2081,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         body.addView(text("The full collection remains searchable in Control.", 13, 0xFFAFB8D0));
     }
     body.addView(
-        button(
-            "Import legacy idx + blob",
-            this::pickLegacyIndex)
-                .show()));
+        button("Import legacy idx + blob", this::pickLegacyIndex));
     body.addView(
         text(
             "SoundFont banks are validated before activation. MIDI/KAR imports are limited to 16 MiB and six hours; original files stay unchanged.",
