@@ -97,6 +97,11 @@ public final class BackgroundStage extends FrameLayout {
       case CAMERA:
         if (cameraView == null) {
           cameraView = new PreviewView(getContext());
+          // The SurfaceView-backed PERFORMANCE path can fail to deliver emulator camera
+          // frames; use the texture-backed path consistently for the primary stage.
+          cameraView.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
+          cameraView.setScaleType(PreviewView.ScaleType.FILL_CENTER);
+          cameraView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
           cameraView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         }
         addView(cameraView, 0);
