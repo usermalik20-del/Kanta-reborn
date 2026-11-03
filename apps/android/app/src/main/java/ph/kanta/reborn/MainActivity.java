@@ -335,8 +335,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         && (workspace == null || workspace.activeAccessory() == null))
       workspaceBackCallback.setEnabled(referenceDestination);
     boolean groupDestination = isGroupDestination(tab);
-    if (appHeader != null) appHeader.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
-    if (stagePane != null) stagePane.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
+    boolean hideStage = home || (referenceDestination && !groupDestination);
+    if (appHeader != null) appHeader.setVisibility(hideStage ? View.GONE : View.VISIBLE);
+    if (stagePane != null) stagePane.setVisibility(hideStage ? View.GONE : View.VISIBLE);
     if (navigationTabs != null)
       navigationTabs.setVisibility(home || (referenceDestination && !groupDestination) ? View.GONE : View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
