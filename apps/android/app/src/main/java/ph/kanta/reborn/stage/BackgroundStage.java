@@ -10,8 +10,6 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
-import androidx.camera.view.PreviewView;
-
 import java.io.File;
 
 /**
@@ -37,7 +35,6 @@ public final class BackgroundStage extends FrameLayout {
   private Source currentSource = Source.SOLID;
   private ImageView photoView;
   private TextureView videoView;
-  private PreviewView cameraView;
   private boolean isTransitioning = false;
   private float transitionProgress = 0f;
 
@@ -95,16 +92,7 @@ public final class BackgroundStage extends FrameLayout {
         addView(videoView, 0);
         break;
       case CAMERA:
-        if (cameraView == null) {
-          cameraView = new PreviewView(getContext());
-          // The SurfaceView-backed PERFORMANCE path can fail to deliver emulator camera
-          // frames; use the texture-backed path consistently for the primary stage.
-          cameraView.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
-          cameraView.setScaleType(PreviewView.ScaleType.FILL_CENTER);
-          cameraView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-          cameraView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-        }
-        addView(cameraView, 0);
+        // Camera preview is owned and mounted by CameraStage above this background layer.
         break;
       case SOLID:
       default:
@@ -144,32 +132,6 @@ public final class BackgroundStage extends FrameLayout {
     return currentSource;
   }
 
-  /** Sets the camera preview. */
-  public PreviewView getCameraPreview() {
-    return cameraView;
-  }
-
-  /**
-   * Detaches the CameraX view and restores the background that was active before camera opt-in.
-   * The controller owns the CameraX binding; this view owns only stage presentation.
-   */
-  public void releaseCameraPreview(Source fallback) {
-    Source restore = fallback == null || fallback == Source.CAMERA ? Source.SOLID : fallback;
-    if (currentSource == Source.CAMERA) setSource(restore);
-    if (cameraView != null) {
-      if (cameraView.getParent() == this) removeView(cameraView);
-      cameraView = null;
-    }
-  }
-
-  /** True only while the active camera background owns a streaming, attached preview. */
-  public boolean isCameraVisible() {
-    return currentSource == Source.CAMERA
-        && cameraView != null
-        && cameraView.getParent() == this
-        && cameraView.getPreviewStreamState().getValue() == PreviewView.StreamState.STREAMING;
-  }
-
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
@@ -200,7 +162,7 @@ public final class BackgroundStage extends FrameLayout {
         canvas.drawRect(0, 0, w, h, videoOverlayPaint);
         break;
       case CAMERA:
-        // Camera drawn by PreviewView child
+        // Camera preview is drawn by the CameraStage-owned child of the stage presenter.
         break;
     }
   }

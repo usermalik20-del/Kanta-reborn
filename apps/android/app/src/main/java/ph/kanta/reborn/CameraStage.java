@@ -61,19 +61,13 @@ final class CameraStage {
     if (target instanceof PreviewView) {
       view = (PreviewView) target;
     } else if (target instanceof StageSurface) {
-      // Fullscreen and external stages own a dedicated preview surface.
-      view = new PreviewView(owner);
-      view.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
-      view.setScaleType(PreviewView.ScaleType.FILL_CENTER);
-      view.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      // Fullscreen and external stages mount a dedicated preview surface.
+      view = new CameraPreviewView();
       ((StageSurface) target).mountCamera(view);
     } else if (target instanceof ph.kanta.reborn.stage.StagePresenterImpl) {
-      // The primary stage presenter owns its PreviewView through BackgroundStage.
-      view = ((ph.kanta.reborn.stage.StagePresenterImpl) target).getCameraPreview();
-      if (view == null) {
-        unavailable("The primary stage could not prepare its camera preview.");
-        return;
-      }
+      // The primary stage mounts the same owned preview above its background layer.
+      view = new CameraPreviewView();
+      ((ph.kanta.reborn.stage.StagePresenterImpl) target).mountCamera(view);
     } else {
       unavailable("The selected stage does not support a camera preview.");
       return;
@@ -82,8 +76,9 @@ final class CameraStage {
         state -> {
           if (token != generation || !enabled) return;
           streaming = state == PreviewView.StreamState.STREAMING;
-          if (surface instanceof StageSurface)
-            ((StageSurface) surface).cameraFrame(streaming);
+          if (surface instanceof StageSurface) ((StageSurface) surface).cameraFrame(streaming);
+          if (surface instanceof ph.kanta.reborn.stage.StagePresenterImpl)
+            ((ph.kanta.reborn.stage.StagePresenterImpl) surface).cameraFrame(streaming);
           if (streaming) handler.removeCallbacksAndMessages(null);
         };
     view.getPreviewStreamState().observe(owner, streamObserver);
@@ -105,43 +100,19 @@ final class CameraStage {
                 unavailable("No usable front camera is available on this device.");
                 return;
               }
-              PreviewView targetView = view;
-              Runnable bindPreview =
-                  () -> {
-                    if (token != generation || !enabled || !session.foreground) return;
-                    try {
-                      preview = new Preview.Builder().build();
-                      preview.setSurfaceProvider(targetView.getSurfaceProvider());
-                      Camera camera =
-                          provider.bindToLifecycle(owner, CameraSelector.DEFAULT_FRONT_CAMERA, preview);
-                      cameraStates = camera.getCameraInfo().getCameraState();
-                      cameraObserver =
-                          state -> {
-                            if (token == generation && enabled && state != null && state.getError() != null)
-                              unavailable(
-                                  "The front camera is unavailable. Close other camera apps or choose a"
-                                      + " background.");
-                          };
-                      cameraStates.observe(owner, cameraObserver);
-                    } catch (Exception failure) {
+              preview = new Preview.Builder().build();
+              preview.setSurfaceProvider(view.getSurfaceProvider());
+              Camera camera =
+                  provider.bindToLifecycle(owner, CameraSelector.DEFAULT_FRONT_CAMERA, preview);
+              cameraStates = camera.getCameraInfo().getCameraState();
+              cameraObserver =
+                  state -> {
+                    if (token == generation && enabled && state != null && state.getError() != null)
                       unavailable(
-                          "The front camera could not be opened. Your saved background is unchanged.");
-                    }
+                          "The front camera is unavailable. Close other camera apps or choose a"
+                              + " background.");
                   };
-              // A newly mounted primary BackgroundStage may not have a window surface yet.
-              // Wait for attachment and non-zero layout before binding so PreviewView can
-              // actually provide its surface instead of leaving the request pending forever.
-              Runnable[] bindWhenReady = new Runnable[1];
-              bindWhenReady[0] =
-                  () -> {
-                    if (token != generation || !enabled || !session.foreground) return;
-                    if (targetView.getWidth() <= 0 || targetView.getHeight() <= 0) {
-                      handler.postDelayed(bindWhenReady[0], 100);
-                      return;
-                    }
-                    bindPreview.run();
-                  };
-              targetView.post(bindWhenReady[0]);
+              cameraStates.observe(owner, cameraObserver);
             } catch (Exception failure) {
               unavailable(
                   "The front camera could not be opened. Your saved background is unchanged.");
@@ -179,7 +150,7 @@ final class CameraStage {
     if (previousSurface instanceof StageSurface && previousView != null) {
       ((StageSurface) previousSurface).unmountCamera(previousView);
     } else if (previousSurface instanceof ph.kanta.reborn.stage.StagePresenterImpl) {
-      ((ph.kanta.reborn.stage.StagePresenterImpl) previousSurface).releaseCameraPreview();
+      ((ph.kanta.reborn.stage.StagePresenterImpl) previousSurface).unmountCamera(previousView);
     }
 
     cameraStates = null;
@@ -189,6 +160,14 @@ final class CameraStage {
     view = null;
     surface = null;
     provider = null;
+  }
+
+  private PreviewView CameraPreviewView() {
+    PreviewView previewView = new PreviewView(owner);
+    previewView.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
+    previewView.setScaleType(PreviewView.ScaleType.FILL_CENTER);
+    previewView.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+    return previewView;
   }
 
   private void unavailable(String message) {
