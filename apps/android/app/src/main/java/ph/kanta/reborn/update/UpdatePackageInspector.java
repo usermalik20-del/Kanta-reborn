@@ -11,7 +11,6 @@ import androidx.core.content.FileProvider;
 import androidx.core.content.pm.PackageInfoCompat;
 import java.io.File;
 import java.security.MessageDigest;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import ph.kanta.reborn.core.update.UpdateDigest;
 
@@ -36,7 +35,7 @@ public final class UpdatePackageInspector {
         X509Certificate certificate =
             (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(encoded));
         return UpdateDigest.sha256Hex(certificate.getEncoded());
-      } catch (CertificateEncodingException | java.security.cert.CertificateException notDer) {
+      } catch (java.security.cert.CertificateException notDer) {
         // Fall back to the raw signer bytes; still a stable device-side digest.
         return UpdateDigest.sha256Hex(encoded);
       }
@@ -73,7 +72,7 @@ public final class UpdatePackageInspector {
 
   /** Whether API 26+ allows this app to request installs of unknown packages. */
   public static boolean canRequestPackageInstalls(Context context) {
-    return context.getPackageManager().canRequestPackageInstalls(context.getPackageName());
+    return context.getPackageManager().canRequestPackageInstalls();
   }
 
   /** Settings screen where the user grants installs from this app. */

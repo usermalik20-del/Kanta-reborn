@@ -217,7 +217,7 @@ public final class AppUpdateManager {
         }
         int code = connection.getResponseCode();
         boolean resume = code == HttpURLConnection.HTTP_PARTIAL;
-        if (code == HttpURLConnection.HTTP_RANGE_NOT_SATISFIABLE && existing > 0) {
+        if (code == 416 && existing > 0) {
           partial.delete();
           continue; // retry without a Range header
         }
