@@ -1,9 +1,14 @@
 {
-  "repository": "https://github.com/schellingb/TinySoundFont",
-  "revision": "853a0a171759f1ddba0de1442133a75912bbeffa",
+  "repository": "https://github.com/usermalik20-del/tinysoundfont",
+  "revision": "a272fe309c13b79b78e79c71b058cabf8d45ce7c",
   "license": "MIT",
   "files": {
-    "tsf.h": "70d55963c98f60ebb81518eaa1f25d46888d5180eb5f5289fd6b74ffc177d197",
-    "LICENSE": "ef10cb839de73fb6d5d32ea7151979e87809a6df70dc7e7ee8457ae1c9e7aa7e"
-  }
+    "tsf.h": "5469c39090161be9bdb74d867521b586b717a3f26a311f12c9f99a0c1c6900d1",
+    "LICENSE": "ef10cb839de73fb6d5d32ea7151979e87809a6df70dc7e7ee8457ae1c9e7aa7e",
+    "tsf_playback.h": "7acefcd052e74e6bb76dc720c1119a0b3652508163ae865c86260ffdebebe207",
+    "HARDENING.md": "23be1385c4dcd6e24463fa0397d6a6c1e4d8cc83bce8a08c0d5d870cfc274d59"
+  },
+  "upstreamRepository": "https://github.com/schellingb/TinySoundFont",
+  "upstreamRevision": "853a0a171759f1ddba0de1442133a75912bbeffa",
+  "description": "TinySoundFont v0.9 with the hardening patch and the quality engine defaults (Catmull-Rom interpolation, low-pass ramping, SF2 modulators, chorus/reverb sends, SF3 pad fix, single-owner playback wrapper); drop-in replacement for apps/android/app/src/main/cpp/vendor/. Compiled warning-clean under -Wall -Wextra -Werror on 64-bit hosts. See HARDENING.md in the same directory and the kanta-vendor-a272fe30 release."
 }
