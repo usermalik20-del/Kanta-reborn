@@ -3,15 +3,17 @@ KANTA bundled SoundFonts
 kanta_reborn_karaokelive_gm_v3.sf2
   Version: 3.0.0
   SHA-256: 6d1acb39b68e6063378c38a4b3ab0cab37013cea63a48f98282854bd0f463a96
-  Declared license: CC0-1.0
+  Runtime license: KANTA OpenStage Procedural Asset License 1.0
   Source package: kanta_reborn_karaokelive_gm_v3.zip
 
 kanta_reborn_livestage_gm_v2.sf2
   Version: 2.0.0
   SHA-256: 204aaf24708b96853e6107fc760d46a66479930e0c13b8b3b2ec4c35ca07891d
-  Declared license: CC0-1.0
+  Runtime license: KANTA OpenStage Procedural Asset License 1.0
   Source package: kanta_reborn_livestage_gm_v2.zip
 
+The supplied source notes declare CC0-1.0, but the project owner directed
+KANTA runtime distribution under the restricted KANTA OpenStage license above.
 The OpenStage candidate audit pack is retained as documentation only. Its
 third-party candidates are not embedded in these banks and are not runtime
 assets until their individual audio licenses are independently audited.
