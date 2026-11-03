@@ -230,7 +230,8 @@ final class LibraryRepository {
       codes.add(String.valueOf(code));
       songs.add(new Song("legacy:" + decoded.id, decoded.title, "", String.valueOf(code), destination.getName(), false));
     }
-    persist();
+    try { persist(); }
+    catch (Exception failure) { throw new IOException("Cannot persist legacy library", failure); }
     return result.songs.size();
   }
 
