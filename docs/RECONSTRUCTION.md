@@ -4,6 +4,29 @@
 
 Owner requested a larger budget for full-tail SoundFonts. Changed only the native tracked-allocation ceiling from 128 MiB to 1536 MiB, with existing validation, overflow rejection and allocation-failure cleanup retained. Added lightweight exact-cap, over-cap, grow/shrink realloc and SIZE_MAX accounting cases to the existing native harness; they simulate live allocation totals rather than allocating gigabytes. Local C11 compilation with strict warnings passed; starter-tone pitch/transposition, truncation rejection, six malformed-table cases and 2000 mutation checks passed, and allocation accounting returned to zero. Layout preflight passed. Local Android doctor reports missing Java 17/platform/AAPT2/D8/apksigner; APK/lint/emulator and ASan/UBSan are not established by this run. The large external piano remains unbundled and playback/device acceptance is open. Raising a software cap cannot fix the local iSH malloc/mmap capacity limitation or guarantee low-memory Android TV operation. This is not deployed or released.
 
+## Karaoke Stage v2 — merged Android preview
+
+PR [#155](https://github.com/usermalik20-del/Kanta-reborn/pull/155) merged as `6db012c34f97b64b4692e09ee709fe4e439e2a71` on 2026-11-03, superseding PR #153. This is Android preview functionality, not a new tagged/store release or physical-device acceptance. It preserves the existing Home destinations, camera lifecycle and SoundFont inventory.
+
+### Vocal monitor effects
+
+`VocalMonitorEffects.Mode` exposes ten selectable names: Dry, Small Room, Room, Studio, Concert Hall, Hall, Cathedral, Plate Reverb, Slap Echo and Warm Tape. Room/Small Room and Hall/Concert Hall share tuning: there are eight canonical modes including Dry, not ten distinct acoustic presets. Dry bypasses the wet effects and clamps output; do not describe every mode as passing through tanh processing. Monitoring remains opt-in and experimental; physical sound quality and latency are unverified. Effects alter monitored output, not dry scoring input.
+
+### Party sounds and scoring
+
+The eight synthesized pads are Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding and Sad Trombone. The five presented score bands are Excellent Singer (100), Great Singer (90–99), Good Singer (80–89), Rising Star (65–79) and Keep Practicing (50–64). `ScoreSink.overall()` floors the displayed result at 50; `rawOverall()` retains the underlying 0–100 estimate. This is a presentation floor, not a measured minimum performance or a guarantee that every song receives a score.
+
+`ScoreRevealPlan` defines a 1900 ms drumroll, 900 ms count-up and 420 ms label fade. `StagePresenterImpl` schedules the reveal; `ScoreOverlay` implements count-up and an instant-final-score reduced-motion path. Device timing, cue audibility and reduced-motion acceptance remain open.
+
+### Scenic video library — partial integration
+
+`ScenicCatalog` contains ten remote clip descriptors with source and licence attribution; these are separate from the bundled scenic still images. `ScenicClip` records HTTPS URLs, expected size and container, but no trusted expected SHA-256. `BgvLibrary` bounds downloads and records a computed SHA-256 in its private index; recording that digest is **not** verification against a trusted source checksum.
+
+`SessionController` exposes download/status/list/delete APIs. The Scenic dialog lists already-downloaded entries with attribution and use/remove actions, but does not expose a catalogue download picker. Selection requests `SessionController.importStage(..., video=true)`; successful import/playback has not been device-accepted. Do not advertise ten ready-to-download videos, streaming backgrounds or verified network downloads. See `docs/UNFINISHED_WORK.md` section K for the remaining acceptance work.
+
+
+---
+
 ## Android library import discoverability — active repair candidate (2026-11-02)
 
 User testing of the latest preview found that SF2 copy progress reaches 100% but the UI offers no discoverable way to apply the bank; the same post-import visibility concern applies to MIDI/KAR and legacy ShubBlob files. Source review confirmed that LibraryRepository already persisted songs and only one active SF2 reference, while My Set rendered neither imported-song rows nor a SoundFont inventory/selector. The legacy Meg/ShubBlob path is separate from the active LibraryRepository and SessionController: SqliteSongCatalog.importFromLegacyContainer(...) is not wired into the UI, and its decoder has only synthetic-fixture evidence. This repair adds a persisted SoundFont inventory and explicit next-song bank selection, exposes imported catalog songs with Reserve actions in My Set, and explains that legacy containers are not supported by this preview rather than misclassifying a raw copy as a successful import. The safe branch is fix/android-library-import-discoverability-20261102; The first exact-head Android run passed build, lint, core regressions, native sanitizers, Chrome and browser interoperability. The emulator then passed the new My Set/SoundFont UI interactions and failed a later pre-existing audio-import assertion because its expected catalog count did not include the two new imported test fixtures; the first correction to six still over-counted because the fixture folder already contains the same WAV later imported by the controller test; the expected total is now five, matching the three starters plus the imported KAR and WAV. The final count correction is five (three starters, one KAR and one WAV). The next emulator run then exposed a separate test-harness state leak: the My Set navigation test left the activity on My Set, so a later voice-settings assertion dereferenced a missing Control-only view. The instrumentation now restores Control immediately after the My Set assertions, and the Android validation artifact retains dedicated My Set/import and active-SoundFont screenshots. Both fixture-count and tab-state failures are recorded in the CI repair ledger. Re-run exact-head Android emulator checks and documentation validation before merge or preview publication.
@@ -414,3 +437,5 @@ The first reconciled PR #149 Android compile exposed one missing adapter: the ne
 PR #134 remains a validation candidate, not a release claim. Its reference-led Android destinations and companion changes were merged with current `main`; the fixed Home default (`bfa605d`) and exact-head Android runtime result remain part of the evidence before merge.
 
 The PR reconciliation restored current-main `SessionController` APIs after resolving the branch divergence. Android compile and runtime evidence must be collected on the resulting exact head.
+
+The exact-head karaoke-stage candidate includes the Home-launch default repair; Android runtime validation must prove the dashboard is mounted before destination walkthroughs.

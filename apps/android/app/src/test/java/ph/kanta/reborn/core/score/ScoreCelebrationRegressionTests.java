@@ -1,5 +1,7 @@
 package ph.kanta.reborn.core.score;
 
+import ph.kanta.reborn.core.score.ScoreResultTier;
+
 import java.util.List;
 
 /**
@@ -17,35 +19,35 @@ public final class ScoreCelebrationRegressionTests {
 
   private static void tierBoundaries() {
     check(
-        ScoreCelebrationPlan.tierFor(100) == ScoreCelebrationPlan.Tier.PERFECT,
+        ScoreCelebrationPlan.tierFor(100) == ScoreResultTier.EXCELLENT_SINGER,
         "100 is Perfect");
     check(
-        ScoreCelebrationPlan.tierFor(95) == ScoreCelebrationPlan.Tier.PERFECT,
+        ScoreCelebrationPlan.tierFor(95) == ScoreResultTier.GREAT_SINGER,
         "95 is Perfect");
     check(
-        ScoreCelebrationPlan.tierFor(94) == ScoreCelebrationPlan.Tier.GREAT,
+        ScoreCelebrationPlan.tierFor(94) == ScoreResultTier.GREAT_SINGER,
         "94 is Great");
     check(
-        ScoreCelebrationPlan.tierFor(85) == ScoreCelebrationPlan.Tier.GREAT,
+        ScoreCelebrationPlan.tierFor(85) == ScoreResultTier.GOOD_SINGER,
         "85 is Great");
     check(
-        ScoreCelebrationPlan.tierFor(84) == ScoreCelebrationPlan.Tier.GOOD,
+        ScoreCelebrationPlan.tierFor(84) == ScoreResultTier.GOOD_SINGER,
         "84 is Good");
     check(
-        ScoreCelebrationPlan.tierFor(70) == ScoreCelebrationPlan.Tier.GOOD,
+        ScoreCelebrationPlan.tierFor(70) == ScoreResultTier.RISING_STAR,
         "70 is Good");
     check(
-        ScoreCelebrationPlan.tierFor(69) == ScoreCelebrationPlan.Tier.MISS,
+        ScoreCelebrationPlan.tierFor(69) == ScoreResultTier.RISING_STAR,
         "69 is Miss");
-    check(ScoreCelebrationPlan.tierFor(0) == ScoreCelebrationPlan.Tier.MISS, "0 is Miss");
+    check(ScoreCelebrationPlan.tierFor(0) == ScoreResultTier.KEEP_PRACTICING, "0 is Miss");
   }
 
   private static void outOfRangeScoresAreClamped() {
     check(
-        ScoreCelebrationPlan.forScore(-25, 1).tier == ScoreCelebrationPlan.Tier.MISS,
+        ScoreCelebrationPlan.forScore(-25, 1).tier == ScoreResultTier.KEEP_PRACTICING,
         "Negative score clamps to Miss");
     check(
-        ScoreCelebrationPlan.forScore(250, 1).tier == ScoreCelebrationPlan.Tier.PERFECT,
+        ScoreCelebrationPlan.forScore(250, 1).tier == ScoreResultTier.EXCELLENT_SINGER,
         "Score above 100 clamps to Perfect");
     check(
         ScoreCelebrationPlan.forScore(-25, 1).confettiCount == 0,
@@ -140,7 +142,7 @@ public final class ScoreCelebrationRegressionTests {
           check(
               particle.originY >= 0f && particle.originY <= 1f,
               "Origin Y inside the stage at score " + score);
-          if (plan.tier != ScoreCelebrationPlan.Tier.MISS && particle.originY == 0f) {
+          if (plan.tier != ScoreResultTier.KEEP_PRACTICING && particle.originY == 0f) {
             check(
                 particle.velocityY > 0f,
                 "Falling confetti never starts moving upward at score " + score);

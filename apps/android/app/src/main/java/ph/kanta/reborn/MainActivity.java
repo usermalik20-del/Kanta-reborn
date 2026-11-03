@@ -1193,14 +1193,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 session.monitor.gain(value);
               }
               @Override public void onMonitorModeSelected(String mode) {
-                ph.kanta.reborn.core.VocalMonitorEffects.Mode selected;
-                switch (mode) {
-                  case "Room": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.ROOM; break;
-                  case "Hall": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.HALL; break;
-                  case "Echo": selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.ECHO; break;
-                  default: selected = ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY;
-                }
-                session.monitor.mode(selected);
+                session.monitor.mode(monitorModeFor(mode));
                 session.publish();
               }
               @Override public void onScoringToggle(boolean enabled) {
@@ -1218,6 +1211,29 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         session.scoringEnabled,
         session.scoreStatus());
     body.addView(micVoiceScreen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  /**
+   * Resolves a monitor-effect label to its engine preset.
+   *
+   * <p>The label is the chip text, not an enum name, so the mapping is explicit and a renamed
+   * label can never silently select the wrong reverb. Unknown labels fall back to dry output
+   * rather than failing.
+   */
+  private static ph.kanta.reborn.core.VocalMonitorEffects.Mode monitorModeFor(String label) {
+    if (label == null) return ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY;
+    switch (label.trim().toLowerCase(java.util.Locale.ROOT)) {
+      case "small room": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.SMALL_ROOM;
+      case "room": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.ROOM;
+      case "studio": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.STUDIO;
+      case "concert hall": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.CONCERT_HALL;
+      case "hall": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.HALL;
+      case "cathedral": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.CATHEDRAL;
+      case "plate reverb": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.PLATE_REVERB;
+      case "slap echo": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.SLAP_ECHO;
+      case "warm tape": return ph.kanta.reborn.core.VocalMonitorEffects.Mode.WARM_TAPE;
+      default: return ph.kanta.reborn.core.VocalMonitorEffects.Mode.DRY;
+    }
   }
 
   private int artworkResourceForSong(Song song) {
@@ -1576,14 +1592,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 + " experimental feature still needs device testing for sound and delay.",
             12,
             Color.WHITE));
-    LinearLayout effects = row();
+    // One row per four presets: ten effects do not fit a single phone row, and the display name
+    // comes from the enum so an underscore can never reach the user.
+    LinearLayout effects = null;
+    int shown = 0;
     for (VocalMonitorEffects.Mode value : VocalMonitorEffects.Mode.values()) {
-      String title =
-          value.name().substring(0, 1)
-              + value.name().substring(1).toLowerCase(java.util.Locale.ROOT);
+      if (shown % 4 == 0) {
+        effects = row();
+        body.addView(effects);
+      }
+      shown++;
       Button option =
           button(
-              title,
+              value.label(),
               () -> {
                 session.monitor.mode(value);
                 session.publish();
@@ -1592,7 +1613,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       if (session.monitor.mode() == value) option.setTextColor(GOLD);
       addWeighted(effects, option);
     }
-    body.addView(effects);
     Button correction =
         button(
             session.monitor.correctionEnabled()
@@ -2186,8 +2206,70 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
+  /**
+   * Opens the downloaded scenic video library.
+   *
+   * <p>The list is read on a worker thread because the library owner touches disk. Selection is
+   * applied through the same stage-import path used for local videos, so the stage keeps a single
+   * owner for the active background.
+   */
+  private void showScenicVideoLibrary() {
+    if (!session.ready || session.importing) return;
+    session.message = "Opening your video library\u2026";
+    session.publish();
+    new Thread(
+            () -> {
+              List<BgvLibrary.Entry> entries = session.scenicEntries();
+              final List<BgvLibrary.Entry> downloaded = new ArrayList<>(entries);
+              runOnUiThread(
+                  () -> {
+                    if (!"Opening your video library\u2026".equals(session.message)) return;
+                    session.message = "";
+                    LinearLayout list = new LinearLayout(MainActivity.this);
+                    list.setOrientation(LinearLayout.VERTICAL);
+                    for (BgvLibrary.Entry entry : downloaded) {
+                      TextView title = new TextView(MainActivity.this);
+                      title.setText(entry.title + " \u00b7 " + entry.attribution());
+                      title.setTextColor(Color.WHITE);
+                      title.setPadding(12, 8, 12, 8);
+                      final String id = entry.id;
+                      title.setOnClickListener(
+                          v -> {
+                            camera.stop();
+                            session.importStage(
+                                new android.net.Uri.Builder()
+                                    .scheme(ContentResolver.SCHEME_FILE)
+                                    .authority(id)
+                                    .build(),
+                                true);
+                            session.message = "Background set. Library updated.";
+                            session.publish();
+                          });
+                      list.addView(title);
+                      Button remove = new Button(MainActivity.this);
+                      remove.setText("Remove");
+                      remove.setTag(id);
+                      remove.setOnClickListener(
+                          v -> {
+                            session.deleteScenic(id);
+                            finish();
+                            startActivity(getIntent());
+                          });
+                      list.addView(remove);
+                    }
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    builder.setTitle("Background video library");
+                    builder.setView(list);
+                    builder.setNegativeButton("Close", null);
+                    builder.show();
+                  });
+            })
+        .start();
+  }
+
   private void scenic() {
     body.addView(text("Choose your stage", 22, Color.WHITE));
+    body.addView(button("Background video library", this::showScenicVideoLibrary));
     body.addView(
         button(
             camera.enabled() ? "Turn off front camera" : "Turn on front camera",

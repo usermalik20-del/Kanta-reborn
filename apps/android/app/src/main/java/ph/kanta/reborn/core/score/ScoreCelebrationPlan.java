@@ -13,17 +13,10 @@ import java.util.Random;
  * clock or a view, so the same {@code (overall, seed)} always produces the same plan and
  * the choreography is reproducible in a test.
  *
- * <p>Tiers match {@code ScoreSink.CompletedScore.tier()}: Perfect, Great, Good, Miss.
+ * <p>Bands come from {@link ScoreResultTier}, the single result ladder shared with the score
+ * card and the reveal plan.
  */
 public final class ScoreCelebrationPlan {
-
-  /** Celebration tier derived from the overall score. */
-  public enum Tier {
-    PERFECT,
-    GREAT,
-    GOOD,
-    MISS
-  }
 
   /** Downward acceleration applied by {@link #positionY}, in normalised units per t^2. */
   public static final float GRAVITY = 0.9f;
@@ -61,7 +54,7 @@ public final class ScoreCelebrationPlan {
 
   /** The complete plan for one completed score. */
   public static final class Plan {
-    public final Tier tier;
+    public final ScoreResultTier tier;
     public final int confettiCount;
     public final int balloonCount;
     public final int starCount;
@@ -69,7 +62,7 @@ public final class ScoreCelebrationPlan {
     public final List<Particle> particles;
 
     Plan(
-        Tier tier,
+        ScoreResultTier tier,
         int confettiCount,
         int balloonCount,
         int starCount,
@@ -91,23 +84,20 @@ public final class ScoreCelebrationPlan {
 
   private ScoreCelebrationPlan() {}
 
-  /** Maps an overall score (0..100) onto a tier. */
-  public static Tier tierFor(int overall) {
-    if (overall >= 95) return Tier.PERFECT;
-    if (overall >= 85) return Tier.GREAT;
-    if (overall >= 70) return Tier.GOOD;
-    return Tier.MISS;
+  /** Maps a presented score (50..100) onto a result band. */
+  public static ScoreResultTier tierFor(int overall) {
+    return ScoreResultTier.fromScore(overall);
   }
 
   /**
    * Builds the celebration plan for a score.
    *
-   * @param overall the overall score, clamped to 0..100
+   * @param overall the presented score, clamped to 0..100
    * @param seed a deterministic seed; the same seed yields the same plan
    */
   public static Plan forScore(int overall, long seed) {
     int clamped = Math.max(0, Math.min(100, overall));
-    Tier tier = tierFor(clamped);
+    ScoreResultTier tier = tierFor(clamped);
     int confetti = confettiFor(tier);
     int balloons = balloonsFor(tier);
     int stars = starsFor(tier);
@@ -147,66 +137,74 @@ public final class ScoreCelebrationPlan {
     return particle.spin * t * 360f;
   }
 
-  private static int confettiFor(Tier tier) {
+  private static int confettiFor(ScoreResultTier tier) {
     switch (tier) {
-      case PERFECT:
+      case EXCELLENT_SINGER:
         return 120;
-      case GREAT:
+      case GREAT_SINGER:
         return 72;
-      case GOOD:
+      case GOOD_SINGER:
         return 36;
+      case RISING_STAR:
+        return 24;
       default:
         return 0;
     }
   }
 
-  private static int balloonsFor(Tier tier) {
+  private static int balloonsFor(ScoreResultTier tier) {
     switch (tier) {
-      case PERFECT:
+      case EXCELLENT_SINGER:
         return 6;
-      case GREAT:
+      case GREAT_SINGER:
         return 3;
-      case GOOD:
+      case GOOD_SINGER:
         return 1;
       default:
         return 0;
     }
   }
 
-  private static int starsFor(Tier tier) {
+  private static int starsFor(ScoreResultTier tier) {
     switch (tier) {
-      case PERFECT:
+      case EXCELLENT_SINGER:
         return 5;
-      case GREAT:
+      case GREAT_SINGER:
         return 3;
-      case GOOD:
+      case GOOD_SINGER:
         return 1;
+      case RISING_STAR:
+        return 2;
       default:
         return 0;
     }
   }
 
-  private static int durationFor(Tier tier) {
+  private static int durationFor(ScoreResultTier tier) {
     switch (tier) {
-      case PERFECT:
+      case EXCELLENT_SINGER:
         return 4200;
-      case GREAT:
+      case GREAT_SINGER:
         return 3200;
-      case GOOD:
+      case GOOD_SINGER:
         return 2200;
+      case RISING_STAR:
+        return 1600;
       default:
         return 0;
     }
   }
 
-  private static float baseHueFor(Tier tier) {
+  private static float baseHueFor(ScoreResultTier tier) {
     switch (tier) {
-      case PERFECT:
+      case EXCELLENT_SINGER:
         return 42f; // gold
-      case GREAT:
+      case GREAT_SINGER:
         return 186f; // cyan
-      case GOOD:
+      case GOOD_SINGER:
         return 268f; // violet
+      case RISING_STAR:
+        return 210f; // blue
       default:
         return 0f;
     }

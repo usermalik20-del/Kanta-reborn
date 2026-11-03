@@ -12,6 +12,7 @@ import android.view.View;
 import java.util.Locale;
 
 import ph.kanta.reborn.core.score.ScoreCelebrationPlan;
+import ph.kanta.reborn.core.score.ScoreResultTier;
 
 /**
  * Draws the deterministic celebration for a completed score.
@@ -116,7 +117,7 @@ public final class ScoreCelebrationView extends View {
   }
 
   /** The tier currently being celebrated, or null. */
-  public ScoreCelebrationPlan.Tier currentTier() {
+  public ScoreResultTier currentTier() {
     return plan == null ? null : plan.tier;
   }
 

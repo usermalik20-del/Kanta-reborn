@@ -673,6 +673,27 @@ The iOS `LocalKaraokeController` operation gate serializes commands across actor
 
 `MainActivity` owns native destination composition and routes Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing into the existing Android Views presentation layer under `ph.kanta.reborn.ui`. The screens emit intents to `SessionController` or existing stage/media owners; they must not own a competing playback clock, queue, import catalog or microphone session. Now Playing embeds the existing live `StageSurface`; fullscreen uses the same stage owner. Keep My Set's imported-song visibility and persisted SoundFont inventory/select action intact when evolving the navigation. Browser companion markup and its iOS mirror remain a separate shared-protocol change and are intentionally excluded from this Android-native UI batch.
 
+## Karaoke Stage v2 — merged Android preview
+
+PR [#155](https://github.com/usermalik20-del/Kanta-reborn/pull/155) merged as `6db012c34f97b64b4692e09ee709fe4e439e2a71` on 2026-11-03, superseding PR #153. This is Android preview functionality, not a new tagged/store release or physical-device acceptance. It preserves the existing Home destinations, camera lifecycle and SoundFont inventory.
+
+### Vocal monitor effects
+
+`VocalMonitorEffects.Mode` exposes ten selectable names: Dry, Small Room, Room, Studio, Concert Hall, Hall, Cathedral, Plate Reverb, Slap Echo and Warm Tape. Room/Small Room and Hall/Concert Hall share tuning: there are eight canonical modes including Dry, not ten distinct acoustic presets. Dry bypasses the wet effects and clamps output; do not describe every mode as passing through tanh processing. Monitoring remains opt-in and experimental; physical sound quality and latency are unverified. Effects alter monitored output, not dry scoring input.
+
+### Party sounds and scoring
+
+The eight synthesized pads are Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding and Sad Trombone. The five presented score bands are Excellent Singer (100), Great Singer (90–99), Good Singer (80–89), Rising Star (65–79) and Keep Practicing (50–64). `ScoreSink.overall()` floors the displayed result at 50; `rawOverall()` retains the underlying 0–100 estimate. This is a presentation floor, not a measured minimum performance or a guarantee that every song receives a score.
+
+`ScoreRevealPlan` defines a 1900 ms drumroll, 900 ms count-up and 420 ms label fade. `StagePresenterImpl` schedules the reveal; `ScoreOverlay` implements count-up and an instant-final-score reduced-motion path. Device timing, cue audibility and reduced-motion acceptance remain open.
+
+### Scenic video library — partial integration
+
+`ScenicCatalog` contains ten remote clip descriptors with source and licence attribution; these are separate from the bundled scenic still images. `ScenicClip` records HTTPS URLs, expected size and container, but no trusted expected SHA-256. `BgvLibrary` bounds downloads and records a computed SHA-256 in its private index; recording that digest is **not** verification against a trusted source checksum.
+
+`SessionController` exposes download/status/list/delete APIs. The Scenic dialog lists already-downloaded entries with attribution and use/remove actions, but does not expose a catalogue download picker. Selection requests `SessionController.importStage(..., video=true)`; successful import/playback has not been device-accepted. Do not advertise ten ready-to-download videos, streaming backgrounds or verified network downloads. See `docs/UNFINISHED_WORK.md` section K for the remaining acceptance work.
+
+
 ## Independent platform download provenance
 
 The website download manifest has separate Android and iOS release records. Each record owns its source validation run, packaging workflow run, artifact ID, download URL, checksum and retention metadata. The top-level packaging run is retained as a strictly validated legacy fallback only for entries without a scoped value; the artifact URL must match it. Every new publication writes a scoped value and migrates the untouched peer's run from its existing artifact URL. Publishing one platform may update only its page and release record; legacy peer provenance is migrated from that peer's existing artifact URL before the shared compatibility pointer advances. The website verifier requires a platform-scoped packaging run so one platform's publication cannot silently rewrite the other platform's artifact link.
@@ -685,3 +706,5 @@ The platform-specific download publisher commits only the manifest and the match
 The Android reference-led UI and shared companion changes were reconciled onto current `main`. Android presentation delegates to `SessionController` and existing stage owners, while iOS/browser companion surfaces remain independently validated. The saved-state fallback opens the Home dashboard when no tab is persisted.
 
 The reconciled reference-led UI uses the current-main `SessionController` API surface, including SoundFont inventory/selection and main-Looper import progress; no second state owner is introduced.
+
+The merged karaoke-stage implementation keeps Home as the launch composition boundary before applying saved accessory/navigation state, matching the runtime walkthrough contract.
