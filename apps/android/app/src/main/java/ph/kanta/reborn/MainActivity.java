@@ -1068,7 +1068,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         || "Visuals".equals(destination)
         || "Now Playing".equals(destination)
         || "My Set".equals(destination)
-        || "Loop".equals(destination)
         || "Scenic".equals(destination)
         || "Realm".equals(destination)
         || "Control".equals(destination);

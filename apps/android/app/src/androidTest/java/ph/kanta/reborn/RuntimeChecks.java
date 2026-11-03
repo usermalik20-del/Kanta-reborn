@@ -393,6 +393,14 @@ public final class RuntimeChecks extends Instrumentation {
       await(
           () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 4,
           "SessionController did not publish imported songs and SoundFonts");
+      runOnMainSync(() -> {
+        View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Experience");
+        check(experience != null, "Experience navigation was not available before stage checks");
+        experience.performClick();
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party") != null,
+          "Experience group did not expose Party Mode");
+      runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party").performClick());
       runOnMainSync(
           () -> check(
               clickText(activity.getWindow().getDecorView(), "Sing"),
