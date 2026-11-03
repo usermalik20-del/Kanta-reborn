@@ -5,6 +5,46 @@
 #include <unistd.h>
 #include "../app/src/main/cpp/soundfont.c"
 
+static void allocation_checks(void) {
+    assert(allocated == 0);
+    assert(budget == (size_t)1536u * 1024u * 1024u);
+    // The full piano's decoded samples fit, with headroom for loader metadata.
+    assert(budget > (size_t)1163416536u + 64u * 1024u * 1024u);
+    assert(!bounded_malloc(budget + 1));
+    assert(!bounded_malloc(SIZE_MAX));
+    assert(allocated == 0);
+
+    void* value = bounded_realloc(NULL, 64);
+    assert(value && allocated == 64);
+    memset(value, 0x5a, 64);
+    // Simulate other live allocations near the ceiling without allocating GiBs.
+    const size_t other = budget - 80;
+    allocated = other + 64;
+    assert(!bounded_malloc(17));
+    assert(!bounded_realloc(value, 81));
+    assert(!bounded_realloc(value, SIZE_MAX));
+    assert(allocated == other + 64 && ((unsigned char*)value)[0] == 0x5a);
+    value = bounded_realloc(value, 80);
+    assert(value && allocated == budget);
+    assert(((unsigned char*)value)[0] == 0x5a);
+    assert(!bounded_malloc(1));
+    assert(!bounded_realloc(value, 81));
+    assert(allocated == budget);
+    value = bounded_realloc(value, 32);
+    assert(value && allocated == other + 32);
+    bounded_free(value);
+    assert(allocated == other);
+    value = bounded_malloc(80);
+    assert(value && allocated == budget);
+    assert(!bounded_malloc(1));
+    bounded_free(value);
+    assert(allocated == other);
+    allocated = 0; // Retire the simulated allocations, not real heap pointers.
+    bounded_free(NULL);
+    assert(allocated == 0);
+    puts("SoundFont: 1536 MiB cap, exact boundary, realloc/overflow accounting passed");
+}
+
 static double frequency(kanta_soundfont* bank, float tuning) {
     kanta_sf_tune(bank, tuning);
     kanta_sf_midi(bank, 0xb0, 120, 0);
@@ -27,6 +67,7 @@ static double frequency(kanta_soundfont* bank, float tuning) {
 }
 int main(int argc, char** argv) {
     assert(argc == 2);
+    allocation_checks();
     kanta_soundfont* bank = kanta_sf_open(argv[1]);
     assert(bank);
     double base = frequency(bank, 0), raised = frequency(bank, 12);

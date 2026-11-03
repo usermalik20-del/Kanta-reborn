@@ -10,7 +10,11 @@
 
 typedef union allocation_header { size_t size; max_align_t alignment; } allocation_header;
 static _Thread_local size_t allocated;
-static const size_t budget = 128u * 1024u * 1024u;
+// Ceiling for tracked TinySoundFont allocations on this worker, not reserved RAM.
+// Full-tail banks may decode to more than 1 GiB of floats; keep a finite cap
+// while allowing 1.11 GiB of samples plus tables, channels and voice state.
+// malloc/realloc can still fail below this ceiling on memory-constrained devices.
+static const size_t budget = (size_t)1536u * 1024u * 1024u;
 
 static void* bounded_malloc(size_t bytes) {
     if (bytes > budget - allocated || bytes > SIZE_MAX - sizeof(allocation_header)) return NULL;

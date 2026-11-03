@@ -1,5 +1,9 @@
 # KANTA Android reconstruction preview
 
+## Large SoundFont RAM ceiling — local candidate
+
+TinySoundFont tracked allocations are capped at **1536 MiB (1.5 GiB) per worker**, raised from 128 MiB. PCM16 banks expand to float samples (approximately twice their sample-data bytes), with additional tables, channels and voices. This ceiling does not allocate RAM in advance, change Android heap/process limits, or guarantee that a bank fits a low-memory phone/TV. Allocation failures remain failures and malformed-bank checks remain enabled; the 128-voice bound is unchanged. Large-bank memory-pressure and sustained playback acceptance require a capable physical Android device. No SoundFont asset or source media is modified by this change.
+
 ## Compact Workspace back-navigation contract
 
 The persistent stage stays attached while Search, Queue, Visuals or Controls is open. Android system/predictive back dismisses that active accessory first through the lifecycle-bound AndroidX `OnBackPressedDispatcher` callback; the callback is disabled when the workspace is stage-only so normal navigation remains available. Keep this behavior covered by `RuntimeChecks.workspaceBackNavigationChecks` and `tools/check-android-workspace-contract.py`.

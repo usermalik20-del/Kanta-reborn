@@ -1,5 +1,9 @@
 # Reconstruction validation
 
+## Android SoundFont 1536 MiB ceiling regression
+
+The existing `apps/android/tests/soundfont-test.c` CI harness now verifies the 1536 MiB tracked-payload ceiling, headroom for 1,163,416,536 sample bytes, over-budget and SIZE_MAX rejection, exact-boundary malloc/realloc, rejection preserving pointer contents and counters, shrink/free accounting, and zero balance after cleanup. Near-cap totals are simulated with the worker-local counter while real allocations stay below 100 bytes; the suite does not require GiBs of RAM or claim full-bank playback. Existing starter pitch (439.3 Hz), octave transpose (880.3 Hz), truncation, six malformed-table and 2000 mutation cases remain enabled and pass locally with C11 `-Wall -Wextra -Werror -O0`. Layout preflight passes. CI retains its existing ASan/UBSan command and Android build/lint/emulator wiring without workflow changes. Those sanitizer/APK/runtime gates and physical large-bank memory-pressure acceptance have not run on this local candidate; local Android doctor reports missing SDK/Java build prerequisites. A cap is not guaranteed available RAM.
+
 Tests and production source must describe the same behavior. Keep recovered tests that enforce product invariants; reconcile missing APIs from preserved source or implement the documented contract. Never remove assertions, disable lint or accept a baseline merely to make validation green.
 
 ## Suite boundaries
