@@ -12,6 +12,10 @@ Run `python3 tools/verify-website.py`, `python3 -m unittest tools.tests.test_web
 
 The recovery evidence in `docs/evidence/website/2026-10-15` remains immutable. Original legal and software notices are retained; current Android implementation and signing statements supersede unavailable-repository feature claims.
 
+## Android stage copy provenance — 2026-11-03
+
+`features.html` describes PR #155's merged Android preview (`6db012c3`), not a new iOS build or tagged release. It distinguishes ten monitor names from eight canonical modes, discloses the displayed score floor of 50, and labels the scenic video catalogue/downloader as partial integration without a download picker or trusted expected digest. Device timing, listening and network acceptance remain open. The documentation correction does not change `downloads.json` or either platform's generated download page; artifact links, expiry and platform-specific source SHAs remain owned by the publisher. Website-only validation/deployment is sufficient for this copy change; no native rebuild is implied.
+
 ## Crawler policy
 
 The public site declares an AI-training opt-out in `apps/web/robots.txt` and enforces the declared user agents in two places: a `routes` refusal with a `has` user-agent condition in `apps/web/vercel.json`, which is evaluated before the page rewrites and therefore also covers static assets, and `isBlockedCrawler()` in `apps/web/api/page.js`, which refuses the request before the page is read from disk. Refusals are `403` with `X-Robots-Tag: noai, noimageai`. Crawler user agents are refused by the edge rule, so in production they receive Vercel's own 403 page rather than the renderer's text body; the renderer's plain-text refusal is the layer behind it. Live verification on 2026-11-01 showed the `headers` rule reaches static responses (`/style.css`, `/robots.txt`, `/downloads.json`) but **not** the rewritten HTML routes, because the function's response replaces them — so the renderer sets `X-Robots-Tag` on its own response, and `tools/verify-website.py` fails if that line is removed.

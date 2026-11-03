@@ -154,48 +154,26 @@ Validation state: `LyricWordAnimationRegressionTests` is wired into the existing
 
 The optional voice-output route accepts Bluetooth SCO and BLE headsets next to wired headphones, USB audio and analog/aux line-out. Headset-class devices are safe to monitor because the microphone belongs to the same worn device; speaker-class routes (built-in speaker, Bluetooth A2DP speakers, HDMI/ARC) stay blocked because the microphone hears them. A Bluetooth activation asks Android for the communication route (API 31 and newer) and plays the effect chain as voice-communication audio, then releases that request when monitoring stops. Bluetooth sound is mono call quality with higher delay, link negotiation takes one to three seconds, and platforms older than Android 12 are not offered a Bluetooth output at all. The Bluetooth device's own microphone is not captured by the app yet: microphone input still comes from the phone. Physical routing, feedback, sound quality and round-trip latency remain unverified on real hardware.
 
-## Karaoke Stage v2 (candidate)
+## Karaoke Stage v2 — merged Android preview
 
-Branch `feature/karaoke-stage-v3` carries the karaoke stage upgrade, rebuilt on current `main`:
+PR [#155](https://github.com/usermalik20-del/Kanta-reborn/pull/155) merged as `6db012c34f97b64b4692e09ee709fe4e439e2a71` on 2026-11-03, superseding PR #153. This is Android preview functionality, not a new tagged/store release or physical-device acceptance. It preserves the existing Home destinations, camera lifecycle and SoundFont inventory.
 
-### Vocal Monitor Effects (8 presets)
-`VocalMonitorEffects` now provides eight high-quality presets replacing the original four:
-- **DRY** — no processing
-- **SMALL_ROOM** — intimate space, short decay
-- **STUDIO** — controlled, neutral
-- **CONCERT_HALL** — large space, long decay
-- **CATHEDRAL** — vast space, very long decay
-- **PLATE_REVERB** — classic plate character
-- **SLAP_ECHO** — distinct repeat, rhythmic
-- **WARM_TAPE** — saturation + gentle compression
+### Vocal monitor effects
 
-All modes include a DC blocker (1-pole HPF at ~20 Hz) and soft-clipping (tanh).
+`VocalMonitorEffects.Mode` exposes ten selectable names: Dry, Small Room, Room, Studio, Concert Hall, Hall, Cathedral, Plate Reverb, Slap Echo and Warm Tape. Room/Small Room and Hall/Concert Hall share tuning: there are eight canonical modes including Dry, not ten distinct acoustic presets. Dry bypasses the wet effects and clamps output; do not describe every mode as passing through tanh processing. Monitoring remains opt-in and experimental; physical sound quality and latency are unverified. Effects alter monitored output, not dry scoring input.
 
-### Party Sounds (8 distinct pads)
-`PartySounds` synthesizes eight genuinely distinct pads; the original Drum Roll = Applause bug is fixed. Each pad has unique timbre: Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding, Sad Trombone.
+### Party sounds and scoring
 
-### Scoring System (5 tiers, 50–100 floor)
-- **EXCELLENT_SINGER** (100) — gold celebration
-- **GREAT_SINGER** (90) — cyan celebration
-- **GOOD_SINGER** (80) — violet celebration
-- **RISING_STAR** (65) — warm celebration
-- **KEEP_PRACTICING** (50) — minimal celebration
+The eight synthesized pads are Applause, Cheering, Drum Roll, Air Horn, Laughter, Ta-Da, Ding and Sad Trombone. The five presented score bands are Excellent Singer (100), Great Singer (90–99), Good Singer (80–89), Rising Star (65–79) and Keep Practicing (50–64). `ScoreSink.overall()` floors the displayed result at 50; `rawOverall()` retains the underlying 0–100 estimate. This is a presentation floor, not a measured minimum performance or a guarantee that every song receives a score.
 
-`ScoreSink.overall()` returns 50–100; `rawOverall()` preserves 0–100; `tier()` uses `ScoreResultTier`.
+`ScoreRevealPlan` defines a 1900 ms drumroll, 900 ms count-up and 420 ms label fade. `StagePresenterImpl` schedules the reveal; `ScoreOverlay` implements count-up and an instant-final-score reduced-motion path. Device timing, cue audibility and reduced-motion acceptance remain open.
 
-### Score Reveal Animation
-- **ScoreRevealPlan**: drumroll (1.9 s) → count-up to final score (0.9 s) → label fade (0.42 s)
-- **ScoreOverlay**: count-up animation with reduced-motion fallback (instant final score)
-- **StagePresenterImpl**: drumroll → scheduled reveal → deterministic celebration flow
+### Scenic video library — partial integration
 
-### Scenic Background Video Library (new in the Scenic tab)
-- **ScenicCatalog**: 10 curated clips from Wikimedia Commons CC0 and NASA public domain (all HEAD-verified)
-- **ScenicClip**: immutable value object with a validated id, title, channel, credit, licence, source page, https download URL, expected size and container
-- **BgvLibrary**: `HttpURLConnection` downloader with a SHA-256 integrity check (recorded on the stored entry), progress reporting and delete; writes to `files/bgv/`
-- **SessionController**: `bgvLibrary` field + `downloadScenic()`, `deleteScenic()`, `scenicDownloadStatus()`, `scenicEntries()`, `scenicLibraryAvailable()`. A storage failure leaves the library unavailable instead of failing session start-up.
-- **MainActivity**: "Background video library" button in Scenic tab → dialog listing downloaded clips with attribution, "Use as background", Remove
+`ScenicCatalog` contains ten remote clip descriptors with source and licence attribution; these are separate from the bundled scenic still images. `ScenicClip` records HTTPS URLs, expected size and container, but no trusted expected SHA-256. `BgvLibrary` bounds downloads and records a computed SHA-256 in its private index; recording that digest is **not** verification against a trusted source checksum.
 
-The candidate is rebuilt on current `main`: the reference-led Home/destination composition, the CameraX preview lifecycle and the persisted SoundFont inventory stay exactly as merged, and only the stage, scoring, effects and scenic-library changes are layered on top.
+`SessionController` exposes download/status/list/delete APIs. The Scenic dialog lists already-downloaded entries with attribution and use/remove actions, but does not expose a catalogue download picker. Selection requests `SessionController.importStage(..., video=true)`; successful import/playback has not been device-accepted. Do not advertise ten ready-to-download videos, streaming backgrounds or verified network downloads. See `docs/UNFINISHED_WORK.md` section K for the remaining acceptance work.
+
 
 
 ## Multi-file import durability
