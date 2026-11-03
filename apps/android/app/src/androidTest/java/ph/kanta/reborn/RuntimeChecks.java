@@ -400,9 +400,10 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.my-songs") != null,
           "Sing group did not expose My songs");
       runOnMainSync(
-          () -> check(
-              clickText(activity.getWindow().getDecorView(), "My songs"),
-              "My songs action was not clickable"));
+          () -> {
+            View mySongs = activity.getWindow().getDecorView().findViewWithTag("kanta.group.my-songs");
+            check(mySongs != null && mySongs.performClick(), "My songs action was not clickable");
+          });
       await(
           () -> contains(activity.getWindow().getDecorView(), "Original KAR")
               && contains(activity.getWindow().getDecorView(), "ACTIVE")
