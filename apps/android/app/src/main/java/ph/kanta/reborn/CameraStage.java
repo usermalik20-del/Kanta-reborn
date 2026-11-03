@@ -105,19 +105,32 @@ final class CameraStage {
                 unavailable("No usable front camera is available on this device.");
                 return;
               }
-              preview = new Preview.Builder().build();
-              preview.setSurfaceProvider(view.getSurfaceProvider());
-              Camera camera =
-                  provider.bindToLifecycle(owner, CameraSelector.DEFAULT_FRONT_CAMERA, preview);
-              cameraStates = camera.getCameraInfo().getCameraState();
-              cameraObserver =
-                  state -> {
-                    if (token == generation && enabled && state != null && state.getError() != null)
+              PreviewView targetView = view;
+              Runnable bindPreview =
+                  () -> {
+                    if (token != generation || !enabled || !session.foreground) return;
+                    try {
+                      preview = new Preview.Builder().build();
+                      preview.setSurfaceProvider(targetView.getSurfaceProvider());
+                      Camera camera =
+                          provider.bindToLifecycle(owner, CameraSelector.DEFAULT_FRONT_CAMERA, preview);
+                      cameraStates = camera.getCameraInfo().getCameraState();
+                      cameraObserver =
+                          state -> {
+                            if (token == generation && enabled && state != null && state.getError() != null)
+                              unavailable(
+                                  "The front camera is unavailable. Close other camera apps or choose a"
+                                      + " background.");
+                          };
+                      cameraStates.observe(owner, cameraObserver);
+                    } catch (Exception failure) {
                       unavailable(
-                          "The front camera is unavailable. Close other camera apps or choose a"
-                              + " background.");
+                          "The front camera could not be opened. Your saved background is unchanged.");
+                    }
                   };
-              cameraStates.observe(owner, cameraObserver);
+              // A newly mounted primary BackgroundStage may not have a window surface yet.
+              // Binding on the next UI frame lets PreviewView create its compatible surface first.
+              targetView.post(bindPreview);
             } catch (Exception failure) {
               unavailable(
                   "The front camera could not be opened. Your saved background is unchanged.");
