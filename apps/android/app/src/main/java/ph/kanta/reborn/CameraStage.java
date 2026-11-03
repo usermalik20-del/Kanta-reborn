@@ -129,8 +129,21 @@ final class CameraStage {
                     }
                   };
               // A newly mounted primary BackgroundStage may not have a window surface yet.
-              // Binding on the next UI frame lets PreviewView create its compatible surface first.
-              targetView.post(bindPreview);
+              // Wait for attachment and non-zero layout before binding so PreviewView can
+              // actually provide its surface instead of leaving the request pending forever.
+              Runnable[] bindWhenReady = new Runnable[1];
+              bindWhenReady[0] =
+                  () -> {
+                    if (token != generation || !enabled || !session.foreground) return;
+                    if (!targetView.isAttachedToWindow()
+                        || targetView.getWidth() <= 0
+                        || targetView.getHeight() <= 0) {
+                      handler.postDelayed(bindWhenReady[0], 100);
+                      return;
+                    }
+                    bindPreview.run();
+                  };
+              targetView.post(bindWhenReady[0]);
             } catch (Exception failure) {
               unavailable(
                   "The front camera could not be opened. Your saved background is unchanged.");
