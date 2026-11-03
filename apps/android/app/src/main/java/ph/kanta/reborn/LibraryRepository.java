@@ -214,14 +214,14 @@ final class LibraryRepository {
     return Collections.unmodifiableList(new ArrayList<>(songs));
   }
 
-  int importLegacyResult(ph.kanta.reborn.core.legacy.MegContainerImporter.ImportResult result) throws IOException {
+  int importLegacyResult(ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result) throws IOException {
     if (result == null || result.songs.isEmpty()) return 0;
     if (songs.size() + result.songs.size() > 150000) throw new IOException("Library capacity reached");
     int code = 300000;
     java.util.HashSet<String> codes = new java.util.HashSet<>();
     for (Song song : songs) codes.add(song.code);
-    for (ph.kanta.reborn.core.legacy.MegContainerImporter.DecodedSong decoded : result.songs) {
-      File source = new File(decoded.fileUri.getPath());
+    for (ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.DecodedSong decoded : result.songs) {
+      File source = decoded.file;
       String suffix = decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".wav") ? ".wav"
           : decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".mp3") ? ".mp3" : ".mid";
       File destination = new File(media, "legacy-" + decoded.id + suffix);

@@ -1456,7 +1456,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         blob = File.createTempFile("legacy-blob-", ".blob", context.getCacheDir());
         copyLegacyUri(indexUri, index, 16L * 1024 * 1024);
         copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024);
-        ph.kanta.reborn.core.legacy.MegContainerImporter.ImportResult result =
+        ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
             ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
                 index, blob, new File(repository.media, "legacy-import"));
         good = repository.importLegacyResult(result);

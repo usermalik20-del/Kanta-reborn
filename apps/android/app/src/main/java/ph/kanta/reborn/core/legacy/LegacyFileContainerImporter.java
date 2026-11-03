@@ -1,6 +1,5 @@
 package ph.kanta.reborn.core.legacy;
 
-import android.net.Uri;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -14,9 +13,12 @@ public final class LegacyFileContainerImporter {
   private static final int MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
   private static final byte[] KEY = hex("9eac94f7d1abf0c1e08e9f67d3a2f6fc45fda31d2477702dae565b259c49fe6b");
   private static final byte[] IV = "JtNpObAv6714@*#&".getBytes(StandardCharsets.US_ASCII);
+  public static final class DecodedSong { public final String id,title,fileName; public final File file; public final MkmdDecoder.Signature signature; public final long decodedBytes; DecodedSong(String id,String title,String fileName,File file,MkmdDecoder.Signature signature,long decodedBytes){this.id=id;this.title=title;this.fileName=fileName;this.file=file;this.signature=signature;this.decodedBytes=decodedBytes;} }
+  public static final class ImportError { public final int recordIndex; public final String message; ImportError(int recordIndex,String message){this.recordIndex=recordIndex;this.message=message;} }
+  public static final class ImportResult { public final int totalSpans,decodedCount,skippedCount; public final List<DecodedSong> songs; public final List<ImportError> errors; ImportResult(int totalSpans,int decodedCount,int skippedCount,List<DecodedSong> songs,List<ImportError> errors){this.totalSpans=totalSpans;this.decodedCount=decodedCount;this.skippedCount=skippedCount;this.songs=songs;this.errors=errors;} }
   private LegacyFileContainerImporter() {}
 
-  public static MegContainerImporter.ImportResult importPair(
+  public static ImportResult importPair(
       File index, File blob, File outputDir) throws IOException {
     if (!index.isFile() || !blob.isFile()) throw new IOException("Both index and blob files are required");
     if (blob.length() <= 0 || blob.length() > MAX_BLOB_BYTES) throw new IOException("ShubBlob exceeds 1 GiB limit");
@@ -26,8 +28,8 @@ public final class LegacyFileContainerImporter {
     if (!outputDir.isDirectory() && !outputDir.mkdirs()) throw new IOException("Cannot create legacy import directory");
     ArrayList<Long> records = scanRecords(blob);
     if (records.size() < titles.size()) throw new IOException("The blob has fewer MKMD records than the index");
-    ArrayList<MegContainerImporter.DecodedSong> songs = new ArrayList<>();
-    ArrayList<MegContainerImporter.ImportError> errors = new ArrayList<>();
+    ArrayList<DecodedSong> songs = new ArrayList<>();
+    ArrayList<ImportError> errors = new ArrayList<>();
     int limit = titles.size();
     for (int i = 0; i < limit; i++) {
       try {
@@ -37,15 +39,15 @@ public final class LegacyFileContainerImporter {
         if (ext == null) throw new IOException("Decoded payload is not MIDI, WAV or MP3");
         String fileName = safe(title) + "-" + i + ext;
         File out = write(outputDir, fileName, payload);
-        songs.add(new MegContainerImporter.DecodedSong(
+        songs.add(new DecodedSong(
             UUID.randomUUID().toString(), title.isEmpty() ? "Legacy song " + i : title,
-            fileName, Uri.fromFile(out), signature(payload), payload.length));
+            fileName, out, signature(payload), payload.length));
       } catch (Exception failure) {
-        errors.add(new MegContainerImporter.ImportError(i, failure.getMessage() == null ? "Decode failed" : failure.getMessage()));
+        errors.add(new ImportError(i, failure.getMessage() == null ? "Decode failed" : failure.getMessage()));
       }
     }
     int skipped = records.size() - songs.size();
-    return new MegContainerImporter.ImportResult(records.size(), songs.size(), skipped, songs, errors);
+    return new ImportResult(records.size(), songs.size(), skipped, songs, errors);
   }
 
   private static ArrayList<Long> scanRecords(File blob) throws IOException {
