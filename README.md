@@ -1,5 +1,9 @@
 # KANTA Reborn
 
+## Android SoundFont RAM ceiling — local candidate
+
+The Android native renderer now permits up to **1536 MiB (1.5 GiB)** of tracked TinySoundFont allocations per worker, raised from 128 MiB for large decoded banks. This is a hard ceiling, not reserved or guaranteed memory: the operating system can refuse smaller allocations or terminate a memory-heavy process. Full-tail piano banks can require over 1 GiB before other app work. Format validation, voice limits, storage checks and source-byte preservation remain unchanged. Local native regression passes; APK, sanitizer and large-bank device acceptance remain separate gates. No new bank is bundled.
+
 Native Android and iOS karaoke applications built around the **Compact Workspace** redesign, together with their public website.
 
 **Current release:** `v0.1.0-workspace-redesign` at SHA `41c8ddde`.

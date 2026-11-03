@@ -1,5 +1,9 @@
 # KANTA Reborn architecture
 
+## Android native SoundFont allocation ceiling
+
+`soundfont.c` bounds TinySoundFont payload allocations at **1536 MiB per worker** (previously 128 MiB), retaining overflow checks and failed-allocation cleanup. The counter remains worker-local and is not a device-wide memory reservation; allocator headers, file mappings and unrelated app allocations are outside the tracked payload. PCM16 sample data expands to float32 at load time: a 581,742,688-byte standalone piano needs roughly 1,163,416,536 bytes for samples before synth metadata. The cap permits that payload with headroom, but does not prove physical-memory availability, successful playback or compatibility with every bank. OS allocation failure and process memory-pressure termination remain possible. Structural and region checks, the 128-voice bound, import/storage policy, thread ownership and iOS behavior are unchanged. No large bank is bundled.
+
 ## Website privacy and third-party integrations
 
 The public website keeps Google Analytics and Google AdSense behind explicit optional consent. `apps/web/api/page.js` owns request-time HTML delivery, per-response nonce generation and the matching CSP; `apps/web/site-consent.js` owns the visitor choice and loads `analytics.js` plus AdSense only after acceptance. The persistent choice can be changed or revoked. The private `/songbook` route is deliberately excluded from the consent injection and third-party integrations. Native iOS and Android builds remain isolated from website scripts and ad SDKs. Actual ad delivery depends on Google publisher approval, account-side Auto Ads configuration and applicable consent-platform requirements. Do not treat code deployment as proof of account approval or live ads.
