@@ -1,6 +1,7 @@
 package ph.kanta.reborn.stage;
 
 import ph.kanta.reborn.core.Song;
+import ph.kanta.reborn.core.score.ScoreResultTier;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.core.MidiLyrics;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
@@ -69,15 +70,15 @@ public interface StagePresenter {
 
   /** Score result data. */
   final class ScoreResult {
-    public final int overallScore; // 0-100
+    public final int overallScore; // 50-100, floored by ScoreResultTier
     public final int pitchScore;
     public final int timingScore;
     public final int bonusScore;
-    public final String tier; // "Perfect", "Great", "Good", "Miss"
+    public final ScoreResultTier tier;
     public final Song song;
     public final String singer;
 
-    public ScoreResult(int overall, int pitch, int timing, int bonus, String tier, Song song, String singer) {
+    public ScoreResult(int overall, int pitch, int timing, int bonus, ScoreResultTier tier, Song song, String singer) {
       this.overallScore = overall;
       this.pitchScore = pitch;
       this.timingScore = timing;
