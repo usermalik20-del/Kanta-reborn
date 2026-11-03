@@ -31,9 +31,15 @@ The website validation job runs `tools/verify-website.py` and `tools/tests/test_
 
 `LyricWordAnimationRegressionTests` runs inside the existing `coreRegression` task. It covers the framework-free part of the candidate stage animation: a fragment boundary remains a hard source event, the span between boundaries interpolates smoothly, the active-fragment range advances only at source boundaries, and pitch energy decays to zero when the estimate is absent, stale or out of band. These checks do not exercise `Canvas`, `StaticLayout`, `ValueAnimator` or emoji rendering; visual, reduced-motion, APK/lint and emulator acceptance remain separate gates on the Android validation workflow.
 
-## Karaoke Stage v2 regression checks (candidate) — 2026-11-02
+## Karaoke Stage v2 regression checks — merged 2026-11-03
 
-The karaoke-stage candidate adds or updates the following host-JVM coverage. All of it runs inside
+PR #155 merged as `6db012c34f97b64b4692e09ee709fe4e439e2a71`. The PR-head Android run [41529578779](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41529578779) on `9607a858` passed 55,130 host regression checks and 291 emulator runtime checks. Main-branch Android validation [41560660780](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41560660780) and Android publishing [41561260449](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41561260449) then succeeded on the merge SHA. The published Android preview is not a tagged/store release; physical-device acceptance remains open.
+
+The prior baseline reported 65,424 host checks. The reduction to 55,130 has not been reconciled by a test-coverage audit; passing CI does not prove equivalent coverage. Do not attribute that reduction to specific suites without evidence.
+
+This documentation/site-copy correction changes no native implementation or download manifest. Validate it with `python3 tools/verify-website.py`, `python3 -m unittest tools.tests.test_website_security_contract`, `git diff --check` and `python3 tools/check-documentation-sync.py <base> <head>`. Check that the feature page distinguishes aliases, floored scores and incomplete scenic download integration. Do not trigger an iOS build or replace either platform's artifact for a copy-only correction.
+
+The merged karaoke-stage work adds or updates the following host-JVM coverage. All of it runs inside
 the existing `coreRegression` Gradle JavaExec task, so no device, emulator or clock is needed:
 
 ### ScoreCelebrationRegressionTests (updated to the five-band ladder)
@@ -77,11 +83,11 @@ a third party:
 
 ### Unchanged suites
 
-`LyricWordAnimationRegressionTests` and `monitorChecks` run unchanged from `main`; the
-karaoke-stage candidate does not alter lyric animation or the monitor route guard.
+`LyricWordAnimationRegressionTests` and the monitor route-guard checks remain separate contracts;
+passing them does not establish acoustic quality or complete scenic-library integration.
 
-Visual, reduced-motion, APK/lint and emulator acceptance remain separate gates on the Android
-validation workflow.
+Build/lint and emulator validation passed on the SHAs recorded above. Physical-device visual,
+reduced-motion and audio acceptance remain separate gates.
 
 ## Android compile gate and masked symbol errors
 
