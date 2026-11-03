@@ -27,3 +27,11 @@ Three deliberate constraints hold this policy in place. Search-engine and unfurl
 
 
 **Consent loading invariant:** `api/page.js` strips the legacy static `/analytics.js` script tag from recovered HTML before rendering. Do not reintroduce an eager Analytics tag in any source page: `site-consent.js` is the sole loader and may inject Analytics and AdSense only after the saved consent value is `accepted`. `tools/tests/test_site_page_handler.test.js` covers removal of the legacy tag from rendered output. This is important because adding a CSP nonce to an eager script does not make its execution consent-gated.
+
+## Android OTA self-update feed
+
+The static file `apps/web/updates.json` is a generated artifact, not edited by hand. It is produced by the Android publisher workflow (`.github/workflows/platform-download-publishing.yml`) on every successful Android build on `main`: the workflow runs `tools/prepare-update-feed.py`, which constructs the feed from `apps/web/downloads.json` (android source SHA), `verified-downloads/android/build-info.json` (file name, sha256, bytes), and the source-tree `app/build.gradle` (versionCode, versionName, minSdk). The resulting `updates.json` is staged into the downloads commit and deployed to Vercel.
+
+`apps/web/vercel.json` exposes it via a static route `^/updates\.json$` -> `/updates.json` with `Cache-Control: public, max-age=0, must-revalidate`, evaluated before the page rewrites. The pinned feed URL is `https://kanta-public.vercel.app/updates.json`.
+
+The feed format is "kanta-update-feed" version 1, channel "stable-reconstruction". It is fetched by the Android app over HTTPS only; the app validates the manifest strictly (schema, URL policy against a durable host allowlist, SHA-256 digest, version ordering) and stages downloads in app-private storage. The feed is not live until the first post-merge Android build on `main` publishes it; until then the endpoint 404s and the app reports the failure honestly.

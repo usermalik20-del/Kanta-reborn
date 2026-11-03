@@ -22,4 +22,4 @@ with zipfile.ZipFile(apk) as package:
     assert 'Leaving the foreground turns it off' in privacy
     assert 'Microphone input is optional' in privacy
     assert 'no microphone audio is saved or uploaded' in privacy
-print('APK: CAMERA/RECORD_AUDIO/INTERNET-only platform permissions and exact upstream offline runtime notices passed')
+print('APK: CAMERA/RECORD_AUDIO/INTERNET/REQUEST_INSTALL_PACKAGES platform permissions and exact upstream offline runtime notices passed')
