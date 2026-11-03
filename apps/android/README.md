@@ -244,3 +244,7 @@ The karaoke-stage candidate initializes the reference-led Home dashboard on laun
 The current Android UI candidate uses five primary destinations: **Home | Sing | Performance | Experience | More**. Sing is the doorway to KANTA, YouTube and Local discovery, My Set/playlists, Favorites, Recent and Queue. Performance owns the Now Playing/lyrics surface plus Voice, Key & Tempo and Singing Coach. Experience owns Background, Camera, Effects, Scenic, Party Mode and Display. More contains advanced settings and tools. The grouping is presentation-only; `SessionController`, `StagePresenterImpl`, catalog persistence and the microphone owner remain authoritative.
 
 Search uses an embedded KANTA keypad toggled from the search row. Numeric and compact letter layouts share a fixed-height footprint; the search field suppresses the system IME so the device keyboard cannot cover results.
+
+## Supplied UI and SoundFont assets
+
+The UI upgrade pack's multicolor VectorDrawables are used directly by Home and Voice navigation/action surfaces; no tint or color filter is applied to those resources. The two supplied procedural banks are bundled under `app/src/main/assets/starter/`, installed into the existing app-private media inventory on first load, and remain selectable through My Set without changing the authoritative playback owner. Their declared SHA-256 values and CC0-1.0 claims are recorded in `starter/SOUNDFONT_LICENSES.txt`. The OpenStage candidate lock/audit files are documentation only until individual sample licenses are independently verified.

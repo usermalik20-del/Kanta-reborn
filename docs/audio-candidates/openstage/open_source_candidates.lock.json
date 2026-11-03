@@ -1,0 +1,9 @@
+{
+  "status": "AUDIT_REQUIRED_BEFORE_AUDIO_IMPORT",
+  "candidates": [
+    {"role":"live drums","repository":"sfzinstruments/virtuosity_drums","commit":"9f04cf9a734527edfbb0a4eee1f674e45bbf71bc","declared_license":"CC0-1.0","required_paths":["LICENSE","Samples/","Programs/"]},
+    {"role":"acoustic piano","repository":"sfzinstruments/Osiris_Piano","commit":"18c6afccb60cff458edbf7c394571783e074e1e9","declared_license":"CC0-1.0","required_paths":["LICENSE","UC/","UC-Sus/","Programs/"]},
+    {"role":"electric guitar","repository":"sfzinstruments/karoryfer.black-and-green-guitars","commit":"b3b3249d37dc977a1a297bd2dc053e6d9b6b805c","declared_license":"CC0-1.0","required_paths":["LICENSE","Samples/","Programs/"]},
+    {"role":"saxophone","repository":"sfzinstruments/karoryfer.weresax","commit":"a4d756b21d2a573aca0d840cce7e71ba5effd4c6","declared_license":"CC0-1.0","required_paths":["LICENSE","Samples/","Programs/"]}
+  ]
+}

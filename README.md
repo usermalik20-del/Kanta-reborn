@@ -196,3 +196,7 @@ The karaoke-stage candidate now also initializes the reference-led Home dashboar
 ## Android user-facing information architecture — local candidate
 
 The Android presentation is being reorganized around three user goals rather than technical destinations: **Sing** (find music, personal songs and queue), **Performance** (Now Playing, lyrics, voice, Key & Tempo and Singing Coach), and **Experience** (backgrounds, camera, effects, scenic presentation, Party Mode and display). **More** contains advanced settings, companion control, diagnostics and help. Home now exposes only the three goals plus compact Continue Singing content; playback, FIFO, microphone, scoring and stage ownership remain unchanged.
+
+## Android supplied UI and SoundFont assets — local candidate
+
+The Android UI candidate now includes the supplied multicolor VectorDrawables and gradient button backgrounds without tinting away their per-path colors. It also bundles the supplied procedural `KANTA KaraokeLive GM v3` and `KANTA LiveStage GM v2` banks in the app's starter assets and exposes them through the existing persisted SoundFont inventory. The OpenStage candidate pack is retained as an audit-only document set; its pinned third-party candidates are not embedded or advertised as integrated audio.

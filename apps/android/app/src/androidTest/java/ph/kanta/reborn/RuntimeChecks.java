@@ -353,9 +353,11 @@ public final class RuntimeChecks extends Instrumentation {
           !isolated.soundFontName().equals("KANTA original tone"),
           "SoundFont override not retained");
       check(
-          isolated.soundFonts().size() == 2
+          isolated.soundFonts().size() == 4
               && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta-tone.sf2"))
-              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals(isolated.soundFont().getName())),
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals(isolated.soundFont().getName()))
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta_reborn_karaokelive_gm_v3.sf2"))
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta_reborn_livestage_gm_v2.sf2")),
           "Imported and bundled SoundFonts are not discoverable");
       String importedBank = isolated.soundFont().getName();
       isolated.selectSoundFont("kanta-tone.sf2");
@@ -369,7 +371,7 @@ public final class RuntimeChecks extends Instrumentation {
       reloadedBanks.load();
       check(
           reloadedBanks.soundFont().getName().equals(importedBank)
-              && reloadedBanks.soundFonts().size() == 2,
+              && reloadedBanks.soundFonts().size() == 4,
           "Active SoundFont selection or inventory did not survive reload");
       check(
           isolated.songs().stream().anyMatch(value -> !value.starter && value.fileName.endsWith(".mid")),
@@ -389,7 +391,7 @@ public final class RuntimeChecks extends Instrumentation {
       }
       runOnMainSync(() -> session.importSongs(files));
       await(
-          () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 2,
+          () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 4,
           "SessionController did not publish imported songs and SoundFonts");
       runOnMainSync(
           () -> check(

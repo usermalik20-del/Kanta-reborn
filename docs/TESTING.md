@@ -519,3 +519,7 @@ The karaoke-stage runtime gate begins by asserting the Home dashboard is visible
 ## Android three-group UI candidate — validation requirements
 
 The grouped navigation must retain visible and actionable Home, Sing, Performance, Experience and More destinations. Runtime coverage must enter Search, Queue, Key & Tempo, Visuals and Voice through their group landing actions, then verify the existing destination tags and controller effects. Search keypad coverage must verify numeric entry, letter-layout switching, backspace and submit without an Android IME covering the result list. The Home screenshot must show the viewport-filling bottom navigation rather than an early content termination. These source changes are not compiled, emulator-accepted or physical-device-accepted until the exact-head Android workflow passes.
+
+## Supplied UI and SoundFont assets — validation requirements
+
+Exact-head Android validation must compile all supplied drawable resources, install a clean app, verify both bundled procedural banks appear in My Set's SoundFont inventory, and confirm selecting each bank persists through repository reload. Native SoundFont structure validation and representative MIDI/KAR program, sustain and channel-10 drum playback remain required before treating either bank as device-accepted. Visual review must confirm multicolor icons retain their source colors rather than being flattened by tinting. The OpenStage candidate pack is not a runtime asset and must not be treated as licensed audio integration.

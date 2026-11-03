@@ -441,3 +441,7 @@ The exact-head karaoke-stage candidate includes the Home-launch default repair; 
 Physical-device screenshots showed that the previous Home dashboard and six-tab technical navigation exposed too many implementation concepts at once. The candidate replaces that structure with Home | Sing | Performance | Experience | More. Group landing cards are goal-oriented and route into the existing Search, Queue, My Set, Now Playing, Voice, Pitch & Tempo, Visuals, Loop/Party and advanced-control destinations without duplicating playback or queue state. The Home viewport now fills available height so its compact navigation does not leave an avoidable black tail.
 
 The Search destination adds an in-app keypad toggle. Numeric and letter keys use the same compact bounded area, while the Android soft keyboard is suppressed; this is a UI candidate until exact-head Android build and emulator/physical-device acceptance pass.
+
+## Supplied UI and SoundFont asset candidate — 2026-11-03
+
+The supplied UI upgrade archive contributes multicolor Android VectorDrawables and gradient button selectors. Home and Voice use them directly without tinting. The two supplied procedural SF2 banks are bundled as starter assets and surfaced in the existing SoundFont inventory; they are not silently selected over the current bank. The OpenStage audit pack's lock file and license requirements are preserved under `docs/audio-candidates/openstage/`, while its unverified third-party audio candidates are not copied into the application.

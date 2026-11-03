@@ -21,6 +21,10 @@ final class LibraryRepository {
   }
   static final String[] STARTERS = {"morning-light", "sing-together", "starlight-echo"};
   static final String[] TITLES = {"Morning Light", "Sing Together", "Starlight Echo"};
+  private static final String[][] BUNDLED_SOUNDFONTS = {
+    {"kanta_reborn_karaokelive_gm_v3.sf2", "KANTA KaraokeLive GM v3"},
+    {"kanta_reborn_livestage_gm_v2.sf2", "KANTA LiveStage GM v2"}
+  };
 
   static final class SoundFontEntry {
     final String fileName, name;
@@ -151,6 +155,11 @@ final class LibraryRepository {
     }
     if (soundFonts.stream().noneMatch(value -> value.fileName.equals("kanta-tone.sf2")))
       soundFonts.add(0, new SoundFontEntry("kanta-tone.sf2", "KANTA original tone"));
+    for (String[] bundled : BUNDLED_SOUNDFONTS) {
+      installBundledSoundFont(bundled[0]);
+      if (soundFonts.stream().noneMatch(value -> value.fileName.equals(bundled[0])))
+        soundFonts.add(new SoundFontEntry(bundled[0], bundled[1]));
+    }
     if (soundFonts.stream().noneMatch(value -> value.fileName.equals(selectedBank))) {
       selectedBank = "kanta-tone.sf2";
       bankName = "KANTA original tone";
@@ -176,6 +185,24 @@ final class LibraryRepository {
         songs.add(new Song(id, TITLES[i], "KANTA Originals", "S00" + (i + 1), file, true));
     }
     persist();
+  }
+
+  private void installBundledSoundFont(String fileName) throws IOException {
+    File destination = new File(media, fileName);
+    if (destination.isFile()) return;
+    File temp = File.createTempFile("bundled-bank-", ".tmp", media);
+    try {
+      try (InputStream in = context.getAssets().open("starter/" + fileName);
+          FileOutputStream out = new FileOutputStream(temp)) {
+        byte[] bytes = new byte[8192];
+        int count;
+        while ((count = in.read(bytes)) != -1) out.write(bytes, 0, count);
+        out.getFD().sync();
+      }
+      if (!temp.renameTo(destination)) throw new IOException("Cannot install bundled SoundFont");
+    } finally {
+      if (temp.exists()) temp.delete();
+    }
   }
 
   private Song find(String id) {

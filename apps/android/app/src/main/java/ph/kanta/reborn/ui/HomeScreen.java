@@ -77,8 +77,7 @@ public class HomeScreen extends LinearLayout {
     header.addView(spacer, new LayoutParams(0, 1, 1));
 
     ImageView settings = new ImageView(context);
-    settings.setImageResource(R.drawable.kanta_settings_outline);
-    settings.setColorFilter(KantaTheme.TEXT_SECONDARY);
+    settings.setImageResource(R.drawable.kanta_settings_color);
     settings.setContentDescription("Settings");
     settings.setPadding(dp(10), dp(10), dp(10), dp(10));
     settings.setBackground(KantaTheme.backgroundDrawable(
@@ -117,8 +116,7 @@ public class HomeScreen extends LinearLayout {
     searchField.setTextSize(13);
     searchField.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
     searchField.setPadding(dp(14), 0, dp(10), 0);
-    Drawable searchIcon = context.getDrawable(R.drawable.kanta_search_outline).mutate();
-    searchIcon.setTint(KantaTheme.PRIMARY_CYAN);
+    Drawable searchIcon = context.getDrawable(R.drawable.kanta_search_color).mutate();
     searchField.setCompoundDrawablesWithIntrinsicBounds(searchIcon, null, null, null);
     searchField.setCompoundDrawablePadding(dp(10));
     searchField.setBackground(KantaTheme.backgroundDrawable(
@@ -128,8 +126,7 @@ public class HomeScreen extends LinearLayout {
     searchRow.addView(searchField, new LayoutParams(0, dp(54), 1));
 
     ImageView code = new ImageView(context);
-    code.setImageResource(R.drawable.kanta_song_code_outline);
-    code.setColorFilter(KantaTheme.PRIMARY_CYAN);
+    code.setImageResource(R.drawable.kanta_code_color);
     code.setContentDescription("Enter song code");
     code.setPadding(dp(10), dp(10), dp(10), dp(10));
     LayoutParams codeParams = new LayoutParams(dp(48), dp(48));
@@ -139,7 +136,7 @@ public class HomeScreen extends LinearLayout {
 
 
 
-    addView(sectionLabel("Quick Play"));
+    addView(sectionLabel("Continue Singing"));
     LinearLayout quickRow = new LinearLayout(context);
     quickRow.setOrientation(HORIZONTAL);
     quickRow.setPadding(dp(12), 0, dp(12), dp(12));
@@ -164,11 +161,11 @@ public class HomeScreen extends LinearLayout {
     bottom.setPadding(dp(4), dp(5), dp(4), dp(5));
     String[] labels = {"Home", "Sing", "Performance", "Experience", "More"};
     int[] icons = {
-      R.drawable.kanta_home_filled,
-      R.drawable.kanta_search_outline,
-      R.drawable.kanta_microphone_outline,
-      R.drawable.kanta_visuals_outline,
-      R.drawable.kanta_more_outline
+      R.drawable.kanta_home_color,
+      R.drawable.kanta_search_color,
+      R.drawable.kanta_microphone_color,
+      R.drawable.kanta_scenic_color,
+      R.drawable.kanta_more_color
     };
     for (int i = 0; i < labels.length; i++) {
       final int destination = i;
@@ -181,7 +178,6 @@ public class HomeScreen extends LinearLayout {
       nav.setGravity(Gravity.CENTER);
       nav.setTextColor(i == 0 ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_MUTED);
       Drawable icon = context.getDrawable(icons[i]).mutate();
-      icon.setTint(i == 0 ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_MUTED);
       nav.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
       nav.setCompoundDrawablePadding(dp(3));
       nav.setPadding(0, dp(5), 0, dp(5));
@@ -261,7 +257,6 @@ public class HomeScreen extends LinearLayout {
     card.setGravity(Gravity.CENTER);
     card.setTextColor(KantaTheme.TEXT_PRIMARY);
     Drawable icon = context.getDrawable(iconResource).mutate();
-    icon.setTint(KantaTheme.PRIMARY_CYAN);
     card.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
     card.setCompoundDrawablePadding(dp(8));
     card.setBackground(KantaTheme.backgroundDrawable(

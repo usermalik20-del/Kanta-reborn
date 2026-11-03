@@ -8,6 +8,8 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import ph.kanta.reborn.R;
+
 /** Mic and voice controls backed by the app's existing capture, monitor and scoring owners. */
 public final class KantaMicVoiceScreen extends LinearLayout {
   public interface Listener {
@@ -53,10 +55,10 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     top.setOrientation(HORIZONTAL);
     top.setGravity(Gravity.CENTER_VERTICAL);
     top.setPadding(dp(16), dp(12), dp(16), dp(8));
-    ph.kanta.reborn.ui.components.KantaIconButton back =
-        new ph.kanta.reborn.ui.components.KantaIconButton(context);
-    back.setText("\u2190");
-    back.setTextSize(18);
+    android.widget.ImageButton back = new android.widget.ImageButton(context);
+    back.setImageResource(R.drawable.kanta_back_color);
+    back.setBackground(null);
+    back.setPadding(dp(10), dp(10), dp(10), dp(10));
     back.setContentDescription("Back to Home");
     back.setTag("kanta.screen.mic-voice.back");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
@@ -233,7 +235,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     button.setTextSize(13);
     button.setTypeface(null, Typeface.BOLD);
     button.setTextColor(KantaTheme.TEXT_PRIMARY);
-    button.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 12, KantaTheme.PRIMARY_BLUE, 1, density));
+    button.setBackgroundResource(R.drawable.kanta_button_secondary);
     button.setMinHeight(dp(44));
     return button;
   }
