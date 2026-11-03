@@ -640,6 +640,15 @@ public final class RuntimeChecks extends Instrumentation {
           "Video did not resume after reactivation");
       runOnMainSync(activity::closeFullscreen);
       stableStage.set(primaryStage);
+      // Camera rendering belongs to the live player surface. Leave the goal group
+      // before enabling it so the acceptance exercises the same visible stage path
+      // a singer uses during playback.
+      runOnMainSync(() -> {
+        activity.tab = "Now Playing";
+        activity.render();
+      });
+      await(() -> primaryStage.getGlobalVisibleRect(new android.graphics.Rect()),
+          "Now Playing did not restore the primary stage");
       runOnMainSync(() -> session.scene("bayanDawn"));
       check(state(() -> session.stageVideo == null), "Scenic selection retained video playback");
       check(
