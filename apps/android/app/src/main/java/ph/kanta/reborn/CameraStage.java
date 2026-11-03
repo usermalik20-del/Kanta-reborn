@@ -135,9 +135,7 @@ final class CameraStage {
               bindWhenReady[0] =
                   () -> {
                     if (token != generation || !enabled || !session.foreground) return;
-                    if (!targetView.isAttachedToWindow()
-                        || targetView.getWidth() <= 0
-                        || targetView.getHeight() <= 0) {
+                    if (targetView.getWidth() <= 0 || targetView.getHeight() <= 0) {
                       handler.postDelayed(bindWhenReady[0], 100);
                       return;
                     }
