@@ -182,6 +182,7 @@ Every change also runs `git diff --check` and `python3 tools/check-documentation
 - Workflow-level `permissions` stays least privilege (`contents: read`); write scopes belong only on the publishing job that needs them (`platform-download-publishing.yml`).
 - Every job keeps a `timeout-minutes`. Validation workflows keep `cancel-in-progress: true`; the publisher and the Vercel deploy keep it `false` so a release is never cancelled by a newer push.
 - Never add `continue-on-error` to a gate, and never make a failing gate non-blocking. A gate that cannot fail should be deleted, not silenced.
+- Automation must not be able to abort itself. A step under `set -o pipefail` that answers one question must ask the API once (`--jq '[...] | first'`) instead of piping a list into `head`, which can fail the whole triage step with SIGPIPE exactly when it is needed.
 - The durable release tag format `v<version>-preview-<sha8>`, the `downloads.json`/`updates.json` publication contract, exact-SHA provenance and the publisher's `fetch-depth: 0` ancestry check are fixed. Workflow edits require the root `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md` and this file in the same commit.
 
 
