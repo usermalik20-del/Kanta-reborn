@@ -439,7 +439,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     SongCatalog catalog =
         new ph.kanta.reborn.core.catalog.MergedSongCatalog(
             new ph.kanta.reborn.core.catalog.SqliteSongCatalog(this, contentRoot, scanner),
-            new ph.kanta.reborn.core.catalog.LibrarySongCatalog(session::songs));
+            new ph.kanta.reborn.core.catalog.LibrarySongCatalog(() -> session.songs));
     stagePresenter = new StagePresenterImpl(this, session, catalog, session.queue);
     stagePresenter.setTag("kanta.stage.primary");
     stagePresenter.setOnClickListener(v -> { tab = "Now Playing"; render(); });
