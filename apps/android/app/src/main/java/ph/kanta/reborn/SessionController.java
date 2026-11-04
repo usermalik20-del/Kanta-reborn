@@ -1505,7 +1505,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 importing = false;
                 libraryImporting = false;
                 message = importSummary;
-                completeImportProgress(importSucceeded, result);
+                completeImportProgress(importSucceeded, importSummary);
                 publish();
               });
         });
