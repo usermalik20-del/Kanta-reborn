@@ -170,6 +170,8 @@ The Android validation workflow is a full acceptance gate, not a screenshot-only
 
 **Android emulator repair follow-up (2026-11-01):** Android run #400 passed build, lint, native and browser gates but failed emulator instrumentation because `RuntimeChecks` cast the primary `StagePresenterImpl` to the separate fullscreen `StageSurface` class. The follow-up camera acceptance exposed a teardown defect: unbinding CameraX did not detach the preview from its owning stage, restore the primary background or invalidate stale visibility state. The repair candidate explicitly releases both primary and fullscreen previews and strengthens the visibility predicate and emulator assertions. It remains unverified until a new complete Android emulator run passes. See `docs/CI_FAILURE_REPAIR_LEDGER.md` and `docs/RECONSTRUCTION.md`.
 
+**PR #161 Android validation (2026-11-04):** run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564) passed all 55,217 core checks but exposed a stale `int[]` instrumentation expectation for `ImportBatchResult`. The test now asserts the imported/failed counts. Full Android validation passed on exact head [`5752532`](https://github.com/usermalik20-del/Kanta-reborn/commit/57525326069908bf19da3328d57260862283dea1) in run [#41814538861](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41814538861), including emulator runtime checks and My Set screenshots. See `docs/CI_FAILURE_REPAIR_LEDGER.md`.
+
 ## Platform CI ownership
 
 Android validation and APK packaging/deployment are triggered by Android-owned source and build inputs. iOS validation, unsigned IPA packaging and iPhone/iPad simulator acceptance are triggered by iOS-owned inputs. Website validation and production deployment remain website-owned. Cross-platform fan-out is limited to explicitly shared protocol files that a second platform directly compiles or tests. An Android-only change must not start Xcode builds or IPA deployment, and an iOS-only change must not start Android builds or APK deployment. See `AGENTS.md`, `docs/ARCHITECTURE.md` and `docs/TESTING.md` for the enforced policy and regression checks.
@@ -215,3 +217,13 @@ The Android presentation is being reorganized around three user goals rather tha
 ## Android supplied UI and SoundFont assets — local candidate
 
 The Android UI candidate now includes the supplied multicolor VectorDrawables and gradient button backgrounds without tinting away their per-path colors. It also bundles the supplied procedural `KANTA KaraokeLive GM v3` and `KANTA LiveStage GM v2` banks in the app's starter assets and exposes them through the existing persisted SoundFont inventory. The KANTA procedural bank from the OpenStage pack is included under the restricted KANTA OpenStage Procedural Asset License 1.0; its pinned third-party candidates remain audit-only and are not embedded.
+
+
+## Android MIDI/KAR import rework — 2026-11-04
+
+MIDI/KAR imports no longer enforce fixed file-size, event-count or six-hour duration caps;
+files are decoded file-mapped, KAR lyric text encoding is detected, @T/@A/@C metadata
+populates title/artist/copyright, @P pause codes and backslash echo lines are honoured, and
+imported songs and SoundFont banks can be removed from My Set. Stage search includes the
+active library. The transport Previous button restarts the current song (seek supported for MIDI/KAR and MP3/WAV). Key/tempo adjustments made during a song are remembered per song and reset from the Pitch & Tempo screen. SF3/Ogg SoundFont banks are now supported in addition to SF2. This is local review work on `feat/midi-kar-import-rework`; it is not merged
+and is not part of any released build.

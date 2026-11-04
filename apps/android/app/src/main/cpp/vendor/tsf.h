@@ -414,6 +414,7 @@ struct tsf
 {
 	struct tsf_preset* presets;
 	float* fontSamples;
+	unsigned int sampleTotal; /* KANTA local delta: post-decode sample frame count (SF3 expands Ogg). */
 	struct tsf_voice* voices;
 	struct tsf_channels* channels;
 
@@ -1954,6 +1955,7 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		if (!res || !tsf_load_presets(res, &hydra, smplCount)) goto out_of_memory;
 		res->outSampleRate = 44100.0f;
 		res->fontSamples = floatBuffer;
+		res->sampleTotal = smplCount; /* KANTA local delta. */
 		floatBuffer = TSF_NULL; // don't free below
 	}
 	if (0)

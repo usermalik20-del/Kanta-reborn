@@ -548,7 +548,7 @@ Main commit [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5
 
 **Recurrence rule:** when `stage.more` is missing, inspect identifier placement in `embeddedPlayer` versus `controls(wide:)`. Do not add sleeps or loosen assertions; give distinct accessible controls distinct stable identifiers and keep the source-contract guard aligned.
 
-**Status:** `candidate`.
+**Status:** `verified` by the separate exact-head follow-up below.
 ## Reconciled main acceptance and PR #83 Android JVM crash — 2026-10-26
 
 This section supersedes the earlier pending wording above for the post-merge PR #82 reconstruction/archive and the PR #80 device walkthrough.
@@ -563,11 +563,57 @@ This section supersedes the earlier pending wording above for the post-merge PR 
 
 **Context:** the post-merge main Android reconstruction [#40243337754](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337754) passed the same build/lint/domain step, real Chrome companion flow, browser interoperability and emulator runtime checks. This makes the old PR failure non-reproduced so far, not conclusively fixed.
 
+## PR #161 — Android core regression source set and malformed MIDI fixtures (2026-11-04)
+
+**Fingerprint:** `KANTA Android validation`, job `android`, step `Build, lint and domain regression tests`; run [#41806652704](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41806652704), diagnostic `Execution failed for task ':app:compileCoreRegression'` and `error: package ph.kanta.reborn.core.catalog does not exist` at `CoreRegressionTests.java:960-967`.
+
+**Affected SHA / first observed run:** `ce4790e249b0d0ca0fe9adf2984f2e3085d00c20`, run [#41806652704](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41806652704).
+
+**Cause (confirmed):** `compileCoreRegression` excluded `core/catalog/**` to avoid Android dependencies in `SqliteSongCatalog`, but the same package contains pure-Java `SongCatalog`, `LibrarySongCatalog` and `MergedSongCatalog`, which the new `catalogMergeChecks()` uses. Once the source exclusion was narrowed, executing the suite also exposed two invalid test fixtures: the marked KAR events omitted delimiters needed for the asserted cue boundaries, and the file-backed decode test wrote track bytes without the required SMF header.
+
+**Fix:** remote commit [`cab2e43`](https://github.com/usermalik20-del/Kanta-reborn/commit/cab2e433ba7f380d09c3c062540ef75089da8d7f) narrows the source-set exclusion to `SqliteSongCatalog.java`. Local candidate commit [`4901fb2`](https://github.com/usermalik20-del/Kanta-reborn/commit/4901fb2a7b65220f8af100f72272b12907699d4c) corrects the KAR delimiters and constructs a complete SMF file for file-backed decoding; it also records the testing and reconstruction status.
+
+**Regression coverage:** `CoreRegressionTests.catalogMergeChecks()` now compiles with the pure-Java catalog sources included. `karaokeMetaAndCharsetChecks()` retains its cue/timing assertions with valid delimiters and a complete MIDI fixture. Manual `javac --release 17` compilation of 66 framework-free Java sources and execution of `CoreRegressionTests` passed all 55,217 checks.
+
+**Validation on the first repair candidate:** exact-head run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564) on `42bfeac452b1f9d4f66b0f7c9fc9566ac4679a38` passed `:app:assembleDebug` and `:app:coreRegression` (55,217 checks), then failed compiling the instrumentation APK due to the separate stale import-result type recorded below. The source-set repair was verified; complete validation is recorded in the later exact-head follow-up.
+
+**Recurrence rule:** exclude only Android-backed adapters from the framework-free source set, not their whole domain package. After a compile repair, execute the regression suite; fixtures must contain full SMF headers and explicit line separators when asserting separate cues.
+
+**Status:** `verified` by the separate exact-head follow-up below.
+
 **Synchronization and fresh validation:** the PR branch was synchronized with current main by merge commit [`6941aec`](https://github.com/usermalik20-del/Kanta-reborn/commit/6941aec198ad07eb46c5f7d8093b9361d0821750); the compare now reports 3 commits ahead and 0 behind. New exact-head runs are reconstruction [#40244262616](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262616), focused iPhone smoke [#40244262594](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594), full iPhone/iPad walkthrough [#40244262620](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262620), and unsigned archive [#40244262618](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262618). At this checkpoint, the fresh Android run had passed build/lint/domain regression and real-Chrome/browser checks and was running emulator runtime checks; iOS package tests had passed and unsigned simulator compilation was still in progress. Final acceptance remains pending.
 
 **Next action if the JVM crash recurs:** extend the failure artifact path to retain `apps/android/hs_err_pid*.log`, then inspect the JVM fatal-error header, problematic frame, signal and resource state. Keep build/lint assertions enabled; do not mask the daemon exit or infer green from partial tests.
 
 
+
+## PR #161 — instrumentation import-result API mismatch (2026-11-04)
+
+**Fingerprint:** `KANTA Android validation`, job `android`, step `Build, lint and domain regression tests`; run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564), diagnostic `RuntimeChecks.java:348: error: incompatible types: ImportBatchResult cannot be converted to int[]`.
+
+**Affected SHA / first observed run:** `42bfeac452b1f9d4f66b0f7c9fc9566ac4679a38`, run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564).
+
+**Cause (confirmed):** `LibraryRepository.importBatch()` now returns `ImportBatchResult` with named `imported`, `duplicates`, `failed` and bounded `reasons` fields, but the emulator `RuntimeChecks` assertion still assigned that result to the prior `int[]` shape. APK assembly and all 55,217 framework-free regression checks passed before the test-APK compile failed.
+
+**Fix candidate:** `RuntimeChecks` now consumes `ImportBatchResult` and asserts `imported == 3`, `failed == 1`, and the existing five-row catalog state. This preserves the fixture's partial-import contract rather than weakening it.
+
+**Regression coverage:** the existing mixed SAF instrumentation fixture checks imported and failed counts together with durable media/catalog state and bank discovery.
+
+**Validation on the failure-reproduction head:** local instrumentation compilation was unavailable because this environment has no Android SDK; both test-APK compilation and emulator execution were subsequently verified in the exact-head hosted run below.
+
+**Recurrence rule:** when an import API returns an aggregate result object, migrate all instrumentation call sites to the named result fields; compile the test APK as well as running framework-free domain checks.
+
+**Status:** `verified` by the separate exact-head follow-up below.
+
+## PR #161 exact-head validation follow-up — 2026-11-04
+
+**Validated source SHA:** [`57525326069908bf19da3328d57260862283dea1`](https://github.com/usermalik20-del/Kanta-reborn/commit/57525326069908bf19da3328d57260862283dea1), commit `fix(android): align import instrumentation result API`.
+
+**Validation:** Android run [#41814538861](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41814538861) passed on that exact SHA. Build/lint/domain regression (including 55,217 core checks), native SoundFont sanitizer, browser interoperability, and Android emulator runtime checks all succeeded. The runtime logs include `files/my-set-imported-library.png` and `files/my-set-active-soundfont.png`.
+
+**Artifact:** [android-reconstruction-checks](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41814538861/artifacts/13314491255) retained for review. Emulator acceptance passed; physical-device acceptance, signing, merge and release are not claimed.
+
+**Resolution:** both PR #161 candidate failure records above are verified on the fixed source head. Their original failure diagnostics remain preserved.
 
 ## PR #83 Stage More accessibility repair — exact-head and post-merge closure (2026-10-26)
 

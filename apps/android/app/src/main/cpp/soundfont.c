@@ -44,8 +44,27 @@ static void* bounded_realloc(void* value, size_t bytes) {
 #define TSF_MALLOC bounded_malloc
 #define TSF_REALLOC bounded_realloc
 #define TSF_FREE bounded_free
+// stb_vorbis must be included without its include guard so the declarations and
+// implementation land in this TU; the macro is defined afterwards so the vendored
+// tsf.h compiles its SF3/Ogg path against them.
+#include "stb_vorbis.c"
+#define STB_VORBIS_INCLUDE_STB_VORBIS_H
+// The SF3 path instantiates TSF_ALLOC_GUARD with a constant element size, which trips the
+// always-true size_t comparison under -Wtype-limits (gcc) / -Wtautological-constant-compare
+// (clang). The guard is semantically sound; the warnings are silenced only for the vendored
+// header (CI compiles this TU with -Werror).
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wtautological-constant-compare"
+#endif
+#endif
 #define TSF_IMPLEMENTATION
 #include "vendor/tsf.h"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 struct kanta_soundfont { tsf* synth; };
 
@@ -82,14 +101,21 @@ kanta_soundfont* kanta_sf_open(const char* path) {
 
     if (!synth || tsf_get_presetcount(synth) == 0) { if (synth) tsf_close(synth); return NULL; }
 
-    // Second line of defence: every decoded region must stay inside the sample data the
-    // validator sized above.
+    // Second line of defence: every decoded region must stay inside the decoded sample
+    // buffer. sampleTotal is the post-decode frame count, so SF3/Ogg banks (which expand
+    // far beyond their on-disk size) are bounded by their real sample data.
     for (int p = 0; p < synth->presetNum; ++p) {
         for (int r = 0; r < synth->presets[p].regionNum; ++r) {
             struct tsf_region* region = &synth->presets[p].regions[r];
-            if (region->offset >= region->end || region->end >= sample_count ||
-                (region->loop_mode && (region->loop_start >= region->loop_end ||
-                 region->loop_end >= region->end))) {
+            // The Catmull-Rom interpolator reads two floats past the current position while
+            // the loader keeps only one pad float after the decoded buffer, so a region
+            // whose end (or loop end) comes within one float of the buffer end cannot be
+            // rendered safely and must be rejected instead of reading past the pad.
+            if (region->offset >= region->end ||
+                (long)region->end + 2 > (long)synth->sampleTotal ||
+                (region->loop_mode &&
+                 (region->loop_start >= region->loop_end ||
+                  region->loop_end >= region->end))) {
                 tsf_close(synth);
                 return NULL;
             }

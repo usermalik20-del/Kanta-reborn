@@ -53,6 +53,17 @@ public final class FileAudioPlayback implements PlaybackBackend {
     if (!released) player.pause();
   }
 
+  @Override
+  public void seekTo(long milliseconds) {
+    if (!released) {
+      try {
+        player.seekTo((int) milliseconds);
+      } catch (IllegalStateException ignored) {
+      }
+    }
+  }
+
+
   public void release() {
     if (!released) {
       released = true;

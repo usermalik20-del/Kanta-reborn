@@ -77,6 +77,43 @@ int main(int argc, char** argv) {
     kanta_sf_midi(bank, -1, 128, 255);
     kanta_sf_close(bank);
     assert(allocated == 0);
+
+    // SF3/Ogg regression: the minimal compressed bank must open, render the same
+    // 440 Hz tone and reject every truncation (path is repo-root relative, as in CI).
+    kanta_soundfont* sf3 = kanta_sf_open("apps/android/tests/data/tone.sf3");
+    assert(sf3);
+    {
+        // One-time diagnostic (permanent, cheap): surface the post-decode sample
+        // accounting and the region the looped SF3 note will render with.
+        struct kanta_soundfont* raw = (struct kanta_soundfont*)sf3;
+        struct tsf* synth = raw->synth;
+        struct tsf_region* r0 = &synth->presets[0].regions[0];
+        fprintf(stderr,
+                "SF3 diag: synth=%p fontSamples=%p voices=%p sampleTotal=%u presetRegions=%d "
+                "region offset=%d end=%d loop=%d..%d mode=%d voices=%d/%d [108]=%g "
+                "[26460..26463]=%g %g %g %g\n",
+                (void*)synth, (void*)synth->fontSamples, (void*)synth->voices,
+                synth->sampleTotal, synth->presets[0].regionNum, r0->offset, r0->end,
+                r0->loop_start, r0->loop_end, r0->loop_mode, synth->voiceNum,
+                synth->maxVoiceNum, synth->fontSamples[108], synth->fontSamples[26460],
+                synth->fontSamples[26461], synth->fontSamples[26462], synth->fontSamples[26463]);
+    }
+    double sf3_base = frequency(sf3, 0);
+    assert(sf3_base > 430 && sf3_base < 450);
+    kanta_sf_close(sf3);
+    assert(allocated == 0);
+    FILE* sf3_file = fopen("apps/android/tests/data/tone.sf3", "rb");
+    assert(sf3_file);
+    assert(fseek(sf3_file, 0, SEEK_END) == 0);
+    size_t sf3_size = (size_t)ftell(sf3_file);
+    rewind(sf3_file);
+    unsigned char* sf3_bytes = malloc(sf3_size);
+    assert(sf3_bytes && fread(sf3_bytes, 1, sf3_size, sf3_file) == sf3_size);
+    fclose(sf3_file);
+    assert(sf_validate(sf3_bytes, sf3_size));
+    for (size_t cut = 0; cut < sf3_size; cut += 17) assert(!sf_validate(sf3_bytes, cut));
+    free(sf3_bytes);
+
     FILE* file = fopen(argv[1], "rb");
     assert(file);
     assert(fseek(file, 0, SEEK_END) == 0);

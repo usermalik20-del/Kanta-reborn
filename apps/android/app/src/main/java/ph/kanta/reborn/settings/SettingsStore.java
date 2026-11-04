@@ -71,6 +71,37 @@ public final class SettingsStore {
 
   public int getPitch() { return prefs.getInt(KEY_PITCH, 0); }
   public void setPitch(int v) { prefs.edit().putInt(KEY_PITCH, v).apply(); }
+  // Per-song key/tempo overrides (remembered per song id).
+  private static final String KEY_SONG_PITCH_PREFIX = "song.pitch.";
+  private static final String KEY_SONG_TEMPO_PREFIX = "song.tempo.";
+
+  public boolean hasSongOverride(String songId) {
+    return prefs.contains(KEY_SONG_PITCH_PREFIX + songId)
+        && prefs.contains(KEY_SONG_TEMPO_PREFIX + songId);
+  }
+
+  public int getSongPitch(String songId, int fallback) {
+    return prefs.getInt(KEY_SONG_PITCH_PREFIX + songId, fallback);
+  }
+
+  public float getSongTempo(String songId, float fallback) {
+    return prefs.getFloat(KEY_SONG_TEMPO_PREFIX + songId, fallback);
+  }
+
+  public void setSongOverride(String songId, int pitch, float tempo) {
+    prefs.edit()
+        .putInt(KEY_SONG_PITCH_PREFIX + songId, pitch)
+        .putFloat(KEY_SONG_TEMPO_PREFIX + songId, tempo)
+        .apply();
+  }
+
+  public void clearSongOverride(String songId) {
+    prefs.edit()
+        .remove(KEY_SONG_PITCH_PREFIX + songId)
+        .remove(KEY_SONG_TEMPO_PREFIX + songId)
+        .apply();
+  }
+
 
   // Pitch (song-aware target + assistant sensitivity)
   public float getPitchTargetHz() { return prefs.getFloat(KEY_PITCH_TARGET_HZ, 440.0f); }

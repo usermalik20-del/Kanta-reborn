@@ -23,7 +23,7 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
     static const char names[9][5] = {"phdr", "pbag", "pmod", "pgen", "inst", "ibag", "imod", "igen", "shdr"};
     static const size_t strides[9] = {38, 4, 10, 4, 22, 4, 10, 4, 46};
     sf_table tables[9] = {{0}};
-    size_t samples = 0;
+    size_t samples = 0, compressedBytes = 0;
     int pdta = 0, sdta = 0;
     if (size < 12 || memcmp(data, "RIFF", 4) || memcmp(data + 8, "sfbk", 4) ||
         sf_u32(data + 4) != size - 8) return 0;
@@ -49,9 +49,18 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
                     tables[i].data = data + body;
                     tables[i].count = length / strides[i];
                 }
-                if (kind == 2 && !memcmp(data + child, "smpl", 4)) {
-                    if (samples || length < 4) return 0;
-                    samples = length / 2;
+                if (kind == 2 && length >= 4) {
+                    if (!memcmp(data + child, "smpl", 4)) {
+                        if (samples) return 0;
+                        samples = length / 2;
+                    }
+                    /* SF3 keeps compressed Ogg streams in a smpl or smpo chunk; the
+                       TinySoundFont loader uses the first such chunk as its buffer. */
+                    if (!compressedBytes
+                        && (!memcmp(data + child, "smpl", 4) || !memcmp(data + child, "smpo", 4))) {
+                        if (length < 8) return 0;
+                        compressedBytes = length;
+                    }
                 }
                 child = body + length;
             }
@@ -59,7 +68,7 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
         pos = end;
     }
     for (int i = 0; i < 9; ++i) if (!tables[i].data) return 0;
-    if (!samples || tables[0].count < 2 || tables[0].count > 1025 ||
+    if ((!samples && !compressedBytes) || tables[0].count < 2 || tables[0].count > 1025 ||
         tables[4].count < 2 || tables[8].count < 2) return 0;
     if (!sf_indices(tables[0], 38, 24, tables[1].count) ||
         !sf_indices(tables[4], 22, 20, tables[5].count) ||
@@ -83,14 +92,30 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
                 (op == 53 && (table != 7 || value >= tables[8].count - 1))) return 0;
         }
     }
+    int anyCompressed = 0;
     for (size_t i = 0; i + 1 < tables[8].count; ++i) {
         const unsigned char* sample = tables[8].data + i * 46;
         uint32_t start = sf_u32(sample + 20), end = sf_u32(sample + 24);
         uint32_t rate = sf_u32(sample + 36);
         unsigned type = sf_u16(sample + 44);
-        if (start >= end || end >= samples || sf_u32(sample + 28) > samples ||
-            sf_u32(sample + 32) > samples || rate < 400 || rate > 384000 ||
-            (sample[40] > 127 && sample[40] != 255) || (type != 1 && type != 2 && type != 4 && type != 8)) return 0;
+        unsigned base = type & 0x0F;
+        if (rate < 400 || rate > 384000 ||
+            (sample[40] > 127 && sample[40] != 255) ||
+            (base != 1 && base != 2 && base != 4 && base != 8)) return 0;
+        if (!(type & 0x30)) {
+            /* Raw PCM sample: start/end and loop points are frame offsets inside the
+               linear sample data. */
+            if (start >= end || end >= samples || sf_u32(sample + 28) > samples ||
+                sf_u32(sample + 32) > samples) return 0;
+        } else {
+            /* Compressed (SF3/Ogg) sample: start/end are byte offsets inside the
+               container chunk; loop points are decoded frames whose lengths are only
+               known after decoding, so only their ordering can be checked here. */
+            anyCompressed = 1;
+            if (start >= end || end > compressedBytes) return 0;
+            uint32_t loopStart = sf_u32(sample + 28), loopEnd = sf_u32(sample + 32);
+            if ((loopStart || loopEnd) && loopStart >= loopEnd) return 0;
+        }
     }
     /* Bound repeated instrument expansion as well as the on-disk table sizes. */
     size_t work = 0, regions = 0;
@@ -115,6 +140,8 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
             }
         }
     }
-    return regions ? samples : 0;
+    /* For compressed banks the decoded frame count is only known after Ogg
+       decoding; the caller re-validates regions against sampleTotal. */
+    return regions ? (anyCompressed ? 1 : samples) : 0;
 }
 #endif

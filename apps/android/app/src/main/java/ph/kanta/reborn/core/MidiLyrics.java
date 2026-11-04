@@ -1,17 +1,42 @@
 package ph.kanta.reborn.core;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.*;
 import java.util.*;
 
-/** Bounded SMF 0/1 parser. Tempo events from all tracks share one tick timeline. */
+/**
+ * SMF 0/1 parser without fixed file-size, event-count or duration caps, so
+ * arbitrarily large MIDI and KAR files can be imported and played when the
+ * device has memory to process them. Structural validity is still enforced
+ * (SMF format 0/1, 1-256 tracks, nonzero PPQ, well-formed events); only
+ * individual text events are memory-bounded.
+ *
+ * <p>Karaoke extensions: lyric/text encoding detection (strict UTF-8, then
+ * Shift_JIS / GBK / Big5 by CJK density, then windows-1252), KAR metadata
+ * tags ({@code @T} title, {@code @A} artist, {@code @C} copyright),
+ * {@code @P} lyric pause codes (standalone or inline) and backslash
+ * {@code \} echo (backing) lines surfaced on {@link Cue}s.
+ */
 public final class MidiLyrics {
+  /** Per-text-event memory bound (not a file cap); prevents one runaway string. */
+  private static final int MAX_TEXT_EVENT_BYTES = 16 * 1024 * 1024;
+
   public static final class Cue {
     public final long milliseconds;
     public final String line;
     public final List<Fragment> fragments;
 
+    /** True when the KAR backslash convention marks this as an echo/backing line. */
+    public final boolean echo;
+
     Cue(long ms, String text, List<Fragment> source) {
+      this(ms, text, source, false);
+    }
+
+    Cue(long ms, String text, List<Fragment> source, boolean echo) {
       milliseconds = ms;
       int start = 0, end = text.length();
       while (start < end && Character.isWhitespace(text.charAt(start))) start++;
@@ -24,6 +49,7 @@ public final class MidiLyrics {
                 fragment.milliseconds,
                 Math.max(0, Math.min(line.length(), fragment.endCharacters - start))));
       fragments = Collections.unmodifiableList(values);
+      this.echo = echo;
     }
 
     public int highlightedCharacters(long position) {
@@ -88,6 +114,15 @@ public final class MidiLyrics {
     /** True when the key signature is minor. */
     public final boolean keyMinor;
 
+    /** KAR {@code @T} metadata when present, otherwise empty. */
+    public final String title;
+
+    /** KAR {@code @A} metadata when present, otherwise empty. */
+    public final String artist;
+
+    /** KAR {@code @C} metadata when present, otherwise empty. */
+    public final String copyright;
+
     Document(
         List<Cue> cues,
         List<Message> messages,
@@ -96,6 +131,21 @@ public final class MidiLyrics {
         boolean keyPresent,
         int keySharpsFlats,
         boolean keyMinor) {
+      this(
+          cues, messages, tracks, duration, keyPresent, keySharpsFlats, keyMinor, "", "", "");
+    }
+
+    Document(
+        List<Cue> cues,
+        List<Message> messages,
+        List<Track> tracks,
+        long duration,
+        boolean keyPresent,
+        int keySharpsFlats,
+        boolean keyMinor,
+        String title,
+        String artist,
+        String copyright) {
       this.cues = Collections.unmodifiableList(cues);
       this.messages = Collections.unmodifiableList(messages);
       this.tracks = Collections.unmodifiableList(new ArrayList<>(tracks));
@@ -103,6 +153,9 @@ public final class MidiLyrics {
       this.keyPresent = keyPresent;
       this.keySharpsFlats = keySharpsFlats;
       this.keyMinor = keyMinor;
+      this.title = title == null ? "" : title;
+      this.artist = artist == null ? "" : artist;
+      this.copyright = copyright == null ? "" : copyright;
     }
   }
 
@@ -120,21 +173,23 @@ public final class MidiLyrics {
       sequence = seq;
       this.track = track;
     }
-  }
-
+  }/** Buffered sequential reader over a slice; one TextCharset per document. */
   private static final class Reader {
-    final byte[] b;
-    int p, end;
+    final ByteBuffer b;
+    final TextCharset textCharset;
 
-    Reader(byte[] b, int p, int end) {
-      this.b = b;
-      this.p = p;
-      this.end = end;
+    Reader(ByteBuffer buffer, TextCharset textCharset) {
+      b = buffer;
+      this.textCharset = textCharset;
+    }
+
+    int remaining() {
+      return b.remaining();
     }
 
     int u8() throws IOException {
-      if (p >= end) throw new IOException("Truncated MIDI");
-      return b[p++] & 255;
+      if (!b.hasRemaining()) throw new IOException("Truncated MIDI");
+      return b.get() & 255;
     }
 
     int u16() throws IOException {
@@ -156,29 +211,184 @@ public final class MidiLyrics {
     }
 
     void skip(long n) throws IOException {
-      if (n < 0 || n > end - p) throw new IOException("Invalid MIDI chunk");
-      p += (int) n;
+      if (n < 0 || n > b.remaining()) throw new IOException("Invalid MIDI chunk");
+      b.position(b.position() + (int) n);
     }
 
     String text(int n) throws IOException {
-      if (n < 0 || n > end - p || n > 65536) throw new IOException("Invalid MIDI text");
-      String s = new String(b, p, n, StandardCharsets.UTF_8);
-      p += n;
-      return s;
+      if (n < 0 || n > b.remaining() || n > MAX_TEXT_EVENT_BYTES)
+        throw new IOException("Invalid MIDI text");
+      byte[] bytes = new byte[n];
+      b.get(bytes);
+      return textCharset.decode(bytes);
     }
 
-    boolean magic(String s) throws IOException {
-      return text(4).equals(s);
+    boolean magic(String expect) throws IOException {
+      if (expect.length() > b.remaining()) return false;
+      for (int i = 0; i < expect.length(); i++) if (b.get() != expect.charAt(i)) return false;
+      return true;
     }
   }
 
+  /**
+   * Per-document lyric/text charset: strict UTF-8 first; when that fails the
+   * CJK candidates are scored by decoded CJK/Hangul density; anything else
+   * falls back to windows-1252. The first text event selects the charset for
+   * the whole document, which matches how KAR files are written.
+   */
+  private static final class TextCharset {
+    private Charset active;
+
+    String decode(byte[] bytes) {
+      return new String(bytes, charsetFor(bytes));
+    }
+
+    private Charset charsetFor(byte[] bytes) {
+      if (active != null) return active;
+      Charset chosen = null;
+      if (strict(StandardCharsets.UTF_8, bytes)) {
+        chosen = StandardCharsets.UTF_8;
+      } else {
+        int best = 0;
+        for (String name : new String[] {"Shift_JIS", "GBK", "Big5", "CP949"}) {
+          Charset candidate;
+          try {
+            candidate = Charset.forName(name);
+          } catch (Exception unavailable) {
+            continue;
+          }
+          if (!strict(candidate, bytes)) continue;
+          int score = cjkScore(candidate, bytes);
+          if (score > best) {
+            best = score;
+            chosen = candidate;
+          }
+        }
+      }
+      if (chosen == null) chosen = Charset.forName("windows-1252");
+      active = chosen;
+      return chosen;
+    }
+
+    private static boolean strict(Charset charset, byte[] bytes) {
+      try {
+        charset
+            .newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .decode(ByteBuffer.wrap(bytes));
+        return true;
+      } catch (CharacterCodingException e) {
+        return false;
+      }
+    }
+
+    private static int cjkScore(Charset charset, byte[] bytes) {
+      CharBuffer decoded = charset.decode(ByteBuffer.wrap(bytes));
+      int score = 0;
+      for (int i = 0; i < decoded.length(); i++) {
+        char c = decoded.charAt(i);
+        if ((c >= 0x2E80 && c <= 0x9FFF) || (c >= 0xAC00 && c <= 0xD7AF)) score++;
+      }
+      return score;
+    }
+  }
+
+  /**
+   * KAR metadata accumulator: {@code @T} title, {@code @A} artist,
+   * {@code @C} copyright and {@code @P} lyric pause codes. A tag is a text
+   * segment starting with {@code @}, tagged either {@code @T value} or
+   * {@code @T:value}. Pause values without a decimal point are hundredths of
+   * a second; with a decimal point they are seconds. Pauses shift subsequent
+   * lyric cues only (the music timeline is untouched).
+   */
+  private static final class KaraokeMeta {
+    String title = "", artist = "", copyright = "";
+    long pauseMillis;
+
+    boolean consume(String text) {
+      if (text == null || text.isEmpty() || text.charAt(0) != '@') return false;
+      String tag = text.substring(1);
+      int space = tag.indexOf(' ');
+      int colon = tag.indexOf(':');
+      int cut = Math.min(
+          space < 0 ? Integer.MAX_VALUE : space, colon < 0 ? Integer.MAX_VALUE : colon);
+      String key, value;
+      if (cut == Integer.MAX_VALUE) {
+        key = tag;
+        value = "";
+      } else {
+        key = tag.substring(0, cut);
+        value = tag.substring(cut + 1).trim();
+      }
+      if (key.equals("T")) {
+        if (title.isEmpty()) title = value;
+      } else if (key.equals("A")) {
+        if (artist.isEmpty()) artist = value;
+      } else if (key.equals("C")) {
+        if (copyright.isEmpty()) copyright = value;
+      } else if (!key.isEmpty() && (key.charAt(0) == 'P' || key.charAt(0) == 'p')) {
+        // @Pnn, @P nn, @P:nn and @P0.5 forms are all supported.
+        parsePause(key.substring(1));
+      }
+      // @L/@k language, @W writer and @V version are recognized and ignored.
+      return true;
+    }
+
+    private void parsePause(String value) {
+      if (value.isEmpty()) return;
+      // Tolerate trailing non-numeric text by parsing the leading number only.
+      int end = 0;
+      while (end < value.length()
+          && (Character.isDigit(value.charAt(end)) || value.charAt(end) == '.')) end++;
+      String number = value.substring(0, end);
+      if (number.isEmpty()) return;
+      double seconds;
+      try {
+        if (number.indexOf('.') >= 0) {
+          seconds = Double.parseDouble(number);
+        } else {
+          seconds = Long.parseLong(number) / 100.0;
+        }
+      } catch (NumberFormatException malformed) {
+        return;
+      }
+      if (!(seconds >= 0) || seconds > 60) return;
+      pauseMillis += (long) (seconds * 1000);
+    }
+  }
+
+  /** Parses in-memory MIDI bytes. */
   public static List<Cue> parse(byte[] data) throws IOException {
     return decode(data).cues;
   }
 
+  /** Parses a MIDI/KAR file. */
+  public static List<Cue> parse(File file) throws IOException {
+    return decode(file).cues;
+  }
+
+  /** Decodes in-memory MIDI bytes. */
   public static Document decode(byte[] data) throws IOException {
-    if (data.length > 16 * 1024 * 1024) throw new IOException("MIDI too large");
-    Reader r = new Reader(data, 0, data.length);
+    return decode(ByteBuffer.wrap(data));
+  }
+
+  /**
+   * Decodes a MIDI/KAR file without materializing the whole file in the heap:
+   * large files are mapped read-only, so a multi-hundred-megabyte import only
+   * consumes address space plus the bounded events/strings it actually has.
+   */
+  public static Document decode(File file) throws IOException {
+    try (FileChannel channel = new FileInputStream(file).getChannel()) {
+      long size = channel.size();
+      if (size > Integer.MAX_VALUE)
+        throw new IOException("MIDI too large to map on this device");
+      return decode(channel.map(FileChannel.MapMode.READ_ONLY, 0, size));
+    }
+  }
+
+  private static Document decode(ByteBuffer data) throws IOException {
+    Reader r = new Reader(data, new TextCharset());
     if (!r.magic("MThd")) throw new IOException("Not MIDI");
     long header = r.u32();
     if (header < 6 || header > 1024) throw new IOException("Invalid MIDI header");
@@ -191,35 +401,37 @@ public final class MidiLyrics {
         || (format == 0 && tracks != 1)) throw new IOException("Unsupported MIDI timing");
     r.skip(header - 6);
     ArrayList<Event> events = new ArrayList<>();
-    int seq = 0, total = 0;
+    int seq = 0;
     boolean keyFound = false, keyMinor = false;
     int keySharpsFlats = 0;
     ArrayList<Track> trackMetadata = new ArrayList<>();
     for (int track = 0; track < tracks; track++) {
       if (!r.magic("MTrk")) throw new IOException("Missing MIDI track");
       long length = r.u32();
-      if (length > r.end - r.p) throw new IOException("Truncated MIDI track");
-      Reader t = new Reader(data, r.p, r.p + (int) length);
+      if (length > r.remaining()) throw new IOException("Truncated MIDI track");
+      // A sub-reader over exactly this track's bytes keeps the master reader aligned.
+      ByteBuffer trackBytes = data.duplicate();
+      trackBytes.position(data.position());
+      trackBytes.limit(data.position() + (int) length);
+      Reader t = new Reader(trackBytes, r.textCharset);
       r.skip(length);
       long tick = 0;
       int running = 0, channelMask = 0;
       String trackName = "", instrumentName = "";
       boolean trackLyrics = false;
-      while (t.p < t.end) {
-        if (++total > 250000) throw new IOException("Too many MIDI events");
+      while (t.b.hasRemaining()) {
         tick += t.vlq();
-        if (tick > Integer.MAX_VALUE * 16L) throw new IOException("MIDI timeline too long");
         int status = t.u8();
         if (status < 128) {
           if (running == 0) throw new IOException("Invalid running status");
-          t.p--;
+          t.b.position(t.b.position() - 1);
           status = running;
         }
         if (status == 255) {
           running = 0;
           int type = t.u8();
           long n = t.vlq();
-          if (n > t.end - t.p) throw new IOException("Truncated MIDI event");
+          if (n > t.remaining()) throw new IOException("Truncated MIDI event");
           if (type == 0x51) {
             if (n != 3) throw new IOException("Invalid tempo");
             int tempo = (t.u8() << 16) | (t.u8() << 8) | t.u8();
@@ -227,9 +439,11 @@ public final class MidiLyrics {
             events.add(new Event(tick, tempo, type, null, seq++, track));
           } else if (type == 1 || type == 5) {
             String text = t.text((int) n);
-            if (!text.startsWith("@") && !text.isEmpty()) {
+            if (!text.isEmpty()) {
               events.add(new Event(tick, 0, type, text, seq++, track));
-              if (type == 5 && !text.replace('/', ' ').replace('\\', ' ').trim().isEmpty())
+              if (type == 5
+                  && !text.startsWith("@")
+                  && !text.replace('/', ' ').replace('\\', ' ').trim().isEmpty())
                 trackLyrics = true;
             }
           } else if (type == 3 || type == 4) {
@@ -278,7 +492,10 @@ public final class MidiLyrics {
       trackMetadata.add(new Track(track, channelMask, trackName, instrumentName, trackLyrics));
     }
     events.sort(Comparator.comparingLong((Event e) -> e.tick).thenComparingInt(e -> e.sequence));
-    boolean lyrics = events.stream().anyMatch(e -> e.type == 5);
+    boolean lyrics =
+        events.stream()
+            .anyMatch(e -> e.type == 5 && (e.text == null || !e.text.startsWith("@")));
+    KaraokeMeta meta = new KaraokeMeta();
     ArrayList<Cue> cues = new ArrayList<>();
     ArrayList<Message> messages = new ArrayList<>();
     long last = 0;
@@ -290,17 +507,17 @@ public final class MidiLyrics {
     final int lyricType = lyrics ? 5 : 1;
     boolean marked =
         events.stream()
-            .filter(e -> e.type == lyricType && e.text != null)
+            .filter(e -> e.type == lyricType && e.text != null && !e.text.startsWith("@"))
             .anyMatch(
                 e ->
                     e.text.indexOf('/') >= 0
                         || e.text.indexOf('\\') >= 0
                         || e.text.indexOf('\n') >= 0
                         || e.text.indexOf('\r') >= 0);
+    boolean lineEcho = false;
     for (Event e : events) {
       micros += (e.tick - last) * (double) tempo / ppq;
       last = e.tick;
-      if (micros > 6L * 60 * 60 * 1000000) throw new IOException("MIDI exceeds six hours");
       if (e.status != 0) {
         messages.add(new Message((long) (micros / 1000), e.status, e.a, e.b, e.track));
         continue;
@@ -309,41 +526,61 @@ public final class MidiLyrics {
         tempo = e.tempo;
         continue;
       }
-      if (e.type != (lyrics ? 5 : 1)) continue;
+      if (e.type != lyricType || e.text == null || e.text.isEmpty()) continue;
       String raw = e.text;
       if (!marked && line.length() > 0) {
-        cues.add(new Cue(lineStart, line.toString(), fragments));
+        cues.add(new Cue(lineStart, line.toString(), fragments, lineEcho));
         line.setLength(0);
         fragments.clear();
+        lineEcho = false;
       }
-      long time = (long) (micros / 1000);
       for (int i = 0; i < raw.length(); ) {
         char value = raw.charAt(i);
         if (value == '/' || value == '\\' || value == '\n' || value == '\r') {
           if (line.length() > 0 && !line.toString().trim().isEmpty())
-            cues.add(new Cue(lineStart, line.toString(), fragments));
+            cues.add(new Cue(lineStart, line.toString(), fragments, lineEcho));
           line.setLength(0);
           fragments.clear();
+          lineEcho = value == '\\';
           i++;
-        } else {
+        } else if (value == '@') {
+          // Inline KAR tag: consumed to the next marker or the end of the event.
           int end = i + 1;
           while (end < raw.length()
               && raw.charAt(end) != '/'
               && raw.charAt(end) != '\\'
               && raw.charAt(end) != '\n'
               && raw.charAt(end) != '\r') end++;
-          if (line.length() == 0) lineStart = time;
-          if (line.length() + end - i > 4096) throw new IOException("Lyric line too long");
+          meta.consume(raw.substring(i, end));
+          i = end;
+        } else {
+          int end = i + 1;
+          while (end < raw.length()
+              && raw.charAt(end) != '/'
+              && raw.charAt(end) != '\\'
+              && raw.charAt(end) != '\n'
+              && raw.charAt(end) != '\r'
+              && raw.charAt(end) != '@') end++;
+          if (line.length() == 0) lineStart = (long) (micros / 1000) + meta.pauseMillis;
           line.append(raw, i, end);
-          fragments.add(new Fragment(time, line.length()));
+          fragments.add(new Fragment((long) (micros / 1000) + meta.pauseMillis, line.length()));
           i = end;
         }
       }
     }
     if (line.length() > 0 && !line.toString().trim().isEmpty())
-      cues.add(new Cue(lineStart, line.toString(), fragments));
+      cues.add(new Cue(lineStart, line.toString(), fragments, lineEcho));
     return new Document(
-        cues, messages, trackMetadata, (long) (micros / 1000), keyFound, keySharpsFlats, keyMinor);
+        cues,
+        messages,
+        trackMetadata,
+        (long) (micros / 1000),
+        keyFound,
+        keySharpsFlats,
+        keyMinor,
+        meta.title,
+        meta.artist,
+        meta.copyright);
   }
 
   public static int activeIndex(List<Cue> cues, long milliseconds) {

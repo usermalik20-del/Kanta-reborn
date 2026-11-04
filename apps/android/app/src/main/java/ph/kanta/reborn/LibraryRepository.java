@@ -19,6 +19,32 @@ final class LibraryRepository {
     void onProgress(long bytesTotal, long bytesCopied, String status);
     void onComplete(boolean success, String message);
   }
+  /** Result of importing one media item (song or SoundFont). */
+  static final class ImportOutcome {
+    final Song song;
+    final boolean duplicate;
+    final boolean bank;
+
+    ImportOutcome(Song song, boolean duplicate, boolean bank) {
+      this.song = song;
+      this.duplicate = duplicate;
+      this.bank = bank;
+    }
+  }
+
+  /** Aggregate batch result with a bounded per-file failure reason list. */
+  static final class ImportBatchResult {
+    final int imported, duplicates, failed;
+    final List<String> reasons;
+
+    ImportBatchResult(int imported, int duplicates, int failed, List<String> reasons) {
+      this.imported = imported;
+      this.duplicates = duplicates;
+      this.failed = failed;
+      this.reasons = Collections.unmodifiableList(new ArrayList<>(reasons));
+    }
+  }
+
   static final String[] STARTERS = {"morning-light", "sing-together", "starlight-echo"};
   static final String[] TITLES = {"Morning Light", "Sing Together", "Starlight Echo"};
   private static final String[][] BUNDLED_SOUNDFONTS = {
@@ -108,6 +134,9 @@ final class LibraryRepository {
                 o.getString("file"),
                 o.optBoolean("starter"));
         if (!ids.add(s.id)) throw new IOException("Duplicate song ID");
+        // Imported rows whose private media copy is missing are dropped on load so a later
+        // identical import recreates the pair instead of returning a permanently broken row.
+        if (!s.starter && !new File(media, s.fileName).isFile()) continue;
         songs.add(s);
       }
       JSONArray hidden = root.optJSONArray("removed");
@@ -283,19 +312,17 @@ final class LibraryRepository {
     catch (Exception failure) { selectedBank = oldFile; bankName = oldName; throw failure; }
   }
 
-  private Song importSong(Uri uri) throws Exception {
+  private ImportOutcome importSong(Uri uri) throws Exception {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening song...");
 
-    String name = "Imported song";
-    try (Cursor c =
-        context
-            .getContentResolver()
-            .query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null)) {
-      if (c != null && c.moveToFirst() && !c.isNull(0)) name = c.getString(0);
-    }
+    String name = displayName(uri);
     if (songs.size() >= 150000) throw new IOException("Library capacity reached");
     String lower = name.toLowerCase(Locale.ROOT);
+    if (lower.endsWith(".zip") || lower.endsWith(".rar") || lower.endsWith(".7z")
+        || lower.endsWith(".tar") || lower.endsWith(".gz") || lower.endsWith(".tgz")
+        || lower.endsWith(".bz2") || lower.endsWith(".xz") || lower.endsWith(".cab"))
+      throw new IOException("\"" + name + "\" is an archive. Import the MIDI/KAR file inside it directly.");
     String ext =
         lower.endsWith(".kar") || lower.endsWith(".mid") || lower.endsWith(".midi")
             ? "mid"
@@ -319,9 +346,7 @@ final class LibraryRepository {
             throw new InterruptedIOException();
           total += count;
           notifyProgress(fileSize, total, "Copying: " + formatBytes(total) + " / " + formatBytes(fileSize));
-          if (ext.equals("mid") && total > 16 * 1024 * 1024)
-            throw new IOException("MIDI file exceeds 16 MB");
-          else if (ext.equals("mp3") || ext.equals("wav")) {
+          if (ext.equals("mp3") || ext.equals("wav")) {
             if (total > 512L * 1024 * 1024) throw new IOException("Music file exceeds 512 MB");
           }
           digest.update(buffer, 0, count);
@@ -335,8 +360,13 @@ final class LibraryRepository {
       try (FileInputStream in = new FileInputStream(temp)) {
         if (readPrefix(in, signature) < 4) throw new IOException("Music file is incomplete");
       }
+      String title = name.replaceFirst("\\.[^.]+$", "");
+      String artist = "";
       if (ext.equals("mid")) {
-        MidiLyrics.parse(java.nio.file.Files.readAllBytes(temp.toPath()));
+        // File-mapped decode validates and returns KAR metadata and lyrics in one pass.
+        MidiLyrics.Document midi = MidiLyrics.decode(temp);
+        if (!midi.title.isEmpty()) title = midi.title;
+        artist = midi.artist;
       } else if (ext.equals("wav")
           && !(new String(signature, 0, 4, java.nio.charset.StandardCharsets.US_ASCII)
                   .equals("RIFF")
@@ -351,7 +381,13 @@ final class LibraryRepository {
       for (byte b : digest.digest()) hex.append(String.format(Locale.ROOT, "%02x", b & 255));
       String id = hex.toString();
       Song existing = find(id);
-      if (existing != null) return existing;
+      if (existing != null) {
+        if (new File(media, existing.fileName).isFile())
+          return new ImportOutcome(existing, true, false);
+        // The private copy is gone while the row survived (for example after manual
+        // storage cleanup): recreate both below instead of returning a broken row.
+        songs.remove(existing);
+      }
       File destination = new File(media, id + "." + ext);
       boolean created = !destination.exists();
       if (created) {
@@ -361,12 +397,11 @@ final class LibraryRepository {
       } else {
         verifyCopy(destination, id);
       }
-      String title = name.replaceFirst("\\.[^.]+$", "");
       Set<String> codes = new HashSet<>();
       for (Song existingSong : songs) codes.add(existingSong.code);
       int reference = 100000;
       while (codes.contains(String.valueOf(reference))) reference++;
-      Song song = new Song(id, title, "", String.valueOf(reference), destination.getName(), false);
+      Song song = new Song(id, title, artist, String.valueOf(reference), destination.getName(), false);
       songs.add(song);
       if (!batching) {
         try {
@@ -380,7 +415,7 @@ final class LibraryRepository {
       }
       notifyProgress(fileSize, fileSize, "Import complete");
       notifyComplete(true, "Import complete");
-      return song;
+      return new ImportOutcome(song, false, false);
     } finally {
       if (!installed) temp.delete();
     }
@@ -400,7 +435,7 @@ final class LibraryRepository {
     return total;
   }
 
-  private void importSoundFont(Uri uri) throws Exception {
+  private ImportOutcome importSoundFont(Uri uri) throws Exception {
     long fileSize = getFileSize(uri);
     notifyProgress(fileSize, 0, "Opening SoundFont...");
 
@@ -458,14 +493,14 @@ final class LibraryRepository {
       }
       if (!created) verifyCopy(destination, key.toString());
       selectedBank = destination.getName();
-      bankName = "Imported SoundFont";
-      try (Cursor c =
-          context
-              .getContentResolver()
-              .query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null)) {
-        if (c != null && c.moveToFirst() && !c.isNull(0))
-          bankName = c.getString(0).substring(0, Math.min(120, c.getString(0).length()));
+      bankName = sf2InstrumentName(temp);
+      if (bankName.isEmpty()) {
+        String display = displayName(uri);
+        if (!display.equals("Imported song") && !display.isEmpty())
+          bankName = display;
       }
+      if (bankName.isEmpty()) bankName = "Imported SoundFont";
+
       String destinationName = destination.getName();
       soundFonts.removeIf(value -> value.fileName.equals(destinationName));
       soundFonts.add(new SoundFontEntry(destinationName, bankName));
@@ -484,6 +519,7 @@ final class LibraryRepository {
     }
     notifyProgress(fileSize, fileSize, "Import complete");
     notifyComplete(true, "Import complete");
+    return new ImportOutcome(null, false, true);
   }
 
   /**
@@ -530,7 +566,7 @@ final class LibraryRepository {
     return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
   }
 
-  boolean importMedia(Uri uri) throws Exception {
+  ImportOutcome importMedia(Uri uri) throws Exception {
     boolean bank = false;
     try (InputStream in = context.getContentResolver().openInputStream(uri)) {
       byte[] signature = new byte[12];
@@ -545,17 +581,16 @@ final class LibraryRepository {
                 && signature[10] == 'b'
                 && signature[11] == 'k';
     }
-    if (bank) importSoundFont(uri);
-    else importSong(uri);
-    return bank;
+    return bank ? importSoundFont(uri) : importSong(uri);
   }
 
-  int[] importBatch(List<Uri> uris, java.util.function.BooleanSupplier cancellation)
+  ImportBatchResult importBatch(List<Uri> uris, java.util.function.BooleanSupplier cancellation)
       throws Exception {
     ArrayList<Song> before = new ArrayList<>(songs);
     String oldBank = selectedBank, oldName = bankName;
     ArrayList<SoundFontEntry> oldSoundFonts = new ArrayList<>(soundFonts);
-    int good = 0, failed = 0;
+    int imported = 0, duplicates = 0, failed = 0;
+    ArrayList<String> reasons = new ArrayList<>();
     batching = true;
     cancelled = cancellation;
     batchFiles.clear();
@@ -564,18 +599,23 @@ final class LibraryRepository {
         if ((Thread.currentThread().isInterrupted() || cancelled.getAsBoolean()))
           throw new InterruptedIOException();
         try {
-          importMedia(uri);
-          good++;
+          ImportOutcome outcome = importMedia(uri);
+          if (outcome.duplicate) duplicates++;
+          else imported++;
         } catch (Exception | LinkageError e) {
-          notifyComplete(false, e.getMessage());
           failed++;
+          if (reasons.size() < 20) reasons.add(failureReason(uri, e));
         }
       }
       if (cancelled.getAsBoolean()) throw new InterruptedIOException();
       batching = false;
       persist();
-      notifyComplete(true, "Imported " + good + (failed > 0 ? ", skipped " + failed : ""));
-      return new int[] {good, failed};
+      StringBuilder summary = new StringBuilder("Imported ").append(imported).append(" file(s)");
+      if (duplicates > 0) summary.append(", ").append(duplicates).append(" already in My Set");
+      if (failed > 0) summary.append(", skipped ").append(failed);
+      summary.append(".");
+      notifyComplete(true, summary.toString());
+      return new ImportBatchResult(imported, duplicates, failed, reasons);
     } catch (Exception e) {
       // Clear the flag before reporting: notifyComplete stays silent while a batch is running.
       batching = false;
@@ -625,6 +665,149 @@ final class LibraryRepository {
       removed.addAll(previous);
       throw e;
     }
+  }
+
+  /** Removes an imported song row, its private copy and any queue reservations. */
+  void deleteSong(String id) throws Exception {
+    Song target = find(id);
+    if (target == null) throw new IOException("That song is no longer listed.");
+    if (target.starter)
+      throw new IOException("Starter songs are hidden from the starter-pack settings instead.");
+    ArrayList<Song> before = new ArrayList<>(songs);
+    List<ReservationQueue.Entry> queueBefore = new ArrayList<>(queue);
+    songs.remove(target);
+    queue.removeIf(e -> e.song.id.equals(id));
+    // Rename-then-delete so a failed persist can restore the private copy.
+    File mediaFile = new File(media, target.fileName);
+    File tombstone = new File(media, target.fileName + ".removed");
+    boolean moved = mediaFile.renameTo(tombstone);
+    try {
+      persist();
+    } catch (Exception failure) {
+      if (moved) tombstone.renameTo(mediaFile);
+      songs.clear();
+      songs.addAll(before);
+      queue.clear();
+      queue.addAll(queueBefore);
+      throw failure;
+    }
+    if (moved) tombstone.delete();
+    else if (mediaFile.exists()) mediaFile.delete();
+  }
+
+  /** Removes an imported (hash-named) SoundFont; bundled banks are starter-managed. */
+  void deleteSoundFont(String fileName) throws Exception {
+    if (!fileName.matches("[a-f0-9]{64}\\.sf2"))
+      throw new IOException("Bundled SoundFonts are managed by the starter pack.");
+    SoundFontEntry target = null;
+    for (SoundFontEntry entry : soundFonts)
+      if (entry.fileName.equals(fileName)) { target = entry; break; }
+    if (target == null) throw new IOException("That SoundFont is not in My Set.");
+    ArrayList<SoundFontEntry> before = new ArrayList<>(soundFonts);
+    String oldBank = selectedBank, oldName = bankName;
+    soundFonts.remove(target);
+    if (selectedBank.equals(fileName)) {
+      selectedBank = "kanta-tone.sf2";
+      bankName = "KANTA original tone";
+    }
+    File mediaFile = new File(media, fileName);
+    File tombstone = new File(media, fileName + ".removed");
+    boolean moved = mediaFile.renameTo(tombstone);
+    try {
+      persist();
+    } catch (Exception failure) {
+      if (moved) tombstone.renameTo(mediaFile);
+      selectedBank = oldBank;
+      bankName = oldName;
+      soundFonts.clear();
+      soundFonts.addAll(before);
+      throw failure;
+    }
+    if (moved) tombstone.delete();
+    else if (mediaFile.exists()) mediaFile.delete();
+  }
+
+  private String displayName(Uri uri) {
+    String name = "Imported song";
+    try (Cursor c =
+        context
+            .getContentResolver()
+            .query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+      if (c != null && c.moveToFirst() && !c.isNull(0)) name = c.getString(0);
+    } catch (RuntimeException unavailable) {
+      // Fall through to the placeholder name.
+    }
+    return name.length() > 120 ? name.substring(0, 120) : name;
+  }
+
+  private String failureReason(Uri uri, Throwable throwable) {
+    String reason = throwable.getMessage();
+    if (reason == null || reason.isEmpty()) reason = throwable.getClass().getSimpleName();
+    return "\"" + displayName(uri) + "\": " + reason;
+  }
+
+  /**
+   * Reads the SF2 INFO/INAM instrument name when the bank carries one, so an
+   * imported bank is labelled by its real instrument name instead of the source
+   * filename. Returns an empty string when the chunk is absent or malformed.
+   */
+  private static String sf2InstrumentName(File file) {
+    try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+      byte[] head = new byte[12];
+      raf.readFully(head);
+      if (!new String(head, 0, 4, java.nio.charset.StandardCharsets.US_ASCII).equals("RIFF")
+          || !new String(head, 8, 4, java.nio.charset.StandardCharsets.US_ASCII).equals("sfbk"))
+        return "";
+      long size = raf.length();
+      while (raf.getFilePointer() + 8 <= size) {
+        raf.readFully(head, 0, 8);
+        String id = new String(head, 0, 4, java.nio.charset.StandardCharsets.US_ASCII);
+        long len =
+            (head[7] & 255L) << 24
+                | (head[6] & 255L) << 16
+                | (head[5] & 255L) << 8
+                | (head[4] & 255L);
+        if (id.equals("LIST")) {
+          byte[] type = new byte[4];
+          raf.readFully(type);
+          long listEnd = raf.getFilePointer() + Math.max(0, len - 4);
+          if (new String(type, java.nio.charset.StandardCharsets.US_ASCII).equals("INFO")) {
+            while (raf.getFilePointer() + 8 <= Math.min(listEnd, size)) {
+              raf.readFully(head, 0, 8);
+              String sub = new String(head, 0, 4, java.nio.charset.StandardCharsets.US_ASCII);
+              long sublen =
+                  (head[7] & 255L) << 24
+                      | (head[6] & 255L) << 16
+                      | (head[5] & 255L) << 8
+                      | (head[4] & 255L);
+              if (sub.equals("INAM")) {
+                int n = (int) Math.min(sublen, 4096L);
+                byte[] bytes = new byte[n];
+                raf.readFully(bytes);
+                String name = new String(bytes, java.nio.charset.StandardCharsets.US_ASCII);
+                int cut = name.indexOf('\0');
+                if (cut >= 0) name = name.substring(0, cut);
+                name = name.trim();
+                return name.length() > 120 ? name.substring(0, 120) : name;
+              }
+              skipSf2Chunk(raf, sublen);
+            }
+          } else {
+            raf.seek(listEnd + (len & 1));
+          }
+        } else {
+          skipSf2Chunk(raf, len);
+        }
+      }
+    } catch (IOException | RuntimeException malformed) {
+      // A malformed bank keeps the filename label; native validation still gates it.
+    }
+    return "";
+  }
+
+  private static void skipSf2Chunk(RandomAccessFile raf, long bytes) throws IOException {
+    if (bytes < 0 || bytes > 1L << 31) throw new IOException("Corrupt SF2 chunk size");
+    raf.seek(raf.getFilePointer() + bytes + (bytes & 1));
   }
 
   void saveSet(String name, List<Song> values) throws Exception {
