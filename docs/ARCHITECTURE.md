@@ -202,6 +202,71 @@ Android 0.10 adds foreground-only, explicit private-IPv4 companion hosting/clien
 Candidate core compilation and all 443 domain assertions passed (79 new companion checks); browser interoperability and Swift layout guards pass. Hosted build/lint and actual emulator socket/queue/lifecycle checks remain pending. Physical two-device networking, iOS compatibility and independent security review remain open. Public downloads remain accepted 0.9 until separately verified packaging/publication.
 
 
+## Android OTA self-update (branch feat/android-ota-update)
+
+The Android app includes a framework-free OTA update subsystem with a strict core/app boundary:
+
+### Core contract (`ph.kanta.reborn.core.update`)
+
+Pure JDK package compiled by the existing empty-classpath `compileCoreRegression`/`coreRegression` tasks (no Android imports):
+
+- **UpdateJson**: strict bounded JSON parser — rejects duplicate keys, raw control characters, unpaired surrogates, leading zeros, over-nesting; max 256 KiB feed.
+- **UpdateManifest**: validates feed shape "kanta-update-feed" version 1, channel "stable-reconstruction", publishedAt ISO-8601 UTC, sourceCommit 40-hex SHA, and android build requirements: versionCode >= 1, versionName shape, minSdk must be at least 26, apkUrl policy, apkBytes 1..256 MiB, apkSha256 64-hex, optional signingCertSha256 64-hex, notes <= 1024 chars, mandatory boolean.
+- **UpdatePolicy**: pinned feed URL `https://kanta-public.vercel.app/updates.json`; HTTPS-only durable-artifact host allowlist: `https://github.com/usermalik20-del/Kanta-reborn/releases/download/<tag>/<file>` canonical URLs plus redirect targets `release-assets.githubusercontent.com` and `objects.githubusercontent.com`; refuses GitHub Actions artifact URLs, `http`, `userinfo`, query/fragment on the canonical host; path case-sensitive.
+- **UpdateDigest**: SHA-256 hex + ".part" staging file naming.
+- **UpdateDecision**: pure decision matrix — `NOTHING_PUBLISHED`, `DEVICE_TOO_OLD`, `ARTIFACT_NOT_DURABLE`, `OLDER_OR_SAME_VERSION_PUBLISHED`, `DIGEST_MISMATCH`, `DOWNLOAD_REFUSED`, `APPLY`.
+
+### App layer (`ph.kanta.reborn.update`)
+
+- **AppUpdateManager**: single-worker executor; feed check via `HttpURLConnection` with strict UTF-8 decode; resumable Range download into app-private `files/update/` staging dir reusing `.part` files with HTTP 200/206/416 handling and 256 MiB ceiling; SHA-256 verification; atomic rename to `kanta-update-<sha12>.apk`; `cancel()` and `close()`; Listener protocol `onState`/`onProgress`/`onReady`.
+- **UpdatePackageInspector**: installed `versionCode` via `androidx.core` `PackageInfoCompat`, optional signing-cert SHA-256 extraction, `canRequestPackageInstalls()`, `ACTION_MANAGE_UNKNOWN_APP_SOURCES` intent, `FileProvider`-based `ACTION_VIEW` install intent.
+
+### AndroidManifest.xml
+
+Added `android.permission.REQUEST_INSTALL_PACKAGES` and a non-exported `androidx.core.content.FileProvider` (authority `${applicationId}.fileprovider`, `grantUriPermissions`, service `res/xml/update_paths.xml` exposing only `files-path update/`).
+
+### app/build.gradle
+
+Added `implementation 'androidx.core:core:1.13.1'`.
+
+### MainActivity integration
+
+New Controls > "App update" entry (`controlsAccessory`) opening a programmatic dialog (check button, status text, horizontal progress bar, install button); manager created lazily with installed version code and platform API level; `onStop` cancels in-flight work, `onDestroy` closes worker; diagnostics report gained an "update" line with last status.
+
+### Feed generation (`tools/prepare-update-feed.py`)
+
+Generates `apps/web/updates.json` from `apps/web/downloads.json` (published android source SHA), `verified-downloads/android/build-info.json` (APK file name, 64-hex sha256, bytes) and `git show <source>:apps/android/app/build.gradle` (versionCode, versionName, minSdk); deterministic durable `apkUrl` `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk`; refuses (`FeedError`) and never writes on any missing/malformed input; prints refusal to stderr and exits 1.
+
+### Tests
+
+- `tools/tests/test_android_update_contract.py`: 9 unittest cases (schema, deterministic URL, URL policy mirror, source selection, malformed-input refusal, build identity, atomic write, no-write-on-refusal).
+- JVM suite `apps/android/app/src/test/java/ph/kanta/reborn/core/update/UpdateContractRegressionTests.java` registered in `CoreRegressionTests` (runs in `coreRegression` task).
+
+### CI integration (`.github/workflows/platform-download-publishing.yml`)
+
+New Android-only step "Ensure a durable release asset for this Android build" creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset; the existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
+
+### Privacy
+
+"Optional Android self-update" disclosure added to all four privacy files (`apps/android/app/src/main/assets/privacy.txt`, `apps/web/privacy.html`, `apps/ios/PRIVACY.md`, `apps/ios/PublicSite/privacy.html`).
+
+### Boundary rules
+
+- **Durable hosts**: only the canonical GitHub Releases download host and its documented redirect targets; no Actions artifacts, no `http`, no userinfo, no query/fragment on canonical host.
+- **HTTPS only**: feed URL and artifact URL must be HTTPS.
+- **Exact permission set**: APK platform permissions are exactly `{CAMERA, RECORD_AUDIO, INTERNET, REQUEST_INSTALL_PACKAGES}` (verified by `tools/verify-android-runtime-package.py`).
+- **Staging directory**: app-private `files/update/` only; `.part` staging files; atomic rename on success.
+- **Cancellation**: `AppUpdateManager.cancel()` cancels in-flight work; `onStop` cancels, `onDestroy` closes worker.
+
+### Honesty notes
+
+- The feed is **not live yet**: `apps/web/updates.json` is generated by the publisher on the next successful Android build on `main` after this branch merges; until then `https://kanta-public.vercel.app/updates.json` 404s and the app reports the failure.
+- `signingCertSha256` is supported by the contract but **not yet published** by the feed tooling (available via `apksigner` in a future pipeline).
+- No local JVM/Gradle build was possible in this environment (JVM cannot start on iSH: `getcpu(2)` unsupported) and no APK, emulator, runtime or physical-device acceptance ran. Java correctness is guarded by CI (`coreRegression` + `android-validation`) only.
+- The GitHub Release asset creation makes every post-merge Android build a public release asset automatically; this is a publication side effect, not a release claim.
+- App update is user-initiated (off by default), HTTPS-only, SHA-256 verified, staging is app-private; install needs the separate Android "Install unknown apps" permission.
+
+
 ## Hosted Android 0.10 acceptance
 
 Final source `d777334eec73996116fdf2c01d97ac73a3a53958` passed run `38885716463`: all 448 domain assertions (84 companion cases), 139 actual API 35 emulator checks, APK/instrumentation assembly, lint, native ASan/UBSan, captured browser interoperability and the CAMERA/RECORD_AUDIO/INTERNET permission/notices gate. Initial source also passed the complete suite; the final source adds bounded peer JSON nesting and strict UTF-8 checks. An independent Python cryptography client verified the JCA handshake, HKDF, framing and both direction keys. PR #28 merged as `51b57e0052c8f01d08fac04f12cccae06b189ad5`. Accepted original artifact is `12039807731`. No existing assertion was disabled. Physical two-device networking, iOS interoperability, forward secrecy and independent security review remain open; Android acceptance does not establish those properties. Public downloads remain verified 0.9 until checksum-verified packaging and website publication.

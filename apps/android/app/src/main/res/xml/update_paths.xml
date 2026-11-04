@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider exposure for the OTA updater: only the app-private update
+     staging directory is ever shared, and only for ACTION_VIEW install. -->
+<paths>
+    <files-path name="update" path="update/" />
+</paths>

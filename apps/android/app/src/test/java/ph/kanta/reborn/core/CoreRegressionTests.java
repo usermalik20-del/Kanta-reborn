@@ -1154,6 +1154,7 @@ public final class CoreRegressionTests {
       Files.write(Paths.get(args[1]), fixture.getBytes(StandardCharsets.UTF_8));
     }
     checks += ph.kanta.reborn.core.songbook.ShubCompatibilityRegressionTests.run();
+    checks += ph.kanta.reborn.core.update.UpdateContractRegressionTests.run();
     checks += CompanionRegressionTests.run();
     checks += BrowserRemoteRegressionTests.run();
     checks += MkmdDecoderRegressionTests.run();
