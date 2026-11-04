@@ -733,7 +733,7 @@ public final class RuntimeChecks extends Instrumentation {
           () ->
               contains(
                       activity.getWindow().getDecorView(),
-                      "Advanced output choices are available in More settings")
+                      "Wired / USB / Bluetooth monitoring")
                   && contains(activity.getWindow().getDecorView(), "Turn on microphone"),
           "Voice settings did not expand from Control");
       capture("voice_settings.png");
@@ -782,7 +782,7 @@ public final class RuntimeChecks extends Instrumentation {
               () ->
                   !contains(
                       activity.getWindow().getDecorView(),
-                      "Advanced output choices are available in More settings")),
+                      "Wired / USB / Bluetooth monitoring")),
           "Collapsed voice settings still occupied Control");
       check(
           state(
