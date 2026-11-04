@@ -2704,11 +2704,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           if ("Now Playing".equals(tab) && nowPlayingStage != null) {
             nowPlayingStage.setVisualActive(true);
             if (stagePresenter != null) stagePresenter.setVisualActive(false);
-            camera.moveTo(nowPlayingStage);
-          } else {
-            if (stagePresenter != null) stagePresenter.setVisualActive(true);
-            camera.moveTo(stagePresenter);
+          } else if (stagePresenter != null) {
+            stagePresenter.setVisualActive(true);
           }
+          // The primary presenter remains the authoritative camera owner after fullscreen
+          // dismissal. Now Playing is a content projection, not a second primary stage.
+          camera.moveTo(stagePresenter);
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
     if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
