@@ -91,7 +91,7 @@ public final class UpdateContractRegressionTests {
     checkRejected("{\"a\":Infinity}", "Infinity accepted");
     checkRejected("{\"a\":\"\\x41\"}", "unknown escape accepted");
     checkRejected("{\"a\":\"\\ud800\"}", "escaped lone surrogate accepted");
-    checkRejected("{\"a\":\"\\ud800\\udc00\"}", "valid escaped pair wrongly rejected");
+    check(requireParse("{\"a\":\"\\ud800\\udc00\"}") != null, "escaped surrogate pair must parse");
     checkRejected("{", "unterminated object accepted");
     checkRejected("{}x", "trailing content accepted");
     checkRejected("\ufeff{}", "BOM accepted");
