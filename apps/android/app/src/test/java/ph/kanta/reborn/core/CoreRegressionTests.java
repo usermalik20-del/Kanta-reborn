@@ -27,6 +27,10 @@ public final class CoreRegressionTests {
   }
 
   private static MidiLyrics.Document midiTrack(byte[] track) throws IOException {
+    return MidiLyrics.decode(midiFile(track));
+  }
+
+  private static byte[] midiFile(byte[] track) throws IOException {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(bytes);
     out.writeInt(0x4d546864);
@@ -37,7 +41,7 @@ public final class CoreRegressionTests {
     out.writeInt(0x4d54726b);
     out.writeInt(track.length);
     out.write(track);
-    return MidiLyrics.decode(bytes.toByteArray());
+    return bytes.toByteArray();
   }
 
   /** VLQ encoder for hand-built MIDI tracks. */
@@ -880,11 +884,11 @@ public final class CoreRegressionTests {
     t.writeByte(0);
     t.write(lyricEvent("@A:Some Artist"));
     t.writeByte(0);
-    t.write(lyricEvent("First/line"));
+    t.write(lyricEvent("First/line/"));
     writeVlq(t, 480);
     t.write(lyricEvent("@P100"));
     writeVlq(t, 480);
-    t.write(lyricEvent("Second\\Echo"));
+    t.write(lyricEvent("Second\\Echo/"));
     writeVlq(t, 480);
     t.write(lyricEvent("@P0.5"));
     writeVlq(t, 480);
@@ -944,7 +948,7 @@ public final class CoreRegressionTests {
     // File-backed decode path maps the file instead of a heap copy.
     File midiFile = File.createTempFile("kanta-midi-regression", ".mid");
     try {
-      java.nio.file.Files.write(midiFile.toPath(), sjisTrack.toByteArray());
+      java.nio.file.Files.write(midiFile.toPath(), midiFile(sjisTrack.toByteArray()));
       MidiLyrics.Document fromFile = MidiLyrics.decode(midiFile);
       check(fromFile.cues.get(0).line.equals("\u3053\u3093\u306b\u3061\u306f"),
           "File-backed MIDI decode");
