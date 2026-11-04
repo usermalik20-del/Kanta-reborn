@@ -43,6 +43,26 @@ jobs:
           path: verified-downloads/${{ env.PLATFORM }}/*
           if-no-files-found: error
           retention-days: 30
+      - name: Ensure a durable release asset for this Android build
+        if: env.PLATFORM == 'android'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version_name="$(
+            git show "${SOURCE_SHA}:apps/android/app/build.gradle" \
+              | sed -n "s/.*versionName '\([^']*\)'.*/\1/p" | head -1
+          )"
+          tag="v${version_name%%-*}-preview-${SOURCE_SHA:0:8}"
+          apk="$(ls verified-downloads/android/*.apk | head -1)"
+          if ! gh release view "${tag}" --json tagName >/dev/null 2>&1; then
+            gh release create "${tag}" "${apk}" \
+              --title "KANTA Android preview ${SOURCE_SHA:0:8}" \
+              --notes "Verified CI build ${SOURCE_SHA:0:8} (run ${GITHUB_RUN_ID}). Durable OTA artifact served by apps/web/updates.json." \
+              --repo "${GITHUB_REPOSITORY}"
+          else
+            gh release upload "${tag}" "${apk}" --clobber --repo "${GITHUB_REPOSITORY}"
+          fi
       - name: Publish only this platform's manifest and page
         env:
           GH_TOKEN: ${{ github.token }}
@@ -60,11 +80,16 @@ jobs:
           PACKAGE_EXPIRES_AT="$(printf '%s' "${artifact}" | jq -r '.expires_at')"
           export PACKAGE_ARTIFACT_ID PACKAGE_ARTIFACT_SHA256 PACKAGE_CREATED_AT PACKAGE_EXPIRES_AT
           python3 tools/publish-platform-download.py
+          if [ "${PLATFORM}" = android ]; then python3 tools/prepare-update-feed.py; fi
           python3 tools/verify-website.py
           python3 -m unittest tools.tests.test_website_security_contract
           git add apps/web/downloads.json
-          # Stage only the page owned by this platform.
-          if [ "${PLATFORM}" = android ]; then git add apps/web/android.html; else git add apps/web/ios-download.html; fi
+          # Stage only the page owned by this platform; the OTA feed follows Android only.
+          if [ "${PLATFORM}" = android ]; then
+            git add apps/web/android.html apps/web/updates.json
+          else
+            git add apps/web/ios-download.html
+          fi
           git diff --cached --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

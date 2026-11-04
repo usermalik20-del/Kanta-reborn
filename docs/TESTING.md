@@ -39,6 +39,48 @@ The website validation job runs `tools/verify-website.py` and `tools/tests/test_
 
 `LyricWordAnimationRegressionTests` runs inside the existing `coreRegression` task. It covers the framework-free part of the candidate stage animation: a fragment boundary remains a hard source event, the span between boundaries interpolates smoothly, the active-fragment range advances only at source boundaries, and pitch energy decays to zero when the estimate is absent, stale or out of band. These checks do not exercise `Canvas`, `StaticLayout`, `ValueAnimator` or emoji rendering; visual, reduced-motion, APK/lint and emulator acceptance remain separate gates on the Android validation workflow.
 
+## Android OTA self-update feed validation
+
+This section documents the framework-free OTA update subsystem added to the Android app (`ph.kanta.reborn`). The feature is gated behind the existing Controls → "App update" dialog and is off by default. The feed is fetched over HTTPS only from the pinned URL `https://kanta-public.vercel.app/updates.json`. All artifacts are SHA-256 verified, staged in app-private storage, and installation requires the separate "Install unknown apps" permission. The GitHub Release asset creation in the publisher workflow makes every post-merge Android build a public release asset automatically.
+
+### Java core contract (framework-free)
+
+The core logic lives in `ph.kanta.reborn.core.update` and is compiled by the empty-classpath `compileCoreRegression` / `coreRegression` Gradle tasks. It is validated by:
+
+- **`UpdateContractRegressionTests`** (`apps/android/app/src/test/java/ph/kanta/reborn/core/update/UpdateContractRegressionTests.java`), registered in `CoreRegressionTests` and executed by the `coreRegression` task:
+  - `UpdateJson` strictness: 256 KiB ceiling, rejects duplicate keys, raw control characters, unpaired surrogates, leading zeros, over-deep nesting.
+  - `UpdateManifest` refusal cases: invalid feed format (must be "kanta-update-feed" version 1), channel (must be "stable-reconstruction"), `publishedAt` not ISO-8601 UTC, `sourceCommit` not 40-hex, `android` entry missing or invalid (`versionCode` < 1, `versionName` shape, `minSdk` ≠ 26, `apkUrl` policy, `apkBytes` 1..256 MiB, `apkSha256` not 64-hex, `notes` > 1024, `mandatory` not boolean).
+  - `UpdatePolicy` URL policy: HTTPS-only, durable host allowlist (github.com/usermalik20-del/Kanta-reborn/releases/download/<tag>/<file> plus redirect targets `release-assets.githubusercontent.com` and `objects.githubusercontent.com`); refuses Actions artifact URLs, http, userinfo, query/fragment on canonical; GitHub path case-sensitive.
+  - `UpdateDigest` vectors: `"abc"` → `ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad`; empty → `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+  - Staging names (`.part` suffix) and `UpdateDecision` matrix: `NOTHING_PUBLISHED`, `DEVICE_TOO_OLD`, `ARTIFACT_NOT_DURABLE`, `OLDER_OR_SAME_VERSION_PUBLISHED`, `DIGEST_MISMATCH`, `DOWNLOAD_REFUSED`, `APPLY`.
+
+- **`tools/tests/test_android_update_contract.py`**: 9 unittest cases covering the same contract from Python.
+
+### Android runtime integration
+
+- **`AppUpdateManager`** (`ph.kanta.reborn.update`): single-worker executor; `HttpURLConnection` feed fetch with strict UTF-8; resumable `Range` download into app-private `files/update/` with `.part` files; HTTP 200/206/416 handling; 256 MiB ceiling; SHA-256 verify; atomic rename to `kanta-update-<sha12>.apk`; `cancel()` and `close()`; `Listener` callbacks `onState`/`onProgress`/`onReady`.
+- **`UpdatePackageInspector`**: `PackageInfoCompat` installed `versionCode`, optional signer SHA-256, `canRequestPackageInstalls`, `ACTION_MANAGE_UNKNOWN_APP_SOURCES`, `FileProvider` `ACTION_VIEW` install intent.
+- **`AndroidManifest.xml`**: `android.permission.REQUEST_INSTALL_PACKAGES`; non-exported `androidx.core.content.FileProvider` (authority `${applicationId}.fileprovider`, `grantUriPermissions`, `res/xml/update_paths.xml` exposing only `files-path update/`).
+- **`app/build.gradle`**: `implementation 'androidx.core:core:1.13.1'`.
+- **`MainActivity`**: Controls → "App update" dialog (check/status/progress/install); manager lazily created; `onStop` cancels; `onDestroy` closes; diagnostics gained an "update" status line.
+
+### Publisher tooling
+
+- **`tools/prepare-update-feed.py`**: generates `apps/web/updates.json` from `apps/web/downloads.json` (android source SHA) + `verified-downloads/android/build-info.json` (file name, sha256, bytes) + `git show <source>:apps/android/app/build.gradle` (`versionCode`/`versionName`/`minSdk`); durable `apkUrl` `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk`; `FeedError` refusal, never writes on refusal, exit 1.
+- **`tools/verify-android-runtime-package.py`**: permission assertion is now the exact set `{CAMERA, RECORD_AUDIO, INTERNET, REQUEST_INSTALL_PACKAGES}`.
+- **`apps/web/vercel.json`**: static route `^/updates\.json$` → `/updates.json`, `Cache-Control: public, max-age=0, must-revalidate`, before page rewrites.
+- **`.github/workflows/platform-download-publishing.yml`**: Android-only step creating/updating (`--clobber`) GitHub Release tag `v<version>-preview-<sha8>` with the APK as durable asset; Android runs `tools/prepare-update-feed.py` and stages `apps/web/updates.json` into the downloads commit.
+
+### Explicit non-claims
+
+- **Feed state**: `apps/web/updates.json` holds the newest published Android build (initial entry: release `v0.10.0-preview-aaa41898`, source `aaa41898`); the publisher regenerates it after every successful Android build on `main` and the endpoint is served through the `vercel.json` routing table.
+- **`signingCertSha256`** supported by the contract but NOT yet published by feed tooling.
+- **No local JVM/Gradle build, APK, emulator, runtime or physical-device acceptance ran** (JVM cannot start on this iSH emulator: `getcpu(2)` unsupported). Java correctness is guarded by CI only (`coreRegression` + `android-validation` + `android` runtime checks).
+- The GitHub Release asset creation makes every post-merge Android build a public release asset automatically.
+- Update is user-initiated, off by default, HTTPS-only, SHA-256 verified, app-private staging, install needs separate "Install unknown apps" permission.
+
+CI wiring unchanged note: workflow `platform-download-publishing.yml` DID gain the release-asset + feed steps.
+
 ## Karaoke Stage v2 regression checks — merged 2026-11-03
 
 PR #155 merged as `6db012c34f97b64b4692e09ee709fe4e439e2a71`. The PR-head Android run [41529578779](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41529578779) on `9607a858` passed 55,130 host regression checks and 291 emulator runtime checks. Main-branch Android validation [41560660780](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41560660780) and Android publishing [41561260449](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41561260449) then succeeded on the merge SHA. The published Android preview is not a tagged/store release; physical-device acceptance remains open.

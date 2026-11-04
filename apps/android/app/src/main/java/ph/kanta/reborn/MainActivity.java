@@ -25,6 +25,10 @@ import ph.kanta.reborn.stage.StagePresenter;
 import ph.kanta.reborn.stage.StagePresenterImpl;
 import ph.kanta.reborn.core.connect.KantaConnectInfo;
 import ph.kanta.reborn.core.connect.QrEncoder;
+import ph.kanta.reborn.core.update.UpdateManifest;
+import ph.kanta.reborn.core.update.UpdatePolicy;
+import ph.kanta.reborn.update.AppUpdateManager;
+import ph.kanta.reborn.update.UpdatePackageInspector;
 import ph.kanta.reborn.stage.QrCodeView;
 import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.ui.KantaTheme;
@@ -76,6 +80,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private android.app.ProgressDialog importProgressDialog;
   private final ExecutorService searchWorker = Executors.newSingleThreadExecutor();
+  private AppUpdateManager updateManager;
+  private AlertDialog updateDialog;
+  private boolean updateBusy;
+  private String updateStatusText;
+  private TextView updateStatus;
+  private ProgressBar updateProgress;
+  private Button updateInstallButton;
+  private File updateReadyApk;
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
@@ -221,6 +233,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   protected void onDestroy() {
     searchGeneration++;
     searchWorker.shutdownNow();
+    if (updateManager != null) updateManager.close();
     if (fullscreen != null) fullscreen.dismiss();
     super.onDestroy();
   }
@@ -735,6 +748,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         button("Diagnostics", () -> {
           dismissAccessory();
           diagnostics();
+        }));
+    target.addView(
+        button("App update", () -> {
+          dismissAccessory();
+          showUpdatePanel();
         }));
     target.addView(
         button("Fullscreen stage", () -> {
@@ -2982,6 +3000,165 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
    * Never includes pairing codes, tokens or key material — only whether a feature is
    * active — so the report is safe to copy and share.
    */
+  private void showUpdatePanel() {
+    if (updateManager == null) {
+      File staging = new File(getFilesDir(), "update");
+      updateManager =
+          new AppUpdateManager(
+              staging,
+              UpdatePackageInspector.installedVersionCode(
+                  getPackageManager(), getPackageName()),
+              android.os.Build.VERSION.SDK_INT);
+    }
+    LinearLayout content = column();
+    int pad = dp(20);
+    content.setPadding(pad, pad, pad, pad);
+    TextView heading = text("App update", 20, GOLD);
+    heading.setTypeface(null, android.graphics.Typeface.BOLD);
+    content.addView(heading);
+    content.addView(
+        text(
+            "Installed " + installedVersionText() + "\nFeed: " + UpdatePolicy.FEED_URL,
+            12, 0xFFAFB8D0));
+    updateStatus =
+        text(
+            updateStatusText == null
+                ? "Choose \"Check for updates\" to fetch the update feed."
+                : updateStatusText,
+            13, Color.WHITE);
+    content.addView(updateStatus);
+    updateProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+    updateProgress.setMax(1);
+    updateProgress.setVisibility(updateBusy ? View.VISIBLE : View.GONE);
+    content.addView(updateProgress);
+    Button check = button("Check for updates", () -> checkForUpdate());
+    updateInstallButton = button("Install update", () -> installReadyUpdate());
+    updateInstallButton.setEnabled(updateReadyApk != null);
+    content.addView(check);
+    content.addView(updateInstallButton);
+    updateDialog = new AlertDialog.Builder(this)
+        .setTitle("App update")
+        .setView(content)
+        .setNegativeButton("Close", null)
+        .create();
+    updateDialog.show();
+  }
+
+  private String installedVersionText() {
+    try {
+      android.content.pm.PackageInfo info =
+          getPackageManager().getPackageInfo(getPackageName(), 0);
+      return info.versionName
+          + " (code "
+          + UpdatePackageInspector.installedVersionCode(
+              getPackageManager(), getPackageName())
+          + ")";
+    } catch (Exception unavailable) {
+      return "(unknown)";
+    }
+  }
+
+  private void checkForUpdate() {
+    if (updateManager == null || updateBusy) {
+      return;
+    }
+    updateBusy = true;
+    updateReadyApk = null;
+    updateStatusText = "Checking the update feed…";
+    if (updateStatus != null) updateStatus.setText(updateStatusText);
+    if (updateProgress != null) updateProgress.setVisibility(View.VISIBLE);
+    updateManager.checkForUpdate(
+        new AppUpdateManager.Listener() {
+          @Override
+          public void onState(AppUpdateManager.State state, String detail) {
+            handler.post(
+                () -> {
+                  updateBusy =
+                      state == AppUpdateManager.State.CHECKING
+                          || state == AppUpdateManager.State.DOWNLOADING
+                          || state == AppUpdateManager.State.VERIFYING;
+                  switch (state) {
+                    case IDLE:
+                      updateStatusText = "Up to date (" + (detail == null ? "no update" : detail) + ").";
+                      break;
+                    case DOWNLOADING:
+                      updateStatusText = "Downloading update…";
+                      break;
+                    case VERIFYING:
+                      updateStatusText = "Verifying the downloaded update…";
+                      break;
+                    case READY:
+                      updateStatusText = "Update downloaded and verified.";
+                      break;
+                    case CANCELLED:
+                      updateStatusText = "Update check cancelled.";
+                      break;
+                    case FAILED:
+                      updateStatusText =
+                          "Update failed: " + (detail == null ? "unknown reason" : detail);
+                      break;
+                    default:
+                      updateStatusText = "…";
+                  }
+                  if (updateProgress != null) {
+                    updateProgress.setVisibility(updateBusy ? View.VISIBLE : View.GONE);
+                  }
+                  if (updateStatus != null) updateStatus.setText(updateStatusText);
+                });
+          }
+
+          @Override
+          public void onProgress(long bytes, long total) {
+            handler.post(
+                () -> {
+                  if (updateProgress == null) {
+                    return;
+                  }
+                  int max = (int) Math.min(Math.max(total, 1), 1_000_000);
+                  updateProgress.setMax(max);
+                  updateProgress.setProgress((int) Math.min(bytes, max));
+                });
+          }
+
+          @Override
+          public void onReady(UpdateManifest.AndroidBuild build, File apk) {
+            handler.post(
+                () -> {
+                  updateBusy = false;
+                  updateReadyApk = apk;
+                  updateStatusText =
+                      "Update ready: " + build.versionName() + " (code " + build.versionCode() + ")";
+                  if (updateProgress != null) updateProgress.setVisibility(View.GONE);
+                  if (updateStatus != null) updateStatus.setText(updateStatusText);
+                  if (updateInstallButton != null) updateInstallButton.setEnabled(true);
+                });
+          }
+        });
+  }
+
+  private void installReadyUpdate() {
+    if (updateReadyApk == null) {
+      return;
+    }
+    if (UpdatePackageInspector.canRequestPackageInstalls(this)) {
+      try {
+        startActivity(UpdatePackageInspector.installIntent(this, updateReadyApk));
+      } catch (Exception refused) {
+        updateStatusText = "Installer could not start: " + refused.getMessage();
+      }
+    } else {
+      updateStatusText =
+          "KANTA needs the \"Install unknown apps\" permission before it can update itself.";
+      try {
+        startActivity(UpdatePackageInspector.manageUnknownSourcesIntent(this));
+      } catch (Exception refused) {
+        updateStatusText =
+            "Could not open the install-permission screen: " + refused.getMessage();
+      }
+    }
+    if (updateStatus != null) updateStatus.setText(updateStatusText);
+  }
+
   private void diagnostics() {
     StringBuilder report = new StringBuilder();
     report.append("KANTA Karaoke · diagnostics\n\n");
@@ -3041,6 +3218,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         .append('\n');
 
     report.append("\nmessage      : ").append(session.message).append('\n');
+
+    report.append("\nupdate\n");
+    report.append("state        : ")
+        .append(updateStatusText == null ? "idle" : updateStatusText)
+        .append('\n');
 
     final String reportText = report.toString();
     TextView content = text(reportText, 12, Color.WHITE);

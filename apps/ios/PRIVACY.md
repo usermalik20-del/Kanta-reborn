@@ -37,7 +37,9 @@ A paired Remote sends song metadata, searches, singer names, queue state and com
 
 Optional iCloud Save prepares selected settings and files for your Apple iCloud account. Apple and third-party Files providers manage transfers, backup, logs and storage under their terms. Uploads and deletions may take time. Deleting KANTA's iCloud backup does not delete your original library files, unrelated device backups or provider-managed copies.
 
-## Website hosting and beta feedback
+## Android self-update (Android build only)
+
+The separate Android preview offers an optional self-update check under Control > App update. It is off by default: nothing is fetched until the user chooses Check for updates. On request, the Android app reads a small JSON feed over HTTPS from kanta-public.vercel.app and, when a newer build exists, downloads the APK into app-private storage, verifies it against its published SHA-256, and hands it to the system installer (which requires the separate Android Install unknown apps permission). The check downloads and uploads no media, library, singer, reservation or usage data. The iOS build does not use this feature.
 
 The website is served by Vercel, which may receive IP, browser and request information to operate and secure the website. The public website (not either native app) offers Google Analytics (G-L0QV01MWR4) and Google AdSense (publisher ca-pub-6290349358884298) only after a visitor accepts optional website technologies. Rejecting prevents both from loading. If accepted, Google may receive IP address, browser/device identifiers, page and interaction events, cookie or similar-technology data and ad-request information for measurement and advertising. Google processes this information under its own privacy terms. The private website Songbook excludes both integrations. The iOS app does not bundle or run these website scripts; this website disclosure does not describe app tracking. Website access records are distinct from the app's local songs and microphone use.
 

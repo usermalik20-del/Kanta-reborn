@@ -257,3 +257,32 @@ The UI upgrade pack's multicolor VectorDrawables are used directly by Home and V
 ## Paired ShubBlob import candidate
 
 My Set now exposes `Import legacy idx + blob`: select the paired index first, then the payload blob. The file-backed importer scans bounded MKMD records, decrypts and inflates validated records, maps them to index titles, and persists materialized MIDI/WAV/MP3 files through the existing LibraryRepository. A standalone `.idx` or `.blob` selection remains rejected. This is not yet a device-accepted feature; exact-head Android build/runtime, cancellation/storage tests and physical playback remain required.
+
+## Android OTA self-update (branch feat/android-ota-update)
+
+The Android app includes a framework-free OTA update subsystem:
+
+- **Core contract** (`ph.kanta.reborn.core.update`, pure JDK, compiled by `compileCoreRegression`/`coreRegression`; no Android imports): `UpdateJson` (strict bounded JSON: rejects duplicate keys, raw control chars, unpaired surrogates, leading zeros, over-nesting; max 256 KiB feed), `UpdateManifest` (validates feed shape "kanta-update-feed" version 1, channel "stable-reconstruction", publishedAt ISO-8601 UTC, sourceCommit 40-hex SHA, and android build requirements: versionCode >= 1, versionName shape, minSdk must be at least 26, apkUrl policy, apkBytes 1..256 MiB, apkSha256 64-hex, optional signingCertSha256 64-hex, notes <= 1024 chars, mandatory boolean), `UpdatePolicy` (pinned feed URL `https://kanta-public.vercel.app/updates.json`; HTTPS-only durable-artifact host allowlist: `https://github.com/usermalik20-del/Kanta-reborn/releases/download/<tag>/<file>` canonical URLs plus redirect targets `release-assets.githubusercontent.com` and `objects.githubusercontent.com`; refuses GitHub Actions artifact URLs, http, userinfo, query/fragment on the canonical host; path case-sensitive), `UpdateDigest` (SHA-256 hex + ".part" staging file naming), `UpdateDecision` (pure decision matrix: `NOTHING_PUBLISHED`, `DEVICE_TOO_OLD`, `ARTIFACT_NOT_DURABLE`, `OLDER_OR_SAME_VERSION_PUBLISHED`, `DIGEST_MISMATCH`, `DOWNLOAD_REFUSED`, `APPLY`).
+
+- **App layer** (`ph.kanta.reborn.update`): `AppUpdateManager` (single-worker executor; feed check via `HttpURLConnection` with strict UTF-8 decode; resumable Range download into app-private `files/update/` staging dir reusing `.part` files with HTTP 200/206/416 handling and 256 MiB ceiling; SHA-256 verification; atomic rename to `kanta-update-<sha12>.apk`; `cancel()` and `close()`; Listener protocol `onState`/`onProgress`/`onReady`) and `UpdatePackageInspector` (installed `versionCode` via `androidx.core` `PackageInfoCompat`, optional signing-cert SHA-256 extraction, `canRequestPackageInstalls()`, `ACTION_MANAGE_UNKNOWN_APP_SOURCES` intent, `FileProvider`-based `ACTION_VIEW` install intent).
+
+- **AndroidManifest.xml**: added `android.permission.REQUEST_INSTALL_PACKAGES` and a non-exported `androidx.core.content.FileProvider` (authority `${applicationId}.fileprovider`, `grantUriPermissions`, service `res/xml/update_paths.xml` exposing only `files-path update/`).
+
+- **app/build.gradle**: added `implementation 'androidx.core:core:1.13.1'`.
+
+- **MainActivity**: new Controls > "App update" entry (`controlsAccessory`) opening a programmatic dialog (check button, status text, horizontal progress bar, install button); manager created lazily with installed version code and platform API level; `onStop` cancels in-flight work, `onDestroy` closes worker; diagnostics report gained an "update" line with last status.
+
+- **Feed generation** (`tools/prepare-update-feed.py`): generates `apps/web/updates.json` from `apps/web/downloads.json` (published android source SHA), `verified-downloads/android/build-info.json` (APK file name, 64-hex sha256, bytes) and `git show <source>:apps/android/app/build.gradle` (versionCode, versionName, minSdk); deterministic durable `apkUrl` `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk`; refuses (`FeedError`) and never writes on any missing/malformed input; prints refusal to stderr and exits 1.
+
+- **Tests**: `tools/tests/test_android_update_contract.py` (9 unittest cases: schema, deterministic URL, URL policy mirror, source selection, malformed-input refusal, build identity, atomic write, no-write-on-refusal). JVM suite `apps/android/app/src/test/java/ph/kanta/reborn/core/update/UpdateContractRegressionTests.java` registered in `CoreRegressionTests` (runs in `coreRegression` task).
+
+- **CI integration** (`.github/workflows/platform-download-publishing.yml`): new Android-only step "Ensure a durable release asset for this Android build" creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset; the existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
+
+- **Privacy**: "Optional Android self-update" disclosure added to all four privacy files (`apps/android/app/src/main/assets/privacy.txt`, `apps/web/privacy.html`, `apps/ios/PRIVACY.md`, `apps/ios/PublicSite/privacy.html`).
+
+**Honesty notes:**
+- The feed is **not live yet**: `apps/web/updates.json` is generated by the publisher on the next successful Android build on `main` after this branch merges; until then `https://kanta-public.vercel.app/updates.json` 404s and the app reports the failure.
+- `signingCertSha256` is supported by the contract but **not yet published** by the feed tooling (available via `apksigner` in a future pipeline).
+- No local JVM/Gradle build was possible in this environment (JVM cannot start on iSH: `getcpu(2)` unsupported) and no APK, emulator, runtime or physical-device acceptance ran. Java correctness is guarded by CI (`coreRegression` + `android-validation`) only.
+- The GitHub Release asset creation makes every post-merge Android build a public release asset automatically; this is a publication side effect, not a release claim.
+- App update is user-initiated (off by default), HTTPS-only, SHA-256 verified, staging is app-private; install needs the separate Android "Install unknown apps" permission.

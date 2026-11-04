@@ -322,3 +322,13 @@ The platform download publisher has narrowly scoped `actions: write` permission 
 ## PR #134 merge reconciliation — 2026-11-02
 
 The Android reference-led UI and companion changes remain subject to the repository platform ownership and exact-head validation rules. Reconciliation with current `main` is not merge, release, signing or device acceptance.
+
+## Android OTA self-update workflow contract
+
+The `platform-download-publishing.yml` workflow now includes an Android-only step "Ensure a durable release asset for this Android build" that creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset. The existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
+
+**Contract requirements:**
+- The durable release asset creation is a **post-merge publication side effect** — every successful Android build on `main` becomes a public GitHub Release asset automatically.
+- The update feed URL naming convention `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk` must stay in sync with `UpdatePolicy` (pinned feed URL `https://kanta-public.vercel.app/updates.json`, HTTPS-only, durable-artifact host allowlist: `https://github.com/usermalik20-del/Kanta-reborn/releases/download/<tag>/<file>` canonical URLs plus redirect targets `release-assets.githubusercontent.com` and `objects.githubusercontent.com`; refuses GitHub Actions artifact URLs, `http`, `userinfo`, query/fragment on the canonical host; path case-sensitive).
+- Updating `tools/prepare-update-feed.py` or the `platform-download-publishing.yml` workflow must preserve this URL naming convention and the feed shape (`kanta-update-feed` version 1, channel `stable-reconstruction`).
+- The APK platform permission assertion is now the exact set `{CAMERA, RECORD_AUDIO, INTERNET, REQUEST_INSTALL_PACKAGES}` (verified by `tools/verify-android-runtime-package.py`).

@@ -32,6 +32,13 @@
       "status": 403
     },
     {
+      "src": "^/updates\\.json$",
+      "dest": "/updates.json",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      }
+    },
+    {
       "src": "^/$",
       "dest": "/api/page?route=%2F"
     },
