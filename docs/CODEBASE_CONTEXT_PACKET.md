@@ -380,3 +380,17 @@ The current-main iOS controller had cancellation gaps across awaited library loo
 - **Platform boundary:** browser companion markup, iOS mirrored resources and iOS host changes are excluded from this Android-native UI slice and require a separately reviewed shared-contract change.
 
 **Reconciliation integration note:** the first PR #149 compile found that the reference Visuals destination needed `SessionController.sceneResource(String, int)`. This adapter has now been ported to the current main controller and uses the existing stage generation/IO/publication path. Fresh Android validation is required on the repaired head.
+
+## Android three-group UI candidate — 2026-11-03
+
+The uncommitted Android UI branch `feature/three-user-groups-ui` adds `GroupScreen` and changes `MainActivity`/`HomeScreen` navigation to Home | Sing | Performance | Experience | More. Existing destination screens remain reachable through group actions; `SessionController`, `StagePresenterImpl`, catalog persistence and microphone/monitor ownership are unchanged. `KantaSearchScreen` uses `InlineKeyboard` and `KantaSearchBar.setEmbeddedKeyboardMode(true)` to keep numeric and letter entry inside a fixed-height app-owned keypad instead of invoking the system IME. Home is mounted match-parent with a weighted spacer so its bottom navigation fills the viewport. Existing local edits to `KantaWorkspace` and `HomeScreen` were present before this branch and are included for review.
+
+Validation so far: `git diff --check`, Java syntax parsing for new/changed leaf UI classes, product branding checks, and `tools/check-android-workspace-contract.py` (50 checks) pass. Local Gradle compilation is unavailable because the device JVM exits with `getcpu(2) system call not supported by kernel`. Exact-head Android build, emulator runtime and physical-device acceptance remain outstanding.
+
+## Supplied UI and SoundFont assets — 2026-11-03
+
+The current local branch also imports the supplied UI upgrade pack's multicolor drawables and gradient selectors into Android resources, using them without tinting. `LibraryRepository` now installs `kanta_reborn_karaokelive_gm_v3.sf2` (SHA-256 `6d1acb39…`) and `kanta_reborn_livestage_gm_v2.sf2` (SHA-256 `204aaf24…`) into the existing app-private SoundFont inventory. The source archive declarations are preserved for provenance, while runtime distribution follows the restricted KANTA OpenStage Procedural Asset License 1.0 in `app/src/main/assets/starter/`; validation of native structure and playback remains outstanding. The OpenStage candidate archive is represented by its KANTA procedural manifest/license and audit README/lock metadata under `docs/audio-candidates/`; no third-party samples were added.
+
+## Paired ShubBlob import candidate — 2026-11-03
+
+A supplied real pair established 47,998 title records and 48,000 1024-aligned MKMD records in a 1.8 MiB index plus 606.8 MiB blob. `LegacyFileContainerImporter` is now file-backed and bounded: it reads the index, scans aligned MKMD headers, decrypts/inflates per-record payloads using the existing compatibility key/IV contract, validates MIDI/WAV/MP3 signatures, and emits decoded files to the existing `LibraryRepository` owner. `MainActivity` offers a paired My Set picker (`idx`, then `blob`); standalone container selection remains rejected. First ten supplied records independently decrypted and inflated to valid MIDI in bounded local analysis. Android compile, full import runtime, cancellation/storage regression and physical-device playback remain outstanding.

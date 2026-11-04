@@ -97,6 +97,9 @@ public final class BackgroundStage extends FrameLayout {
       case CAMERA:
         if (cameraView == null) {
           cameraView = new PreviewView(getContext());
+          cameraView.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
+          cameraView.setScaleType(PreviewView.ScaleType.FILL_CENTER);
+          cameraView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
           cameraView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         }
         addView(cameraView, 0);

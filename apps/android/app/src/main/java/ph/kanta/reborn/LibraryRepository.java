@@ -21,6 +21,10 @@ final class LibraryRepository {
   }
   static final String[] STARTERS = {"morning-light", "sing-together", "starlight-echo"};
   static final String[] TITLES = {"Morning Light", "Sing Together", "Starlight Echo"};
+  private static final String[][] BUNDLED_SOUNDFONTS = {
+    {"kanta_reborn_karaokelive_gm_v3.sf2", "KANTA KaraokeLive GM v3"},
+    {"kanta_reborn_livestage_gm_v2.sf2", "KANTA LiveStage GM v2"}
+  };
 
   static final class SoundFontEntry {
     final String fileName, name;
@@ -151,6 +155,11 @@ final class LibraryRepository {
     }
     if (soundFonts.stream().noneMatch(value -> value.fileName.equals("kanta-tone.sf2")))
       soundFonts.add(0, new SoundFontEntry("kanta-tone.sf2", "KANTA original tone"));
+    for (String[] bundled : BUNDLED_SOUNDFONTS) {
+      installBundledSoundFont(bundled[0]);
+      if (soundFonts.stream().noneMatch(value -> value.fileName.equals(bundled[0])))
+        soundFonts.add(new SoundFontEntry(bundled[0], bundled[1]));
+    }
     if (soundFonts.stream().noneMatch(value -> value.fileName.equals(selectedBank))) {
       selectedBank = "kanta-tone.sf2";
       bankName = "KANTA original tone";
@@ -178,6 +187,24 @@ final class LibraryRepository {
     persist();
   }
 
+  private void installBundledSoundFont(String fileName) throws IOException {
+    File destination = new File(media, fileName);
+    if (destination.isFile()) return;
+    File temp = File.createTempFile("bundled-bank-", ".tmp", media);
+    try {
+      try (InputStream in = context.getAssets().open("starter/" + fileName);
+          FileOutputStream out = new FileOutputStream(temp)) {
+        byte[] bytes = new byte[8192];
+        int count;
+        while ((count = in.read(bytes)) != -1) out.write(bytes, 0, count);
+        out.getFD().sync();
+      }
+      if (!temp.renameTo(destination)) throw new IOException("Cannot install bundled SoundFont");
+    } finally {
+      if (temp.exists()) temp.delete();
+    }
+  }
+
   private Song find(String id) {
     for (Song s : songs) if (s.id.equals(id)) return s;
     return null;
@@ -185,6 +212,27 @@ final class LibraryRepository {
 
   List<Song> songs() {
     return Collections.unmodifiableList(new ArrayList<>(songs));
+  }
+
+  int importLegacyResult(ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result) throws IOException {
+    if (result == null || result.songs.isEmpty()) return 0;
+    if (songs.size() + result.songs.size() > 150000) throw new IOException("Library capacity reached");
+    int code = 300000;
+    java.util.HashSet<String> codes = new java.util.HashSet<>();
+    for (Song song : songs) codes.add(song.code);
+    for (ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.DecodedSong decoded : result.songs) {
+      File source = decoded.file;
+      String suffix = decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".wav") ? ".wav"
+          : decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".mp3") ? ".mp3" : ".mid";
+      File destination = new File(media, "legacy-" + decoded.id + suffix);
+      if (!source.isFile() || !source.renameTo(destination)) throw new IOException("Cannot install decoded legacy song");
+      while (codes.contains(String.valueOf(code))) code++;
+      codes.add(String.valueOf(code));
+      songs.add(new Song("legacy:" + decoded.id, decoded.title, "", String.valueOf(code), destination.getName(), false));
+    }
+    try { persist(); }
+    catch (Exception failure) { throw new IOException("Cannot persist legacy library", failure); }
+    return result.songs.size();
   }
 
   List<SavedSet> sets() {
@@ -254,7 +302,7 @@ final class LibraryRepository {
             : lower.endsWith(".mp3") ? "mp3" : lower.endsWith(".wav") ? "wav" : null;
     if (lower.endsWith(".shubblob") || lower.endsWith(".kantablob")
         || lower.endsWith(".shubidx") || lower.endsWith(".kantidx"))
-      throw new IOException("Legacy ShubBlob containers are not supported by this preview. Import extracted MIDI/KAR files instead.");
+      throw new IOException("Select “Import legacy idx + blob” in My Set and choose the paired files.");
     if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music, or a valid SF2 SoundFont.");
     File temp = File.createTempFile("import-", ".tmp", media);
     boolean installed = false;

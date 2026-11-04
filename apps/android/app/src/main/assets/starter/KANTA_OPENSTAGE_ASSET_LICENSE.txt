@@ -1,0 +1,22 @@
+KANTA OPENSTAGE PROCEDURAL ASSET LICENSE
+Version 1.0 — 2026-11-03
+
+Copyright (c) 2026 KANTA Reborn project.
+
+This license applies only to the KANTA-created procedural audio, mappings,
+metadata and generated assets identified in the accompanying OpenStage
+manifest. It does not apply to any third-party sample, repository, mapping,
+impulse response or other candidate listed in the audit metadata.
+
+Permission is granted to use this asset solely as part of an official KANTA
+Reborn build or an authorized KANTA development/test build.
+
+Without prior written permission from the project owner, you may not:
+- redistribute the asset as a standalone file;
+- extract, resell, sublicense or repackage the asset;
+- use the asset in another product or sound library;
+- claim the asset or its mappings as your own work.
+
+The asset is provided as-is. No warranty is given, and KANTA Reborn is not
+liable for damages arising from its use. This notice must remain with any
+authorized copy.

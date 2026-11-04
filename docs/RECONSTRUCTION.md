@@ -478,3 +478,18 @@ PR #134 remains a validation candidate, not a release claim. Its reference-led A
 The PR reconciliation restored current-main `SessionController` APIs after resolving the branch divergence. Android compile and runtime evidence must be collected on the resulting exact head.
 
 The exact-head karaoke-stage candidate includes the Home-launch default repair; Android runtime validation must prove the dashboard is mounted before destination walkthroughs.
+
+## Android three-group UI candidate — 2026-11-03
+
+Physical-device screenshots showed that the previous Home dashboard and six-tab technical navigation exposed too many implementation concepts at once. The candidate replaces that structure with Home | Sing | Performance | Experience | More. Group landing cards are goal-oriented and route into the existing Search, Queue, My Set, Now Playing, Voice, Pitch & Tempo, Visuals, Loop/Party and advanced-control destinations without duplicating playback or queue state. The Home viewport now fills available height so its compact navigation does not leave an avoidable black tail.
+
+The Search destination adds an in-app keypad toggle. Numeric and letter keys use the same compact bounded area, while the Android soft keyboard is suppressed; this is a UI candidate until exact-head Android build and emulator/physical-device acceptance pass.
+
+## Supplied UI and SoundFont asset candidate — 2026-11-03
+
+The supplied UI upgrade archive contributes multicolor Android VectorDrawables and gradient button selectors. Home and Voice use them directly without tinting. The two supplied procedural SF2 banks are bundled as starter assets and surfaced in the existing SoundFont inventory; they are not silently selected over the current bank. The OpenStage audit pack's lock file and license requirements are preserved under `docs/audio-candidates/openstage/`; the KANTA-created procedural bank is included under the restricted project asset license, while unverified third-party audio candidates are not copied into the application.
+
+
+## Legacy ShubBlob paired import candidate — 2026-11-03
+
+The supplied real pair (`shubidx` plus `shubblob`) established that the earlier rejection was not licensing-related. The blob contains aligned encrypted MKMD records; the Android candidate now has a bounded file-backed importer using the compatibility AES-256-CBC/raw-deflate contract, title records from the paired index, and LibraryRepository persistence. The legacy path is selected only through the paired-file My Set flow; standalone `.idx`/`.blob` selection remains rejected. Exact-head Android compilation, a retained synthetic regression fixture, emulator acceptance and physical-device import/playback remain required.

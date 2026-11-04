@@ -83,8 +83,15 @@ public final class RuntimeChecks extends Instrumentation {
           "Reference-led Home dashboard was not mounted at launch");
       capture("home_dashboard.png");
       runOnMainSync(() -> {
-        View search = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onSearch");
-        check(search != null, "Home dashboard Search feature missing");
+        View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Sing");
+        check(sing != null, "Home Sing destination missing");
+        sing.performClick();
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.find-song") != null,
+          "Sing group did not open for Find a song");
+      runOnMainSync(() -> {
+        View search = activity.getWindow().getDecorView().findViewWithTag("kanta.group.find-song");
+        check(search != null, "Sing Find a song action missing");
         search.performClick();
       });
       await(
@@ -101,8 +108,15 @@ public final class RuntimeChecks extends Instrumentation {
           "Search did not return to Home");
       capture("home_dashboard_restored.png");
       runOnMainSync(() -> {
-        View queue = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onQueue");
-        check(queue != null, "Home Queue feature missing");
+        View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Sing");
+        check(sing != null, "Home Sing destination missing");
+        sing.performClick();
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.queue") != null,
+          "Sing group did not open");
+      runOnMainSync(() -> {
+        View queue = activity.getWindow().getDecorView().findViewWithTag("kanta.group.queue");
+        check(queue != null, "Sing Queue action missing");
         queue.performClick();
       });
       await(
@@ -118,8 +132,15 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Queue did not return to Home");
       runOnMainSync(() -> {
-        View pitch = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onPitchTempo");
-        check(pitch != null, "Home Pitch & Tempo feature missing");
+        View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Performance");
+        check(performance != null, "Home Performance destination missing");
+        performance.performClick();
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.key-tempo") != null,
+          "Performance group did not open");
+      runOnMainSync(() -> {
+        View pitch = activity.getWindow().getDecorView().findViewWithTag("kanta.group.key-tempo");
+        check(pitch != null, "Performance Key & Tempo action missing");
         pitch.performClick();
       });
       await(
@@ -148,8 +169,15 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Pitch & Tempo did not return to Home");
       runOnMainSync(() -> {
-        View visuals = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onVisuals");
-        check(visuals != null, "Home Visuals feature missing");
+        View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Experience");
+        check(experience != null, "Home Experience destination missing");
+        experience.performClick();
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.background") != null,
+          "Experience group did not open");
+      runOnMainSync(() -> {
+        View visuals = activity.getWindow().getDecorView().findViewWithTag("kanta.group.background");
+        check(visuals != null, "Experience Background action missing");
         visuals.performClick();
       });
       await(
@@ -171,8 +199,15 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Visuals did not return to Home");
       runOnMainSync(() -> {
-        View mic = activity.getWindow().getDecorView().findViewWithTag("kanta.home.feature.onMicVoice");
-        check(mic != null, "Home Mic & Voice feature missing");
+        View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Performance");
+        check(performance != null, "Home Performance destination missing");
+        performance.performClick();
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.voice") != null,
+          "Performance group did not open for Voice");
+      runOnMainSync(() -> {
+        View mic = activity.getWindow().getDecorView().findViewWithTag("kanta.group.voice");
+        check(mic != null, "Performance Voice action missing");
         mic.performClick();
       });
       await(
@@ -318,9 +353,11 @@ public final class RuntimeChecks extends Instrumentation {
           !isolated.soundFontName().equals("KANTA original tone"),
           "SoundFont override not retained");
       check(
-          isolated.soundFonts().size() == 2
+          isolated.soundFonts().size() == 4
               && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta-tone.sf2"))
-              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals(isolated.soundFont().getName())),
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals(isolated.soundFont().getName()))
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta_reborn_karaokelive_gm_v3.sf2"))
+              && isolated.soundFonts().stream().anyMatch(value -> value.fileName.equals("kanta_reborn_livestage_gm_v2.sf2")),
           "Imported and bundled SoundFonts are not discoverable");
       String importedBank = isolated.soundFont().getName();
       isolated.selectSoundFont("kanta-tone.sf2");
@@ -334,7 +371,7 @@ public final class RuntimeChecks extends Instrumentation {
       reloadedBanks.load();
       check(
           reloadedBanks.soundFont().getName().equals(importedBank)
-              && reloadedBanks.soundFonts().size() == 2,
+              && reloadedBanks.soundFonts().size() == 4,
           "Active SoundFont selection or inventory did not survive reload");
       check(
           isolated.songs().stream().anyMatch(value -> !value.starter && value.fileName.endsWith(".mid")),
@@ -354,12 +391,27 @@ public final class RuntimeChecks extends Instrumentation {
       }
       runOnMainSync(() -> session.importSongs(files));
       await(
-          () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 2,
+          () -> !session.importing && session.songs.size() == 5 && session.soundFonts.size() == 4,
           "SessionController did not publish imported songs and SoundFonts");
+      runOnMainSync(() -> {
+        View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Experience");
+        check(experience != null, "Experience navigation was not available before stage checks");
+        experience.performClick();
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party") != null,
+          "Experience group did not expose Party Mode");
+      runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party").performClick());
       runOnMainSync(
           () -> check(
-              clickText(activity.getWindow().getDecorView(), "My Set"),
-              "My Set navigation control was not clickable"));
+              clickText(activity.getWindow().getDecorView(), "Sing"),
+              "Sing navigation control was not clickable"));
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.my-songs") != null,
+          "Sing group did not expose My songs");
+      runOnMainSync(
+          () -> {
+            View mySongs = activity.getWindow().getDecorView().findViewWithTag("kanta.group.my-songs");
+            check(mySongs != null && mySongs.performClick(), "My songs action was not clickable");
+          });
       await(
           () -> contains(activity.getWindow().getDecorView(), "Original KAR")
               && contains(activity.getWindow().getDecorView(), "ACTIVE")
@@ -383,8 +435,11 @@ public final class RuntimeChecks extends Instrumentation {
       capture("my-set-active-soundfont.png");
       runOnMainSync(
           () -> check(
-              clickText(activity.getWindow().getDecorView(), "Control"),
-              "Control navigation was not restored after My Set assertions"));
+              clickText(activity.getWindow().getDecorView(), "More"),
+              "More navigation was not restored after My Set assertions"));
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings") != null,
+          "More group did not expose Settings");
+      runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings").performClick());
 
       AtomicBoolean progressSeen = new AtomicBoolean();
       AtomicBoolean progressOnMain = new AtomicBoolean(true);
@@ -549,7 +604,7 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(
               () -> {
-                for (String name : new String[] {"My Set", "Loop", "Scenic", "Realm", "Control"}) {
+                for (String name : new String[] {"Sing", "Performance", "Experience", "More"}) {
                   View tab =
                       activity.getWindow().getDecorView().findViewWithTag("kanta.nav." + name);
                   android.graphics.Rect visible = new android.graphics.Rect();
@@ -585,6 +640,12 @@ public final class RuntimeChecks extends Instrumentation {
           "Video did not resume after reactivation");
       runOnMainSync(activity::closeFullscreen);
       stableStage.set(primaryStage);
+      // Camera rendering belongs to the live player surface. Leave the goal group
+      // before enabling it so the acceptance exercises the same visible stage path
+      // a singer uses during playback.
+      runOnMainSync(() -> check(primaryStage.performClick(), "Primary stage did not open Now Playing"));
+      await(() -> primaryStage.getGlobalVisibleRect(new android.graphics.Rect()),
+          "Now Playing did not restore the primary stage");
       runOnMainSync(() -> session.scene("bayanDawn"));
       check(state(() -> session.stageVideo == null), "Scenic selection retained video playback");
       check(
@@ -642,19 +703,38 @@ public final class RuntimeChecks extends Instrumentation {
           "Foregrounding KANTA re-enabled camera without opt-in");
 
       runOnMainSync(
+          () -> {
+            View more =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
+            check(more != null && more.performClick(), "More navigation did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings") != null,
+          "More settings group did not render");
+      runOnMainSync(
+          () -> {
+            View settings =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings");
+            check(settings != null && settings.performClick(), "Settings group did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.voice.settings") != null,
+          "Control voice settings did not render");
+      runOnMainSync(
           () ->
               activity
                   .getWindow()
                   .getDecorView()
                   .findViewWithTag("kanta.voice.settings")
                   .performClick());
-      check(
-          state(
-              () ->
-                  contains(
-                          activity.getWindow().getDecorView(),
-                          "Wired / USB / Bluetooth monitoring")
-                      && contains(activity.getWindow().getDecorView(), "Turn on microphone")),
+      await(
+          () ->
+              contains(
+                      activity.getWindow().getDecorView(),
+                      "Wired / USB / Bluetooth monitoring")
+                  && contains(activity.getWindow().getDecorView(), "Turn on microphone"),
           "Voice settings did not expand from Control");
       capture("voice_settings.png");
       check(
@@ -670,6 +750,26 @@ public final class RuntimeChecks extends Instrumentation {
                     && contains(activity.getWindow().getDecorView(), "Turn on pitch correction");
               }),
           "Correction control was missing or enabled before verified monitoring");
+      runOnMainSync(
+          () -> {
+            View more =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
+            check(more != null && more.performClick(), "More navigation did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings") != null,
+          "More settings group did not render");
+      runOnMainSync(
+          () -> {
+            View settings =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings");
+            check(settings != null && settings.performClick(), "Settings group did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.voice.settings") != null,
+          "Control voice settings did not render");
       runOnMainSync(
           () ->
               activity

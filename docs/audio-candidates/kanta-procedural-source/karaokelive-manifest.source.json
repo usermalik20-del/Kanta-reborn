@@ -1,0 +1,20 @@
+{
+  "name": "KANTA Reborn KaraokeLive GM",
+  "version": "3.0.0",
+  "file": "kanta_reborn_karaokelive_gm_v3.sf2",
+  "bytes": 17278402,
+  "sha256": "6d1acb39b68e6063378c38a4b3ab0cab37013cea63a48f98282854bd0f463a96",
+  "gm_programs": 128,
+  "drum_bank": 128,
+  "drum_programs": [
+    0,
+    8,
+    16,
+    24
+  ],
+  "velocity_layers": 3,
+  "key_zones_per_family": 3,
+  "melodic_families": 15,
+  "sample_rate": 32000,
+  "license": "CC0-1.0"
+}

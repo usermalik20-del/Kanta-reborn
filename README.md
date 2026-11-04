@@ -182,7 +182,7 @@ Android APK publication follows successful Android validation only. iOS unsigned
 
 ## Android library import discoverability — 2026-11-02
 
-The Android My Set surface now lists imported MIDI/KAR/audio items with direct Reserve actions and shows the installed SoundFont inventory with an explicit active-bank indicator and Use action. SoundFont inventory and active selection are persisted together; changing banks affects subsequent playback, not a song already in progress. The legacy ShubBlob/kantablob and index-container formats remain explicitly unsupported in the preview UI: the decoder has no real-container acceptance evidence and must not report a raw container copy as an imported song. Extracted MIDI/KAR files remain the supported route until a real, safely decoded container is demonstrated. The changed-head Android emulator/runtime gate is required before this UI is called verified.
+The Android My Set surface now lists imported MIDI/KAR/audio items with direct Reserve actions and shows the installed SoundFont inventory with an explicit active-bank indicator and Use action. SoundFont inventory and active selection are persisted together; changing banks affects subsequent playback, not a song already in progress. Paired ShubBlob/kantablob and index-container import is now implemented as a separate My Set flow: choose the index, then the paired blob. The file-backed importer scans bounded MKMD records, decrypts and inflates only validated payloads, and materializes MIDI/WAV/MP3 copies through the existing LibraryRepository. Single-file selection still rejects container files; physical-device and exact-head Android validation remain required.
 
 ## Android SoundFont storage safety — 2026-11-02
 
@@ -207,3 +207,11 @@ The reference-led Android UI and companion changes were reconciled onto current 
 The reconciled PR retains the current-main `SessionController` SoundFont inventory and import-progress APIs while preserving the reference-led UI composition.
 
 The karaoke-stage candidate now also initializes the reference-led Home dashboard before applying saved navigation state, so validation starts from a discoverable stage entry point.
+
+## Android user-facing information architecture — local candidate
+
+The Android presentation is being reorganized around three user goals rather than technical destinations: **Sing** (find music, personal songs and queue), **Performance** (Now Playing, lyrics, voice, Key & Tempo and Singing Coach), and **Experience** (backgrounds, camera, effects, scenic presentation, Party Mode and display). **More** contains advanced settings, companion control, diagnostics and help. Home now exposes only the three goals plus compact Continue Singing content; playback, FIFO, microphone, scoring and stage ownership remain unchanged.
+
+## Android supplied UI and SoundFont assets — local candidate
+
+The Android UI candidate now includes the supplied multicolor VectorDrawables and gradient button backgrounds without tinting away their per-path colors. It also bundles the supplied procedural `KANTA KaraokeLive GM v3` and `KANTA LiveStage GM v2` banks in the app's starter assets and exposes them through the existing persisted SoundFont inventory. The KANTA procedural bank from the OpenStage pack is included under the restricted KANTA OpenStage Procedural Asset License 1.0; its pinned third-party candidates remain audit-only and are not embedded.

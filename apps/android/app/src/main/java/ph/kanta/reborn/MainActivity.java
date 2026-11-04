@@ -41,7 +41,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       PHOTO = 14,
       VIDEO = 15,
       CAMERA = 16,
-      MICROPHONE = 17;
+      MICROPHONE = 17,
+      LEGACY_INDEX = 18,
+      LEGACY_BLOB = 19;
   private static final int NAVY = 0xFF0B1023,
       PANEL = 0xFF19213E,
       CYAN = 0xFF6FE5E8,
@@ -70,6 +72,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private Presentation presentation;
   private DisplayManager displays;
   private String tab = "Home", query = "", singer = "";
+  private Uri pendingLegacyIndex;
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
@@ -344,9 +347,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (workspaceBackCallback != null
         && (workspace == null || workspace.activeAccessory() == null))
       workspaceBackCallback.setEnabled(referenceDestination);
-    if (appHeader != null) appHeader.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
-    if (stagePane != null) stagePane.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
-    if (navigationTabs != null) navigationTabs.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
+    boolean groupDestination = isGroupDestination(tab);
+    boolean hideStage = home || (referenceDestination && !groupDestination);
+    if (appHeader != null) appHeader.setVisibility(hideStage ? View.GONE : View.VISIBLE);
+    if (stagePane != null) stagePane.setVisibility(hideStage ? View.GONE : View.VISIBLE);
+    if (navigationTabs != null)
+      navigationTabs.setVisibility(home || (referenceDestination && !groupDestination) ? View.GONE : View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
       entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
@@ -470,7 +476,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     else main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout tabs = row();
     navigationTabs = tabs;
-    for (String name : new String[] {"Home", "My Set", "Loop", "Scenic", "Realm", "Control"}) {
+    for (String name : new String[] {"Home", "Sing", "Performance", "Experience", "More"}) {
       Button b =
           button(
               name,
@@ -1003,6 +1009,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       case "Home":
         homeDashboard();
         break;
+      case "Sing":
+        singGroup();
+        break;
+      case "Performance":
+        performanceGroup();
+        break;
+      case "Experience":
+        experienceGroup();
+        break;
+      case "More":
+        moreGroup();
+        break;
       case "Search":
         searchScreen();
         break;
@@ -1050,13 +1068,28 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     returnToHomeAfterAccessory = true;
   }
 
+  private boolean isGroupDestination(String destination) {
+    return "Sing".equals(destination)
+        || "Performance".equals(destination)
+        || "Experience".equals(destination)
+        || "More".equals(destination);
+  }
+
   private boolean isReferenceDestination(String destination) {
-    return "Search".equals(destination)
+    return "Sing".equals(destination)
+        || "Performance".equals(destination)
+        || "Experience".equals(destination)
+        || "More".equals(destination)
+        || "Search".equals(destination)
         || "Queue".equals(destination)
         || "Pitch & Tempo".equals(destination)
         || "Mic & Voice".equals(destination)
         || "Visuals".equals(destination)
-        || "Now Playing".equals(destination);
+        || "Now Playing".equals(destination)
+        || "My Set".equals(destination)
+        || "Scenic".equals(destination)
+        || "Realm".equals(destination)
+        || "Control".equals(destination);
   }
 
   private void navigateHome() {
@@ -1474,10 +1507,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 tab = "Home";
                 render();
               }
-              @Override public void onSettings() {
-                tab = "Control";
-                render();
-              }
+              @Override public void onSing() { tab = "Sing"; render(); }
+              @Override public void onPerformance() { tab = "Performance"; render(); }
+              @Override public void onExperience() { tab = "Experience"; render(); }
+              @Override public void onSettings() { tab = "More"; render(); }
               @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
               @Override public void onQueue() { tab = "Queue"; render(); }
               @Override public void onYouTube() { openYouTubeVideo(); }
@@ -1487,10 +1520,139 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onMySet() { tab = "My Set"; render(); }
               @Override public void onFavorites() { tab = "My Set"; render(); }
               @Override public void onRecent() { tab = "My Set"; render(); }
-              @Override public void onMore() { tab = "Control"; render(); }
+              @Override public void onMore() { tab = "More"; render(); }
               @Override public void onScenic() { tab = "Scenic"; render(); }
               @Override public void onRealm() { tab = "Realm"; render(); }
-            }));
+            }), new LinearLayout.LayoutParams(-1, -1));
+  }
+
+
+  private ph.kanta.reborn.ui.GroupScreen groupScreen(
+      String title, String purpose, ph.kanta.reborn.ui.GroupScreen.Item[] items) {
+    return new ph.kanta.reborn.ui.GroupScreen(
+        this,
+        title,
+        purpose,
+        items,
+        new ph.kanta.reborn.ui.GroupScreen.Listener() {
+          @Override public void onBack() { navigateHome(); }
+          @Override public void onAction(String action) { handleGroupAction(action); }
+        });
+  }
+
+  private void handleGroupAction(String action) {
+    switch (action) {
+      case "find-song":
+        tab = "Search";
+        searchSource = "All";
+        render();
+        break;
+      case "my-songs":
+      case "favorites":
+      case "recent":
+        tab = "My Set";
+        render();
+        break;
+      case "queue":
+        tab = "Queue";
+        render();
+        break;
+      case "youtube":
+        openYouTubeVideo();
+        break;
+      case "now-playing":
+      case "lyrics":
+        tab = "Now Playing";
+        render();
+        break;
+      case "voice":
+        tab = "Mic & Voice";
+        render();
+        break;
+      case "key-tempo":
+        tab = "Pitch & Tempo";
+        render();
+        break;
+      case "coach":
+        tab = "Mic & Voice";
+        voiceExpanded = true;
+        render();
+        break;
+      case "background":
+      case "camera":
+      case "effects":
+        tab = "Visuals";
+        render();
+        break;
+      case "scenic":
+        tab = "Scenic";
+        render();
+        break;
+      case "party":
+        tab = "Loop";
+        render();
+        break;
+      case "display":
+        fullscreen();
+        break;
+      case "settings":
+        tab = "Control";
+        render();
+        break;
+      case "companion":
+        companionDialog = CompanionDialog.show(this, session);
+        break;
+      case "diagnostics":
+        diagnostics();
+        break;
+      case "help":
+        help();
+        break;
+      default:
+        break;
+    }
+  }
+
+  private void singGroup() {
+    body.addView(groupScreen("Sing", "What do you want to sing?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
+      new ph.kanta.reborn.ui.GroupScreen.Item("find-song", "Find a song", "KANTA, YouTube or Local", "⌕"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("my-songs", "My songs", "My Set and playlists", "♫"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("favorites", "Favorites", "Saved songs", "★"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("recent", "Recent", "Recently played", "↺"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("queue", "Queue", "Up next", "☷"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("youtube", "YouTube", "Optional online video", "▶")
+    }));
+  }
+
+  private void performanceGroup() {
+    body.addView(groupScreen("Performance", "Help me while I’m singing.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
+      new ph.kanta.reborn.ui.GroupScreen.Item("now-playing", "Now Playing", "Playback controls", "▶"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("lyrics", "Lyrics", "Follow along while singing", "▤"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("voice", "Voice", "Microphone and hear my voice", "♫"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("key-tempo", "Key & Tempo", "Fit the song to your voice", "↕"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("coach", "Singing Coach", "Scoring and practice", "✦")
+    }));
+  }
+
+  private void experienceGroup() {
+    body.addView(groupScreen("Experience", "How should your karaoke session look and feel?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
+      new ph.kanta.reborn.ui.GroupScreen.Item("background", "Background", "Choose your stage", "▧"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("camera", "Camera", "Add a live preview", "▣"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("effects", "Effects", "Stage and voice sound", "✧"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("scenic", "Scenic", "Animated stage scenes", "◈"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("realm", "Realm", "Ambient stage mood", "◎"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("party", "Party Mode", "Between-song music and sounds", "🎉"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("display", "Display", "Fullscreen and external stage", "▣")
+    }));
+  }
+
+  private void moreGroup() {
+    body.addView(groupScreen("More", "Advanced settings and tools.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
+      new ph.kanta.reborn.ui.GroupScreen.Item("settings", "Settings", "Advanced voice and app settings", "⚙"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", "⌘"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", "⌁"),
+      new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", "?")
+    }));
   }
 
   private void openYouTubeVideo() {
@@ -1798,84 +1960,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           }
         });
     body.addView(volume);
-    body.addView(text("Find your next song", 20, Color.WHITE));
-    queryInput = new EditText(this);
-    queryInput.setSingleLine();
-    queryInput.setTextColor(Color.WHITE);
-    queryInput.setTextSize(18);
-    queryInput.setHintTextColor(0xFFAFB8D0);
-    queryInput.setHint("Song code, title or artist");
-    queryInput.setText(query);
-    body.addView(queryInput);
-    queryInput.addTextChangedListener(
-        new TextWatcher() {
-          public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-          public void onTextChanged(CharSequence s, int start, int before, int count) {
-            query = s.toString();
-            resultLimit = 50;
-            search();
-          }
-
-          public void afterTextChanged(Editable e) {}
-        });
-    EditText singerInput = new EditText(this);
-    singerInput.setSingleLine();
-    singerInput.setTextColor(Color.WHITE);
-    singerInput.setHintTextColor(0xFFAFB8D0);
-    singerInput.setHint("Singer name (optional)");
-    singerInput.setText(singer);
-    body.addView(singerInput);
-    singerInput.addTextChangedListener(
-        new TextWatcher() {
-          public void beforeTextChanged(CharSequence s, int a, int c, int f) {}
-
-          public void onTextChanged(CharSequence s, int a, int b, int c) {
-            singer = s.toString();
-          }
-
-          public void afterTextChanged(Editable e) {}
-        });
-    LinearLayout tools = row();
-    addWeighted(tools, button("Voice search", this::voiceSearch));
-    addWeighted(
-        tools,
-        button(
-            "Cancel",
-            () -> {
-              query = "";
-              queryInput.setText("");
-            }));
-    body.addView(tools);
-    for (String[] digits :
-        new String[][] {{"1", "2", "3"}, {"4", "5", "6"}, {"7", "8", "9"}, {"RES", "0", "⌫"}}) {
-      LinearLayout keys = row();
-      for (String digit : digits)
-        addWeighted(
-            keys,
-            button(
-                digit,
-                () -> {
-                  if (digit.equals("RES")) {
-                    List<Song> matches = new ArrayList<>();
-                    for (Song s : session.songs) if (s.matches(query)) matches.add(s);
-                    if (matches.size() == 1) session.reserve(matches.get(0), singer);
-                    else
-                      new AlertDialog.Builder(this)
-                          .setMessage("Choose Reserve beside the song you want below.")
-                          .setPositiveButton("OK", null)
-                          .show();
-                  } else if (digit.equals("⌫")) {
-                    if (!query.isEmpty())
-                      queryInput.setText(query.substring(0, query.length() - 1));
-                  } else queryInput.setText(query + digit);
-                }));
-      body.addView(keys);
-    }
-    results = column();
-    body.addView(results);
-    search();
-    queue();
+    body.addView(text("Advanced settings", 18, GOLD));
+    body.addView(text("Song discovery is available from Sing → Find a song.", 14, 0xFFAFB8D0));
   }
 
   private void search() {
@@ -2013,17 +2099,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         body.addView(text("The full collection remains searchable in Control.", 13, 0xFFAFB8D0));
     }
     body.addView(
-        button(
-            "Legacy ShubBlob container status",
-            () -> new AlertDialog.Builder(this)
-                .setTitle("Legacy ShubBlob import")
-                .setMessage(
-                    "This preview does not yet import legacy ShubBlob/kantablob containers. "
-                        + "The container is encrypted and its format has not been validated against "
-                        + "a real file. Import extracted MIDI/KAR files instead. Do not treat a "
-                        + "100% file copy as a successful container decode.")
-                .setPositiveButton("OK", null)
-                .show()));
+        button("Import legacy idx + blob", this::pickLegacyIndex));
     body.addView(
         text(
             "SoundFont banks are validated before activation. MIDI/KAR imports are limited to 16 MiB and six hours; original files stay unchanged.",
@@ -2427,6 +2503,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     queue();
   }
 
+  private void pickLegacyIndex() {
+    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
+    startActivityForResult(intent, LEGACY_INDEX);
+  }
+
+  private void pickLegacyBlob() {
+    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
+    startActivityForResult(intent, LEGACY_BLOB);
+  }
+
   private void chooseAudio(String title, java.util.function.Consumer<Song> selected) {
     List<Song> audio = new ArrayList<>();
     for (Song song : session.songs) if (SessionController.isAudio(song)) audio.add(song);
@@ -2636,11 +2722,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           if ("Now Playing".equals(tab) && nowPlayingStage != null) {
             nowPlayingStage.setVisualActive(true);
             if (stagePresenter != null) stagePresenter.setVisualActive(false);
-            camera.moveTo(nowPlayingStage);
-          } else {
-            if (stagePresenter != null) stagePresenter.setVisualActive(true);
-            camera.moveTo(stagePresenter);
+          } else if (stagePresenter != null) {
+            stagePresenter.setVisualActive(true);
           }
+          // The primary presenter remains the authoritative camera owner after fullscreen
+          // dismissal. Now Playing is a content projection, not a second primary stage.
+          camera.moveTo(stagePresenter);
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
     if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
@@ -2748,6 +2835,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     if ((request == PHOTO || request == VIDEO) && data.getData() != null) {
       session.importStage(data.getData(), request == VIDEO);
+      return;
+    }
+    if (request == LEGACY_INDEX && data.getData() != null) {
+      pendingLegacyIndex = data.getData();
+      pickLegacyBlob();
+      return;
+    }
+    if (request == LEGACY_BLOB && data.getData() != null) {
+      if (pendingLegacyIndex == null) { Toast.makeText(this, "Choose the index file first.", Toast.LENGTH_LONG).show(); return; }
+      showImportProgress();
+      attachImportProgressListener();
+      session.importLegacyPair(pendingLegacyIndex, data.getData());
+      pendingLegacyIndex = null;
       return;
     }
     if (request == MUSIC) {

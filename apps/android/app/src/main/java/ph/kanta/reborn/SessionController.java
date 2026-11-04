@@ -1446,6 +1446,38 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
+  void importLegacyPair(android.net.Uri indexUri, android.net.Uri blobUri) {
+    if (!ready || importing || indexUri == null || blobUri == null) return;
+    importCancelled.set(false); importing = true; libraryImporting = true; message = "Importing legacy song library…"; publish();
+    io.execute(() -> {
+      File index = null, blob = null; int good = 0; String resultMessage;
+      try {
+        index = File.createTempFile("legacy-index-", ".idx", context.getCacheDir());
+        blob = File.createTempFile("legacy-blob-", ".blob", context.getCacheDir());
+        copyLegacyUri(indexUri, index, 16L * 1024 * 1024);
+        copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024);
+        ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
+            ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
+                index, blob, new File(repository.media, "legacy-import"));
+        good = repository.importLegacyResult(result);
+        resultMessage = "Imported " + good + " legacy song(s); " + result.skippedCount + " record(s) skipped.";
+      } catch (Exception failure) {
+        resultMessage = "Legacy import failed: " + (failure.getMessage() == null ? "unsupported container" : failure.getMessage());
+      } finally { if (index != null) index.delete(); if (blob != null) blob.delete(); }
+      final int imported = good; final String messageValue = resultMessage;
+      main.post(() -> { songs = repository.songs(); importing = false; libraryImporting = false; message = messageValue; completeImportProgress(imported > 0, messageValue); publish(); });
+    });
+  }
+
+  private void copyLegacyUri(android.net.Uri uri, File target, long maxBytes) throws Exception {
+    try (java.io.InputStream in = context.getContentResolver().openInputStream(uri); java.io.FileOutputStream out = new java.io.FileOutputStream(target)) {
+      if (in == null) throw new IOException("Cannot open selected legacy file");
+      byte[] buffer = new byte[65536]; long total = 0; int count;
+      while ((count = in.read(buffer)) != -1) { if (importCancelled.get()) throw new java.io.InterruptedIOException(); total += count; if (total > maxBytes) throw new IOException("Legacy file exceeds safety limit"); out.write(buffer,0,count); }
+      out.getFD().sync();
+    }
+  }
+
   String activeSoundFontFileName() {
     return selectedSoundFont == null ? "kanta-tone.sf2" : selectedSoundFont.getName();
   }

@@ -773,3 +773,17 @@ The Android reference-led UI and shared companion changes were reconciled onto c
 The reconciled reference-led UI uses the current-main `SessionController` API surface, including SoundFont inventory/selection and main-Looper import progress; no second state owner is introduced.
 
 The merged karaoke-stage implementation keeps Home as the launch composition boundary before applying saved accessory/navigation state, matching the runtime walkthrough contract.
+
+## Android user-goal navigation candidate — 2026-11-03
+
+The Android reference-led presentation is being grouped into five user-facing destinations: Home, Sing, Performance, Experience and More. Sing is the entry point for Search, KANTA/YouTube/Local sources, Favorites, Recent, My Set/playlists and Queue. Performance groups Now Playing/lyrics, Key & Tempo, Voice and Singing Coach. Experience groups backgrounds, camera, effects, Scenic/Realm presentation, Party Mode and display/fullscreen. More owns advanced settings, companion, diagnostics and help.
+
+This is a presentation boundary only. `MainActivity` selects destinations, `GroupScreen` renders group actions, and existing screens continue to issue commands to the authoritative `SessionController`, stage presenter, catalog and microphone/monitor owners. Search uses a bounded embedded keypad with numeric and letter layouts; it suppresses the system IME and does not change search ownership or persistence.
+
+## Android supplied UI and SoundFont assets — 2026-11-03
+
+The Android UI candidate consumes the supplied multicolor VectorDrawables directly; tinting is intentionally avoided because it destroys per-path colors. `LibraryRepository` remains the single SoundFont inventory owner and now installs the two supplied procedural banks (`KANTA KaraokeLive GM v3` and `KANTA LiveStage GM v2`) into its existing app-private media directory and persisted inventory. Playback still opens only the selected bank through the existing SessionController/native adapter. The KANTA-created procedural portion is a runtime asset under the restricted project license; the pinned third-party sample candidates remain excluded until per-file audio licensing is verified.
+
+## Paired ShubBlob import candidate — 2026-11-03
+
+The Android legacy path now has a separate file-backed importer for user-supplied `shubidx` + `shubblob` pairs. It scans 1024-aligned MKMD records without loading the blob into memory, applies the fixed compatibility AES-256-CBC/raw-deflate contract only after bounded header validation, pairs decoded records with index titles, and persists materialized MIDI/WAV/MP3 files through `LibraryRepository`. The single-file import path still rejects `.idx`/`.blob`; the paired UI is the only entry point. This is a source candidate until exact-head Android compilation, real-container runtime acceptance, storage/cancellation tests and physical-device playback pass.

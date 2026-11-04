@@ -1,0 +1,13 @@
+{
+  "package": "KANTA Reborn OpenStage",
+  "version": "0.9-kanta-procedural",
+  "audioStatus": "KANTA-created procedural audio only",
+  "license": "KANTA OpenStage Procedural Asset License 1.0",
+  "banks": [
+    {
+      "file": "kanta_reborn_karaokelive_gm_v3.sf2",
+      "sha256": "6d1acb39b68e6063378c38a4b3ab0cab37013cea63a48f98282854bd0f463a96"
+    }
+  ],
+  "thirdPartyCandidates": "audit-only; not embedded"
+}

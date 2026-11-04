@@ -8,6 +8,8 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import ph.kanta.reborn.R;
+
 /** Mic and voice controls backed by the app's existing capture, monitor and scoring owners. */
 public final class KantaMicVoiceScreen extends LinearLayout {
   public interface Listener {
@@ -53,14 +55,14 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     top.setOrientation(HORIZONTAL);
     top.setGravity(Gravity.CENTER_VERTICAL);
     top.setPadding(dp(16), dp(12), dp(16), dp(8));
-    ph.kanta.reborn.ui.components.KantaIconButton back =
-        new ph.kanta.reborn.ui.components.KantaIconButton(context);
-    back.setText("\u2190");
-    back.setTextSize(18);
+    android.widget.ImageButton back = new android.widget.ImageButton(context);
+    back.setImageResource(R.drawable.kanta_back_color);
+    back.setBackground(null);
+    back.setPadding(dp(10), dp(10), dp(10), dp(10));
     back.setContentDescription("Back to Home");
     back.setTag("kanta.screen.mic-voice.back");
     back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    TextView title = KantaTheme.titleText(context, "Mic & Voice", 20);
+    TextView title = KantaTheme.titleText(context, "Voice", 20);
     top.addView(back);
     top.addView(title, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     addView(top);
@@ -107,7 +109,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     addViewCard(content, micCard);
 
     LinearLayout monitorCard = card();
-    TextView monitorTitle = KantaTheme.titleText(context, "Voice Monitoring", 16);
+    TextView monitorTitle = KantaTheme.titleText(context, "Hear My Voice", 16);
     monitorCard.addView(monitorTitle);
     monitorStatus = bodyText("Monitoring off · connect wired, USB or Bluetooth headphones");
     monitorStatus.setPadding(0, dp(6), 0, dp(8));
@@ -141,7 +143,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
       }
     });
     monitorCard.addView(gainSlider);
-    TextView fxTitle = bodyText("Monitor effect");
+    TextView fxTitle = bodyText("Voice Sound");
     fxTitle.setPadding(0, dp(10), 0, dp(6));
     monitorCard.addView(fxTitle);
     // Ten presets do not fit one phone row; three per line stays readable at 12sp.
@@ -153,7 +155,8 @@ public final class KantaMicVoiceScreen extends LinearLayout {
         monitorCard.addView(modes);
       }
       final String name = MODES[i].label();
-      Button chip = actionButton(name);
+      final String displayName = voiceSoundName(name);
+      Button chip = actionButton(displayName);
       chip.setTextSize(12);
       chip.setTag(
           "kanta.monitor.mode."
@@ -169,8 +172,8 @@ public final class KantaMicVoiceScreen extends LinearLayout {
       modes.addView(chip, p);
     }
     TextView monitorNote = bodyText(
-        "Monitoring is opt-in and requires a verified wired, USB or Bluetooth headset route. "
-            + "Speaker outputs are blocked to prevent feedback.");
+        "Turn this on when you want to hear your voice through headphones. "
+            + "Advanced output choices are available in More settings.");
     monitorNote.setTextSize(12);
     monitorCard.addView(monitorNote);
     addViewCard(content, monitorCard);
@@ -197,6 +200,20 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     addViewCard(content, coachCard);
   }
 
+  private String voiceSoundName(String engineName) {
+    if (engineName == null) return "Natural";
+    String key = engineName.toUpperCase(java.util.Locale.ROOT);
+    if ("DRY".equals(key)) return "Natural";
+    if ("SMALL_ROOM".equals(key)) return "Studio";
+    if ("ROOM".equals(key)) return "Big Room";
+    if ("STUDIO".equals(key)) return "Studio";
+    if ("CONCERT_HALL".equals(key) || "HALL".equals(key)) return "Hall";
+    if ("CATHEDRAL".equals(key)) return "Echo";
+    if ("PLATE_REVERB".equals(key) || "SLAP_ECHO".equals(key)) return "More Echo";
+    if ("WARM_TAPE".equals(key)) return "Warm";
+    return engineName;
+  }
+
   private LinearLayout card() {
     LinearLayout card = new LinearLayout(context);
     card.setOrientation(VERTICAL);
@@ -218,7 +235,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     button.setTextSize(13);
     button.setTypeface(null, Typeface.BOLD);
     button.setTextColor(KantaTheme.TEXT_PRIMARY);
-    button.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 12, KantaTheme.PRIMARY_BLUE, 1, density));
+    button.setBackgroundResource(R.drawable.kanta_button_secondary);
     button.setMinHeight(dp(44));
     return button;
   }
