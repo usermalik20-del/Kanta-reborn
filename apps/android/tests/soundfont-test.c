@@ -82,6 +82,16 @@ int main(int argc, char** argv) {
     // 440 Hz tone and reject every truncation (path is repo-root relative, as in CI).
     kanta_soundfont* sf3 = kanta_sf_open("apps/android/tests/data/tone.sf3");
     assert(sf3);
+    {
+        // One-time diagnostic (permanent, cheap): surface the post-decode sample
+        // accounting and the region the looped SF3 note will render with.
+        struct kanta_soundfont* raw = (struct kanta_soundfont*)sf3;
+        struct tsf* synth = raw->synth;
+        struct tsf_region* r0 = &synth->presets[0].regions[0];
+        fprintf(stderr, "SF3 diag: sampleTotal=%u presetRegions=%d region offset=%d end=%d loop=%d..%d mode=%d\n",
+                synth->sampleTotal, synth->presets[0].regionNum, r0->offset, r0->end,
+                r0->loop_start, r0->loop_end, r0->loop_mode);
+    }
     double sf3_base = frequency(sf3, 0);
     assert(sf3_base > 430 && sf3_base < 450);
     kanta_sf_close(sf3);
