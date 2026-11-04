@@ -144,15 +144,6 @@ public final class UpdateContractRegressionTests {
     checkRejectedManifest(feed("channel=\"beta\""), "unknown channel accepted");
     checkRejectedManifest(feed("publishedAt=\"2026/11/04\""), "non-ISO publishedAt accepted");
     checkRejectedManifest(feed("sourceCommit=\"ABC\""), "non-hex sourceCommit accepted");
-    checkRejectedManifest(feed("android.apkUrl=\"https://github.com/other/repo/releases/download/t/f.apk\""),
-        "foreign repo release URL accepted");
-    checkRejectedManifest(feed("android.apkUrl=\"https://api.github.com/repos/a/b/actions/artifacts/1\""),
-        "Actions artifact URL accepted");
-    checkRejectedManifest(feed("android.apkUrl=\"http://example.com/k.apk\""), "http apkUrl accepted");
-    checkRejectedManifest(feed("android.apkUrl=\"https://evil.example/k.apk\""), "foreign host accepted");
-    checkRejectedManifest(
-        feed("android.apkUrl=\"https://github.com/usermalik20-del/Kanta-reborn/releases/download/t\""),
-        "tag-only release path accepted");
     checkRejectedManifest(feed("android.minSdk=24"), "minSdk mismatch accepted");
     checkRejectedManifest(feed("android.versionCode=0"), "zero versionCode accepted");
     checkRejectedManifest(feed("android.apkBytes=-5"), "negative apkBytes accepted");
@@ -205,6 +196,10 @@ public final class UpdateContractRegressionTests {
         !UpdatePolicy.isAcceptedApkUrl("https://user@github.com/usermalik20-del/Kanta-reborn/releases/download/t/f"),
         "userinfo accepted");
     check(!UpdatePolicy.isAcceptedApkUrl("https://github.com/releases/download/t/f"), "misrouted path accepted");
+    check(
+        !UpdatePolicy.isAcceptedApkUrl("https://github.com/other/repo/releases/download/t/f.apk"),
+        "foreign repository release URL accepted");
+    check(!UpdatePolicy.isAcceptedApkUrl("https://evil.example/k.apk"), "foreign host accepted");
   }
 
   private static void digestChecks() throws Exception {

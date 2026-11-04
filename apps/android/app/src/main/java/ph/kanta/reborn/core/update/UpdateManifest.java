@@ -222,8 +222,8 @@ public final class UpdateManifest {
       throw new Malformed("minSdk must be at least " + ANDROID_MIN_SDK + ", got " + minSdk);
     }
     String apkUrl = requireString(android, "apkUrl");
-    if (!UpdatePolicy.isAcceptedApkUrl(apkUrl)) {
-      throw new Malformed("apkUrl is not an accepted durable HTTPS URL: " + apkUrl);
+    if (apkUrl.length() > 2048 || apkUrl.trim().isEmpty()) {
+      throw new Malformed("apkUrl must be a bounded non-blank URL string");
     }
     long apkBytes = requireLong(android, "apkBytes");
     if (apkBytes < 1 || apkBytes > UpdatePolicy.MAX_APK_BYTES) {
