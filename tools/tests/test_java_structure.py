@@ -35,7 +35,8 @@ class JavaStructureTests(unittest.TestCase):
         )
         findings = scan(source)
         self.assertTrue(any("method declared inside a method body" in f for f in findings))
-        self.assertTrue(any("inner" in f for f in findings))
+        # The nested method sits on line 6 of the fixture source.
+        self.assertTrue(any(":6:" in f for f in findings), findings)
 
     def test_constructor_chain_is_clean(self):
         source = (
