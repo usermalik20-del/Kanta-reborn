@@ -174,9 +174,9 @@ public final class UpdateContractRegressionTests {
   private static void policyChecks() {
     check(UpdatePolicy.isAcceptedApkUrl(APK_URL), "canonical release URL refused");
     check(
-        UpdatePolicy.isAcceptedApkUrl(
+        !UpdatePolicy.isAcceptedApkUrl(
             "https://github.com/usermalik20-del/Kanta-reborn/releases/latest/download/KANTA.apk"),
-        "latest-release shortcut refused");
+        "latest-release shortcut must not bypass the pinned release path");
     check(
         UpdatePolicy.isAcceptedApkUrl(
             "https://release-assets.githubusercontent.com/repository-assets/123?sig=abc"),
