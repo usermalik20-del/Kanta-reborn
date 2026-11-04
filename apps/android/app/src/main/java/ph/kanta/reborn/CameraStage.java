@@ -145,14 +145,14 @@ final class CameraStage {
                           "The front camera could not be opened. Your saved background is unchanged.");
                     }
                   };
-              // PreviewView must be attached and laid out before CameraX binds its surface.
+              // PreviewView must be laid out before CameraX binds its surface. The primary
+              // preview can report a valid size one UI pass before attachment propagates through
+              // the workspace container, so size—not the transient attachment flag—is the gate.
               Runnable[] bindWhenReady = new Runnable[1];
               bindWhenReady[0] =
                   () -> {
                     if (token != generation || !enabled || !session.foreground) return;
-                    if (!targetView.isAttachedToWindow()
-                        || targetView.getWidth() <= 0
-                        || targetView.getHeight() <= 0) {
+                    if (targetView.getWidth() <= 0 || targetView.getHeight() <= 0) {
                       handler.postDelayed(bindWhenReady[0], 100);
                       return;
                     }
