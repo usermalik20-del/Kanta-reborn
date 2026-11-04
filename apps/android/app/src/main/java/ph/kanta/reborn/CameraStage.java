@@ -44,12 +44,16 @@ final class CameraStage {
   }
 
   void start(android.view.View target) {
+    android.util.Log.i("KantaCamera", "start target=" + (target == null ? "null" : target.getClass().getName())
+        + " foreground=" + session.foreground + " permission="
+        + (owner.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED));
     stop();
     if (!session.foreground
         || target == null
         || owner.isFinishing()
         || owner.checkSelfPermission(Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) {
+      android.util.Log.w("KantaCamera", "start rejected by lifecycle, target, or permission");
       unavailable("Camera permission is needed for the optional front-camera background.");
       return;
     }
@@ -103,6 +107,7 @@ final class CameraStage {
             if (token != generation || !enabled || !session.foreground) return;
             try {
               provider = future.get();
+              android.util.Log.i("KantaCamera", "provider ready; front=" + provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA));
               if (!provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
                 unavailable("No usable front camera is available on this device.");
                 return;
@@ -116,6 +121,7 @@ final class CameraStage {
                       preview.setSurfaceProvider(targetView.getSurfaceProvider());
                       Camera camera =
                           provider.bindToLifecycle(owner, CameraSelector.DEFAULT_FRONT_CAMERA, preview);
+                      android.util.Log.i("KantaCamera", "preview bound width=" + targetView.getWidth() + " height=" + targetView.getHeight());
                       // Binding succeeds only after CameraX has accepted the attached preview
                       // surface. PreviewView's stream LiveData is delayed on some emulators.
                       streaming = true;
