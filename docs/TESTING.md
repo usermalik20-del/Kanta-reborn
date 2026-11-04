@@ -1,5 +1,7 @@
 # Reconstruction validation
 
+Start with `python3 tools/preflight.py`: it selects the guards the changed paths require, prints the owner documents that must change in the same commit, and lists the cloud-only gates it cannot prove. The change-type matrix and the workflow invariants are in [Pre-flight](#pre-flight-run-the-guards-a-change-actually-needs). Each section below records why a specific guard exists; a static check passing never proves a build, a package, a simulator run or device acceptance.
+
 ## Java structure guard
 
 `tools/check-java-structure.py` (with `tools/tests/test_java_structure.py`) fails closed on method declarations opened inside another method body, catching nested-method Java errors that only a compiler would otherwise find; the Android build cannot run on the local iSH environment, so this static guard runs here and in CI.
@@ -153,9 +155,34 @@ A `javac` parse error stops the compiler before symbol resolution, so a file tha
 
 ## Documentation synchronization gate
 
-Every pull request runs the lightweight the `documentation-sync` job in `website-validation.yml` workflow. It compares the full PR diff against `tools/check-documentation-sync.py` and fails when required documentation was not changed in the same PR. Web implementation requires `README.md`, `apps/web/README.md`, `docs/ARCHITECTURE.md` and `docs/TESTING.md`; Android requires the root and Android README plus architecture, testing and reconstruction; iOS requires the root README, `apps/ios/AGENTS.md` plus architecture, testing and reconstruction; workflow edits require the root README, `AGENTS.md`, architecture and testing; tooling changes require testing documentation. Privacy-related changes also require the platform privacy disclosure. The check verifies a substantive diff in each required file; whitespace-only edits do not satisfy the requirement. It also runs for fork pull requests with read-only permissions and no persisted checkout credentials.
+Every pull request runs the lightweight `documentation-sync` job in `website-validation.yml` workflow. It compares the full PR diff against `tools/check-documentation-sync.py` and fails when required documentation was not changed in the same PR. Web implementation requires `README.md`, `apps/web/README.md`, `docs/ARCHITECTURE.md` and `docs/TESTING.md`; Android requires the root and Android README plus architecture, testing and reconstruction; iOS requires the root README, `apps/ios/AGENTS.md` plus architecture, testing and reconstruction; workflow edits require the root README, `AGENTS.md`, architecture and testing; tooling changes require testing documentation. Privacy-related changes also require the platform privacy disclosure. The check verifies a substantive diff in each required file; whitespace-only edits do not satisfy the requirement. It also runs for fork pull requests with read-only permissions and no persisted checkout credentials.
 
 The same guard runs as a step inside existing main-branch platform and deployment jobs. It adds no extra Android, Xcode or simulator jobs. Pull requests get one small Ubuntu documentation check regardless of platform; platform build workflows retain their independent path filters. A documentation-only PR runs the documentation check without allocating native runners.
+
+## Pre-flight: run the guards a change actually needs
+
+`python3 tools/preflight.py` derives the applicable local guards from the changed paths of a change — including work that is not committed yet — and prints the owner documents it must update in the same commit. `--list` prints the plan without running anything; `--base REV` compares against another revision (default `origin/main`, then `main`, then `HEAD~1`). It reuses `tools/check-documentation-sync.py` for the documentation matrix, so the two cannot drift, and it always prints the cloud-only gates so a local pass is never mistaken for one of them. `tools/tests/test_preflight.py` pins the mapping.
+
+| Change type | Owner documents that must change in the same commit | Local guards |
+| --- | --- | --- |
+| Android implementation (`apps/android/**`, excluding `apps/android/README.md`) | `README.md`, `apps/android/README.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/RECONSTRUCTION.md` | `tools/check-java-structure.py`, `tools/check-android-workspace-contract.py`, `tools/verify-android-companion-interface.py` |
+| iOS implementation (`apps/ios/**`, excluding `apps/ios/README.md`, `apps/ios/AGENTS.md`, `apps/ios/PRIVACY.md`, `apps/ios/Docs/**`, `apps/ios/PublicSite/**`) | `README.md`, `apps/ios/AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/RECONSTRUCTION.md` | `tools/check-ios-presentation-contract.py`, `tools/verify-test-layout.py` |
+| Website implementation (`apps/web/**`, excluding `apps/web/README.md`, `apps/web/privacy.html`) | `README.md`, `apps/web/README.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/RECONSTRUCTION.md` | `tools/verify-website.py` |
+| Workflow (`.github/workflows/**`) | `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` | `tools/tests/test_workflow_path_ownership.py`, `tools/tests/test_platform_download_publishing.py`, `tools/tests/test_vercel_deploy_workflow.py` |
+| Tooling (`tools/**`) | `docs/TESTING.md` | `python3 -m unittest discover -s tools/tests -p 'test_*.py'` |
+| Privacy copy (any path containing `privacy`, or a `PrivacyInfo.xcprivacy`) | all four disclosures: `apps/web/privacy.html`, `apps/android/app/src/main/assets/privacy.txt`, `apps/ios/PRIVACY.md`, `apps/ios/PublicSite/privacy.html` | `tools/verify-website.py` |
+| Documentation only (`*.md`, `docs/**`) | none required | `git diff --check` |
+
+Every change also runs `git diff --check` and `python3 tools/check-documentation-sync.py BASE HEAD`. `tools/verify-android-runtime-package.py` needs `ANDROID_HOME` and runs only in the Android runtime job; the `node --test` files do not execute in the authoring environment. A passing preflight is a local static result only: it is not a Gradle build, an APK, an IPA, a simulator walkthrough, a signed artifact, a published release or device acceptance.
+
+### Workflow invariants a change must not break
+
+- Trigger events, path filters and branch filters are ownership boundaries. Never add, remove, widen or narrow one to make a run easier to reach.
+- Keep third-party actions pinned to full commit SHAs, as every current workflow does.
+- Workflow-level `permissions` stays least privilege (`contents: read`); write scopes belong only on the publishing job that needs them (`platform-download-publishing.yml`).
+- Every job keeps a `timeout-minutes`. Validation workflows keep `cancel-in-progress: true`; the publisher and the Vercel deploy keep it `false` so a release is never cancelled by a newer push.
+- Never add `continue-on-error` to a gate, and never make a failing gate non-blocking. A gate that cannot fail should be deleted, not silenced.
+- The durable release tag format `v<version>-preview-<sha8>`, the `downloads.json`/`updates.json` publication contract, exact-SHA provenance and the publisher's `fetch-depth: 0` ancestry check are fixed. Workflow edits require the root `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md` and this file in the same commit.
 
 
 

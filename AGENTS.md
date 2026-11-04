@@ -28,6 +28,8 @@ Before a substantive refactor, follow docs/CODING_CONTEXT_GUIDE.md and regenerat
 
 A substantive refactor includes changes to state ownership, module boundaries, public interfaces, persistence formats, dependencies, navigation, lifecycle behavior, build systems, signing, CI, release configuration or cross-platform behavioral contracts.
 
+Start any change by running `python3 tools/preflight.py --list`. It reports the guards the changed paths require, the owner documents that must change in the same commit (read from `tools/check-documentation-sync.py` itself, so the list cannot drift) and the cloud-only gates it cannot prove. The full change-type matrix and the workflow invariants a change must not break are in docs/TESTING.md.
+
 ## 2. Repository acquisition and evidence
 
 Gather existing files directly from the online repository. Do not ask the owner for local settings or duplicate copies when the repository already contains the required material.
