@@ -1,6 +1,6 @@
 # Unfinished work
 
-**Last updated:** 2026-11-01 · **main:** `9a46f71` · **public release source:** `41c8ddde`
+**Last updated:** 2026-11-05 · **main:** `5826f3b` · **public release source:** `1f49555c`
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
@@ -29,7 +29,6 @@ elsewhere never change meaning.
 | --- | --- | --- | --- | --- | --- |
 | A1 | **Signed production iOS IPA** | The shipped IPA is unsigned and needs trusted personal signing; it is not installable or TestFlight-able. | `README.md` "Open release gates"; `ios-runtime-artifacts.yml` builds with `CODE_SIGNING_ALLOWED=NO` and `personal_signing: true`. | A signed IPA installs on a non-development device, or the owner explicitly decides unsigned personal-signing builds remain the shipping form. **Requires owner certificate and approval — do not do this without an explicit instruction.** | M |
 | A2 | **Attach the final domain once the is-a.bot registration completes** | The public site is moving from `https://kanta-public.vercel.app` to the KANTA domain registered through is-a.bot. **The wiring has landed** (see the closed table), so what remains is the operator action, not code. | The upstream **is-a.bot registration request is still in review**, so the final hostname is not yet fixed — the workflow takes it as a validated input precisely so this does not need a code change. | The owner dispatches `Configure KANTA Vercel domain` with the final hostname; the domain resolves to the site with a valid certificate, and then A5 follows. | S |
-| A3 | **New exact-source packaging run** | The durable release `v0.1.0-workspace-redesign` and the public manifest are pinned to native source `41c8ddde`, which predates every milestone in this ledger. The live site therefore describes an older build. | `apps/web/downloads.json`; `docs/VERIFIED_DOWNLOADS.md`. | An exact-SHA packaging run produces identified artifacts for a current main SHA, checksums are recorded, website contract validation passes, and the manifest plus the release are advanced together. | M |
 | A4 | **Physical-device acceptance (Android and iOS)** | Every acceptance claim in this repository is host-CI evidence. No milestone has been run on a real handset. | `docs/TESTING.md`: a green build is not device acceptance. | One real Android device and one real iOS device complete: search → reserve → play with lyrics → countdown → score → queue advance, plus a background photo and the front camera, with a screenshot or logcat excerpt attached. | L |
 | A5 | **Sweep absolute URLs to the new domain** | A half-moved domain breaks canonical URLs and the in-app legal and support links users tap. **`tools/verify-website.py` hard-codes `PUBLIC_BASE_URL` and asserts every sitemap URL's netloc against it**, so the guard, `apps/web/sitemap.xml` and the page content must all change **together** or website validation fails. | **77 occurrences of `kanta-public.vercel.app` on main:** 10 in `apps/web/sitemap.xml`, 2 in `tools/verify-website.py`, and user-facing in `apps/ios/Sources/Features/Legal/LegalView.swift` (4), `apps/ios/PRIVACY.md` (3) and `apps/android/app/src/main/assets/privacy.txt`. Also 14 in `docs/evidence/website/2026-10-15/manifest.json` and refs under `recovery/`, which are historical records. | Every live reference resolves to the new domain; the guard's base URL, the sitemap and the in-app links are updated in one change; historical evidence under `docs/evidence/` and `recovery/` is left byte-identical with a note explaining why; website, branding and docs guards all pass. | M |
 
@@ -198,6 +197,7 @@ Privacy disclosure "Optional Android self-update" added to all four privacy file
 
 | Item | Closed by | Evidence |
 | --- | --- | --- |
+| A3 — exact-source packaging run for a current `main` | publisher automation on `1f49555c` | `apps/web/downloads.json` records Android source `1f49555c` (validation run 41818623156, packaging run 41819162264, artifact 13316555595) and `apps/web/updates.json` serves release `v0.10.0-preview-1f49555c`; the site no longer describes an older build |
 | Milestone 0 — rebrand foundation | `8d14c91` | `tools/check-product-branding.py` 4/4 |
 | Milestone 1 — content / catalog / stage overlays | `fa37794` | Android validation on `3a81dd6` |
 | Milestone 2 — stage binding, score sink, MKMD decode, Meg importer | `1dfecd7`, `2a01654` | Android validation [#40760610063](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40760610063) |

@@ -131,7 +131,7 @@ physical-device acceptance. Preserve FIFO and one-CI-only authorization.
 
 ## Vocal Pitch DSP safety contract — 2026-10-10
 
-The legal open-source DSP review is in `Docs/VOCAL_DSP_LICENSE_AND_ACCEPTANCE.md`. Current pitch stabilization is KANTA-owned `VocalPitchFollower` feeding the existing Apple TimePitch node; **no Signalsmith/AudioKit/Soundpipe effect code has been linked**. Do not advertise an MIT backend as shipping until exact-version licensing, notices, transitive assets, audio render safety, CI and physical wired/USB latency tests pass. Keep the existing graph, dry scoring isolation, neutral reset on unsafe route, and opt-in default-off behavior. No paid Actions without renewed authorization.
+The legal open-source DSP review is in `Docs/VOCAL_DSP_LICENSE_AND_ACCEPTANCE.md`. Current pitch stabilization is KANTA-owned `VocalPitchFollower` feeding the existing Apple TimePitch node. The `MicrophoneScoring` package does link **SoundpipeAudioKit 5.7.4 and AudioKit 5.7.2** (`Package.swift`), and `VocalPitchCorrection` carries a Soundpipe option, as the PR #46 section below and the in-app LegalView copy record. Do not advertise an MIT backend as shipping until exact-version licensing, notices, transitive assets, audio render safety, CI and physical wired/USB latency tests pass. Keep the existing graph, dry scoring isolation, neutral reset on unsafe route, and opt-in default-off behavior. No paid Actions without renewed authorization.
 
 ## Original KAR starter-pack invariant — October 10, 2026
 
@@ -203,7 +203,11 @@ a separate explicit user share or TestFlight facility.
 
 `.github/workflows/manual-ad-hoc-ipa.yml` is **manual-only** and gated
 for verified main with Apple-owned Ad Hoc profile/registered device
-preflight before macOS billing. It may export signed IPA privately but
+preflight before macOS billing. The file currently lives at
+`apps/ios/.github/workflows/manual-ad-hoc-ipa.yml`, below the repository
+workflow root, so GitHub Actions does not discover it: treat it as inactive
+until it is moved under `.github/workflows/` with every action pinned
+(see `Docs/IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md`). It may export signed IPA privately but
 **never uploads keys or IPA to BetaDrop**. BetaDrop is a hosting service,
 **not** signing. Do not trigger a paid signing/build workflow without
 the owner's authorization or merge unvalidated DSP. Full policy:

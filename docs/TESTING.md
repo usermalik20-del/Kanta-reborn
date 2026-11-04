@@ -83,7 +83,7 @@ The core logic lives in `ph.kanta.reborn.core.update` and is compiled by the emp
 
 ### Explicit non-claims
 
-- **Feed state**: `apps/web/updates.json` holds the newest published Android build (initial entry: release `v0.10.0-preview-aaa41898`, source `aaa41898`); the publisher regenerates it after every successful Android build on `main` and the endpoint is served through the `vercel.json` routing table.
+- **Feed state**: `apps/web/updates.json` holds the newest published Android build (current entry: release `v0.10.0-preview-1f49555c`, source `1f49555c`); the publisher regenerates it after every successful Android build on `main` and the endpoint is served through the `vercel.json` routing table.
 - **`signingCertSha256`** supported by the contract but NOT yet published by feed tooling.
 - **No local JVM/Gradle build, APK, emulator, runtime or physical-device acceptance ran** (JVM cannot start on this iSH emulator: `getcpu(2)` unsupported). Java correctness is guarded by CI only (`coreRegression` + `android-validation` + `android` runtime checks).
 - The GitHub Release asset creation makes every post-merge Android build a public release asset automatically.
@@ -232,11 +232,11 @@ Pitch Settings UI test coverage added to `RuntimeChecks`: workspace accessory ac
 
 
 
-Android emulator startup uses an explicit shared AVD directory for avdmanager and emulator. The helper detects early process exits, bounds boot/ADB/instrumentation, always collects diagnostics and retires the emulator. Use `owner-approved-android-validation` for Android-only repairs; `owner-approved-validation` still runs both native platforms. No source tests are skipped by the focused label.
+Android emulator startup uses an explicit shared AVD directory for avdmanager and emulator. The helper detects early process exits, bounds boot/ADB/instrumentation, always collects diagnostics and retires the emulator. Dispatch `android-validation.yml` with an explicit `ref` for Android-only repairs; the owner-approval labels and the retired actor gate no longer exist (see AGENTS.md) and no run gate applies. No source tests are skipped.
 
 ## iOS KCP1 controller candidate
 
-`owner-approved-ios-validation` selects the full iOS package/app gate without rerunning unchanged Android native tests. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
+`ios-validation.yml` runs the full iOS package/app gate without rerunning unchanged Android native tests. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
 
 ## iOS walkthrough runner diagnostics and suite timeout
 
@@ -282,11 +282,11 @@ The presentation contract guard checks that the UIKit fullscreen presenter acqui
 
 ## Automatic workflow triggers and release boundary
 
-Reconstruction validation runs for relevant app, tool and workflow changes on feature/main pushes and pull requests. The unsigned iOS archive and full iPhone/iPad walkthrough also trigger on `apps/android/**` changes, so Android-only commits receive same-SHA iOS release-gate evidence. The walkthrough additionally triggers on `tools/verify-android-companion-interface.py`; both iOS workflows retain manual dispatch. Website validation runs for relevant website changes. Verified-download contract tests run automatically; packaging fixed, previously accepted IPA/APK artifacts still requires owner dispatch. No workflow signs, merges, deploys or publishes production downloads automatically.
+Reconstruction validation runs for relevant app, tool and workflow changes on feature/main pushes and pull requests. The iOS workflows are scoped to `apps/ios/**` with the documentation-only paths excluded, plus two explicit shared-contract exceptions: `ios-validation.yml` also runs for a change to the single shared `apps/android/app/src/main/java/ph/kanta/reborn/core/CompanionProtocol.java`, and `ios-visual-walkthrough.yml` also runs for `tools/capture-ios-runtime.py`. No `apps/android/**` source path starts an iOS archive or walkthrough, so Android-only commits never receive iOS release-gate evidence. Both iOS workflows and the Android workflow retain manual dispatch. Website validation runs for relevant website changes. Verified-download contract tests run automatically; packaging fixed, previously accepted IPA/APK artifacts still requires owner dispatch. No workflow signs, merges, deploys or publishes production downloads automatically.
 
 ## CI separation: fast validation, unsigned artifacts and visual acceptance
 
-- `reconstruction-validation.yml` remains the PR source, Swift package, simulator-build, and Android validation gate. It does not replace simulator UI acceptance.
+- The split workflows are the gates: `ios-validation.yml` (pull-request source, Swift package and simulator build), `android-validation.yml` (Android build, lint, domain and runtime checks) and `website-validation.yml` (site checks and the documentation-sync job). None of them replaces simulator UI acceptance.
 - `ios-visual-walkthrough.yml` runs on iOS-source pull requests and iOS/Android source plus release-tool changes on main; the Android companion-interface guard can also trigger PR walkthroughs. Workflow-only edits use the lightweight release-contract check instead. Manual dispatch, the weekly schedule and `ios-rc-*` tags remain available. Its independent iPhone and iPad jobs each build and execute the complete named UI suite, retain screenshots/recordings/logs, and publish compact per-device diagnostics. A pass on one device does not mask a failure on the other.
 - The unsigned iOS archive workflow proves packaging only. It does not prove interactive behavior, signing, or installability.
 - `ios-smoke.yml` remains a focused iPhone test for navigation/Search recovery and native lifecycle behavior; it is not the full release walkthrough.

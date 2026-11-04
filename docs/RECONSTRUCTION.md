@@ -54,7 +54,7 @@ The framework-free OTA update subsystem (`ph.kanta.reborn.core.update` + `ph.kan
 
 ### Explicit non-claims
 
-- Feed state: apps/web/updates.json holds the newest published Android build (initial entry: release v0.10.0-preview-aaa41898, source aaa41898); the publisher regenerates it after every successful Android build on main and the endpoint is served through the vercel.json routing table.
+- Feed state: apps/web/updates.json holds the newest published Android build (current entry: release v0.10.0-preview-1f49555c, source 1f49555c); the publisher regenerates it after every successful Android build on main and the endpoint is served through the vercel.json routing table.
 - signingCertSha256 supported by the contract but NOT yet published by feed tooling.
 - No local JVM/Gradle build, APK, emulator, runtime or physical-device acceptance ran (JVM cannot start on this iSH emulator: getcpu(2) unsupported). Java correctness is guarded by CI only (coreRegression + android-validation + android runtime checks).
 - The GitHub Release asset creation makes every post-merge Android build a public release asset automatically.
