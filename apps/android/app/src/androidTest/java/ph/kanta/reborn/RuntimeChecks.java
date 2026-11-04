@@ -703,6 +703,26 @@ public final class RuntimeChecks extends Instrumentation {
           "Foregrounding KANTA re-enabled camera without opt-in");
 
       runOnMainSync(
+          () -> {
+            View more =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
+            check(more != null && more.performClick(), "More navigation did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings") != null,
+          "More settings group did not render");
+      runOnMainSync(
+          () -> {
+            View settings =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings");
+            check(settings != null && settings.performClick(), "Settings group did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.voice.settings") != null,
+          "Control voice settings did not render");
+      runOnMainSync(
           () ->
               activity
                   .getWindow()
@@ -731,6 +751,26 @@ public final class RuntimeChecks extends Instrumentation {
                     && contains(activity.getWindow().getDecorView(), "Turn on pitch correction");
               }),
           "Correction control was missing or enabled before verified monitoring");
+      runOnMainSync(
+          () -> {
+            View more =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
+            check(more != null && more.performClick(), "More navigation did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings") != null,
+          "More settings group did not render");
+      runOnMainSync(
+          () -> {
+            View settings =
+                activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings");
+            check(settings != null && settings.performClick(), "Settings group did not open");
+          });
+      await(
+          () ->
+              activity.getWindow().getDecorView().findViewWithTag("kanta.voice.settings") != null,
+          "Control voice settings did not render");
       runOnMainSync(
           () ->
               activity
