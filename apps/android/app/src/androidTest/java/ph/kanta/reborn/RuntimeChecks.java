@@ -729,13 +729,12 @@ public final class RuntimeChecks extends Instrumentation {
                   .getDecorView()
                   .findViewWithTag("kanta.voice.settings")
                   .performClick());
-      check(
-          state(
-              () ->
-                  contains(
-                          activity.getWindow().getDecorView(),
-                          "Advanced output choices are available in More settings")
-                      && contains(activity.getWindow().getDecorView(), "Turn on microphone")),
+      await(
+          () ->
+              contains(
+                      activity.getWindow().getDecorView(),
+                      "Advanced output choices are available in More settings")
+                  && contains(activity.getWindow().getDecorView(), "Turn on microphone"),
           "Voice settings did not expand from Control");
       capture("voice_settings.png");
       check(
