@@ -1147,7 +1147,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     nowPlayingScreen.setTimes(formatPlaybackTime(position),duration>0?formatPlaybackTime(duration):"—");
     nowPlayingScreen.setProgress(duration>0?Math.min(1f,position/(float)duration):0f);
     nowPlayingScreen.setPlaying(session.playing);
-    nowPlayingScreen.setKey(session.pitch);nowPlayingScreen.setTempo(session.tempo);
+    nowPlayingScreen.setKey(session.effectivePitch());
+    nowPlayingScreen.setTempo(session.effectiveTempo());
     nowPlayingScreen.setTransportCapabilities(session.queue.peek()!=null);
     java.util.List<ph.kanta.reborn.core.MidiLyrics.Cue> cues=session.lyrics;
     if(current==null)nowPlayingScreen.setLyrics("","No song is playing","Reserve a song to begin","");
@@ -1465,13 +1466,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             new ph.kanta.reborn.ui.KantaPitchTempoScreen.Listener() {
               private void refreshValues() {
                 if (screenRef[0] != null) {
-                  screenRef[0].setKey(session.pitch);
-                  screenRef[0].setTempo(session.tempo);
+                  screenRef[0].setKey(session.effectivePitch());
+                  screenRef[0].setTempo(session.effectiveTempo());
                 }
               }
               @Override public void onBack() { navigateHome(); }
               @Override public void onReset() {
-                session.controls(session.volume, 1.0f, 0);
+                if (session.currentSongHasOverride()) session.clearCurrentSongOverride();
+                else session.controls(session.volume, 1.0f, 0);
                 refreshValues();
               }
               @Override public void onKeyDown() {
@@ -1497,8 +1499,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             });
     screenRef[0] = screen;
     screen.setTag("kanta.screen.pitch-tempo");
-    screen.setKey(session.pitch);
-    screen.setTempo(session.tempo);
+    screen.setKey(session.effectivePitch());
+    screen.setTempo(session.effectiveTempo());
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
   }
 

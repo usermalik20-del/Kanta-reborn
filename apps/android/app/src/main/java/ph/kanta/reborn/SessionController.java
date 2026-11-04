@@ -991,7 +991,13 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                             return;
                           }
                           try {
-                            candidate.controls(volume, tempo, pitch);
+                            float applyTempo = tempo;
+                            int applyPitch = pitch;
+                            if (settings.hasSongOverride(entry.song.id)) {
+                              applyTempo = settings.getSongTempo(entry.song.id, tempo);
+                              applyPitch = settings.getSongPitch(entry.song.id, pitch);
+                            }
+                            candidate.controls(volume, applyTempo, applyPitch);
                             candidate.start();
                           } catch (Exception e) {
                             failed(candidate);
@@ -1097,7 +1103,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     if (!Float.isFinite(value)) return;
     volume = Math.max(0, Math.min(1, value));
     try {
-      if (player != null) player.controls(volume, tempo, pitch);
+      if (player != null) player.controls(volume, effectiveTempo(), effectivePitch());
     } catch (Exception e) {
       message = "Could not apply volume";
     }
@@ -1111,6 +1117,15 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     this.tempo = Math.min(2, Math.max(0.5f, tempo));
     this.pitch = Math.min(12, Math.max(-12, pitch));
     if (oldTempo != this.tempo || oldPitch != this.pitch) resetScore();
+    // Adjustments made during an active song are remembered for that song.
+    if ((oldTempo != this.tempo || oldPitch != this.pitch)
+        && current != null && player != null) {
+      try {
+        settings.setSongOverride(current.id, this.pitch, this.tempo);
+      } catch (Exception ignored) {
+        // Override persistence is best effort and must never block playback.
+      }
+    }
     try {
       if (player != null) player.controls(this.volume, this.tempo, this.pitch);
     } catch (Exception e) {
@@ -1144,6 +1159,38 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void seekTo(long milliseconds) {
+  /** Tempo the active song actually plays at (per-song override wins). */
+  float effectiveTempo() {
+    return current != null && settings.hasSongOverride(current.id)
+        ? settings.getSongTempo(current.id, tempo)
+        : tempo;
+  }
+
+  /** Pitch shift the active song actually plays at (per-song override wins). */
+  int effectivePitch() {
+    return current != null && settings.hasSongOverride(current.id)
+        ? settings.getSongPitch(current.id, pitch)
+        : pitch;
+  }
+
+  boolean currentSongHasOverride() {
+    return current != null && settings.hasSongOverride(current.id);
+  }
+
+  /** Forgets the active song override and re-applies the app-wide defaults. */
+  void clearCurrentSongOverride() {
+    if (current == null) return;
+    settings.clearSongOverride(current.id);
+    if (player != null) {
+      try {
+        player.controls(volume, tempo, pitch);
+      } catch (Exception ignored) {
+      }
+    }
+    message = "Per-song key/tempo reset to your defaults.";
+    publish();
+  }
+
     if (player != null) player.seekTo(milliseconds);
   }
 

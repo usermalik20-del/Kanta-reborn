@@ -501,3 +501,7 @@ On `feat/midi-kar-import-rework` (no merge/push/deploy): removed fixed MIDI/KAR 
 ## 2026-11-04 — Android seek/restart (local, unmerged)
 
 Follow-up on the same branch: PlaybackBackend gains seekTo(); SoundFontPlayback seeks by flushing AudioTrack, silencing voices, re-rendering silently to the target source time and resetting the audible clock (head bias keeps the timeline linear); FileAudioPlayback wraps MediaPlayer.seekTo; the transport Previous button restarts the current song. Not JVM-testable locally; emulator instrumentation validates it in CI.
+
+## 2026-11-04 — Android per-song key/tempo (local, unmerged)
+
+Same branch: SettingsStore gains per-song override keys (song.pitch.&lt;id&gt; / song.tempo.&lt;id&gt;); SessionController applies the override at preparation, auto-remembers adjustments made during an active song (controls path), and exposes effectiveTempo/effectivePitch, currentSongHasOverride and clearCurrentSongOverride; Pitch & Tempo and Now Playing surfaces display and reset the effective values. Emulator instrumentation validates it in CI.
