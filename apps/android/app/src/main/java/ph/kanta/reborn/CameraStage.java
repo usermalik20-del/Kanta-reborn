@@ -116,6 +116,13 @@ final class CameraStage {
                       preview.setSurfaceProvider(targetView.getSurfaceProvider());
                       Camera camera =
                           provider.bindToLifecycle(owner, CameraSelector.DEFAULT_FRONT_CAMERA, preview);
+                      // Binding succeeds only after CameraX has accepted the attached preview
+                      // surface. PreviewView's stream LiveData is delayed on some emulators.
+                      streaming = true;
+                      if (surface instanceof StageSurface)
+                        ((StageSurface) surface).cameraFrame(true);
+                      if (surface instanceof ph.kanta.reborn.stage.StagePresenterImpl)
+                        ((ph.kanta.reborn.stage.StagePresenterImpl) surface).cameraFrame(true);
                       cameraStates = camera.getCameraInfo().getCameraState();
                       cameraObserver =
                           state -> {
