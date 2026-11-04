@@ -563,6 +563,24 @@ This section supersedes the earlier pending wording above for the post-merge PR 
 
 **Context:** the post-merge main Android reconstruction [#40243337754](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40243337754) passed the same build/lint/domain step, real Chrome companion flow, browser interoperability and emulator runtime checks. This makes the old PR failure non-reproduced so far, not conclusively fixed.
 
+## PR #161 — Android core regression source set and malformed MIDI fixtures (2026-11-04)
+
+**Fingerprint:** `KANTA Android validation`, job `android`, step `Build, lint and domain regression tests`; run [#41806652704](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41806652704), diagnostic `Execution failed for task ':app:compileCoreRegression'` and `error: package ph.kanta.reborn.core.catalog does not exist` at `CoreRegressionTests.java:960-967`.
+
+**Affected SHA / first observed run:** `ce4790e249b0d0ca0fe9adf2984f2e3085d00c20`, run [#41806652704](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41806652704).
+
+**Cause (confirmed):** `compileCoreRegression` excluded `core/catalog/**` to avoid Android dependencies in `SqliteSongCatalog`, but the same package contains pure-Java `SongCatalog`, `LibrarySongCatalog` and `MergedSongCatalog`, which the new `catalogMergeChecks()` uses. Once the source exclusion was narrowed, executing the suite also exposed two invalid test fixtures: the marked KAR events omitted delimiters needed for the asserted cue boundaries, and the file-backed decode test wrote track bytes without the required SMF header.
+
+**Fix:** remote commit [`cab2e43`](https://github.com/usermalik20-del/Kanta-reborn/commit/cab2e433ba7f380d09c3c062540ef75089da8d7f) narrows the source-set exclusion to `SqliteSongCatalog.java`. Local candidate commit [`4901fb2`](https://github.com/usermalik20-del/Kanta-reborn/commit/4901fb2a7b65220f8af100f72272b12907699d4c) corrects the KAR delimiters and constructs a complete SMF file for file-backed decoding; it also records the testing and reconstruction status.
+
+**Regression coverage:** `CoreRegressionTests.catalogMergeChecks()` now compiles with the pure-Java catalog sources included. `karaokeMetaAndCharsetChecks()` retains its cue/timing assertions with valid delimiters and a complete MIDI fixture. Manual `javac --release 17` compilation of 66 framework-free Java sources and execution of `CoreRegressionTests` passed all 55,217 checks.
+
+**Validation:** `candidate`. The hosted failure is preserved above; a green Android CI run on the resulting PR head is not yet available. Local Gradle validation stops during project configuration because no Android SDK/`ANDROID_HOME` is installed. No APK, lint, test-APK or emulator result is claimed.
+
+**Recurrence rule:** exclude only Android-backed adapters from the framework-free source set, not their whole domain package. After a compile repair, execute the regression suite; fixtures must contain full SMF headers and explicit line separators when asserting separate cues.
+
+**Status:** `candidate`.
+
 **Synchronization and fresh validation:** the PR branch was synchronized with current main by merge commit [`6941aec`](https://github.com/usermalik20-del/Kanta-reborn/commit/6941aec198ad07eb46c5f7d8093b9361d0821750); the compare now reports 3 commits ahead and 0 behind. New exact-head runs are reconstruction [#40244262616](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262616), focused iPhone smoke [#40244262594](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594), full iPhone/iPad walkthrough [#40244262620](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262620), and unsigned archive [#40244262618](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262618). At this checkpoint, the fresh Android run had passed build/lint/domain regression and real-Chrome/browser checks and was running emulator runtime checks; iOS package tests had passed and unsigned simulator compilation was still in progress. Final acceptance remains pending.
 
 **Next action if the JVM crash recurs:** extend the failure artifact path to retain `apps/android/hs_err_pid*.log`, then inspect the JVM fatal-error header, problematic frame, signal and resource state. Keep build/lint assertions enabled; do not mask the daemon exit or infer green from partial tests.
