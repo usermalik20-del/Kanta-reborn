@@ -345,9 +345,12 @@ public final class RuntimeChecks extends Instrumentation {
               && afterCancel.songs().stream().allMatch(
                   value -> value.starter && new File(afterCancel.media, value.fileName).isFile()),
           "Cancelled batch left imported metadata or missing media in durable catalog");
-      int[] imported = isolated.importBatch(files, () -> false);
+      LibraryRepository.ImportBatchResult importResult =
+          isolated.importBatch(files, () -> false);
       check(
-          imported[0] == 3 && imported[1] == 1 && isolated.songs().size() == 5,
+          importResult.imported == 3
+              && importResult.failed == 1
+              && isolated.songs().size() == 5,
           "SAF partial import or SoundFont selection");
       check(
           !isolated.soundFontName().equals("KANTA original tone"),

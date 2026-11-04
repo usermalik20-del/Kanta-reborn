@@ -575,7 +575,7 @@ This section supersedes the earlier pending wording above for the post-merge PR 
 
 **Regression coverage:** `CoreRegressionTests.catalogMergeChecks()` now compiles with the pure-Java catalog sources included. `karaokeMetaAndCharsetChecks()` retains its cue/timing assertions with valid delimiters and a complete MIDI fixture. Manual `javac --release 17` compilation of 66 framework-free Java sources and execution of `CoreRegressionTests` passed all 55,217 checks.
 
-**Validation:** `candidate`. The hosted failure is preserved above; a green Android CI run on the resulting PR head is not yet available. Local Gradle validation stops during project configuration because no Android SDK/`ANDROID_HOME` is installed. No APK, lint, test-APK or emulator result is claimed.
+**Validation:** `candidate`. Exact-head run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564) on `42bfeac452b1f9d4f66b0f7c9fc9566ac4679a38` passed `:app:assembleDebug` and `:app:coreRegression` (55,217 checks) and progressed through lint, then failed compiling the instrumentation APK due to the stale import-result type recorded below. This verifies the source-set fix and core regression only; complete Android validation is not green.
 
 **Recurrence rule:** exclude only Android-backed adapters from the framework-free source set, not their whole domain package. After a compile repair, execute the regression suite; fixtures must contain full SMF headers and explicit line separators when asserting separate cues.
 
@@ -586,6 +586,24 @@ This section supersedes the earlier pending wording above for the post-merge PR 
 **Next action if the JVM crash recurs:** extend the failure artifact path to retain `apps/android/hs_err_pid*.log`, then inspect the JVM fatal-error header, problematic frame, signal and resource state. Keep build/lint assertions enabled; do not mask the daemon exit or infer green from partial tests.
 
 
+
+## PR #161 — instrumentation import-result API mismatch (2026-11-04)
+
+**Fingerprint:** `KANTA Android validation`, job `android`, step `Build, lint and domain regression tests`; run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564), diagnostic `RuntimeChecks.java:348: error: incompatible types: ImportBatchResult cannot be converted to int[]`.
+
+**Affected SHA / first observed run:** `42bfeac452b1f9d4f66b0f7c9fc9566ac4679a38`, run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564).
+
+**Cause (confirmed):** `LibraryRepository.importBatch()` now returns `ImportBatchResult` with named `imported`, `duplicates`, `failed` and bounded `reasons` fields, but the emulator `RuntimeChecks` assertion still assigned that result to the prior `int[]` shape. APK assembly and all 55,217 framework-free regression checks passed before the test-APK compile failed.
+
+**Fix candidate:** `RuntimeChecks` now consumes `ImportBatchResult` and asserts `imported == 3`, `failed == 1`, and the existing five-row catalog state. This preserves the fixture's partial-import contract rather than weakening it.
+
+**Regression coverage:** the existing mixed SAF instrumentation fixture checks imported and failed counts together with durable media/catalog state and bank discovery.
+
+**Validation:** `candidate`. The local environment has no configured Android SDK, so instrumentation compilation and emulator execution must be verified by a new exact-head hosted Android run.
+
+**Recurrence rule:** when an import API returns an aggregate result object, migrate all instrumentation call sites to the named result fields; compile the test APK as well as running framework-free domain checks.
+
+**Status:** `candidate`.
 
 ## PR #83 Stage More accessibility repair — exact-head and post-merge closure (2026-10-26)
 
