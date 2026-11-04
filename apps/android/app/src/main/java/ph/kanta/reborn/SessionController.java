@@ -1158,7 +1158,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     }
   }
 
-  void seekTo(long milliseconds) {
   /** Tempo the active song actually plays at (per-song override wins). */
   float effectiveTempo() {
     return current != null && settings.hasSongOverride(current.id)
@@ -1191,6 +1190,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     publish();
   }
 
+  void seekTo(long milliseconds) {
     if (player != null) player.seekTo(milliseconds);
   }
 

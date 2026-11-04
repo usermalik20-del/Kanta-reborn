@@ -34,12 +34,12 @@ public final class RenderedPlaybackClock {
     spans.addLast(new Span(frame, milliseconds, tempo));
   }
 
-  public long position(long playedFrames) {
   /** Drops every span; used after a seek restarts the audible timeline. */
   public void reset() {
     spans.clear();
   }
 
+  public long position(long playedFrames) {
     while (spans.size() > 1) {
       Span first = spans.removeFirst();
       if (spans.getFirst().frame > playedFrames) {
