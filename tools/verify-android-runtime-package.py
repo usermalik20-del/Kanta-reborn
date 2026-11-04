@@ -11,7 +11,7 @@ aapt = Path(os.environ['ANDROID_HOME']) / 'build-tools/35.0.0/aapt'
 report = subprocess.check_output([str(aapt), 'dump', 'permissions', str(apk)], text=True, timeout=30)
 permissions = set(re.findall(r"uses-permission: name='([^']+)'", report))
 platform_permissions = {name for name in permissions if name.startswith('android.permission.')}
-assert platform_permissions == {'android.permission.CAMERA', 'android.permission.RECORD_AUDIO', 'android.permission.INTERNET'}, platform_permissions
+assert platform_permissions == {'android.permission.CAMERA', 'android.permission.RECORD_AUDIO', 'android.permission.INTERNET', 'android.permission.REQUEST_INSTALL_PACKAGES'}, platform_permissions
 with zipfile.ZipFile(apk) as package:
     notices = package.read('assets/runtime-notices.txt').decode()
     for module in ('camera-core', 'camera-camera2', 'camera-lifecycle', 'camera-view'):
