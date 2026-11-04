@@ -50,6 +50,7 @@ public final class StagePresenterImpl extends FrameLayout
   private final ScoreCelebrationView celebration;
   private final BackgroundStage backgroundStage;
   private BackgroundStage.Source cameraFallbackSource = BackgroundStage.Source.SOLID;
+  private boolean cameraStreaming;
   private final AdjustmentOverlay adjustmentOverlay;
   private final IntroCard introCard;
   private final SearchOverlay searchOverlay;
@@ -526,7 +527,7 @@ public final class StagePresenterImpl extends FrameLayout
 
   /** Delegates to BackgroundStage for camera frame visibility. */
   public void cameraFrame(boolean visible) {
-    // BackgroundStage doesn't have this, but we can track it
+    cameraStreaming = visible;
   }
 
   /** Prepares and returns the primary stage's CameraX preview, preserving its prior background. */
@@ -540,12 +541,16 @@ public final class StagePresenterImpl extends FrameLayout
   /** Releases the primary preview and restores the background selected before camera opt-in. */
   public void releaseCameraPreview() {
     backgroundStage.releaseCameraPreview(cameraFallbackSource);
+    cameraStreaming = false;
     cameraFallbackSource = BackgroundStage.Source.SOLID;
   }
 
   /** Reports only an attached preview belonging to the active camera background. */
   public boolean isCameraVisible() {
-    return backgroundStage.isCameraVisible();
+    return cameraStreaming
+        && backgroundStage.getSource() == BackgroundStage.Source.CAMERA
+        && backgroundStage.getCameraPreview() != null
+        && backgroundStage.getCameraPreview().getParent() == backgroundStage;
   }
 
   @Override

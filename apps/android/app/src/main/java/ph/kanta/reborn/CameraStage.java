@@ -84,6 +84,8 @@ final class CameraStage {
           streaming = state == PreviewView.StreamState.STREAMING;
           if (surface instanceof StageSurface)
             ((StageSurface) surface).cameraFrame(streaming);
+          if (surface instanceof ph.kanta.reborn.stage.StagePresenterImpl)
+            ((ph.kanta.reborn.stage.StagePresenterImpl) surface).cameraFrame(streaming);
           if (streaming) handler.removeCallbacksAndMessages(null);
         };
     view.getPreviewStreamState().observe(owner, streamObserver);
@@ -117,10 +119,25 @@ final class CameraStage {
                       cameraStates = camera.getCameraInfo().getCameraState();
                       cameraObserver =
                           state -> {
-                            if (token == generation && enabled && state != null && state.getError() != null)
+                            if (token != generation || !enabled || state == null) return;
+                            if (state.getError() != null) {
                               unavailable(
                                   "The front camera is unavailable. Close other camera apps or choose a"
                                       + " background.");
+                              return;
+                            }
+                            // CameraX reports the device OPEN before PreviewView reliably emits
+                            // STREAMING on the emulator. The surface request is already attached,
+                            // so treat OPEN as camera readiness and retain the stronger stream
+                            // signal when it arrives.
+                            if (state.getType() == CameraState.Type.OPEN) {
+                              streaming = true;
+                              if (surface instanceof StageSurface)
+                                ((StageSurface) surface).cameraFrame(true);
+                              if (surface instanceof ph.kanta.reborn.stage.StagePresenterImpl)
+                                ((ph.kanta.reborn.stage.StagePresenterImpl) surface).cameraFrame(true);
+                              handler.removeCallbacksAndMessages(null);
+                            }
                           };
                       cameraStates.observe(owner, cameraObserver);
                     } catch (Exception failure) {
