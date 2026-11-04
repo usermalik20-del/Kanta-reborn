@@ -15,7 +15,7 @@ import java.util.Map;
 public final class UpdateContractRegressionTests {
 
   private static final String SHA64 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-  private static final String SOURCE = "0123456789abcdef0123456789abcdef0123456789abcdef";
+  private static final String SOURCE = "0123456789abcdef0123456789abcdef01234567";
   private static final String APK_URL =
       "https://github.com/usermalik20-del/Kanta-reborn/releases/download/"
           + "v0.11.0-preview-9ab1cd23/KANTA-Android-preview-9ab1cd23.apk";
