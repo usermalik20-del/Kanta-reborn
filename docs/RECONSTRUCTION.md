@@ -515,3 +515,7 @@ Same branch: pinned `stb_vorbis.c` (nothings/stb v1.22, d14d46f6b) compiled insi
 ## 2026-11-04 — SF3 render-tail guard (local, unmerged)
 
 CI ASan found a heap-buffer-overflow in tsf_voice_interpolate: the Catmull-Rom interpolator reads input[pos+2] while the loader keeps one pad float; the 2000-mutation render loop produced a mutant whose combined-SF3 decode sized the sample buffer to the region end, and the render read one float past the allocation (deterministic 436-byte block, diag confirmed the SF3 fixture itself is fine: sampleTotal=28786 voices=128/128). kanta_sf_open now requires every region to keep its end and loop window at least two frames inside synth->sampleTotal; unsafe mutants are rejected instead of rendered. Verified locally: -Wall -Wextra -Werror clean, full soundfont-test.c CI-shape run passes (SF3 open/render + truncation + 2000 mutations), tone.sf3/SF2 unchanged. Pending the CI rerun.
+
+## OTA/versioning reconstruction boundary
+
+The Android OTA feed is a release-provenance surface. `tools/verify-ota-publication.py` is authoritative for metadata and signer continuity; `tools/prepare-update-feed.py` consumes its generated `apk-metadata.json`. Do not restore the former Gradle-source scraping or mutable release-asset behavior.

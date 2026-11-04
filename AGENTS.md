@@ -332,3 +332,7 @@ The `platform-download-publishing.yml` workflow now includes an Android-only ste
 - The update feed URL naming convention `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk` must stay in sync with `UpdatePolicy` (pinned feed URL `https://kanta-public.vercel.app/updates.json`, HTTPS-only, durable-artifact host allowlist: `https://github.com/usermalik20-del/Kanta-reborn/releases/download/<tag>/<file>` canonical URLs plus redirect targets `release-assets.githubusercontent.com` and `objects.githubusercontent.com`; refuses GitHub Actions artifact URLs, `http`, `userinfo`, query/fragment on the canonical host; path case-sensitive).
 - Updating `tools/prepare-update-feed.py` or the `platform-download-publishing.yml` workflow must preserve this URL naming convention and the feed shape (`kanta-update-feed` version 1, channel `stable-reconstruction`).
 - The APK platform permission assertion is now the exact set `{CAMERA, RECORD_AUDIO, INTERNET, REQUEST_INSTALL_PACKAGES}` (verified by `tools/verify-android-runtime-package.py`).
+
+## OTA safeguard status
+
+Android OTA publication is fail-closed: the exact APK supplies version and signer metadata, source history and versionCode must advance, and release assets are immutable. A compatible persistent owner keystore and a pinned historical APK/certificate are required; absent evidence blocks publication. Never bootstrap, generate, rotate or expose signing material in this repository. Physical-device upgrade acceptance remains unverified and must follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.

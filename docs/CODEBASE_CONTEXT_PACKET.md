@@ -394,3 +394,8 @@ The current local branch also imports the supplied UI upgrade pack's multicolor 
 ## Paired ShubBlob import candidate — 2026-11-03
 
 A supplied real pair established 47,998 title records and 48,000 1024-aligned MKMD records in a 1.8 MiB index plus 606.8 MiB blob. `LegacyFileContainerImporter` is now file-backed and bounded: it reads the index, scans aligned MKMD headers, decrypts/inflates per-record payloads using the existing compatibility key/IV contract, validates MIDI/WAV/MP3 signatures, and emits decoded files to the existing `LibraryRepository` owner. `MainActivity` offers a paired My Set picker (`idx`, then `blob`); standalone container selection remains rejected. First ten supplied records independently decrypted and inflated to valid MIDI in bounded local analysis. Android compile, full import runtime, cancellation/storage regression and physical-device playback remain outstanding.
+
+
+## OTA safeguard context refresh — 2026-11-05
+
+The Android release boundary now uses `apps/android/app/build.gradle` only for a bounded local fallback; CI supplies `kantaVersionCode` from the validation workflow run number. `tools/verify-ota-publication.py` extracts identity from the exact APK with `aapt` and `apksigner`, verifies the previous feed's pinned APK digest and certificate, and refuses missing history or signer rotation. `tools/prepare-update-feed.py` consumes generated APK metadata and enforces strict versionCode increase and descendant source history. The platform publisher no longer permits release-asset clobbering. Local Python regression tests are available; Android build, CI signer verification and physical-device upgrade acceptance remain unrun/unverified in this environment.

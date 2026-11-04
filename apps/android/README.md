@@ -288,3 +288,8 @@ The Android app includes a framework-free OTA update subsystem:
 - No local JVM/Gradle build was possible in this environment (JVM cannot start on iSH: `getcpu(2)` unsupported) and no APK, emulator, runtime or physical-device acceptance ran. Java correctness is guarded by CI (`coreRegression` + `android-validation`) only.
 - The GitHub Release asset creation makes every post-merge Android build a public release asset automatically; this is a publication side effect, not a release claim.
 - App update is user-initiated (off by default), HTTPS-only, SHA-256 verified, staging is app-private; install needs the separate Android "Install unknown apps" permission.
+
+
+### OTA versioning and signing gate
+
+CI passes `kantaVersionCode` from its monotonic workflow allocation. Release metadata comes from the built APK (`aapt`/`apksigner`) and publication fails closed unless the prior published APK digest and signer certificate verify. This preview has no device-upgrade acceptance claim; see `../../docs/OTA_UPGRADE_ACCEPTANCE.md`.

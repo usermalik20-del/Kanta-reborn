@@ -74,6 +74,11 @@ class FeedContractTests(unittest.TestCase):
         self.git("add", ".")
         self.git("commit", "-m", "source with build config")
         self.source_sha = self.git("rev-parse", "HEAD")
+        (self.root / "verified-downloads/android/apk-metadata.json").write_text(json.dumps({
+            "source": self.source_sha, "versionCode": 10,
+            "versionName": "0.10.0-reconstruction", "minSdk": 26,
+            "signerSha256": "b" * 64,
+        }))
 
     def git(self, *args):
         result = subprocess.run(
@@ -107,6 +112,7 @@ class FeedContractTests(unittest.TestCase):
         self.assertEqual(android["versionCode"], 10)
         self.assertEqual(android["versionName"], "0.10.0-reconstruction")
         self.assertEqual(android["minSdk"], 26)
+        self.assertEqual(android["signerSha256"], "b" * 64)
         self.assertTrue(feed.is_accepted_apk_url(android["apkUrl"]))
         self.assertEqual(android["apkBytes"], 52_767_115)
         self.assertEqual(android["apkSha256"], SHA64)
