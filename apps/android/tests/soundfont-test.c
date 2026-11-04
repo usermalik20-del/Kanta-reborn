@@ -89,13 +89,14 @@ int main(int argc, char** argv) {
         struct tsf* synth = raw->synth;
         struct tsf_region* r0 = &synth->presets[0].regions[0];
         fprintf(stderr,
-                "SF3 diag: sampleTotal=%u presetRegions=%d region offset=%d end=%d loop=%d..%d mode=%d voices=%d/%d fontSamples[0..4]=%g %g %g %g %g [108]=%g [26460..26463]=%g %g %g %g\n",
+                "SF3 diag: synth=%p fontSamples=%p voices=%p sampleTotal=%u presetRegions=%d "
+                "region offset=%d end=%d loop=%d..%d mode=%d voices=%d/%d [108]=%g "
+                "[26460..26463]=%g %g %g %g\n",
+                (void*)synth, (void*)synth->fontSamples, (void*)synth->voices,
                 synth->sampleTotal, synth->presets[0].regionNum, r0->offset, r0->end,
                 r0->loop_start, r0->loop_end, r0->loop_mode, synth->voiceNum,
-                synth->maxVoiceNum, synth->fontSamples[0], synth->fontSamples[1],
-                synth->fontSamples[2], synth->fontSamples[3], synth->fontSamples[4],
-                synth->fontSamples[108], synth->fontSamples[26460], synth->fontSamples[26461],
-                synth->fontSamples[26462], synth->fontSamples[26463]);
+                synth->maxVoiceNum, synth->fontSamples[108], synth->fontSamples[26460],
+                synth->fontSamples[26461], synth->fontSamples[26462], synth->fontSamples[26463]);
     }
     double sf3_base = frequency(sf3, 0);
     assert(sf3_base > 430 && sf3_base < 450);
