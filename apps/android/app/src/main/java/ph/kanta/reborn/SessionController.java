@@ -1143,6 +1143,18 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     }
   }
 
+  void seekTo(long milliseconds) {
+    if (player != null) player.seekTo(milliseconds);
+  }
+
+  /** Restarts the current song from the top (transport Previous). */
+  void restartCurrent() {
+    if (player == null || current == null) return;
+    seekTo(0);
+    if (!playing && !loading) toggle();
+    else publish();
+  }
+
   void toggle() {
     if (loading) return;
     if (player == null) {

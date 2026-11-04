@@ -1119,7 +1119,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onBack(){navigateHome();}
       @Override public void onFullscreen(){fullscreen();}
       @Override public void onPlayPause(){session.toggle();}
-      @Override public void onPrevious(){}
+      @Override public void onPrevious(){ session.restartCurrent(); }
       @Override public void onNext(){session.next();}
       @Override public void onShuffle(){}
       @Override public void onRepeat(){}

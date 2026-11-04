@@ -22,7 +22,8 @@ final class SoundFontPlayback implements PlaybackBackend {
   private int event, buffered = buffer.length;
   private double sourceTime;
   private float tempo = 1;
-  private boolean playing, completed, pumpQueued;
+  private boolean playing, completed, pumpQueued, seekRequested;
+  private long seekTarget, headBias;
   private volatile boolean disposed;
   private volatile long audiblePosition;
   private final ph.kanta.reborn.core.AudibleControlFence controlFence =
@@ -105,8 +106,7 @@ final class SoundFontPlayback implements PlaybackBackend {
           playing = false;
           if (output != null) {
             output.pause();
-            audiblePosition =
-                clock.position(Integer.toUnsignedLong(output.getPlaybackHeadPosition()));
+            audiblePosition = clock.position(audibleHead());
           }
         });
   }
@@ -128,6 +128,70 @@ final class SoundFontPlayback implements PlaybackBackend {
   public boolean controlsSettled() {
     return controlFence.settled();
   }
+
+  @Override
+  public void seekTo(long milliseconds) {
+    enqueue(
+        () -> {
+          if (output == null || disposed) return;
+          long target = Math.min(Math.max(0, milliseconds), document.durationMilliseconds);
+          if (!playing) {
+            applySeek(target);
+            return;
+          }
+          seekRequested = true;
+          seekTarget = target;
+          schedule();
+        });
+  }
+
+  /**
+   * Resets synthesis state to the target source time: all voices are silenced, buffered
+   * audio is flushed, and the events before the target are re-rendered silently so the
+   * synth state (notes, controllers, effects) matches the target exactly. Costs CPU for
+   * long jumps; a typical three-minute song seeks in well under a second on a phone.
+   */
+  private void applySeek(long target) {
+    if (output == null) return;
+    output.flush();
+    headBias = Integer.toUnsignedLong(output.getPlaybackHeadPosition());
+    allNotesOff();
+    event = 0;
+    sourceTime = 0;
+    while (sourceTime < target) {
+      while (event < document.messages.size()
+          && document.messages.get(event).milliseconds <= sourceTime) {
+        MidiLyrics.Message message = document.messages.get(event++);
+        NativeSoundFont.midi(bank, message.status, message.a, message.b);
+      }
+      NativeSoundFont.render(bank, buffer, 0, FRAMES);
+      sourceTime += FRAMES * 1000.0 * tempo / RATE;
+    }
+    sourceTime = target;
+    framesRendered = 0;
+    framesWritten = 0;
+    buffered = 0;
+    completed = false;
+    clock.reset();
+    clock.append(framesRendered, sourceTime, tempo);
+    audiblePosition = Math.min(document.durationMilliseconds, target);
+  }
+
+  /** Silences every channel (all-notes-off plus sustain clear). */
+  private void allNotesOff() {
+    if (bank == 0) return;
+    for (int channel = 0; channel < 16; channel++) {
+      NativeSoundFont.midi(bank, 0xb0 | channel, 123, 0);
+      NativeSoundFont.midi(bank, 0xb0 | channel, 64, 0);
+    }
+  }
+
+  /** Audible head relative to the last seek reset, so the clock stays linear. */
+  private long audibleHead() {
+    long head = Integer.toUnsignedLong(output.getPlaybackHeadPosition());
+    return head >= headBias ? head - headBias : 0;
+  }
+
 
   public long position() { return Math.min(document.durationMilliseconds, audiblePosition); }
   public long duration() { return document.durationMilliseconds; }
@@ -183,9 +247,13 @@ final class SoundFontPlayback implements PlaybackBackend {
   private void pump() {
     if (disposed || !playing || output == null) return;
     try {
-      long head = Integer.toUnsignedLong(output.getPlaybackHeadPosition());
+      if (seekRequested) {
+        seekRequested = false;
+        applySeek(seekTarget);
+      }
+      long head = audibleHead();
       audiblePosition = clock.position(head);
-      controlFence.heard(head);
+      controlFence.heard(Integer.toUnsignedLong(output.getPlaybackHeadPosition()));
       if (sourceTime >= document.durationMilliseconds + 800 && buffered == buffer.length) {
         if (head >= framesWritten && !completed) {
           completed = true;

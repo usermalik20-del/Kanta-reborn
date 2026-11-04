@@ -497,3 +497,7 @@ The supplied real pair (`shubidx` plus `shubblob`) established that the earlier 
 ## 2026-11-04 — Android MIDI/KAR import rework (local, unmerged)
 
 On `feat/midi-kar-import-rework` (no merge/push/deploy): removed fixed MIDI/KAR caps, added file-mapped decode, KAR metadata/pause/echo parsing, lyric charset detection, per-file import diagnostics with duplicate counting, imported song/bank deletion with tombstone rollback, missing-media repair on load and re-import, library-backed stage search, explicit archive rejection, a cancelable import dialog, and SF2 INFO/INAM bank re-labelling. Host-JVM checks live in `CoreRegressionTests`; JVM/native validation is pending CI on push.
+
+## 2026-11-04 — Android seek/restart (local, unmerged)
+
+Follow-up on the same branch: PlaybackBackend gains seekTo(); SoundFontPlayback seeks by flushing AudioTrack, silencing voices, re-rendering silently to the target source time and resetting the audible clock (head bias keeps the timeline linear); FileAudioPlayback wraps MediaPlayer.seekTo; the transport Previous button restarts the current song. Not JVM-testable locally; emulator instrumentation validates it in CI.

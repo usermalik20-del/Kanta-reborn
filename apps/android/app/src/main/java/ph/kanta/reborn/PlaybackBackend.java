@@ -33,4 +33,7 @@ interface PlaybackBackend {
   }
 
   void controls(float volume, float tempo, int pitch);
+  /** Requests a jump to an absolute source time on the backend worker. */
+  default void seekTo(long milliseconds) {}
+
 }
