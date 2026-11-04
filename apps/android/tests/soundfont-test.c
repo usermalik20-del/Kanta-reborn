@@ -77,6 +77,27 @@ int main(int argc, char** argv) {
     kanta_sf_midi(bank, -1, 128, 255);
     kanta_sf_close(bank);
     assert(allocated == 0);
+
+    // SF3/Ogg regression: the minimal compressed bank must open, render the same
+    // 440 Hz tone and reject every truncation (path is repo-root relative, as in CI).
+    kanta_soundfont* sf3 = kanta_sf_open("apps/android/tests/data/tone.sf3");
+    assert(sf3);
+    double sf3_base = frequency(sf3, 0);
+    assert(sf3_base > 430 && sf3_base < 450);
+    kanta_sf_close(sf3);
+    assert(allocated == 0);
+    FILE* sf3_file = fopen("apps/android/tests/data/tone.sf3", "rb");
+    assert(sf3_file);
+    assert(fseek(sf3_file, 0, SEEK_END) == 0);
+    size_t sf3_size = (size_t)ftell(sf3_file);
+    rewind(sf3_file);
+    unsigned char* sf3_bytes = malloc(sf3_size);
+    assert(sf3_bytes && fread(sf3_bytes, 1, sf3_size, sf3_file) == sf3_size);
+    fclose(sf3_file);
+    assert(sf_validate(sf3_bytes, sf3_size));
+    for (size_t cut = 0; cut < sf3_size; cut += 17) assert(!sf_validate(sf3_bytes, cut));
+    free(sf3_bytes);
+
     FILE* file = fopen(argv[1], "rb");
     assert(file);
     assert(fseek(file, 0, SEEK_END) == 0);

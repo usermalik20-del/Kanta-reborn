@@ -3,12 +3,23 @@
   "revision": "a272fe309c13b79b78e79c71b058cabf8d45ce7c",
   "license": "MIT",
   "files": {
-    "tsf.h": "5469c39090161be9bdb74d867521b586b717a3f26a311f12c9f99a0c1c6900d1",
+    "tsf.h": "f0aacb00676183e1f61592cc1e53a44d23b8a974120c8c341be154aca0f941c0",
     "LICENSE": "ef10cb839de73fb6d5d32ea7151979e87809a6df70dc7e7ee8457ae1c9e7aa7e",
     "tsf_playback.h": "7acefcd052e74e6bb76dc720c1119a0b3652508163ae865c86260ffdebebe207",
-    "HARDENING.md": "23be1385c4dcd6e24463fa0397d6a6c1e4d8cc83bce8a08c0d5d870cfc274d59"
+    "HARDENING.md": "23be1385c4dcd6e24463fa0397d6a6c1e4d8cc83bce8a08c0d5d870cfc274d59",
+    "stb_vorbis.c": "4c7cb2ff1f7011e9d67950446b7eb9ca044f2e464d76bfbb0b84dd2e23e65636"
   },
   "upstreamRepository": "https://github.com/schellingb/TinySoundFont",
   "upstreamRevision": "853a0a171759f1ddba0de1442133a75912bbeffa",
-  "description": "TinySoundFont v0.9 with the hardening patch and the quality engine defaults (Catmull-Rom interpolation, low-pass ramping, SF2 modulators, chorus/reverb sends, SF3 pad fix, single-owner playback wrapper); drop-in replacement for apps/android/app/src/main/cpp/vendor/. Compiled warning-clean under -Wall -Wextra -Werror on 64-bit hosts. See HARDENING.md in the same directory and the kanta-vendor-a272fe30 release."
+  "description": "TinySoundFont v0.9 with the hardening patch and the quality engine defaults (Catmull-Rom interpolation, low-pass ramping, SF2 modulators, chorus/reverb sends, SF3 pad fix, single-owner playback wrapper) plus the KANTA local `sampleTotal` delta for post-decode region bounds; drop-in replacement for apps/android/app/src/main/cpp/vendor/. stb_vorbis.c enables SF3/Ogg banks. Compiled warning-clean under -Wall -Wextra -Werror on 64-bit hosts. See the kanta-vendor-a272fe30 release.",
+  "stbVorbis": {
+    "source": "https://github.com/nothings/stb (stb_vorbis.c v1.22)",
+    "pin": "nothings/stb d14d46f6b",
+    "license": "MIT or public domain (dual, see file header)",
+    "note": "Ogg Vorbis decoder that enables SF3/Ogg banks; compiled inside soundfont.c behind STB_VORBIS_INCLUDE_STB_VORBIS_H."
+  },
+  "localDelta": {
+    "tsf.h": "Added `unsigned int sampleTotal` to `struct tsf` and set it after `tsf_load_samples` so the native wrapper can bound decoded regions against the real post-decode frame count (SF3/Ogg banks expand far beyond their on-disk size). The odd-sized smpl pad handling is the fork revision's own fix.",
+    "note": "vendor/tsf.h hashes above reflect the KANTA local delta; the fork and upstream revision fields record the unmodified base."
+  }
 }

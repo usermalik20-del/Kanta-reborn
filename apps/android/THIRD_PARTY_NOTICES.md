@@ -30,3 +30,8 @@ never committed to the repo or CI (Option B per dim-3, Option 3b). The decoder n
 touches the ReservationQueue or RenderedPlaybackClock owners. No upstream library
 source or copyright header was modified. Meg container payloads remain encrypted; the
 decoder is a parser only and does not weaken or bypass any encryption.
+
+stb_vorbis (Ogg Vorbis decoder) by Sean Barrett is bundled as `app/src/main/cpp/stb_vorbis.c`
+(v1.22, pinned to nothings/stb revision `d14d46f6b`), under the dual MIT / public-domain
+license shown in the file header. It is compiled inside the native wrapper and enables SF3/Ogg
+SoundFont banks. Exact hash and pin are in `app/src/main/cpp/vendor/PROVENANCE.json`.

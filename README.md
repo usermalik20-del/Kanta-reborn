@@ -223,5 +223,5 @@ MIDI/KAR imports no longer enforce fixed file-size, event-count or six-hour dura
 files are decoded file-mapped, KAR lyric text encoding is detected, @T/@A/@C metadata
 populates title/artist/copyright, @P pause codes and backslash echo lines are honoured, and
 imported songs and SoundFont banks can be removed from My Set. Stage search includes the
-active library. The transport Previous button restarts the current song (seek supported for MIDI/KAR and MP3/WAV). Key/tempo adjustments made during a song are remembered per song and reset from the Pitch & Tempo screen. This is local review work on `feat/midi-kar-import-rework`; it is not merged
+active library. The transport Previous button restarts the current song (seek supported for MIDI/KAR and MP3/WAV). Key/tempo adjustments made during a song are remembered per song and reset from the Pitch & Tempo screen. SF3/Ogg SoundFont banks are now supported in addition to SF2. This is local review work on `feat/midi-kar-import-rework`; it is not merged
 and is not part of any released build.

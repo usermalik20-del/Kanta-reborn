@@ -505,3 +505,7 @@ Follow-up on the same branch: PlaybackBackend gains seekTo(); SoundFontPlayback 
 ## 2026-11-04 — Android per-song key/tempo (local, unmerged)
 
 Same branch: SettingsStore gains per-song override keys (song.pitch.&lt;id&gt; / song.tempo.&lt;id&gt;); SessionController applies the override at preparation, auto-remembers adjustments made during an active song (controls path), and exposes effectiveTempo/effectivePitch, currentSongHasOverride and clearCurrentSongOverride; Pitch & Tempo and Now Playing surfaces display and reset the effective values. Emulator instrumentation validates it in CI.
+
+## 2026-11-04 — Android SF3/Ogg SoundFont support (local, unmerged)
+
+Same branch: pinned `stb_vorbis.c` (nothings/stb v1.22, d14d46f6b) compiled inside the native wrapper; vendored `tsf.h` gains a documented local delta (`synth->sampleTotal`, the post-decode frame count) so regions are bounded against the real decoded buffer; `sf2-validation.h` validates compressed banks (container byte offsets, compressed sample types, loop ordering; no static decoded length exists) and `soundfont.c` arms the SF3 path behind STB_VORBIS_INCLUDE_STB_VORBIS_H with the vendor-silencing pragmas. Locally verified: gcc -Wall -Wextra -Werror clean, synthetic 440 Hz tone.sf3 opens, decodes 26,461 frames, renders audibly (RMS 0.049), truncations rejected, SF2 banks unchanged. Native CI (ASan/UBSan soundfont-test with the new fixture) validates on push.
