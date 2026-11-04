@@ -43,7 +43,7 @@ Read `Docs/ARCHITECTURE.md` before changing system boundaries. Update it in the 
 
 The current manual workflow is INTERNAL TestFlight only. Its export settings must retain `testFlightInternalTestingOnly=true` until a separately reviewed release batch closes device, public-contact/legal, and LAN confidentiality gates. It does not invite testers or approve external release.
 
-The current remote is PIN-authorized plaintext TCP for trusted LANs. Do not describe it as encrypted, expose it over the internet, or treat a PIN as confidentiality. See `Docs/LAN_SECURITY_DECISION.md` for the release decision and acceptance criteria. TLS/secure pairing implementation is still outstanding.
+The current remote is PIN-authorized plaintext TCP for trusted LANs. Do not describe it as encrypted, expose it over the internet, or treat a PIN as confidentiality. No `Docs/LAN_SECURITY_DECISION.md` exists in this repository: while the decision is open, treat the release decision and its acceptance criteria as unrecorded rather than following a missing file. TLS/secure pairing implementation is still outstanding.
 
 Signing inputs belong in GitHub Actions secrets, never chat, source, logs, or artifacts. The temporary keychain password is generated per job and no longer needs a repository secret. The manual workflow must fail its Linux preflight before allocating macOS when signing inputs are missing.
 

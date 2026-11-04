@@ -180,6 +180,18 @@ class FeedContractTests(unittest.TestCase):
         with self.assertRaises(feed.FeedError):
             feed.render_feed(downloads_manifest(), build_info(file=42), SOURCE, NOW)
 
+    def test_published_gradle_must_declare_min_sdk(self):
+        self.assertEqual(
+            feed.parse_build_identity(GRADLE),
+            {"versionCode": 10, "versionName": "0.10.0-reconstruction", "minSdk": 26},
+        )
+        # A published build.gradle without minSdk must be refused with FeedError,
+        # never with the TypeError the old None comparison raised.
+        with self.assertRaises(feed.FeedError):
+            feed.parse_build_identity(GRADLE.replace("        minSdk 26\n", ""))
+        with self.assertRaises(feed.FeedError):
+            feed.parse_build_identity("android { }")
+
     def test_build_identity_comes_from_published_source(self):
         identity = feed.build_identity(self.source_sha, self.root)
         self.assertEqual(identity["versionCode"], 10)

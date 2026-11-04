@@ -71,6 +71,29 @@ def published_android_source(downloads: dict) -> str:
     return candidate
 
 
+def parse_build_identity(gradle: str) -> dict:
+    """versionCode / versionName / minSdk parsed from a published build.gradle."""
+    match = re.search(r"\bversionCode\s+(\d+)", gradle)
+    if match is None:
+        raise FeedError("versionCode missing from published build.gradle")
+    version_code = int(match.group(1))
+    match = re.search(r"\bversionName\s+'([^']+)'", gradle)
+    if match is None:
+        raise FeedError("versionName missing from published build.gradle")
+    version_name = match.group(1)
+    if not re.fullmatch(r"[A-Za-z0-9.+-]+", version_name) or len(version_name) > 64:
+        raise FeedError("published versionName is outside the allowed shape")
+    match = re.search(r"\bminSdk\s+(\d+)", gradle)
+    if match is None:
+        raise FeedError("minSdk missing from published build.gradle")
+    min_sdk = int(match.group(1))
+    if min_sdk < ANDROID_MIN_SDK:
+        raise FeedError("published minSdk must be at least " + str(ANDROID_MIN_SDK))
+    if version_code < 1:
+        raise FeedError("published versionCode must be positive")
+    return {"versionCode": version_code, "versionName": version_name, "minSdk": min_sdk}
+
+
 def build_identity(source_sha: str, root: Path = ROOT) -> dict:
     """versionCode / versionName / minSdk read from the published source itself."""
     try:
@@ -86,23 +109,7 @@ def build_identity(source_sha: str, root: Path = ROOT) -> dict:
         raise FeedError(
             "source " + source_sha[:12] + " has no readable app/build.gradle"
         ) from failure
-    match = re.search(r"\bversionCode\s+(\d+)", gradle)
-    if match is None:
-        raise FeedError("versionCode missing from published build.gradle")
-    version_code = int(match.group(1))
-    match = re.search(r"\bversionName\s+'([^']+)'", gradle)
-    if match is None:
-        raise FeedError("versionName missing from published build.gradle")
-    version_name = match.group(1)
-    if not re.fullmatch(r"[A-Za-z0-9.+-]+", version_name) or len(version_name) > 64:
-        raise FeedError("published versionName is outside the allowed shape")
-    match = re.search(r"\bminSdk\s+(\d+)", gradle)
-    min_sdk = int(match.group(1)) if match else None
-    if min_sdk < ANDROID_MIN_SDK:
-        raise FeedError("published minSdk must be at least " + str(ANDROID_MIN_SDK))
-    if version_code < 1:
-        raise FeedError("published versionCode must be positive")
-    return {"versionCode": version_code, "versionName": version_name, "minSdk": min_sdk}
+    return parse_build_identity(gradle)
 
 
 def release_tag(source_sha: str, version_name: str) -> str:
