@@ -51,6 +51,7 @@ public final class StagePresenterImpl extends FrameLayout
   private final BackgroundStage backgroundStage;
   private BackgroundStage.Source cameraFallbackSource = BackgroundStage.Source.SOLID;
   private boolean cameraStreaming;
+  private androidx.camera.view.PreviewView cameraPreview;
   private final AdjustmentOverlay adjustmentOverlay;
   private final IntroCard introCard;
   private final SearchOverlay searchOverlay;
@@ -535,12 +536,29 @@ public final class StagePresenterImpl extends FrameLayout
     if (backgroundStage.getSource() != BackgroundStage.Source.CAMERA)
       cameraFallbackSource = backgroundStage.getSource();
     backgroundStage.setSource(BackgroundStage.Source.CAMERA);
-    return backgroundStage.getCameraPreview();
+    if (cameraPreview == null) {
+      cameraPreview = new androidx.camera.view.PreviewView(getContext());
+      cameraPreview.setImplementationMode(
+          androidx.camera.view.PreviewView.ImplementationMode.COMPATIBLE);
+      cameraPreview.setScaleType(androidx.camera.view.PreviewView.ScaleType.FILL_CENTER);
+      cameraPreview.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      cameraPreview.setLayoutParams(
+          new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+      // Keep the primary preview in the presenter hierarchy. The BackgroundStage owns the
+      // selected CAMERA source, while this sibling receives the CameraX surface at full stage
+      // dimensions; nested PreviewViews can remain zero-sized during workspace transitions.
+      addView(cameraPreview, 1);
+    }
+    return cameraPreview;
   }
 
   /** Releases the primary preview and restores the background selected before camera opt-in. */
   public void releaseCameraPreview() {
     backgroundStage.releaseCameraPreview(cameraFallbackSource);
+    if (cameraPreview != null) {
+      if (cameraPreview.getParent() == this) removeView(cameraPreview);
+      cameraPreview = null;
+    }
     cameraStreaming = false;
     cameraFallbackSource = BackgroundStage.Source.SOLID;
   }
@@ -549,8 +567,8 @@ public final class StagePresenterImpl extends FrameLayout
   public boolean isCameraVisible() {
     return cameraStreaming
         && backgroundStage.getSource() == BackgroundStage.Source.CAMERA
-        && backgroundStage.getCameraPreview() != null
-        && backgroundStage.getCameraPreview().getParent() == backgroundStage;
+        && cameraPreview != null
+        && cameraPreview.getParent() == this;
   }
 
   @Override
