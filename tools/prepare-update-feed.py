@@ -98,8 +98,8 @@ def build_identity(source_sha: str, root: Path = ROOT) -> dict:
         raise FeedError("published versionName is outside the allowed shape")
     match = re.search(r"\bminSdk\s+(\d+)", gradle)
     min_sdk = int(match.group(1)) if match else None
-    if min_sdk != ANDROID_MIN_SDK:
-        raise FeedError("published minSdk must equal " + str(ANDROID_MIN_SDK))
+    if min_sdk < ANDROID_MIN_SDK:
+        raise FeedError("published minSdk must be at least " + str(ANDROID_MIN_SDK))
     if version_code < 1:
         raise FeedError("published versionCode must be positive")
     return {"versionCode": version_code, "versionName": version_name, "minSdk": min_sdk}

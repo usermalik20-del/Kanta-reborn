@@ -218,8 +218,8 @@ public final class UpdateManifest {
       throw new Malformed("versionName is outside the allowed shape: " + versionName);
     }
     int minSdk = requireInt(android, "minSdk");
-    if (minSdk != ANDROID_MIN_SDK) {
-      throw new Malformed("minSdk must equal " + ANDROID_MIN_SDK + ", got " + minSdk);
+    if (minSdk < ANDROID_MIN_SDK) {
+      throw new Malformed("minSdk must be at least " + ANDROID_MIN_SDK + ", got " + minSdk);
     }
     String apkUrl = requireString(android, "apkUrl");
     if (!UpdatePolicy.isAcceptedApkUrl(apkUrl)) {
