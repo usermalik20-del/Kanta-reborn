@@ -493,3 +493,7 @@ The supplied UI upgrade archive contributes multicolor Android VectorDrawables a
 ## Legacy ShubBlob paired import candidate — 2026-11-03
 
 The supplied real pair (`shubidx` plus `shubblob`) established that the earlier rejection was not licensing-related. The blob contains aligned encrypted MKMD records; the Android candidate now has a bounded file-backed importer using the compatibility AES-256-CBC/raw-deflate contract, title records from the paired index, and LibraryRepository persistence. The legacy path is selected only through the paired-file My Set flow; standalone `.idx`/`.blob` selection remains rejected. Exact-head Android compilation, a retained synthetic regression fixture, emulator acceptance and physical-device import/playback remain required.
+
+## 2026-11-04 — Android MIDI/KAR import rework (local, unmerged)
+
+On `feat/midi-kar-import-rework` (no merge/push/deploy): removed fixed MIDI/KAR caps, added file-mapped decode, KAR metadata/pause/echo parsing, lyric charset detection, per-file import diagnostics with duplicate counting, imported song/bank deletion with tombstone rollback, missing-media repair on load and re-import, library-backed stage search, explicit archive rejection, a cancelable import dialog, and SF2 INFO/INAM bank re-labelling. Host-JVM checks live in `CoreRegressionTests`; JVM/native validation is pending CI on push.

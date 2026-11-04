@@ -956,7 +956,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             File file = new File(repository.media, entry.song.fileName);
             MidiLyrics.Document midi =
                 entry.song.fileName.endsWith(".mid")
-                    ? MidiLyrics.decode(java.nio.file.Files.readAllBytes(file.toPath()))
+                    ? MidiLyrics.decode(file)
                     : null;
             MelodyTarget melody = MelodyTarget.extract(midi);
             boolean keyPresent = midi != null && midi.keyPresent;
@@ -1411,11 +1411,15 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     publish();
     io.execute(
         () -> {
-          int good = 0, failed = 0;
+          int imported = 0, duplicates = 0, failed = 0;
+          List<String> reasons = java.util.Collections.emptyList();
           try {
-            int[] counts = repository.importBatch(files, importCancelled::get);
-            good = counts[0];
-            failed = counts[1];
+            LibraryRepository.ImportBatchResult outcome =
+                repository.importBatch(files, importCancelled::get);
+            imported = outcome.imported;
+            duplicates = outcome.duplicates;
+            failed = outcome.failed;
+            reasons = outcome.reasons;
           } catch (Exception e) {
             failed = files.size();
           }
@@ -1423,13 +1427,15 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           File bank = repository.soundFont();
           String bankLabel = repository.soundFontName();
           List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
-          String result =
-              "Imported "
-                  + good
-                  + " file(s)"
-                  + (failed > 0
-                      ? ". " + failed + " unsupported or unreadable file(s) were skipped."
-                      : ".");
+          StringBuilder result = new StringBuilder("Imported ").append(imported).append(" file(s)");
+          if (duplicates > 0) result.append(", ").append(duplicates).append(" already in My Set");
+          if (failed > 0) {
+            result.append(". ").append(failed).append(" file(s) skipped");
+            int shown = Math.min(3, reasons.size());
+            for (int i = 0; i < shown; i++) result.append(" \u2022 ").append(reasons.get(i));
+          }
+          result.append(".");
+          final String importSummary = result.toString();
           final boolean importSucceeded = failed == 0;
           main.post(
               () -> {
@@ -1439,7 +1445,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 soundFonts = banks;
                 importing = false;
                 libraryImporting = false;
-                message = result;
+                message = importSummary;
                 completeImportProgress(importSucceeded, result);
                 publish();
               });
@@ -1480,6 +1486,56 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   String activeSoundFontFileName() {
     return selectedSoundFont == null ? "kanta-tone.sf2" : selectedSoundFont.getName();
+  }
+
+
+  void deleteSong(String id) {
+    if (!ready || importing) return;
+    io.execute(
+        () -> {
+          try {
+            repository.deleteSong(id);
+            main.post(
+                () -> {
+                  songs = repository.songs();
+                  message = "Removed from My Set.";
+                  publish();
+                });
+          } catch (Exception failure) {
+            main.post(
+                () -> {
+                  message = "Could not remove that song. " + failure.getMessage();
+                  publish();
+                });
+          }
+        });
+  }
+
+  void deleteSoundFont(String fileName) {
+    if (!ready || importing) return;
+    io.execute(
+        () -> {
+          try {
+            repository.deleteSoundFont(fileName);
+            File bank = repository.soundFont();
+            String label = repository.soundFontName();
+            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
+            main.post(
+                () -> {
+                  selectedSoundFont = bank;
+                  soundFontName = label;
+                  soundFonts = banks;
+                  message = "SoundFont removed.";
+                  publish();
+                });
+          } catch (Exception failure) {
+            main.post(
+                () -> {
+                  message = "Could not remove that SoundFont. " + failure.getMessage();
+                  publish();
+                });
+          }
+        });
   }
 
   void selectSoundFont(String fileName) {

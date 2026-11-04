@@ -40,6 +40,29 @@ public final class CoreRegressionTests {
     return MidiLyrics.decode(bytes.toByteArray());
   }
 
+  /** VLQ encoder for hand-built MIDI tracks. */
+  private static void writeVlq(DataOutputStream out, long value) throws IOException {
+    long v = value;
+    ArrayList<Integer> groups = new ArrayList<>();
+    do {
+      groups.add(0, (int) (v & 127));
+      v >>= 7;
+    } while (v != 0);
+    for (int i = 0; i < groups.size(); i++)
+      out.writeByte(groups.get(i) | (i < groups.size() - 1 ? 0x80 : 0));
+  }
+
+  /** FF 05 lyric meta event without its delta byte. */
+  private static byte[] lyricEvent(String text) throws IOException {
+    byte[] content = text.getBytes(StandardCharsets.UTF_8);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    out.write(0xff);
+    out.write(5);
+    out.write(content.length);
+    out.write(content);
+    return out.toByteArray();
+  }
+
   private static float[] tone(double frequency, double amplitude) {
     float[] samples = new float[DryPitchDetector.FRAME_SIZE];
     for (int i = 0; i < samples.length; i++)
@@ -793,11 +816,175 @@ public final class CoreRegressionTests {
         "A below-minimum reserve was accepted");
   }
 
+  private static void midiUnboundedChecks() throws Exception {
+    // 1) No fixed file-size cap: a 17 MiB structurally valid MIDI must decode.
+    ByteArrayOutputStream track = new ByteArrayOutputStream();
+    DataOutputStream t = new DataOutputStream(track);
+    t.write(new byte[] {0, (byte) 255, 81, 3, 7, (byte) 161, 32}); // tempo 500000
+    int payload = 17 * 1024 * 1024;
+    t.writeByte(0);
+    t.writeByte(0xf0);
+    writeVlq(t, payload);
+    byte[] sysex = new byte[payload];
+    t.write(sysex); // skipped payload must not become events
+    t.writeByte(0);
+    t.write(lyricEvent("Hello"));
+    t.writeByte(0);
+    t.writeByte((byte) 255);
+    t.writeByte(0x2f);
+    t.writeByte(0);
+    MidiLyrics.Document huge = midiTrack(track.toByteArray());
+    check(huge.cues.size() == 1 && huge.cues.get(0).line.equals("Hello"),
+        "Large MIDI rejected or lyrics lost");
+
+    // 2) No fixed event-count cap: 260,000 note-ons must decode.
+    ByteArrayOutputStream notes = new ByteArrayOutputStream();
+    DataOutputStream n = new DataOutputStream(notes);
+    for (int i = 0; i < 260000; i++) {
+      writeVlq(n, 0);
+      n.writeByte(0x90);
+      n.writeByte(60);
+      n.writeByte(1);
+    }
+    n.writeByte(0);
+    n.writeByte((byte) 255);
+    n.writeByte(0x2f);
+    n.writeByte(0);
+    MidiLyrics.Document many = midiTrack(notes.toByteArray());
+    check(many.messages.size() == 260000, "MIDI event cap still enforced");
+    check(many.durationMilliseconds >= 0, "Duration regressed");
+
+    // 3) No fixed duration cap: a 75-hour gap must decode and report its length.
+    ByteArrayOutputStream marathonTrack = new ByteArrayOutputStream();
+    DataOutputStream l = new DataOutputStream(marathonTrack);
+    l.write(new byte[] {0, (byte) 255, 81, 3, 7, (byte) 161, 32});
+    l.writeByte(0);
+    l.write(lyricEvent("Start"));
+    writeVlq(l, 260000000L);
+    l.writeByte((byte) 255);
+    l.writeByte(0x2f);
+    l.writeByte(0);
+    MidiLyrics.Document marathon = midiTrack(marathonTrack.toByteArray());
+    check(marathon.durationMilliseconds > 6L * 60 * 60 * 1000,
+        "Six-hour cap still enforced: " + marathon.durationMilliseconds);
+    check(marathon.cues.get(0).line.equals("Start"), "Marathon lyric lost");
+  }
+
+  private static void karaokeMetaAndCharsetChecks() throws Exception {
+    // KAR metadata, pauses and echo lines.
+    ByteArrayOutputStream track = new ByteArrayOutputStream();
+    DataOutputStream t = new DataOutputStream(track);
+    t.write(new byte[] {0, (byte) 255, 81, 3, 7, (byte) 161, 32});
+    t.writeByte(0);
+    t.write(lyricEvent("@T:My Title"));
+    t.writeByte(0);
+    t.write(lyricEvent("@A:Some Artist"));
+    t.writeByte(0);
+    t.write(lyricEvent("First/line"));
+    writeVlq(t, 480);
+    t.write(lyricEvent("@P100"));
+    writeVlq(t, 480);
+    t.write(lyricEvent("Second\\Echo"));
+    writeVlq(t, 480);
+    t.write(lyricEvent("@P0.5"));
+    writeVlq(t, 480);
+    t.write(lyricEvent("Third"));
+    writeVlq(t, 480);
+    t.writeByte((byte) 255);
+    t.writeByte(0x2f);
+    t.writeByte(0);
+    MidiLyrics.Document kar = midiTrack(track.toByteArray());
+    check(kar.title.equals("My Title"), "KAR title metadata");
+    check(kar.artist.equals("Some Artist"), "KAR artist metadata");
+    check(kar.cues.size() == 5, "KAR cue count: " + kar.cues.size());
+    check(kar.cues.get(0).line.equals("First") && kar.cues.get(1).line.equals("line"),
+        "KAR line markers");
+    check(kar.cues.get(2).milliseconds == 2000 && kar.cues.get(2).line.equals("Second"),
+        "KAR pause shift");
+    check(kar.cues.get(3).line.equals("Echo") && kar.cues.get(3).echo,
+        "KAR echo line not flagged");
+    check(kar.cues.get(4).milliseconds == 3500 && kar.cues.get(4).line.equals("Third"),
+        "KAR fractional pause");
+
+    // Shift_JIS lyric text is detected instead of becoming mojibake.
+    ByteArrayOutputStream sjisTrack = new ByteArrayOutputStream();
+    DataOutputStream sj = new DataOutputStream(sjisTrack);
+    sj.write(new byte[] {0, (byte) 255, 81, 3, 7, (byte) 161, 32});
+    byte[] japanese = "\u3053\u3093\u306b\u3061\u306f".getBytes(java.nio.charset.Charset.forName("Shift_JIS"));
+    sj.writeByte(0);
+    sj.writeByte(0xff);
+    sj.writeByte(5);
+    sj.writeByte(japanese.length);
+    sj.write(japanese);
+    sj.writeByte(0);
+    sj.writeByte((byte) 255);
+    sj.writeByte(0x2f);
+    sj.writeByte(0);
+    MidiLyrics.Document sjis = midiTrack(sjisTrack.toByteArray());
+    check(!sjis.cues.isEmpty() && sjis.cues.get(0).line.equals("\u3053\u3093\u306b\u3061\u306f"),
+        "Shift_JIS lyric detection");
+
+    // windows-1252 fallback for single high bytes.
+    ByteArrayOutputStream cpTrack = new ByteArrayOutputStream();
+    DataOutputStream cp = new DataOutputStream(cpTrack);
+    cp.write(new byte[] {0, (byte) 255, 81, 3, 7, (byte) 161, 32});
+    byte[] latin = "L'\u00e9".getBytes(java.nio.charset.Charset.forName("windows-1252"));
+    cp.writeByte(0);
+    cp.writeByte(0xff);
+    cp.writeByte(5);
+    cp.writeByte(latin.length);
+    cp.write(latin);
+    cp.writeByte(0);
+    cp.writeByte((byte) 255);
+    cp.writeByte(0x2f);
+    cp.writeByte(0);
+    MidiLyrics.Document latinDoc = midiTrack(cpTrack.toByteArray());
+    check(latinDoc.cues.get(0).line.equals("L'\u00e9"), "windows-1252 lyric fallback");
+
+    // File-backed decode path maps the file instead of a heap copy.
+    File midiFile = File.createTempFile("kanta-midi-regression", ".mid");
+    try {
+      java.nio.file.Files.write(midiFile.toPath(), sjisTrack.toByteArray());
+      MidiLyrics.Document fromFile = MidiLyrics.decode(midiFile);
+      check(fromFile.cues.get(0).line.equals("\u3053\u3093\u306b\u3061\u306f"),
+          "File-backed MIDI decode");
+    } finally {
+      midiFile.delete();
+    }
+  }
+
+  private static void catalogMergeChecks() {
+    Song libraryA = new Song("a1", "Hello", "Ana", "001", "a1.mid", false);
+    Song libraryB = new Song("b1", "World", "Bob", "002", "b1.mid", false);
+    Song duplicateId = new Song("b1", "World Remix", "Bob", "009", "dup.mid", false);
+    ph.kanta.reborn.core.catalog.LibrarySongCatalog live =
+        new ph.kanta.reborn.core.catalog.LibrarySongCatalog(
+            () -> java.util.Arrays.asList(libraryA, libraryB));
+    ph.kanta.reborn.core.catalog.LibrarySongCatalog legacy =
+        new ph.kanta.reborn.core.catalog.LibrarySongCatalog(
+            () -> java.util.Arrays.asList(duplicateId));
+    ph.kanta.reborn.core.catalog.MergedSongCatalog merged =
+        new ph.kanta.reborn.core.catalog.MergedSongCatalog(live, legacy);
+    check(live.count() == 2, "Library catalog count");
+    check(live.search("ana", 10).size() == 1 && live.search("ana", 10).get(0).id.equals("a1"),
+        "Library artist search");
+    check(live.search("002", 10).size() == 1, "Library code search");
+    check(live.findById("b1") == libraryB, "Library findById");
+    check(merged.search("hello", 10).size() == 1, "Merged library search");
+    check(merged.search("world", 10).size() == 1, "Merged duplicate dedupe");
+    check(merged.findById("b1") == libraryB, "Merged first-catalog precedence");
+    check(merged.findByCode("009") != null, "Merged second-catalog lookup");
+    check(merged.count() == 3, "Merged count is the dedupe approximation");
+  }
+
   public static void main(String[] args) throws Exception {
     youtubeLifecycleChecks();
     microphonePitchChecks();
     monitorChecks();
     soundFontStorageChecks();
+    midiUnboundedChecks();
+    karaokeMetaAndCharsetChecks();
+    catalogMergeChecks();
     scoringChecks(args[0]);
     pitchCorrectionChecks();
     ReservationQueue queue = new ReservationQueue();

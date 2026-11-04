@@ -1,5 +1,9 @@
 # Reconstruction validation
 
+## Android MIDI/KAR import regression
+
+`CoreRegressionTests` verifies that MIDI/KAR imports accept structurally valid files beyond the former 16 MiB / 250,000-event / six-hour caps (17 MiB sysex payloads, 260,000 events and 75-hour gaps decode), that KAR metadata (@T/@A/@C), @P pause codes and backslash echo lines parse, that lyric text encoding detection covers Shift_JIS, GBK, Big5, CP949 and windows-1252, and that the live-library and merged stage-search catalogs dedupe by song identity. JVM execution stays CI-owned; the local iSH environment cannot run a JVM (getcpu(2)).
+
 ## Android SoundFont 1536 MiB ceiling regression
 
 The existing `apps/android/tests/soundfont-test.c` CI harness now verifies the 1536 MiB tracked-payload ceiling, headroom for 1,163,416,536 sample bytes, over-budget and SIZE_MAX rejection, exact-boundary malloc/realloc, rejection preserving pointer contents and counters, shrink/free accounting, and zero balance after cleanup. Near-cap totals are simulated with the worker-local counter while real allocations stay below 100 bytes; the suite does not require GiBs of RAM or claim full-bank playback. Existing starter pitch (439.3 Hz), octave transpose (880.3 Hz), truncation, six malformed-table and 2000 mutation cases remain enabled and pass locally with C11 `-Wall -Wextra -Werror -O0`. Layout preflight passes. CI retains its existing ASan/UBSan command and Android build/lint/emulator wiring without workflow changes. Those sanitizer/APK/runtime gates and physical large-bank memory-pressure acceptance have not run on this local candidate; local Android doctor reports missing SDK/Java build prerequisites. A cap is not guaranteed available RAM.

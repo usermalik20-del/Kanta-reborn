@@ -431,10 +431,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             }
           }
         });
-    // Create StagePresenterImpl with all stage overlays
+    // Create StagePresenterImpl with all stage overlays. Stage search must find the songs the
+    // active player can actually play, so the catalog merges the (dormant) SQLite index with
+    // the live library snapshot.
     ContentRoot contentRoot = new ContentRoot(this);
     ContentScanner scanner = new ContentScanner(getContentResolver(), contentRoot);
-    SongCatalog catalog = new ph.kanta.reborn.core.catalog.SqliteSongCatalog(this, contentRoot, scanner);
+    SongCatalog catalog =
+        new ph.kanta.reborn.core.catalog.MergedSongCatalog(
+            new ph.kanta.reborn.core.catalog.SqliteSongCatalog(this, contentRoot, scanner),
+            new ph.kanta.reborn.core.catalog.LibrarySongCatalog(session::songs));
     stagePresenter = new StagePresenterImpl(this, session, catalog, session.queue);
     stagePresenter.setTag("kanta.stage.primary");
     stagePresenter.setOnClickListener(v -> { tab = "Now Playing"; render(); });
@@ -2093,6 +2098,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             text(song.title + (song.artist.isEmpty() ? "" : "\n" + song.artist), 14, Color.WHITE),
             new LinearLayout.LayoutParams(0, -2, 1));
         item.addView(button("Reserve", () -> session.reserve(song, "")));
+        item.addView(button("Remove", () -> confirmRemoveSong(song)));
         body.addView(item);
       }
       if (importedSongs.size() > shown)
@@ -2102,7 +2108,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         button("Import legacy idx + blob", this::pickLegacyIndex));
     body.addView(
         text(
-            "SoundFont banks are validated before activation. MIDI/KAR imports are limited to 16 MiB and six hours; original files stay unchanged.",
+            "SoundFont banks are validated before activation. MIDI/KAR files have no fixed size or duration cap; import time depends on the file.",
             13,
             0xFFAFB8D0));
 
@@ -2916,15 +2922,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
-  /** Shows the blocking import dialog. Imports run off the main thread, so it must not be
-   * cancelable by tapping outside: the work cannot actually be interrupted from here. */
+  /** Confirms removal of an imported song from this device. */
+  private void confirmRemoveSong(Song song) {
+    new android.app.AlertDialog.Builder(this)
+        .setTitle("Remove \"" + song.title + "\"?")
+        .setMessage("The imported file is removed from this device; the original file stays where it is.")
+        .setPositiveButton("Remove", (dialog, which) -> session.deleteSong(song.id))
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  /** Shows the import progress dialog. Imports run off the main thread and are cancellable:
+   * the dialog Cancel action and My Set "Cancel import" both signal the running batch. */
   private void showImportProgress() {
     if (importProgressDialog == null) {
       importProgressDialog = new android.app.ProgressDialog(this);
       importProgressDialog.setTitle("Importing");
       importProgressDialog.setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL);
       importProgressDialog.setMax(100);
-      importProgressDialog.setCancelable(false);
+      importProgressDialog.setCancelable(true);
+      importProgressDialog.setOnCancelListener(dialog -> session.cancelImports());
     }
     importProgressDialog.setProgress(0);
     importProgressDialog.setIndeterminate(true);

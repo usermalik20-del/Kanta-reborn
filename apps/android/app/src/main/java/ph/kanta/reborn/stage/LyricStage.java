@@ -42,6 +42,7 @@ public final class LyricStage extends View {
   private final TextPaint highlightPaint;
   private final TextPaint inactivePaint;
   private final TextPaint upcomingPaint;
+  private final TextPaint echoPaint;
   private final TextPaint pitchWavePaint;
   private final Paint pillPaint;
   private final Paint sparkPaint;
@@ -91,6 +92,10 @@ public final class LyricStage extends View {
     upcomingPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     upcomingPaint.setTextSize(UPCOMING_SIZE_SP * density);
     upcomingPaint.setColor(0xFFBBBBBB); // karaoke_lyric_upcoming
+
+    echoPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    echoPaint.setTextSize(UPCOMING_SIZE_SP * density);
+    echoPaint.setColor(0x55FFFFFF); // dimmed KAR echo/backing line
 
     pitchWavePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     pitchWavePaint.setTextSize(ACTIVE_SIZE_SP * density);
@@ -157,6 +162,7 @@ public final class LyricStage extends View {
   private TextPaint getPaintForLine(int lineIndex) {
     if (lineIndex == currentLineIndex) return activePaint;
     if (lineIndex < currentLineIndex) return inactivePaint;
+    if (lineIndex < cues.length && cues[lineIndex].echo) return echoPaint;
     return upcomingPaint;
   }
 

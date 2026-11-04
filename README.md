@@ -215,3 +215,13 @@ The Android presentation is being reorganized around three user goals rather tha
 ## Android supplied UI and SoundFont assets — local candidate
 
 The Android UI candidate now includes the supplied multicolor VectorDrawables and gradient button backgrounds without tinting away their per-path colors. It also bundles the supplied procedural `KANTA KaraokeLive GM v3` and `KANTA LiveStage GM v2` banks in the app's starter assets and exposes them through the existing persisted SoundFont inventory. The KANTA procedural bank from the OpenStage pack is included under the restricted KANTA OpenStage Procedural Asset License 1.0; its pinned third-party candidates remain audit-only and are not embedded.
+
+
+## Android MIDI/KAR import rework — 2026-11-04
+
+MIDI/KAR imports no longer enforce fixed file-size, event-count or six-hour duration caps;
+files are decoded file-mapped, KAR lyric text encoding is detected, @T/@A/@C metadata
+populates title/artist/copyright, @P pause codes and backslash echo lines are honoured, and
+imported songs and SoundFont banks can be removed from My Set. Stage search includes the
+active library. This is local review work on `feat/midi-kar-import-rework`; it is not merged
+and is not part of any released build.
