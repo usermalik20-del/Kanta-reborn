@@ -548,7 +548,7 @@ Main commit [`5ee1893`](https://github.com/usermalik20-del/Kanta-reborn/commit/5
 
 **Recurrence rule:** when `stage.more` is missing, inspect identifier placement in `embeddedPlayer` versus `controls(wide:)`. Do not add sleeps or loosen assertions; give distinct accessible controls distinct stable identifiers and keep the source-contract guard aligned.
 
-**Status:** `candidate`.
+**Status:** `verified` by the separate exact-head follow-up below.
 ## Reconciled main acceptance and PR #83 Android JVM crash — 2026-10-26
 
 This section supersedes the earlier pending wording above for the post-merge PR #82 reconstruction/archive and the PR #80 device walkthrough.
@@ -575,11 +575,11 @@ This section supersedes the earlier pending wording above for the post-merge PR 
 
 **Regression coverage:** `CoreRegressionTests.catalogMergeChecks()` now compiles with the pure-Java catalog sources included. `karaokeMetaAndCharsetChecks()` retains its cue/timing assertions with valid delimiters and a complete MIDI fixture. Manual `javac --release 17` compilation of 66 framework-free Java sources and execution of `CoreRegressionTests` passed all 55,217 checks.
 
-**Validation:** `candidate`. Exact-head run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564) on `42bfeac452b1f9d4f66b0f7c9fc9566ac4679a38` passed `:app:assembleDebug` and `:app:coreRegression` (55,217 checks) and progressed through lint, then failed compiling the instrumentation APK due to the stale import-result type recorded below. This verifies the source-set fix and core regression only; complete Android validation is not green.
+**Validation on the first repair candidate:** exact-head run [#41813457564](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41813457564) on `42bfeac452b1f9d4f66b0f7c9fc9566ac4679a38` passed `:app:assembleDebug` and `:app:coreRegression` (55,217 checks), then failed compiling the instrumentation APK due to the separate stale import-result type recorded below. The source-set repair was verified; complete validation is recorded in the later exact-head follow-up.
 
 **Recurrence rule:** exclude only Android-backed adapters from the framework-free source set, not their whole domain package. After a compile repair, execute the regression suite; fixtures must contain full SMF headers and explicit line separators when asserting separate cues.
 
-**Status:** `candidate`.
+**Status:** `verified` by the separate exact-head follow-up below.
 
 **Synchronization and fresh validation:** the PR branch was synchronized with current main by merge commit [`6941aec`](https://github.com/usermalik20-del/Kanta-reborn/commit/6941aec198ad07eb46c5f7d8093b9361d0821750); the compare now reports 3 commits ahead and 0 behind. New exact-head runs are reconstruction [#40244262616](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262616), focused iPhone smoke [#40244262594](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262594), full iPhone/iPad walkthrough [#40244262620](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262620), and unsigned archive [#40244262618](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40244262618). At this checkpoint, the fresh Android run had passed build/lint/domain regression and real-Chrome/browser checks and was running emulator runtime checks; iOS package tests had passed and unsigned simulator compilation was still in progress. Final acceptance remains pending.
 
@@ -599,11 +599,21 @@ This section supersedes the earlier pending wording above for the post-merge PR 
 
 **Regression coverage:** the existing mixed SAF instrumentation fixture checks imported and failed counts together with durable media/catalog state and bank discovery.
 
-**Validation:** `candidate`. The local environment has no configured Android SDK, so instrumentation compilation and emulator execution must be verified by a new exact-head hosted Android run.
+**Validation on the failure-reproduction head:** local instrumentation compilation was unavailable because this environment has no Android SDK; both test-APK compilation and emulator execution were subsequently verified in the exact-head hosted run below.
 
 **Recurrence rule:** when an import API returns an aggregate result object, migrate all instrumentation call sites to the named result fields; compile the test APK as well as running framework-free domain checks.
 
-**Status:** `candidate`.
+**Status:** `verified` by the separate exact-head follow-up below.
+
+## PR #161 exact-head validation follow-up — 2026-11-04
+
+**Validated source SHA:** [`57525326069908bf19da3328d57260862283dea1`](https://github.com/usermalik20-del/Kanta-reborn/commit/57525326069908bf19da3328d57260862283dea1), commit `fix(android): align import instrumentation result API`.
+
+**Validation:** Android run [#41814538861](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41814538861) passed on that exact SHA. Build/lint/domain regression (including 55,217 core checks), native SoundFont sanitizer, browser interoperability, and Android emulator runtime checks all succeeded. The runtime logs include `files/my-set-imported-library.png` and `files/my-set-active-soundfont.png`.
+
+**Artifact:** [android-reconstruction-checks](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/41814538861/artifacts/13314491255) retained for review. Emulator acceptance passed; physical-device acceptance, signing, merge and release are not claimed.
+
+**Resolution:** both PR #161 candidate failure records above are verified on the fixed source head. Their original failure diagnostics remain preserved.
 
 ## PR #83 Stage More accessibility repair — exact-head and post-merge closure (2026-10-26)
 
