@@ -61,13 +61,19 @@ final class CameraStage {
     if (target instanceof PreviewView) {
       view = (PreviewView) target;
     } else if (target instanceof StageSurface) {
-      // Fullscreen and external stages mount a dedicated preview surface.
-      view = createCameraPreview();
+      // Fullscreen and external stages own a dedicated preview surface.
+      view = new PreviewView(owner);
+      view.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
+      view.setScaleType(PreviewView.ScaleType.FILL_CENTER);
+      view.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
       ((StageSurface) target).mountCamera(view);
     } else if (target instanceof ph.kanta.reborn.stage.StagePresenterImpl) {
-      // The primary stage mounts the same owned preview above its background layer.
-      view = createCameraPreview();
-      ((ph.kanta.reborn.stage.StagePresenterImpl) target).mountCamera(view);
+      // The primary stage presenter owns its PreviewView through BackgroundStage.
+      view = ((ph.kanta.reborn.stage.StagePresenterImpl) target).getCameraPreview();
+      if (view == null) {
+        unavailable("The primary stage could not prepare its camera preview.");
+        return;
+      }
     } else {
       unavailable("The selected stage does not support a camera preview.");
       return;
@@ -76,9 +82,8 @@ final class CameraStage {
         state -> {
           if (token != generation || !enabled) return;
           streaming = state == PreviewView.StreamState.STREAMING;
-          if (surface instanceof StageSurface) ((StageSurface) surface).cameraFrame(streaming);
-          if (surface instanceof ph.kanta.reborn.stage.StagePresenterImpl)
-            ((ph.kanta.reborn.stage.StagePresenterImpl) surface).cameraFrame(streaming);
+          if (surface instanceof StageSurface)
+            ((StageSurface) surface).cameraFrame(streaming);
           if (streaming) handler.removeCallbacksAndMessages(null);
         };
     view.getPreviewStreamState().observe(owner, streamObserver);
@@ -150,7 +155,7 @@ final class CameraStage {
     if (previousSurface instanceof StageSurface && previousView != null) {
       ((StageSurface) previousSurface).unmountCamera(previousView);
     } else if (previousSurface instanceof ph.kanta.reborn.stage.StagePresenterImpl) {
-      ((ph.kanta.reborn.stage.StagePresenterImpl) previousSurface).unmountCamera(previousView);
+      ((ph.kanta.reborn.stage.StagePresenterImpl) previousSurface).releaseCameraPreview();
     }
 
     cameraStates = null;
@@ -160,14 +165,6 @@ final class CameraStage {
     view = null;
     surface = null;
     provider = null;
-  }
-
-  private PreviewView createCameraPreview() {
-    PreviewView previewView = new PreviewView(owner);
-    previewView.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
-    previewView.setScaleType(PreviewView.ScaleType.FILL_CENTER);
-    previewView.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-    return previewView;
   }
 
   private void unavailable(String message) {

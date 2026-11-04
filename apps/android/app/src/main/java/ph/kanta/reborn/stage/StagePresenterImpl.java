@@ -50,8 +50,6 @@ public final class StagePresenterImpl extends FrameLayout
   private final ScoreCelebrationView celebration;
   private final BackgroundStage backgroundStage;
   private BackgroundStage.Source cameraFallbackSource = BackgroundStage.Source.SOLID;
-  private androidx.camera.view.PreviewView cameraPreview;
-  private boolean cameraStreaming;
   private final AdjustmentOverlay adjustmentOverlay;
   private final IntroCard introCard;
   private final SearchOverlay searchOverlay;
@@ -515,42 +513,39 @@ public final class StagePresenterImpl extends FrameLayout
     // LyricStage is always drawn
   }
 
-  /**
-   * Mounts the CameraStage-owned preview directly above the background layer, mirroring the
-   * fullscreen {@link ph.kanta.reborn.StageSurface} contract. The background selection
-   * (solid/photo/video) is left untouched and returns immediately when the camera is released,
-   * so camera ownership never depends on BackgroundStage source swapping.
-   */
+  /** Delegates to BackgroundStage for camera mounting. */
   public void mountCamera(android.view.View preview) {
-    unmountCamera(null);
-    if (!(preview instanceof androidx.camera.view.PreviewView)) return;
-    cameraPreview = (androidx.camera.view.PreviewView) preview;
-    cameraPreview.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-    // Index 1 keeps the preview above BackgroundStage and below lyrics/overlays.
-    addView(cameraPreview, 1);
-    invalidate();
+    // BackgroundStage manages its own PreviewView for camera
+    // This is called from CameraStage when moving camera to this presenter
   }
 
-  /** Detaches the CameraStage-owned preview; the previous background remains intact. */
+  /** Delegates to BackgroundStage for camera unmounting. */
   public void unmountCamera(android.view.View preview) {
-    if (cameraPreview != null) {
-      if (cameraPreview.getParent() == this) removeView(cameraPreview);
-      cameraPreview = null;
-    }
-    cameraStreaming = false;
-    invalidate();
+    // BackgroundStage handles this internally
   }
 
-  /** Records whether the owned preview is actively streaming frames. */
+  /** Delegates to BackgroundStage for camera frame visibility. */
   public void cameraFrame(boolean visible) {
-    if (cameraStreaming == visible) return;
-    cameraStreaming = visible;
-    invalidate();
+    // BackgroundStage doesn't have this, but we can track it
   }
 
-  /** True only while an attached preview owned by this stage is streaming frames. */
+  /** Prepares and returns the primary stage's CameraX preview, preserving its prior background. */
+  public androidx.camera.view.PreviewView getCameraPreview() {
+    if (backgroundStage.getSource() != BackgroundStage.Source.CAMERA)
+      cameraFallbackSource = backgroundStage.getSource();
+    backgroundStage.setSource(BackgroundStage.Source.CAMERA);
+    return backgroundStage.getCameraPreview();
+  }
+
+  /** Releases the primary preview and restores the background selected before camera opt-in. */
+  public void releaseCameraPreview() {
+    backgroundStage.releaseCameraPreview(cameraFallbackSource);
+    cameraFallbackSource = BackgroundStage.Source.SOLID;
+  }
+
+  /** Reports only an attached preview belonging to the active camera background. */
   public boolean isCameraVisible() {
-    return cameraStreaming && cameraPreview != null && cameraPreview.getParent() == this;
+    return backgroundStage.isCameraVisible();
   }
 
   @Override

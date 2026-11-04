@@ -34,7 +34,7 @@ def main() -> int:
         with (ROOT / "emulator.log").open("wb") as log:
             emulator = subprocess.Popen([str(sdk / "emulator/emulator"), "-avd", "kanta-test", "-no-window",
                 "-no-audio", "-no-snapshot", "-no-boot-anim", "-gpu", "swiftshader", "-accel", "on",
-                "-cores", "2", "-memory", "2048", "-camera-front", "emulated", "-camera-back", "emulated"], env=env, stdout=log, stderr=subprocess.STDOUT)
+                "-cores", "2", "-memory", "2048", "-camera-front", "emulated"], env=env, stdout=log, stderr=subprocess.STDOUT)
             deadline = time.monotonic() + 600  # 10 minutes for emulator boot
             booted = False
             while time.monotonic() < deadline:
