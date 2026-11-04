@@ -107,11 +107,15 @@ kanta_soundfont* kanta_sf_open(const char* path) {
     for (int p = 0; p < synth->presetNum; ++p) {
         for (int r = 0; r < synth->presets[p].regionNum; ++r) {
             struct tsf_region* region = &synth->presets[p].regions[r];
-            // The loader guards the region windows itself and always keeps a padding
-            // sample after the decoded buffer, so an end exactly at sampleTotal is valid.
-            if (region->offset >= region->end || region->end > synth->sampleTotal ||
-                (region->loop_mode && (region->loop_start >= region->loop_end ||
-                 region->loop_end >= region->end))) {
+            // The Catmull-Rom interpolator reads two floats past the current position while
+            // the loader keeps only one pad float after the decoded buffer, so a region
+            // whose end (or loop end) comes within one float of the buffer end cannot be
+            // rendered safely and must be rejected instead of reading past the pad.
+            if (region->offset >= region->end ||
+                (long)region->end + 2 > (long)synth->sampleTotal ||
+                (region->loop_mode &&
+                 (region->loop_start >= region->loop_end ||
+                  region->loop_end >= region->end))) {
                 tsf_close(synth);
                 return NULL;
             }
