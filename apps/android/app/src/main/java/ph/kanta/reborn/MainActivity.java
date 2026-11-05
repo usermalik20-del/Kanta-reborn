@@ -44,10 +44,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       MICROPHONE = 17,
       LEGACY_INDEX = 18,
       LEGACY_BLOB = 19;
-  private static final int NAVY = 0xFF0B1023,
-      PANEL = 0xFF19213E,
-      CYAN = 0xFF6FE5E8,
-      GOLD = 0xFFF6CE77;
+  private static final int NAVY = KantaTheme.BG_MAIN,
+      PANEL = KantaTheme.SURFACE_ELEVATED,
+      CYAN = KantaTheme.PRIMARY_CYAN,
+      ACCENT = KantaTheme.PRIMARY_CYAN;
   private SessionController session;
   private LinearLayout root, body, results, stagePane, navigationTabs;
   private View appHeader;
@@ -281,14 +281,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private Button button(String label, Runnable action) {
-    Button b = new Button(this);
-    b.setText(label);
+    Button b = KantaTheme.secondaryButton(this, label, v -> action.run());
     b.setAllCaps(false);
-    b.setTextColor(Color.WHITE);
-    b.setTextSize(14);
     b.setMinHeight(dp(48));
-    b.setBackgroundTintList(ColorStateList.valueOf(PANEL));
-    b.setOnClickListener(v -> action.run());
     return b;
   }
 
@@ -355,7 +350,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       navigationTabs.setVisibility(home || (referenceDestination && !groupDestination) ? View.GONE : View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
-      entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
+      entry.getValue().setTextColor(entry.getKey().equals(tab) ? ACCENT : Color.WHITE);
     }
     if ("Now Playing".equals(tab) && nowPlayingScreen != null) {
       refreshNowPlayingScreen();
@@ -496,7 +491,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       b.setMaxLines(2);
       b.setSelected(name.equals(tab));
       b.setTag("kanta.nav." + name);
-      if (name.equals(tab)) b.setTextColor(GOLD);
+      if (name.equals(tab)) b.setTextColor(ACCENT);
       navigationButtons.put(name, b);
       tabs.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
     }
@@ -666,7 +661,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   /** Queue accessory: a read-only projection of the current queue. */
   private void queueAccessory(LinearLayout target) {
-    target.addView(text("Up Next \u00b7 " + session.queue.snapshot().size(), 18, GOLD));
+    target.addView(text("Up Next \u00b7 " + session.queue.snapshot().size(), 18, ACCENT));
     List<ReservationQueue.Entry> entries = session.queue.snapshot();
     if (entries.isEmpty()) {
       target.addView(text("Reserve a song, then choose Play to begin.", 14, 0xFFAFB8D0));
@@ -793,7 +788,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     int pad = dp(20);
     content.setPadding(pad, pad, pad, pad);
 
-    TextView heading = text("Kanta-Connect", 20, GOLD);
+    TextView heading = text("Kanta-Connect", 20, ACCENT);
     heading.setTypeface(null, android.graphics.Typeface.BOLD);
     content.addView(heading);
     content.addView(text(info.endpoint(), 15, Color.WHITE));
@@ -848,7 +843,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     LinearLayout content = column();
     content.setPadding(dp(24), dp(16), dp(24), dp(16));
 
-    TextView title = text("Pitch Settings", 20, GOLD);
+    TextView title = text("Pitch Settings", 20, ACCENT);
     title.setTypeface(null, android.graphics.Typeface.BOLD);
     title.setGravity(android.view.Gravity.CENTER);
     content.addView(title);
@@ -867,7 +862,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     sensSeek.setProgress((int) ((currentSens - 0.1f) / 2.9f * 200));
     content.addView(sensSeek);
 
-    TextView sensValue = text(String.format("%.2f", currentSens), 18, GOLD);
+    TextView sensValue = text(String.format("%.2f", currentSens), 18, ACCENT);
     sensValue.setGravity(android.view.Gravity.CENTER);
     content.addView(sensValue);
 
@@ -1005,6 +1000,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     monitorReading = null;
     scoreReading = null;
     nowPlayingScreen = null;
+    String legacyTitle = legacyDestinationTitle();
+    if (legacyTitle != null) {
+      String tag = "kanta.legacy." + tab.toLowerCase(Locale.ROOT).replace(' ', '-') + ".back";
+      body.addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
+          this, legacyTitle, "Back to Home", tag, v -> navigateHome()));
+    }
     if (!"Home".equals(tab) && !isReferenceDestination(tab)) {
       body.addView(text(session.message, 13, CYAN));
       body.addView(button("YouTube video (online)", this::openYouTubeVideo));
@@ -1058,6 +1059,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         break;
       default:
         control();
+    }
+  }
+
+  private String legacyDestinationTitle() {
+    switch (tab) {
+      case "My Set": return "My Set";
+      case "Scenic": return "Scenic";
+      case "Realm": return "Realm";
+      case "Control": return "Settings";
+      case "Loop": return "Party Mode";
+      default: return null;
     }
   }
 
@@ -1622,43 +1634,43 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void singGroup() {
     body.addView(groupScreen("Sing", "What do you want to sing?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("find-song", "Find a song", "KANTA, YouTube or Local", "⌕"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("my-songs", "My songs", "My Set and playlists", "♫"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("favorites", "Favorites", "Saved songs", "★"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("recent", "Recent", "Recently played", "↺"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("queue", "Queue", "Up next", "☷"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("youtube", "YouTube", "Optional online video", "▶")
+      new ph.kanta.reborn.ui.GroupScreen.Item("find-song", "Find a song", "KANTA, YouTube or Local", ph.kanta.reborn.R.drawable.kanta_search_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("my-songs", "My songs", "My Set and playlists", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("favorites", "Favorites", "Saved songs", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("recent", "Recent", "Recently played", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("queue", "Queue", "Up next", ph.kanta.reborn.R.drawable.kanta_queue_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("youtube", "YouTube", "Optional online video", ph.kanta.reborn.R.drawable.kanta_youtube_color)
     }));
   }
 
   private void performanceGroup() {
     body.addView(groupScreen("Performance", "Help me while I’m singing.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("now-playing", "Now Playing", "Playback controls", "▶"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("lyrics", "Lyrics", "Follow along while singing", "▤"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("voice", "Voice", "Microphone and hear my voice", "♫"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("key-tempo", "Key & Tempo", "Fit the song to your voice", "↕"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("coach", "Singing Coach", "Scoring and practice", "✦")
+      new ph.kanta.reborn.ui.GroupScreen.Item("now-playing", "Now Playing", "Playback controls", ph.kanta.reborn.R.drawable.kanta_play_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("lyrics", "Lyrics", "Follow along while singing", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("voice", "Voice", "Microphone and hear my voice", ph.kanta.reborn.R.drawable.kanta_microphone_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("key-tempo", "Key & Tempo", "Fit the song to your voice", ph.kanta.reborn.R.drawable.kanta_pitch_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("coach", "Singing Coach", "Scoring and practice", ph.kanta.reborn.R.drawable.kanta_microphone_color)
     }));
   }
 
   private void experienceGroup() {
     body.addView(groupScreen("Experience", "How should your karaoke session look and feel?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("background", "Background", "Choose your stage", "▧"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("camera", "Camera", "Add a live preview", "▣"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("effects", "Effects", "Stage and voice sound", "✧"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("scenic", "Scenic", "Animated stage scenes", "◈"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("realm", "Realm", "Ambient stage mood", "◎"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("party", "Party Mode", "Between-song music and sounds", "🎉"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("display", "Display", "Fullscreen and external stage", "▣")
+      new ph.kanta.reborn.ui.GroupScreen.Item("background", "Background", "Choose your stage", ph.kanta.reborn.R.drawable.kanta_scenic_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("camera", "Camera", "Add a live preview", ph.kanta.reborn.R.drawable.kanta_visuals_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("effects", "Effects", "Stage and voice sound", ph.kanta.reborn.R.drawable.kanta_microphone_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("scenic", "Scenic", "Animated stage scenes", ph.kanta.reborn.R.drawable.kanta_scenic_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("realm", "Realm", "Ambient stage mood", ph.kanta.reborn.R.drawable.kanta_scenic_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("party", "Party Mode", "Between-song music and sounds", ph.kanta.reborn.R.drawable.kanta_more_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("display", "Display", "Fullscreen and external stage", ph.kanta.reborn.R.drawable.kanta_visuals_color)
     }));
   }
 
   private void moreGroup() {
     body.addView(groupScreen("More", "Advanced settings and tools.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("settings", "Settings", "Advanced voice and app settings", "⚙"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", "⌘"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", "⌁"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", "?")
+      new ph.kanta.reborn.ui.GroupScreen.Item("settings", "Settings", "Advanced voice and app settings", ph.kanta.reborn.R.drawable.kanta_settings_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", ph.kanta.reborn.R.drawable.kanta_remote_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", ph.kanta.reborn.R.drawable.kanta_settings_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", ph.kanta.reborn.R.drawable.kanta_more_color)
     }));
   }
 
@@ -1797,7 +1809,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 session.publish();
               });
       option.setEnabled(session.monitor.enabled());
-      if (session.monitor.mode() == value) option.setTextColor(GOLD);
+      if (session.monitor.mode() == value) option.setTextColor(ACCENT);
       addWeighted(effects, option);
     }
     Button correction =
@@ -1897,7 +1909,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 + "\n"
                 + result,
             15,
-            GOLD);
+            ACCENT);
     label.setTag("kanta.score.last");
     body.addView(label);
   }
@@ -1919,7 +1931,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(voiceSettings);
     lastScore();
     if (voiceExpanded) voiceControls();
-    body.addView(text("Sound & pace", 18, GOLD));
+    body.addView(text("Sound & pace", 18, ACCENT));
     LinearLayout tuning = row();
     addWeighted(
         tuning,
@@ -1967,7 +1979,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           }
         });
     body.addView(volume);
-    body.addView(text("Advanced settings", 18, GOLD));
+    body.addView(text("Advanced settings", 18, ACCENT));
     body.addView(text("Song discovery is available from Sing → Find a song.", 14, 0xFFAFB8D0));
   }
 
@@ -1995,7 +2007,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               () -> {
                 if (token != searchGeneration || target != results || isDestroyed()) return;
                 target.removeAllViews();
-                target.addView(text(count + " matching songs", 13, GOLD));
+                target.addView(text(count + " matching songs", 13, ACCENT));
                 for (Song s : found) {
                   LinearLayout item = row();
                   TextView name =
@@ -2022,7 +2034,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void queue() {
-    body.addView(text("Up Next · " + session.queue.snapshot().size(), 20, GOLD));
+    body.addView(text("Up Next · " + session.queue.snapshot().size(), 20, ACCENT));
     int n = 0;
     for (ReservationQueue.Entry e : session.queue.snapshot()) {
       if (n >= queueLimit) break;
@@ -2050,7 +2062,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void mySet() {
-    body.addView(text("My Set", 22, Color.WHITE));
     Button importButton =
         button(
             session.importing ? "Importing…" : "Add music or SoundFont",
@@ -2072,7 +2083,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(folder);
     if (session.importing) body.addView(button("Cancel import", session::cancelImports));
     body.addView(text("Active SoundFont · " + session.soundFontName, 14, CYAN));
-    body.addView(text("SoundFonts", 20, GOLD));
+    body.addView(text("SoundFonts", 20, ACCENT));
     for (LibraryRepository.SoundFontEntry bank : session.soundFonts) {
       LinearLayout item = row();
       item.addView(
@@ -2085,7 +2096,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     body.addView(
         text(
-            "Imported MIDI/KAR and audio", 20, GOLD));
+            "Imported MIDI/KAR and audio", 20, ACCENT));
     List<Song> importedSongs = new ArrayList<>();
     for (Song song : session.songs) if (!song.starter) importedSongs.add(song);
     if (importedSongs.isEmpty()) {
@@ -2118,11 +2129,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(button("Save played songs as Favorites", () -> nameSet(true)));
     body.addView(button("Export private Songbook", () -> export(true)));
     body.addView(button("Export song list (CSV)", () -> export(false)));
-    body.addView(text("Saved sets", 20, GOLD));
+    body.addView(text("Saved sets", 20, ACCENT));
     for (LibraryRepository.SavedSet set : session.savedSets)
       body.addView(
           button(set.name + " · " + set.songs.size() + " songs", () -> session.loadSet(set)));
-    body.addView(text("Original starter songs", 20, GOLD));
+    body.addView(text("Original starter songs", 20, ACCENT));
     for (int i = 0; i < LibraryRepository.STARTERS.length; i++) {
       final String id = "starter:" + LibraryRepository.STARTERS[i];
       boolean present = session.songs.stream().anyMatch(s -> s.id.equals(id));
@@ -2455,7 +2466,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void loop() {
-    body.addView(text("Loop & party sounds", 22, GOLD));
+    body.addView(text("Loop & party sounds", 22, ACCENT));
     body.addView(
         text(
             "Choose an imported MP3/WAV for between-song music. It stops for karaoke and when you"
@@ -2486,7 +2497,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         "Party sound volume",
         session.party.sfxVolume,
         value -> session.partyVolumes(value, session.party.loopVolume));
-    body.addView(text("Original synthesized party sounds", 18, GOLD));
+    body.addView(text("Original synthesized party sounds", 18, ACCENT));
     body.addView(button("Stop all party audio", session::stopParty));
     for (int i = 0; i < PartySounds.TITLES.size(); i++) {
       final int slot = i;
@@ -2542,7 +2553,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void volumeControl(
       String title, float initial, java.util.function.Consumer<Float> apply) {
-    body.addView(text(title, 16, GOLD));
+    body.addView(text(title, 16, ACCENT));
     SeekBar bar = new SeekBar(this);
     bar.setMax(100);
     bar.setProgress(Math.round(initial * 100));
@@ -2561,7 +2572,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void realm() {
-    body.addView(text("Realm", 22, GOLD));
     body.addView(
         text(
             "Animated lights behind your lyrics. Turn this off for a still stage.",
@@ -2574,7 +2584,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               session.realm = !session.realm;
               session.publish();
             }));
-    body.addView(text("Lyric size", 18, GOLD));
+    body.addView(text("Lyric size", 18, ACCENT));
     SeekBar size = new SeekBar(this);
     size.setMax(75);
     size.setProgress(Math.round((session.lyricScale - .75f) * 100));
@@ -3032,7 +3042,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     LinearLayout content = column();
     int pad = dp(20);
     content.setPadding(pad, pad, pad, pad);
-    TextView heading = text("App update", 20, GOLD);
+    TextView heading = text("App update", 20, ACCENT);
     heading.setTypeface(null, android.graphics.Typeface.BOLD);
     content.addView(heading);
     content.addView(

@@ -6,8 +6,8 @@ import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import ph.kanta.reborn.ui.components.KantaIconButton;
 import ph.kanta.reborn.ui.components.KantaProgressBar;
+import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaTransportControls;
 
 public class KantaFullscreenStage extends LinearLayout {
@@ -40,23 +40,8 @@ public class KantaFullscreenStage extends LinearLayout {
     build();
   }
   private void build() {
-    LinearLayout top = new LinearLayout(context);
-    top.setOrientation(HORIZONTAL);
-    top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding((int)(16*density),(int)(10*density),(int)(16*density),(int)(4*density));
-    KantaIconButton exit = new KantaIconButton(context);
-    exit.setText("\u2190"); exit.setTextSize(16);
-    exit.setOnClickListener(v -> { if (listener != null) listener.onExitFullscreen(); });
-    TextView stageTitle = new TextView(context);
-    stageTitle.setText("Fullscreen Stage");
-    stageTitle.setTextSize(16);
-    stageTitle.setTypeface(null, Typeface.BOLD);
-    stageTitle.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
-    LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    sp.weight = 1;
-    stageTitle.setLayoutParams(sp);
-    top.addView(exit); top.addView(stageTitle);
-    addView(top);
+    addView(new KantaScreenHeader(context, "Fullscreen Stage", "Exit fullscreen stage",
+        "kanta.fullscreen.back", v -> { if (listener != null) listener.onExitFullscreen(); }));
     LinearLayout stage = new LinearLayout(context);
     stage.setOrientation(VERTICAL);
     stage.setGravity(Gravity.CENTER);

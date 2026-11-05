@@ -5,6 +5,8 @@ import android.content.*;
 import android.graphics.Bitmap;
 import android.os.*;
 import android.view.*;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import java.io.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -54,6 +56,32 @@ public final class RuntimeChecks extends Instrumentation {
     return false;
   }
 
+  private boolean containsImageAsset(View view) {
+    if (view instanceof ImageView && ((ImageView) view).getDrawable() != null) return true;
+    if (view instanceof ViewGroup) {
+      ViewGroup group = (ViewGroup) view;
+      for (int i = 0; i < group.getChildCount(); i++)
+        if (containsImageAsset(group.getChildAt(i))) return true;
+    }
+    return false;
+  }
+
+  private void checkIconTile(View view, String label) {
+    check(view != null && view.isClickable(), label + " tile is not clickable");
+    check(containsImageAsset(view), label + " tile is missing its themed icon");
+    check(view.getContentDescription() != null, label + " tile is missing its accessible label");
+  }
+
+  private void checkIconImageButton(View view, String label) {
+    check(view instanceof ImageButton, label + " is not an image button");
+    check(((ImageButton) view).getDrawable() != null, label + " icon is missing");
+    check(view.getContentDescription() != null, label + " is missing its accessible label");
+  }
+
+  private void checkIconBack(View view, String label) {
+    checkIconImageButton(view, label + " back control");
+  }
+
   private boolean clickText(View view, String text) {
     if (view instanceof android.widget.Button
         && ((android.widget.Button) view).getText().toString().equals(text))
@@ -92,6 +120,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View search = activity.getWindow().getDecorView().findViewWithTag("kanta.group.find-song");
         check(search != null, "Sing Find a song action missing");
+        checkIconTile(search, "Find a song");
         search.performClick();
       });
       await(
@@ -101,6 +130,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.search.back");
         check(back != null, "Search back control missing");
+        checkIconBack(back, "Search");
         back.performClick();
       });
       await(
@@ -117,6 +147,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View queue = activity.getWindow().getDecorView().findViewWithTag("kanta.group.queue");
         check(queue != null, "Sing Queue action missing");
+        checkIconTile(queue, "Queue");
         queue.performClick();
       });
       await(
@@ -126,6 +157,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue.back");
         check(back != null, "Queue back control missing");
+        checkIconBack(back, "Queue");
         back.performClick();
       });
       await(
@@ -141,6 +173,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View pitch = activity.getWindow().getDecorView().findViewWithTag("kanta.group.key-tempo");
         check(pitch != null, "Performance Key & Tempo action missing");
+        checkIconTile(pitch, "Key & Tempo");
         pitch.performClick();
       });
       await(
@@ -163,6 +196,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.pitch-tempo.back");
         check(back != null, "Pitch & Tempo back control missing");
+        checkIconBack(back, "Pitch & Tempo");
         back.performClick();
       });
       await(
@@ -178,6 +212,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View visuals = activity.getWindow().getDecorView().findViewWithTag("kanta.group.background");
         check(visuals != null, "Experience Background action missing");
+        checkIconTile(visuals, "Background");
         visuals.performClick();
       });
       await(
@@ -208,6 +243,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View mic = activity.getWindow().getDecorView().findViewWithTag("kanta.group.voice");
         check(mic != null, "Performance Voice action missing");
+        checkIconTile(mic, "Voice");
         mic.performClick();
       });
       await(
@@ -227,7 +263,10 @@ public final class RuntimeChecks extends Instrumentation {
       });
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice.back");
-        if (back != null) back.performClick();
+        if (back != null) {
+          checkIconBack(back, "Mic & Voice");
+          back.performClick();
+        }
         else {
           View top = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice");
           check(top != null, "Mic & Voice destination disappeared unexpectedly");
@@ -285,10 +324,20 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.now-playing.stage") != null),
           "Now Playing did not mount the live StageSurface");
+      runOnMainSync(() -> {
+        for (String tag : new String[] {
+            "kanta.transport.shuffle", "kanta.transport.previous", "kanta.transport.play-pause",
+            "kanta.transport.next", "kanta.transport.repeat"
+        }) {
+          View control = activity.getWindow().getDecorView().findViewWithTag(tag);
+          checkIconImageButton(control, "Now Playing transport " + tag);
+        }
+      });
       capture("now_playing_screen.png", "kanta.screen.now-playing");
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing.back");
         check(back != null, "Now Playing back control missing");
+        checkIconBack(back, "Now Playing");
         back.performClick();
       });
       await(() -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
@@ -404,6 +453,11 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party") != null,
           "Experience group did not expose Party Mode");
       runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party").performClick());
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.loop.back") != null,
+          "Party Mode did not expose the shared destination header");
+      runOnMainSync(() -> checkIconBack(
+          activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.loop.back"),
+          "Party Mode"));
       runOnMainSync(
           () -> check(
               clickText(activity.getWindow().getDecorView(), "Sing"),
@@ -420,6 +474,10 @@ public final class RuntimeChecks extends Instrumentation {
               && contains(activity.getWindow().getDecorView(), "ACTIVE")
               && contains(activity.getWindow().getDecorView(), "Use"),
           "My Set did not show imported songs and SoundFont actions");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.my-set.back");
+        checkIconBack(back, "My Set");
+      });
       capture("my-set-imported-library.png");
       runOnMainSync(
           () -> check(

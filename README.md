@@ -35,6 +35,10 @@ Download pages under `apps/web/` (`ios-download.html`, `android.html`, `download
 
 The public website retains Google Analytics (`G-L0QV01MWR4`) and Google AdSense (`ca-pub-6290349358884298`) behind an explicit optional-consent choice. Visitors can accept, reject or later change their choice. The private browser Songbook is excluded. These integrations are website-only: neither native app bundles the website scripts or loads website ads. Ad delivery remains subject to Google's publisher approval and account configuration; see [website operations](apps/web/README.md) and [privacy](apps/web/privacy.html).
 
+## Website visual consistency
+
+All ten website routes use one shared dark KANTA theme, color/spacing tokens, primary navigation, brand mark and download action from `apps/web/style.css`. The private Songbook keeps its printed-paper catalog treatment inside the same site shell.
+
 ## Website crawler and scraping defense
 
 The public site declares an AI-training opt-out and refuses the declared AI training, data-mining and SEO-crawler user agents at two layers: a `routes` refusal in `apps/web/vercel.json` that also covers static assets, and the request-time gate in `apps/web/api/page.js`. Search-engine indexing is deliberately preserved, live-user AI fetchers stay allowed, and `robots.txt` carries the canonical sitemap plus a `Content-Signal` preference. The `X-Robots-Tag: noai, noimageai` preference is set twice on purpose: the `vercel.json` headers rule reaches static responses, while the renderer sets it on the HTML routes, because a rewrite to the function replaces the response. `robots.txt` is a declared policy, not an enforcement mechanism, and this is not claimed to make the site unscrapable. The token list is deliberately duplicated across the three files and `tools/verify-website.py` fails when they drift apart. Verified live on 2026-11-01: `/robots.txt` serves the policy, a declared crawler receives `403` on both an HTML route and a static asset, `Googlebot` and a normal browser still receive the rendered page, and `X-Robots-Tag` is present on both static and rendered responses. See [scraping defense](docs/WEBSITE_SCRAPING_DEFENSE.md).
@@ -60,9 +64,12 @@ the KANTA dark entertainment design system against the supplied UI concept:
   media rows with Sing action), Queue (count, items, Add Songs CTA), Pitch & Tempo (key/tempo cards),
   Mic & Voice (mic toggle, input level, reverb/echo, voice FX, coach), Visuals (Background/Camera/
   Effects tabs with thumbnail grid), Fullscreen Stage (clean stage with lyrics and controls)
-- **Reusable components**: KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar,
-  KantaStepper, KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow,
-  KantaTransportControls
+- **Consistent destinations**: shared KantaScreenHeader app bars and KANTA vector icons across the
+  goal menus, search, queue, controls and playback surfaces; pill-style source tabs and icon-led
+  category cards use the same palette as Home
+- **Reusable components**: KantaCard, KantaButton, KantaIconButton, KantaImageButton,
+  KantaScreenHeader, KantaSearchBar, KantaProgressBar, KantaStepper, KantaSectionHeader,
+  KantaTabSelector, KantaSongArtwork, KantaMediaRow, KantaTransportControls
 
 The UI refactor is presentation-only. All playback, queue, persistence, sensor, companion and
 playback logic remains owned by `SessionController` and `StagePresenterImpl`; no backend behavior is

@@ -519,3 +519,22 @@ CI ASan found a heap-buffer-overflow in tsf_voice_interpolate: the Catmull-Rom i
 ## OTA/versioning reconstruction boundary
 
 The Android OTA feed is a release-provenance surface. `tools/verify-ota-publication.py` is authoritative for metadata and signer continuity; `tools/prepare-update-feed.py` consumes its generated `apk-metadata.json`. Do not restore the former Gradle-source scraping or mutable release-asset behavior.
+
+## 2026-11-04 — Website visual consistency (local candidate)
+
+All ten website routes now share the same KANTA theme tokens, header brand mark, single primary navigation, Download App action and theme stylesheet. The homepage's duplicate logo/navigation shell was aligned with the other routes, and its narrow-screen device mockup no longer forces horizontal page overflow. The private Songbook keeps its intentionally paper-like catalog pages inside the common dark site shell. Local validation passed the website verifier, branding checks and all 134 Python tool tests; a local browser check at 430 px confirmed the shared header and no document-level horizontal overflow on all ten pages. Node/Vercel validation and production visual acceptance were not available or claimed; this change is not deployed.
+
+## 2026-11-04 — Android destination UI consistency (local candidate)
+
+Non-home Android page destinations now share a reusable KantaScreenHeader with accessible icon back
+controls and consistent action buttons. Goal-menu tiles use supplied KANTA vector assets and
+descriptive labels instead of Unicode/emoji glyphs; search tabs, search affordances, queue actions
+and Now Playing transport buttons use themed surfaces and drawable icons. The legacy MainActivity
+button factory and accent colors now use KantaTheme as well. This is presentation-only: Home and
+the SessionController/StagePresenterImpl ownership contracts are unchanged.
+
+Android runtime instrumentation now checks themed goal-card icons, accessible destination back
+controls and drawable transport icons. Source inspection and repository static checks are the only
+local evidence: Java/Android SDK tools are unavailable here, so no Android compile, test execution,
+APK build, emulator/device acceptance, signing or release is claimed. Exact-head hosted Android
+validation remains required.

@@ -2,6 +2,10 @@
 
 Static first-party pages recovered from the captured October 15 website evidence. Android and iOS remain separate native applications under their own directories.
 
+## Shared visual system
+
+Every public route, including the private `/songbook` reader, uses the shared site header and the dark KANTA theme in `style.css`. Theme colors, content width, page gutters and card surfaces are defined as shared CSS tokens; the primary nav, brand mark and Download App action are consistent across routes. `songbook.css` retains the paper appearance of the printed catalog itself, while its site shell, form controls and unlock card follow the shared theme. Keep new route styling on these shared tokens and components.
+
 The Vercel project root is `apps/web`. Public HTML routes are delivered through `api/page.js`, which creates a cryptographically random per-response nonce and a matching Content Security Policy. The renderer keeps HTML responses private/no-store and excludes the private `/songbook` route from third-party integrations. `vercel.json` maps public pages to the request-time handler; preview verification must confirm that static-file routing cannot bypass it.
 
 Google Analytics (`G-L0QV01MWR4`) and Google AdSense (`ca-pub-6290349358884298`) load only after the visitor explicitly accepts optional cookies. The consent choice can be rejected, changed or revoked through the persistent Privacy choices control. The existing `ads.txt` publisher declaration is retained. This code enables the website-side integration only; actual ad delivery still depends on Google's publisher approval, Auto Ads configuration and any applicable Google consent-platform requirements. No Google analytics or advertising script is bundled in either native app. The private Songbook is excluded from both integrations.

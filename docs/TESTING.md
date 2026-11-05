@@ -43,7 +43,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 
 ## Website route and responsive navigation contract
 
-The website validation job runs `tools/verify-website.py` and `tools/tests/test_website_security_contract.py`. These checks cover all ten public routes, local links and anchors, route-specific CSP, verified download provenance, the shared six-link primary navigation, visible wrapping behavior at narrow viewports, adjacent duplicate feature headings, and stylesheet source hygiene. After a production deployment, inspect the canonical Vercel alias and affected routes; a successful build/deploy alone does not prove mobile usability.
+The website validation job runs `tools/verify-website.py` and `tools/tests/test_website_security_contract.py`. These checks cover all ten public routes, their shared theme stylesheet and header (brand, single six-link primary navigation and Download App action), theme tokens, local links and anchors, route-specific CSP, verified download provenance, visible nav wrapping at narrow viewports, adjacent duplicate feature headings, and stylesheet source hygiene. After a production deployment, inspect the canonical Vercel alias and affected routes; a successful build/deploy alone does not prove mobile usability.
 
 ## Android lyric-stage animation checks
 
@@ -517,19 +517,22 @@ owned by `SessionController` and `StagePresenterImpl`.
 ### What is tested
 
 - Design tokens (`KantaTheme`) expose the specified color values, radii and gradient policy
-- Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`,
-  `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`,
-  `KantaMediaRow`, `KantaTransportControls`) instantiate with correct colors, radii and states
+- Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaImageButton`,
+  `KantaScreenHeader`, `KantaSearchBar`, `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`,
+  `KantaTabSelector`, `KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`) instantiate
+  with correct colors, radii and states
 - Screens (`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
   `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`)
   wire their `Listener` callbacks into `MainActivity`, which delegates to existing backend methods
+- Android runtime checks require themed drawable icons and accessible labels on goal cards and
+  destination back controls, and image-based icons on all Now Playing transport controls
 - Browser remote restyling preserves all 22 element IDs queried by `remote.js` and keeps the wire
   protocol, action allowlist, pairing flow and fingerprint verification unchanged
 
 ### What is NOT tested by these checks
 
-- Canvas/Surface rendering, StaticLayout, ValueAnimator or emoji rendering (covered by the Android
-  emulator runtime instrumentation gate)
+- Canvas/Surface rendering, StaticLayout, ValueAnimator and drawable rendering (covered by the
+  Android emulator runtime instrumentation gate)
 - Visual, reduced-motion, APK/lint and emulator acceptance (separate gates on the Android
   validation workflow)
 - Device acceptance (remains open)

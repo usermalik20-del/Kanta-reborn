@@ -209,14 +209,20 @@ the KANTA dark entertainment design system against the supplied UI concept:
   media rows with Sing action), Queue (count, items, Add Songs CTA), Pitch & Tempo (key/tempo
   cards), Mic & Voice (mic toggle, input level, reverb/echo, voice FX, coach), Visuals
   (Background/Camera/Effects tabs with thumbnail grid), Fullscreen Stage (clean stage with lyrics)
-- **Components**: KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar,
-  KantaStepper, KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow,
-  KantaTransportControls
+- **Consistent destinations**: shared KantaScreenHeader app bars, themed vector icons and pill-style
+  source tabs unify goal menus, search, queue, controls and playback surfaces with Home
+- **Components**: KantaCard, KantaButton, KantaIconButton, KantaImageButton, KantaScreenHeader,
+  KantaSearchBar, KantaProgressBar, KantaStepper, KantaSectionHeader, KantaTabSelector,
+  KantaSongArtwork, KantaMediaRow, KantaTransportControls
 
 This is a presentation-only refactor. All playback, queue, persistence, sensor, companion and
 playback logic remains owned by `SessionController` and `StagePresenterImpl`; no backend behavior is
 duplicated or replaced. The existing workspace/StagePresenterImpl/transport/toolbar/body structure
 is preserved; the new screens are presented as an overlay via `contentContainer`.
+
+`MainActivity`'s legacy destination controls use the same KantaTheme surfaces and accent colors.
+Android runtime checks verify category-card icons, accessible image back controls, and vector-based
+Now Playing transport controls; hosted emulator acceptance remains a separate validation gate.
 
 The browser remote (`apps/android/app/src/main/assets/companion/`) is restyled with the same KANTA
 design system: responsive 3-column desktop layout collapsing below 1000px, cyan active states, and

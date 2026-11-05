@@ -61,21 +61,9 @@ public final class KantaVisualsScreen extends LinearLayout {
   private int dp(int value) { return (int) (value * density); }
 
   private void build() {
-    LinearLayout top = new LinearLayout(context);
-    top.setOrientation(HORIZONTAL);
-    top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding(dp(16), dp(12), dp(16), dp(8));
-    ph.kanta.reborn.ui.components.KantaIconButton back =
-        new ph.kanta.reborn.ui.components.KantaIconButton(context);
-    back.setText("\u2190");
-    back.setTextSize(18);
-    back.setTag("kanta.screen.visuals.back");
-    back.setContentDescription("Back to Home");
-    back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    top.addView(back);
-    top.addView(KantaTheme.titleText(context, "Visuals", 20),
-        new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
-    addView(top);
+    addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
+        context, "Visuals", "Back to Home", "kanta.screen.visuals.back",
+        v -> { if (listener != null) listener.onBack(); }));
 
     LinearLayout tabs = new LinearLayout(context);
     tabs.setOrientation(HORIZONTAL);

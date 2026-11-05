@@ -2,18 +2,22 @@ package ph.kanta.reborn.ui;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
-import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import ph.kanta.reborn.ui.components.KantaScreenHeader;
 
 /** Goal-oriented landing page for one primary KANTA user group. */
 public final class GroupScreen extends LinearLayout {
   public interface Listener { void onAction(String action); void onBack(); }
   public static final class Item {
-    public final String action, title, detail, icon;
-    public Item(String action, String title, String detail, String icon) {
-      this.action = action; this.title = title; this.detail = detail; this.icon = icon;
+    public final String action, title, detail;
+    public final int iconResource;
+    public Item(String action, String title, String detail, int iconResource) {
+      this.action = action; this.title = title; this.detail = detail; this.iconResource = iconResource;
     }
   }
   private final Context context; private final float density; private final Listener listener;
@@ -24,33 +28,56 @@ public final class GroupScreen extends LinearLayout {
   }
   private int dp(int value) { return (int) (value * density + 0.5f); }
   private void build(String title, String purpose, Item[] items) {
-    LinearLayout header = new LinearLayout(context); header.setGravity(Gravity.CENTER_VERTICAL);
-    header.setPadding(dp(12), dp(12), dp(12), dp(4));
-    Button back = new Button(context); back.setText("←"); back.setAllCaps(false); back.setTextSize(18);
-    back.setTextColor(KantaTheme.TEXT_PRIMARY); back.setBackground(KantaTheme.backgroundDrawable(
-        KantaTheme.SURFACE, 18, KantaTheme.BORDER, 1, density));
-    back.setContentDescription("Back to Home"); back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    header.addView(back, new LayoutParams(dp(64), dp(48)));
-    TextView heading = KantaTheme.titleText(context, title, 24); heading.setTypeface(null, Typeface.BOLD);
-    heading.setPadding(dp(12), 0, 0, 0); header.addView(heading, new LayoutParams(0, -2, 1)); addView(header);
+    addView(new KantaScreenHeader(context, title, "Back to Home", "kanta.group.back",
+        v -> { if (listener != null) listener.onBack(); }));
     TextView description = KantaTheme.bodyText(context, purpose, 14); description.setTextColor(KantaTheme.TEXT_SECONDARY);
     description.setPadding(dp(24), dp(2), dp(24), dp(14)); addView(description);
     LinearLayout grid = new LinearLayout(context); grid.setOrientation(VERTICAL); grid.setPadding(dp(12), 0, dp(12), dp(16));
     for (int index = 0; index < items.length; index += 2) {
       LinearLayout row = new LinearLayout(context);
       for (int column = 0; column < 2; column++) { int itemIndex = index + column; if (itemIndex >= items.length) break;
-        Button card = itemButton(items[itemIndex]); LayoutParams params = new LayoutParams(0, dp(92), 1);
+        LinearLayout card = itemButton(items[itemIndex]); LayoutParams params = new LayoutParams(0, dp(116), 1);
         params.setMargins(dp(4), dp(4), dp(4), dp(4)); row.addView(card, params); }
       grid.addView(row, new LayoutParams(-1, -2));
     }
     addView(grid);
   }
-  private Button itemButton(Item item) {
-    Button card = new Button(context); card.setAllCaps(false); card.setText(item.icon + "  " + item.title + "\n" + item.detail);
-    card.setTextSize(13); card.setGravity(Gravity.CENTER); card.setTextColor(KantaTheme.TEXT_PRIMARY);
-    card.setTypeface(null, Typeface.BOLD); card.setBackground(KantaTheme.backgroundDrawable(
-        KantaTheme.SURFACE_ELEVATED, 16, KantaTheme.BORDER, 1, density)); card.setPadding(dp(6), dp(8), dp(6), dp(8));
+  private LinearLayout itemButton(Item item) {
+    LinearLayout card = new LinearLayout(context);
+    card.setOrientation(VERTICAL);
+    card.setGravity(Gravity.CENTER);
+    card.setPadding(dp(8), dp(8), dp(8), dp(8));
+    StateListDrawable backgrounds = new StateListDrawable();
+    backgrounds.addState(new int[]{android.R.attr.state_pressed}, KantaTheme.backgroundDrawable(
+        KantaTheme.SURFACE, 16, KantaTheme.PRIMARY_CYAN, 1, density));
+    backgrounds.addState(new int[]{}, KantaTheme.backgroundDrawable(
+        KantaTheme.SURFACE_ELEVATED, 16, KantaTheme.BORDER, 1, density));
+    card.setBackground(backgrounds);
+    card.setClickable(true);
+    card.setFocusable(true);
     card.setContentDescription(item.title + ". " + item.detail); card.setTag("kanta.group." + item.action);
-    card.setOnClickListener(v -> { if (listener != null) listener.onAction(item.action); }); return card;
+    card.setOnClickListener(v -> { if (listener != null) listener.onAction(item.action); });
+
+    ImageView icon = new ImageView(context);
+    icon.setImageResource(item.iconResource);
+    icon.setContentDescription(null);
+    card.addView(icon, new LayoutParams(dp(36), dp(36)));
+
+    TextView title = KantaTheme.titleText(context, item.title, 14);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setMaxLines(1);
+    title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    LayoutParams titleParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+    titleParams.topMargin = dp(5);
+    card.addView(title, titleParams);
+
+    TextView detail = KantaTheme.bodyText(context, item.detail, 11);
+    detail.setTextColor(KantaTheme.TEXT_SECONDARY);
+    detail.setGravity(Gravity.CENTER);
+    detail.setMaxLines(1);
+    detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    card.addView(detail, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+    return card;
   }
 }

@@ -9,8 +9,7 @@
 <title>KANTA Karaoke · Built from scratch, sung by your own music library</title>
 <link rel="apple-touch-icon" sizes="180x180" href="kanta-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="kanta-icon.png">
-<link rel="stylesheet" href="style.css">
-<script defer src="/nav.js"></script>
+<link rel="stylesheet" href="/style.css">
 
 </head>
 <body id="home">
@@ -19,14 +18,9 @@
 
 <header class="site-header">
   <a class="brand" href="/" aria-label="KANTA home">
-    <img src="/kanta-brand.png" alt="KANTA" width="32" height="32" loading="eager" decoding="async">
-    <span class="brand-mark">KANTA</span>
+    <span class="brand-mark" aria-hidden="true">✦</span>KANTA
   </a>
-  <button class="nav-toggle mobile-nav-toggle" aria-expanded="false" aria-controls="site-drawer" aria-label="Open menu" id="menuToggle">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-  </button>
-  <nav id="site-drawer" class="site-drawer site-nav nav-drawer" aria-label="Main navigation">
-    <button class="close-drawer" id="closeDrawer" aria-label="Close Menu" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem;">✕</button>
+  <nav class="site-nav" aria-label="Main navigation">
     <a href="/ios-download">iPhone / iPad</a>
     <a href="/android">Android</a>
     <a href="/guide">How to Use</a>
@@ -34,17 +28,10 @@
     <a href="/songbook">My Songbook</a>
     <a href="/support">Help</a>
   </nav>
-  <nav class="site-nav nav-links" aria-label="Main navigation">
-    <a href="/ios-download">iPhone / iPad</a>
-    <a href="/android">Android</a>
-    <a href="/guide">How to Use</a>
-    <a href="/features">Features</a>
-    <a href="/songbook">My Songbook</a>
-    <a href="/support">Help</a>
-  </nav>
+  <div class="header-actions">
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
 </header>
-
-<div class="drawer-overlay" id="drawerOverlay"></div>
 
 <main id="content">
 

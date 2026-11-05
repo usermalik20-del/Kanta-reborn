@@ -8,6 +8,10 @@
 
 The public website keeps Google Analytics and Google AdSense behind explicit optional consent. `apps/web/api/page.js` owns request-time HTML delivery, per-response nonce generation and the matching CSP; `apps/web/site-consent.js` owns the visitor choice and loads `analytics.js` plus AdSense only after acceptance. The persistent choice can be changed or revoked. The private `/songbook` route is deliberately excluded from the consent injection and third-party integrations. Native iOS and Android builds remain isolated from website scripts and ad SDKs. Actual ad delivery depends on Google publisher approval, account-side Auto Ads configuration and applicable consent-platform requirements. Do not treat code deployment as proof of account approval or live ads.
 
+## Website visual system
+
+All ten website routes share the dark KANTA visual system from `apps/web/style.css`. Its CSS custom properties own the palette, content width, page gutters and card radius; the primary header, navigation, brand mark and download action are kept consistent across routes. Route-specific content can vary, but should use the shared theme and reusable components. The Songbook's rendered paper pages are an intentional content-specific treatment, not a second site shell; its controls and surrounding layout remain within the shared theme.
+
 ## Website crawler and scraping boundary
 
 The public site owns one crawler policy expressed at three enforcement points, and the three must stay consistent: `apps/web/robots.txt` declares the policy in prose and in `User-agent` groups (canonical `Sitemap:` line, `Content-Signal` preference, an allow group for search engines and live-user AI fetchers, a `Disallow: /` group for AI training and data-mining), `apps/web/vercel.json` refuses the declared user agents with a `routes` entry carrying a `has` user-agent condition and `status: 403` before the page rewrites, and `apps/web/api/page.js` applies the same classification at request time before reading the page from disk.
@@ -689,8 +693,15 @@ A single token source defines the KANTA visual language:
 
 ### Reusable components (`ph.kanta.reborn.ui.components`)
 
-`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`, `KantaProgressBar`, `KantaStepper`,
-`KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`.
+`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaImageButton`, `KantaScreenHeader`,
+`KantaSearchBar`, `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`,
+`KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`.
+
+All non-home page destinations share the same 48dp icon back affordance and typography through
+`KantaScreenHeader`. Goal menus use accessible icon-led cards, and search tabs, media actions,
+queue/playback controls and legacy `MainActivity` buttons use the same KantaTheme palette and
+pressed/disabled states. These remain view-only changes; authoritative queue, playback and stage
+ownership is unchanged.
 
 ### Screens (`ph.kanta.reborn.ui`)
 

@@ -9,8 +9,10 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TextView;
+
+import ph.kanta.reborn.R;
 
 public class KantaSearchBar extends LinearLayout {
   private final EditText input;
@@ -23,11 +25,10 @@ public class KantaSearchBar extends LinearLayout {
     this.density = context.getResources().getDisplayMetrics().density;
     setOrientation(HORIZONTAL);
     setGravity(Gravity.CENTER_VERTICAL);
-    TextView iconView = new TextView(context);
-    iconView.setText("\uD83D\uDD0E");
-    iconView.setTextSize(20);
-    iconView.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-    LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    ImageView iconView = new ImageView(context);
+    iconView.setImageResource(R.drawable.kanta_search_color);
+    iconView.setContentDescription(null);
+    LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams((int)(24*density), (int)(24*density));
     iconParams.gravity = Gravity.CENTER_VERTICAL;
     addView(iconView, iconParams);
     input = new EditText(context);
