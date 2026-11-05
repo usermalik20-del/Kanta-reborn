@@ -81,7 +81,8 @@ jobs:
         run: |
           set -euo pipefail
           apk="$(python3 -c 'from pathlib import Path; print(next(Path("verified-downloads/android").glob("*.apk")))')"
-          tag="$(python3 -c 'import json; print("v" + json.load(open("verified-downloads/android/apk-metadata.json"))["versionName"].split("-")[0] + "-preview-" + "${SOURCE_SHA}"[:8])')"
+          version="$(python3 -c 'import json; print(json.load(open("verified-downloads/android/apk-metadata.json"))["versionName"].split("-")[0])')"
+          tag="v${version}-preview-${SOURCE_SHA:0:8}"
           digest="$(sha256sum "$apk" | cut -d' ' -f1)"
           for attempt in 1 2 3; do
             if ! gh release view "$tag" --repo "${GITHUB_REPOSITORY}" --json assets >/tmp/release.json 2>/dev/null; then

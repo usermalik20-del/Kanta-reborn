@@ -331,7 +331,7 @@ The Android reference-led UI and companion changes remain subject to the reposit
 
 ## Android OTA self-update workflow contract
 
-The `platform-download-publishing.yml` workflow now includes an Android-only step "Ensure a durable release asset for this Android build" that creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset. The existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
+The `platform-download-publishing.yml` workflow constructs the durable Android tag in shell as `v<version>-preview-<source-sha8>`; do not interpolate shell variables inside single-quoted Python snippets. It includes an Android-only step "Ensure a durable release asset for this Android build" that creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset. The existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
 
 **Contract requirements:**
 - The durable release asset creation is a **post-merge publication side effect** — every successful Android build on `main` becomes a public GitHub Release asset automatically.
