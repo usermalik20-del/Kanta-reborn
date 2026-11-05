@@ -278,7 +278,7 @@ The Android app includes a framework-free OTA update subsystem:
 
 - **Tests**: `tools/tests/test_android_update_contract.py` (9 unittest cases: schema, deterministic URL, URL policy mirror, source selection, malformed-input refusal, build identity, atomic write, no-write-on-refusal). JVM suite `apps/android/app/src/test/java/ph/kanta/reborn/core/update/UpdateContractRegressionTests.java` registered in `CoreRegressionTests` (runs in `coreRegression` task).
 
-- **CI integration** (`.github/workflows/platform-download-publishing.yml`): new Android-only step "Ensure a durable release asset for this Android build" creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset; the existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
+- **CI integration** (`.github/workflows/platform-download-publishing.yml`): new Android-only step "Ensure a durable release asset for this Android build" creates an immutable GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset; the existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
 
 - **Privacy**: "Optional Android self-update" disclosure added to all four privacy files (`apps/android/app/src/main/assets/privacy.txt`, `apps/web/privacy.html`, `apps/ios/PRIVACY.md`, `apps/ios/PublicSite/privacy.html`).
 
@@ -292,4 +292,4 @@ The Android app includes a framework-free OTA update subsystem:
 
 ### OTA versioning and signing gate
 
-CI passes `kantaVersionCode` from its monotonic workflow allocation. Release metadata comes from the built APK (`aapt`/`apksigner`) and publication fails closed unless the prior published APK digest and signer certificate verify. This preview has no device-upgrade acceptance claim; see `../../docs/OTA_UPGRADE_ACCEPTANCE.md`.
+CI passes `kantaVersionCode` from its monotonic workflow allocation. Release metadata comes from the built APK (pinned SDK `aapt`/`apksigner` paths) and publication fails closed unless the prior published APK digest and signer certificate verify. This preview has no device-upgrade acceptance claim; see `../../docs/OTA_UPGRADE_ACCEPTANCE.md`.

@@ -52,7 +52,9 @@ jobs:
           python3 tools/verify-ota-publication.py "$apk" \
             --previous-feed apps/web/updates.json \
             --output verified-downloads/android/apk-metadata.json \
-            --expected-version-code "${SOURCE_RUN_NUMBER}" --source "${SOURCE_SHA}"
+            --expected-version-code "${SOURCE_RUN_NUMBER}" --source "${SOURCE_SHA}" \
+            --aapt "$ANDROID_HOME/build-tools/35.0.0/aapt" \
+            --apksigner "$ANDROID_HOME/build-tools/35.0.0/apksigner"
       - name: Ensure an immutable durable release asset
         if: env.PLATFORM == 'android'
         env:

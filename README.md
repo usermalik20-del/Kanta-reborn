@@ -231,4 +231,4 @@ and is not part of any released build.
 
 ## OTA publication safety
 
-Android OTA publication is fail-closed. CI allocates a bounded monotonically increasing `kantaVersionCode`; metadata is extracted from the exact APK, and publication verifies the prior pinned APK digest and signer certificate. Release assets are immutable. A persistent compatible owner keystore is required; missing signing evidence blocks publication. Physical-device upgrade acceptance is **UNVERIFIED**; follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.
+Android OTA publication is fail-closed. The publisher invokes the pinned Android SDK 35.0.0 `aapt` and `apksigner` paths explicitly and parses `sdkVersion` from the standalone badging line. CI allocates a bounded monotonically increasing `kantaVersionCode`; metadata is extracted from the exact APK, and publication verifies the prior pinned APK digest and signer certificate. Release assets are immutable. A persistent compatible owner keystore is required; missing signing evidence blocks publication. Physical-device upgrade acceptance is **UNVERIFIED**; follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.

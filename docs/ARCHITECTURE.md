@@ -244,7 +244,7 @@ Generates `apps/web/updates.json` from `apps/web/downloads.json` (published andr
 
 ### CI integration (`.github/workflows/platform-download-publishing.yml`)
 
-New Android-only step "Ensure a durable release asset for this Android build" creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset; the existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
+New Android-only step "Ensure a durable release asset for this Android build" creates an immutable GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset; the existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
 
 ### Privacy
 
@@ -790,6 +790,6 @@ The Android legacy path now has a separate file-backed importer for user-supplie
 
 ## OTA publication safeguards (Android)
 
-Android version identity is taken from the exact APK produced by CI, not from Gradle source. CI passes a bounded `kantaVersionCode` allocation (the workflow run number) and the Gradle file retains only a local baseline for development. `tools/verify-ota-publication.py` extracts package/version/minSdk with `aapt` and the certificate SHA-256 with `apksigner`, then pins and re-verifies the prior feed APK before accepting signer continuity. A missing prior APK, digest mismatch, or signer change fails closed; it never generates or silently rotates a key. The feed requires verified APK metadata, a strictly increasing versionCode, and descendant source history. GitHub release assets are immutable and are never uploaded with `--clobber`.
+Android version identity is taken from the exact APK produced by CI, not from Gradle source. CI passes a bounded `kantaVersionCode` allocation (the workflow run number) and the Gradle file retains only a local baseline for development. `tools/verify-ota-publication.py` extracts package/version/minSdk with the pinned Android SDK 35.0.0 `aapt` and `apksigner` paths, then pins and re-verifies the prior feed APK before accepting signer continuity. A missing prior APK, digest mismatch, or signer change fails closed; it never generates or silently rotates a key. The feed requires verified APK metadata, a strictly increasing versionCode, and descendant source history. GitHub release assets are immutable and are never uploaded with `--clobber`.
 
 The permanent owner prerequisite is a compatible persistent Android signing key in CI. The current preview may remain publication-blocked when that key or a pinned historical APK cannot be verified. Debug-key CI output is not device-upgrade evidence.

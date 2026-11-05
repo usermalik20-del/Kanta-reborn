@@ -1,28 +1,44 @@
 #!/usr/bin/env python3
 """Fail-closed OTA APK metadata and signer continuity gate."""
 from __future__ import annotations
-import argparse, hashlib, json, re, subprocess, sys, tempfile, urllib.request
+import argparse, hashlib, json, os, re, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
-PACKAGE="ph.kanta.reborn"; HEX64=re.compile(r"[0-9a-f]{64}")
+PACKAGE="ph.kanta.reborn"; BUILD_TOOLS_VERSION="35.0.0"; HEX64=re.compile(r"[0-9a-f]{64}", re.IGNORECASE)
 class OtaError(ValueError): pass
+def _tool_path(name):
+ sdk=os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+ if not sdk: raise OtaError(f"{name} requires ANDROID_HOME or ANDROID_SDK_ROOT")
+ path=Path(sdk)/"build-tools"/BUILD_TOOLS_VERSION/name
+ if not path.is_file(): raise OtaError(f"{name} not found at pinned SDK path {path}")
+ return str(path)
 def run(cmd):
+ label=Path(cmd[0]).name
  try: r=subprocess.run(cmd,capture_output=True,text=True,check=True,timeout=60)
- except (OSError,subprocess.CalledProcessError,subprocess.TimeoutExpired) as e: raise OtaError("APK metadata command failed") from e
+ except FileNotFoundError as e: raise OtaError(f"{label} executable was not found") from e
+ except subprocess.TimeoutExpired as e: raise OtaError(f"{label} timed out while inspecting APK metadata") from e
+ except subprocess.CalledProcessError as e:
+  detail=" ".join((e.stderr or e.stdout or "").split())
+  detail=re.sub(r"(?:/|[A-Za-z]:\\)[^ ]+","<path>",detail)[:240]
+  raise OtaError(f"{label} failed with exit {e.returncode}{': '+detail if detail else ''}") from e
+ except OSError as e: raise OtaError(f"{label} could not run: {e.strerror or 'OS error'}") from e
  return r.stdout+r.stderr
 def parse_badging(text):
- line=next((x for x in text.splitlines() if x.startswith("package:")),"")
- v=dict(re.findall(r"(versionCode|versionName|name|sdkVersion)(?:=|:)'([^']*)'",line))
- if v.get("name")!=PACKAGE: raise OtaError("APK package identity is not "+PACKAGE)
- try: code=int(v["versionCode"]); sdk=int(v["sdkVersion"])
- except (KeyError,ValueError) as e: raise OtaError("aapt metadata incomplete") from e
- if code<1 or code>2100000000 or sdk<26 or not re.fullmatch(r"[A-Za-z0-9.+-]{1,64}",v.get("versionName","")): raise OtaError("APK version metadata invalid")
- return {"versionCode":code,"versionName":v["versionName"],"minSdk":sdk}
+ package_line=next((x for x in text.splitlines() if x.startswith("package:")),"")
+ v=dict(re.findall(r"(versionCode|versionName|name)(?:=|:)'([^']*)'",package_line))
+ sdk=re.search(r"^sdkVersion(?:=|:)'([^']*)'",text,re.MULTILINE)
+ if v.get("name")!=PACKAGE: raise OtaError(f"APK package identity is not {PACKAGE}")
+ if sdk: v["sdkVersion"]=sdk.group(1)
+ try: code=int(v["versionCode"]); min_sdk=int(v["sdkVersion"])
+ except (KeyError,ValueError) as e: raise OtaError("aapt badging is missing numeric versionCode or sdkVersion") from e
+ if code<1 or code>2100000000 or min_sdk<26 or not re.fullmatch(r"[A-Za-z0-9.+-]{1,64}",v.get("versionName","")): raise OtaError("APK version metadata is invalid")
+ return {"versionCode":code,"versionName":v["versionName"],"minSdk":min_sdk}
 def parse_signer(text):
  m=re.findall(r"certificate SHA-256 digest:\s*([0-9A-Fa-f]{64})",text)
  if len(m)!=1: raise OtaError("APK must have exactly one signer certificate")
  return m[0].lower()
-def inspect_apk(apk,aapt="aapt",apksigner="apksigner"):
+def inspect_apk(apk,aapt=None,apksigner=None):
  if not apk.is_file() or apk.stat().st_size<1: raise OtaError("missing or empty APK")
+ aapt=aapt or _tool_path("aapt"); apksigner=apksigner or _tool_path("apksigner")
  d=parse_badging(run([aapt,"dump","badging",str(apk)])); d["signerSha256"]=parse_signer(run([apksigner,"verify","--print-certs",str(apk)])); d["apkSha256"]=hashlib.sha256(apk.read_bytes()).hexdigest(); d["apkBytes"]=apk.stat().st_size; return d
 def previous_signer(feed,aapt,apksigner):
  a=feed.get("android")
@@ -41,7 +57,7 @@ def verify(candidate, old_feed, aapt="aapt", apksigner="apksigner"):
  if candidate.get("signerSha256")!=signer: raise OtaError("APK signer changed; refusing silent key bootstrap or rotation")
  return {**candidate,"previousSignerSha256":signer}
 def main():
- p=argparse.ArgumentParser(); p.add_argument("apk",type=Path); p.add_argument("--previous-feed",type=Path,required=True); p.add_argument("--output",type=Path,required=True); p.add_argument("--expected-version-code",type=int,required=True); p.add_argument("--source",required=True); p.add_argument("--aapt",default="aapt"); p.add_argument("--apksigner",default="apksigner"); a=p.parse_args()
+ p=argparse.ArgumentParser(); p.add_argument("apk",type=Path); p.add_argument("--previous-feed",type=Path,required=True); p.add_argument("--output",type=Path,required=True); p.add_argument("--expected-version-code",type=int,required=True); p.add_argument("--source",required=True); p.add_argument("--aapt"); p.add_argument("--apksigner"); a=p.parse_args()
  d=inspect_apk(a.apk,a.aapt,a.apksigner)
  if d["versionCode"]!=a.expected_version_code: raise OtaError("APK versionCode does not equal CI allocation")
  if not a.previous_feed.is_file(): raise OtaError("no previous APK; persistent owner signing key required before bootstrap")

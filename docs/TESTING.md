@@ -77,7 +77,7 @@ The core logic lives in `ph.kanta.reborn.core.update` and is compiled by the emp
 - **`tools/prepare-update-feed.py`**: generates `apps/web/updates.json` from `apps/web/downloads.json` (android source SHA) + `verified-downloads/android/build-info.json` (file name, sha256, bytes) + `git show <source>:apps/android/app/build.gradle` (`versionCode`/`versionName`/`minSdk`); durable `apkUrl` `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk`; `FeedError` refusal, never writes on refusal, exit 1.
 - **`tools/verify-android-runtime-package.py`**: permission assertion is now the exact set `{CAMERA, RECORD_AUDIO, INTERNET, REQUEST_INSTALL_PACKAGES}`.
 - **`apps/web/vercel.json`**: static route `^/updates\.json$` → `/updates.json`, `Cache-Control: public, max-age=0, must-revalidate`, before page rewrites.
-- **`.github/workflows/platform-download-publishing.yml`**: Android-only step creating/updating (`--clobber`) GitHub Release tag `v<version>-preview-<sha8>` with the APK as durable asset; Android runs `tools/prepare-update-feed.py` and stages `apps/web/updates.json` into the downloads commit.
+- **`.github/workflows/platform-download-publishing.yml`**: Android-only step creating an immutable GitHub Release tag `v<version>-preview-<sha8>` with the APK as durable asset; Android runs `tools/prepare-update-feed.py` and stages `apps/web/updates.json` into the downloads commit.
 
 ### Explicit non-claims
 

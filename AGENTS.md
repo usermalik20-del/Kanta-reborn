@@ -96,6 +96,10 @@ Files designated as preserved recovery artifacts must remain byte-for-byte uncha
 
 Preserve required licenses, copyrights, provenance and existing authorship records. Do not rewrite history or metadata to imply different authorship.
 
+## OTA publisher tooling
+
+The Android publisher must use the pinned SDK build-tools 35.0.0 `aapt` and `apksigner` paths. Real `aapt dump badging` output places `sdkVersion` on its own line; parser tests must represent that format.
+
 ## 6. Privacy, credentials and publication safety
 
 Never commit, publish, upload or include in fixtures, logs, screenshots, artifacts or handoff documentation:
