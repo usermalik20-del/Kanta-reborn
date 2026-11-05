@@ -1,5 +1,7 @@
 # Reconstruction validation
 
+Start with `python3 tools/preflight.py`: it selects the guards the changed paths require, prints the owner documents that must change in the same commit, and lists the cloud-only gates it cannot prove. The change-type matrix and the workflow invariants are in [Pre-flight](#pre-flight-run-the-guards-a-change-actually-needs). Each section below records why a specific guard exists; a static check passing never proves a build, a package, a simulator run or device acceptance.
+
 ## Java structure guard
 
 `tools/check-java-structure.py` (with `tools/tests/test_java_structure.py`) fails closed on method declarations opened inside another method body, catching nested-method Java errors that only a compiler would otherwise find; the Android build cannot run on the local iSH environment, so this static guard runs here and in CI.
@@ -74,14 +76,14 @@ The core logic lives in `ph.kanta.reborn.core.update` and is compiled by the emp
 
 ### Publisher tooling
 
-- **`tools/prepare-update-feed.py`**: generates `apps/web/updates.json` from `apps/web/downloads.json` (android source SHA) + `verified-downloads/android/build-info.json` (file name, sha256, bytes) + `git show <source>:apps/android/app/build.gradle` (`versionCode`/`versionName`/`minSdk`); durable `apkUrl` `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk`; `FeedError` refusal, never writes on refusal, exit 1.
+- **`tools/prepare-update-feed.py`**: generates `apps/web/updates.json` from `apps/web/downloads.json` (android source SHA) + `verified-downloads/android/build-info.json` (file name, sha256, bytes) + `git show <source>:apps/android/app/build.gradle` (`versionCode`/`versionName`/`minSdk`); durable `apkUrl` `v<version>-preview-<sha8>/KANTA-Android-preview-<sha8>.apk`; `FeedError` refusal, never writes on refusal, exit 1. The identity now comes from the exact APK (`verified-downloads/android/apk-metadata.json`), and incomplete or out-of-range metadata — including a missing, boolean or below-minimum `minSdk` — is refused with `FeedError` before any comparison, so malformed metadata cannot raise a bare `TypeError`.
 - **`tools/verify-android-runtime-package.py`**: permission assertion is now the exact set `{CAMERA, RECORD_AUDIO, INTERNET, REQUEST_INSTALL_PACKAGES}`.
 - **`apps/web/vercel.json`**: static route `^/updates\.json$` → `/updates.json`, `Cache-Control: public, max-age=0, must-revalidate`, before page rewrites.
 - **`.github/workflows/platform-download-publishing.yml`**: Android-only step creating/updating (`--clobber`) GitHub Release tag `v<version>-preview-<sha8>` with the APK as durable asset; Android runs `tools/prepare-update-feed.py` and stages `apps/web/updates.json` into the downloads commit.
 
 ### Explicit non-claims
 
-- **Feed state**: `apps/web/updates.json` holds the newest published Android build (initial entry: release `v0.10.0-preview-aaa41898`, source `aaa41898`); the publisher regenerates it after every successful Android build on `main` and the endpoint is served through the `vercel.json` routing table.
+- **Feed state**: `apps/web/updates.json` holds the newest published Android build (current entry: release `v0.10.0-preview-1f49555c`, source `1f49555c`); the publisher regenerates it after every successful Android build on `main` and the endpoint is served through the `vercel.json` routing table.
 - **`signingCertSha256`** supported by the contract but NOT yet published by feed tooling.
 - **No local JVM/Gradle build, APK, emulator, runtime or physical-device acceptance ran** (JVM cannot start on this iSH emulator: `getcpu(2)` unsupported). Java correctness is guarded by CI only (`coreRegression` + `android-validation` + `android` runtime checks).
 - The GitHub Release asset creation makes every post-merge Android build a public release asset automatically.
@@ -153,9 +155,35 @@ A `javac` parse error stops the compiler before symbol resolution, so a file tha
 
 ## Documentation synchronization gate
 
-Every pull request runs the lightweight the `documentation-sync` job in `website-validation.yml` workflow. It compares the full PR diff against `tools/check-documentation-sync.py` and fails when required documentation was not changed in the same PR. Web implementation requires `README.md`, `apps/web/README.md`, `docs/ARCHITECTURE.md` and `docs/TESTING.md`; Android requires the root and Android README plus architecture, testing and reconstruction; iOS requires the root README, `apps/ios/AGENTS.md` plus architecture, testing and reconstruction; workflow edits require the root README, `AGENTS.md`, architecture and testing; tooling changes require testing documentation. Privacy-related changes also require the platform privacy disclosure. The check verifies a substantive diff in each required file; whitespace-only edits do not satisfy the requirement. It also runs for fork pull requests with read-only permissions and no persisted checkout credentials.
+Every pull request runs the lightweight `documentation-sync` job in `website-validation.yml` workflow. It compares the full PR diff against `tools/check-documentation-sync.py` and fails when required documentation was not changed in the same PR. Web implementation requires `README.md`, `apps/web/README.md`, `docs/ARCHITECTURE.md` and `docs/TESTING.md`; Android requires the root and Android README plus architecture, testing and reconstruction; iOS requires the root README, `apps/ios/AGENTS.md` plus architecture, testing and reconstruction; workflow edits require the root README, `AGENTS.md`, architecture and testing; tooling changes require testing documentation. Privacy-related changes also require the platform privacy disclosure. The check verifies a substantive diff in each required file; whitespace-only edits do not satisfy the requirement. It also runs for fork pull requests with read-only permissions and no persisted checkout credentials.
 
 The same guard runs as a step inside existing main-branch platform and deployment jobs. It adds no extra Android, Xcode or simulator jobs. Pull requests get one small Ubuntu documentation check regardless of platform; platform build workflows retain their independent path filters. A documentation-only PR runs the documentation check without allocating native runners.
+
+## Pre-flight: run the guards a change actually needs
+
+`python3 tools/preflight.py` derives the applicable local guards from the changed paths of a change — including work that is not committed yet — and prints the owner documents it must update in the same commit. `--list` prints the plan without running anything; `--base REV` compares against another revision (default `origin/main`, then `main`, then `HEAD~1`). It reuses `tools/check-documentation-sync.py` for the documentation matrix, so the two cannot drift, and it always prints the cloud-only gates so a local pass is never mistaken for one of them. `tools/tests/test_preflight.py` pins the mapping.
+
+| Change type | Owner documents that must change in the same commit | Local guards |
+| --- | --- | --- |
+| Android implementation (`apps/android/**`, excluding `apps/android/README.md`) | `README.md`, `apps/android/README.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/RECONSTRUCTION.md` | `tools/check-java-structure.py`, `tools/check-android-workspace-contract.py`, `tools/verify-android-companion-interface.py` |
+| iOS implementation (`apps/ios/**`, excluding `apps/ios/README.md`, `apps/ios/AGENTS.md`, `apps/ios/PRIVACY.md`, `apps/ios/Docs/**`, `apps/ios/PublicSite/**`) | `README.md`, `apps/ios/AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/RECONSTRUCTION.md` | `tools/check-ios-presentation-contract.py`, `tools/verify-test-layout.py` |
+| Website implementation (`apps/web/**`, excluding `apps/web/README.md`, `apps/web/privacy.html`) | `README.md`, `apps/web/README.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/RECONSTRUCTION.md` | `tools/verify-website.py` |
+| Workflow (`.github/workflows/**`) | `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` | `tools/tests/test_workflow_path_ownership.py`, `tools/tests/test_platform_download_publishing.py`, `tools/tests/test_vercel_deploy_workflow.py` |
+| Tooling (`tools/**`) | `docs/TESTING.md` | `python3 -m unittest discover -s tools/tests -p 'test_*.py'` |
+| Privacy copy (any path containing `privacy`, or a `PrivacyInfo.xcprivacy`) | all four disclosures: `apps/web/privacy.html`, `apps/android/app/src/main/assets/privacy.txt`, `apps/ios/PRIVACY.md`, `apps/ios/PublicSite/privacy.html` | `tools/verify-website.py` |
+| Documentation only (`*.md`, `docs/**`) | none required | `git diff --check` |
+
+Every change also runs `git diff --check` and `python3 tools/check-documentation-sync.py BASE HEAD`. `tools/verify-android-runtime-package.py` needs `ANDROID_HOME` and runs only in the Android runtime job; the `node --test` files do not execute in the authoring environment. A passing preflight is a local static result only: it is not a Gradle build, an APK, an IPA, a simulator walkthrough, a signed artifact, a published release or device acceptance.
+
+### Workflow invariants a change must not break
+
+- Trigger events, path filters and branch filters are ownership boundaries. Never add, remove, widen or narrow one to make a run easier to reach.
+- Keep third-party actions pinned to full commit SHAs, as every current workflow does.
+- Workflow-level `permissions` stays least privilege (`contents: read`); write scopes belong only on the publishing job that needs them (`platform-download-publishing.yml`).
+- Every job keeps a `timeout-minutes`. Validation workflows keep `cancel-in-progress: true`; the publisher and the Vercel deploy keep it `false` so a release is never cancelled by a newer push.
+- Never add `continue-on-error` to a gate, and never make a failing gate non-blocking. A gate that cannot fail should be deleted, not silenced.
+- Automation must not be able to abort itself. A step under `set -o pipefail` that answers one question must ask the API once (`--jq '[...] | first'`) instead of piping a list into `head`, which can fail the whole triage step with SIGPIPE exactly when it is needed.
+- The durable release tag format `v<version>-preview-<sha8>`, the `downloads.json`/`updates.json` publication contract, exact-SHA provenance and the publisher's `fetch-depth: 0` ancestry check are fixed. Workflow edits require the root `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md` and this file in the same commit.
 
 
 
@@ -205,11 +233,11 @@ Pitch Settings UI test coverage added to `RuntimeChecks`: workspace accessory ac
 
 
 
-Android emulator startup uses an explicit shared AVD directory for avdmanager and emulator. The helper detects early process exits, bounds boot/ADB/instrumentation, always collects diagnostics and retires the emulator. Use `owner-approved-android-validation` for Android-only repairs; `owner-approved-validation` still runs both native platforms. No source tests are skipped by the focused label.
+Android emulator startup uses an explicit shared AVD directory for avdmanager and emulator. The helper detects early process exits, bounds boot/ADB/instrumentation, always collects diagnostics and retires the emulator. Dispatch `android-validation.yml` with an explicit `ref` for Android-only repairs; the owner-approval labels and the retired actor gate no longer exist (see AGENTS.md) and no run gate applies. No source tests are skipped.
 
 ## iOS KCP1 controller candidate
 
-`owner-approved-ios-validation` selects the full iOS package/app gate without rerunning unchanged Android native tests. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
+`ios-validation.yml` runs the full iOS package/app gate without rerunning unchanged Android native tests. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
 
 ## iOS walkthrough runner diagnostics and suite timeout
 
@@ -255,11 +283,11 @@ The presentation contract guard checks that the UIKit fullscreen presenter acqui
 
 ## Automatic workflow triggers and release boundary
 
-Reconstruction validation runs for relevant app, tool and workflow changes on feature/main pushes and pull requests. The unsigned iOS archive and full iPhone/iPad walkthrough also trigger on `apps/android/**` changes, so Android-only commits receive same-SHA iOS release-gate evidence. The walkthrough additionally triggers on `tools/verify-android-companion-interface.py`; both iOS workflows retain manual dispatch. Website validation runs for relevant website changes. Verified-download contract tests run automatically; packaging fixed, previously accepted IPA/APK artifacts still requires owner dispatch. No workflow signs, merges, deploys or publishes production downloads automatically.
+Reconstruction validation runs for relevant app, tool and workflow changes on feature/main pushes and pull requests. The iOS workflows are scoped to `apps/ios/**` with the documentation-only paths excluded, plus two explicit shared-contract exceptions: `ios-validation.yml` also runs for a change to the single shared `apps/android/app/src/main/java/ph/kanta/reborn/core/CompanionProtocol.java`, and `ios-visual-walkthrough.yml` also runs for `tools/capture-ios-runtime.py`. No `apps/android/**` source path starts an iOS archive or walkthrough, so Android-only commits never receive iOS release-gate evidence. Both iOS workflows and the Android workflow retain manual dispatch. Website validation runs for relevant website changes. Verified-download contract tests run automatically; packaging fixed, previously accepted IPA/APK artifacts still requires owner dispatch. No workflow signs or merges, and no pull-request job deploys or publishes anything; on `main` the sequence is automatic: after a successful platform build, `platform-download-publishing.yml` creates the durable release asset, commits the manifest and dispatches `vercel-deploy.yml`, which deploys production from `main`.
 
 ## CI separation: fast validation, unsigned artifacts and visual acceptance
 
-- `reconstruction-validation.yml` remains the PR source, Swift package, simulator-build, and Android validation gate. It does not replace simulator UI acceptance.
+- The split workflows are the gates: `ios-validation.yml` (pull-request source, Swift package and simulator build), `android-validation.yml` (Android build, lint, domain and runtime checks) and `website-validation.yml` (site checks and the documentation-sync job). None of them replaces simulator UI acceptance.
 - `ios-visual-walkthrough.yml` runs on iOS-source pull requests and iOS/Android source plus release-tool changes on main; the Android companion-interface guard can also trigger PR walkthroughs. Workflow-only edits use the lightweight release-contract check instead. Manual dispatch, the weekly schedule and `ios-rc-*` tags remain available. Its independent iPhone and iPad jobs each build and execute the complete named UI suite, retain screenshots/recordings/logs, and publish compact per-device diagnostics. A pass on one device does not mask a failure on the other.
 - The unsigned iOS archive workflow proves packaging only. It does not prove interactive behavior, signing, or installability.
 - `ios-smoke.yml` remains a focused iPhone test for navigation/Search recovery and native lifecycle behavior; it is not the full release walkthrough.

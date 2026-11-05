@@ -68,9 +68,13 @@ The release owner must complete these account-bound steps:
 5. dispatch the manual workflow on main with upload_to_testflight=true; hosted macOS archives/signs
 6. validate the archive
 7. upload to TestFlight
-8. complete App Privacy responses consistently with
-   Docs/PRIVACY_REVIEW.md
-9. use the canonical privacy/support URLs in Docs/APP_STORE_METADATA.md
+8. complete App Privacy responses consistently with the shipping disclosures —
+   `apps/ios/PRIVACY.md`, `apps/ios/PublicSite/privacy.html` and the in-app
+   LegalView copy. There is no separate `Docs/PRIVACY_REVIEW.md` in this
+   repository; add a review worksheet before relying on one here.
+9. take the canonical privacy and support URLs from those same disclosures.
+   There is no `Docs/APP_STORE_METADATA.md` in this repository, so record the
+   submission metadata with the release instead of following a missing file
 10. confirm the App Store encryption questionnaire matches the shipping
     `ITSAppUsesNonExemptEncryption` declaration
 
@@ -86,7 +90,7 @@ Connect API key, or account secret belongs in Git history.
 
 ## Device acceptance gate
 
-Follow `Docs/DEVICE_ACCEPTANCE.md`; all physical-device rows currently remain NOT RUN.
+There is no `Docs/DEVICE_ACCEPTANCE.md` in this repository. Use the physical-device procedure in `docs/IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md` and the acceptance-gate rules in `docs/TESTING.md`; all physical-device rows currently remain NOT RUN.
 
 Before a commercial release candidate is promoted:
 
@@ -107,7 +111,7 @@ Before a commercial release candidate is promoted:
 
 Still required before commercial shipment:
 
-- close `Docs/LAN_SECURITY_DECISION.md`: internal-only distribution is the current boundary; authenticated encryption remains outstanding
+- close the LAN security decision — no `Docs/LAN_SECURITY_DECISION.md` exists in this repository, so record the decision with the release when it is made: internal-only distribution is the current boundary and authenticated encryption remains outstanding
 - legal review of third-party-format interoperability
 - final review of trademarks and user-facing third-party notices
 - verify KANTA publisher legal identity/contact; privacy/support URLs are
@@ -362,7 +366,9 @@ The crash-collection regression tests do not close any runtime or hardware gate.
 The owner authorized a Core Swift/Xcode test pass, subsequent repairs,
 merge and website deployment on October 10, 2026. Keep the merge blocked
 until the `Swift Core CI` status is conclusively green for this exact PR
-head. The separate `manual-altstore-ipa.yml` workflow is dispatched
+head. No `manual-altstore-ipa.yml` workflow exists in this repository: AltStore
+packaging is the local tool `apps/ios/Tools/package-altstore-ipa.py`, covered by
+`apps/ios/Tests/ReleaseToolingTests/test_altstore_packaging.py`, and it is run
 only after that acceptance; the unsigned device IPA still requires
 AltServer on the owner's PC to sign with the free Apple account.
 

@@ -8,7 +8,8 @@ already in the repository or in the publishing job:
 
   * apps/web/downloads.json                -- which source SHA is published
   * verified-downloads/android/build-info.json -- APK file, SHA-256 and size
-  * the published source's app/build.gradle -- versionCode / versionName / minSdk
+  * verified-downloads/android/apk-metadata.json -- versionCode / versionName /
+    minSdk / signerSha256, read from the exact APK rather than from Gradle source
 
 The durable apkUrl is a GitHub release-asset URL under the repo's existing
 naming scheme (v<version>-preview-<sha8>), never an Actions artifact URL:

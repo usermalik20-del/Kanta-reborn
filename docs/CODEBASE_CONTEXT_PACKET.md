@@ -1,5 +1,7 @@
 # Codebase Context Packet — KANTA Reborn
 
+**Status (2026-11-05):** this packet is a dated snapshot of the candidate tree named below, not the current contract. One statement in the 2026-11-02 section is out of date: paired legacy `ShubBlob`/`kantablob`/index-container import **is** implemented and discoverable — MainActivity offers *Import legacy idx + blob* (`apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java:2110`), `SessionController.importLegacyPair` performs the import, and `LibraryRepository` rejects a lone container with a message naming that exact action. Regenerate this packet with the procedure in docs/CODING_CONTEXT_GUIDE.md before treating any section as current.
+
 ## Android library import-discoverability repair candidate — 2026-11-02
 
 **Candidate tree before this context refresh:** `3a2f936dec401d73ebcef373d9df3d170afec1cc` on `reconcile/ios-playback-cancellation-after-android-20261102`, based on main merge `2f3ad90b0d92f7e05377ba1683c66c01adbb4559` (Android import-discoverability PR #147). Android remains Java 17 + Android Views, one `SessionController` queue/playback owner, one serial `LibraryRepository` IO owner, app-private hash-addressed media, JSON metadata through `AtomicFile`, TinySoundFont via JNI/AudioTrack, and no Room/Compose/FluidSynth dependency.

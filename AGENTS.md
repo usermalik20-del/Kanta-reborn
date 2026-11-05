@@ -28,6 +28,8 @@ Before a substantive refactor, follow docs/CODING_CONTEXT_GUIDE.md and regenerat
 
 A substantive refactor includes changes to state ownership, module boundaries, public interfaces, persistence formats, dependencies, navigation, lifecycle behavior, build systems, signing, CI, release configuration or cross-platform behavioral contracts.
 
+Start any change by running `python3 tools/preflight.py --list`. It reports the guards the changed paths require, the owner documents that must change in the same commit (read from `tools/check-documentation-sync.py` itself, so the list cannot drift) and the cloud-only gates it cannot prove. The full change-type matrix and the workflow invariants a change must not break are in docs/TESTING.md.
+
 ## 2. Repository acquisition and evidence
 
 Gather existing files directly from the online repository. Do not ask the owner for local settings or duplicate copies when the repository already contains the required material.
@@ -174,12 +176,14 @@ Owner authorization (updated 2026-10-23) grants Astra unrestricted use of CI for
 any workflow, any branch, any trigger, workflow dispatch, reruns, labels and PR-triggered runs.
 No per-run approval, label, actor or run-count gate applies.
 
+Failure-triage automation opens or updates one investigation issue per failing run. Keep it pipefail-safe: a step that needs a single answer asks the API once rather than piping a list into `head`, so the triage step cannot abort itself with SIGPIPE while a build is red.
+
 The root workflow triggers are intentionally scoped by ownership and source paths:
 - `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
 - `ios-validation.yml`: iOS build inputs, resources and tests on pull requests and main pushes. Exclude documentation-only `PRIVACY.md`, `PublicSite/**`, `Docs/**`, README and AGENTS paths; feature branches use the pull-request event only.
 - `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
-- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on iOS-source pull requests and native iOS/Android source plus exact-SHA release-packaging inputs on main; Android-only pull requests do not allocate an iOS archive. Website-only tools and packaging-tool PRs are excluded.
-- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on iOS pull requests; Android source and release-packaging tools trigger it on main after merge for exact-SHA release provenance. The Android companion-interface guard can trigger a PR walkthrough. Weekly schedule, tags and manual dispatch remain supported. Website-only verifier/test edits and workflow-only edits are excluded.
+- `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on `apps/ios/**` pull requests and main pushes, with the documentation-only iOS paths excluded; no `apps/android/**` path triggers it, so Android-only pull requests do not allocate an iOS archive. Website-only tools and packaging-tool PRs are excluded.
+- `ios-visual-walkthrough.yml`: separate iPhone and iPad simulator acceptance on `apps/ios/**` pull requests and main pushes, plus `tools/capture-ios-runtime.py` as the only non-iOS path. No `apps/android/**` source path or release-packaging tool triggers it. `ios-rc-*` tags, the weekly schedule and manual dispatch remain supported. Website-only verifier/test edits and workflow-only edits are excluded.
 - `website-validation.yml`: website source/tooling plus iOS PublicSite and native privacy-copy contract checks; documentation changes use this lightweight job, not native builds.
 - `vercel-deploy.yml`: production deployment on main pushes or explicit dispatch; no pull-request validation trigger.
 - `verified-downloads.yml`: exact-SHA release-contract tests and workflow-ownership tests on packaging/workflow changes; actual packaging is gated by successful same-SHA main-branch release runs or an explicit main-branch dispatch.
