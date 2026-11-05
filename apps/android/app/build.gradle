@@ -19,7 +19,28 @@ android {
         testInstrumentationRunner 'ph.kanta.reborn.RuntimeChecks'
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-    buildTypes { release { minifyEnabled false } }
+    signingConfigs {
+        releaseOwner {
+            def storePath = System.getenv('KANTA_ANDROID_SIGNING_STORE_FILE')
+            def storePasswordValue = System.getenv('KANTA_ANDROID_SIGNING_PASSWORD')
+            if (storePath && storePasswordValue) {
+                storeFile file(storePath)
+                storeType 'pkcs12'
+                storePassword storePasswordValue
+                keyAlias 'kanta-release'
+                keyPassword storePasswordValue
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            // CI PR builds remain unsigned; trusted main builds inject the owner key.
+            if (System.getenv('KANTA_ANDROID_SIGNING_STORE_FILE') && System.getenv('KANTA_ANDROID_SIGNING_PASSWORD')) {
+                signingConfig signingConfigs.releaseOwner
+            }
+        }
+    }
 }
 
 // Framework-free domain checks can run before spending emulator/macOS minutes.

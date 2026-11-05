@@ -48,7 +48,7 @@ def main():
     (output / "SHA256.txt").write_text(checksum + "  " + name + "\n")
     details = {"platform": platform, "source": source_sha, "run": int(run["id"]),
                "artifact": int(artifact["id"]), "file": name, "sha256": checksum,
-               "bytes": len(application), "signed": "debug" if platform == "android" else False}
+               "bytes": len(application), "signed": "release" if platform == "android" else False}
     if walkthrough:
         details["walkthroughRun"] = int(walkthrough["id"])
     (output / "build-info.json").write_text(json.dumps(details, indent=2) + "\n")
