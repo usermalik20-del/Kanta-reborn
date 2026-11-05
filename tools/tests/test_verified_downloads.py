@@ -294,6 +294,9 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         cls.publisher = (root / ".github/workflows/platform-download-publishing.yml").read_text(encoding="utf-8")
         cls.contracts = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
 
+    def test_artifact_response_limit_covers_both_android_apk_variants(self):
+        self.assertEqual(module.LIMIT, 256 * 1024 * 1024)
+
     def test_android_artifact_retains_release_candidate_and_debug_runtime_apks(self):
         self.assertIn("apps/android/app/build/outputs/apk/release/*.apk", self.android)
         self.assertIn("apps/android/app/build/outputs/apk/debug/*.apk", self.android)
