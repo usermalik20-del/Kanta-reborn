@@ -76,6 +76,11 @@ class PublisherToolchainContractTests(unittest.TestCase):
   self.assertIn("if: env.PLATFORM == 'android'", segment)
   self.assertIn("tools/verify-ota-publication.py", segment)
 
+ def test_release_tag_uses_shell_source_sha_not_python_literal(self):
+  start=self.workflow.index('tag="$(python3') if 'tag="$(python3' in self.workflow else -1
+  self.assertEqual(start,-1,"Do not interpolate shell variables inside single-quoted Python code")
+  self.assertIn('tag="v${version}-preview-${SOURCE_SHA:0:8}"',self.workflow)
+  self.assertIn('version="$(python3 -c',self.workflow)
  def test_signing_secret_step_is_main_only_and_not_for_pull_requests(self):
   android=(ROOT.parent/".github/workflows/android-validation.yml").read_text()
   step=android[android.index("Prepare owner-controlled Android release signing"):android.index("Native SoundFont sanitizer regression")]
