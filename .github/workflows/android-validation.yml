@@ -82,7 +82,7 @@ jobs:
         working-directory: apps/android
         run: |
           set -o pipefail
-          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleRelease :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
+          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:assembleRelease :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
