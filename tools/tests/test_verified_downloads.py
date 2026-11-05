@@ -303,6 +303,16 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         prepare = (pathlib.Path(__file__).resolve().parents[1] / "prepare-verified-downloads.py").read_text()
         self.assertIn('one(archive, "/outputs/apk/release/app-release.apk")', prepare)
 
+    def test_android_release_notes_are_detailed_and_evidence_backed(self):
+        self.assertIn("tools/generate-android-release-notes.py", self.publisher)
+        self.assertIn("--notes-file", self.publisher)
+        self.assertIn("pull-requests: read", self.publisher)
+        self.assertIn("SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}", self.publisher)
+        self.assertNotIn("Verified CI build ${SOURCE_SHA:0:8}. Durable OTA artifact.", self.publisher)
+        self.assertLess(self.publisher.index("generate-android-release-notes.py"),
+                        self.publisher.index("gh release create"))
+        self.assertNotIn("gh release edit", self.publisher)
+
     def test_android_and_ios_publishing_are_separate_completion_paths(self):
         self.assertIn("KANTA Android validation", self.publisher)
         self.assertIn("KANTA iOS unsigned artifacts", self.publisher)
