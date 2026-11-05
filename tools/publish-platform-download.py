@@ -85,8 +85,8 @@ def publish():
         raise ValueError("Invalid platform package provenance")
     if platform == "ios" and (info.get("signed") is not False or not info.get("walkthroughRun")):
         raise ValueError("iOS publication requires an unsigned IPA and same-SHA simulator walkthrough")
-    if platform == "android" and info.get("signed") != "debug":
-        raise ValueError("Android publication requires the debug APK")
+    if platform == "android" and info.get("signed") != "release":
+        raise ValueError("Android publication requires the owner-signed release APK")
     source_run = info.get("run")
     if isinstance(source_run, bool) or not isinstance(source_run, int) or source_run < 1:
         raise ValueError("Invalid source workflow run ID")
@@ -154,7 +154,7 @@ def publish():
       f'<p><a class="button primary" href="{url}">Download {"verified Android bundle" if platform == "android" else "unsigned iOS bundle"} ↗</a></p>'
       f'<p class="release-note">Verified CI artifact · GitHub sign-in required · {days}-day retention.</p>'
       f'<p>Source <code>{source[:8]}</code> · Validated build run <a href="https://github.com/{REPO}/actions/runs/{source_run}">#{source_run}</a>.</p>'
-      + ('<p>Debug-signed APK testing preview; not a Google Play release. SHA256.txt is included in this Android bundle.</p>' if platform == "android" else '<p><strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable.</p><p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/' + REPO + '/actions/runs/' + str(int(info["walkthroughRun"])) + '">run #' + str(int(info["walkthroughRun"])) + '</a>. Simulator results do not establish physical-device acceptance.</p>')
+      + ('<p>Owner-signed Android preview; not a Google Play release. This new signing identity cannot update earlier debug-signed installs in place; reinstall may remove app-private data. SHA256.txt is included in this Android bundle.</p>' if platform == "android" else '<p><strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable.</p><p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/' + REPO + '/actions/runs/' + str(int(info["walkthroughRun"])) + '">run #' + str(int(info["walkthroughRun"])) + '</a>. Simulator results do not establish physical-device acceptance.</p>')
       + f'<p>Artifact ZIP SHA-256: <code>{digest}</code>. {"APK SHA-256" if platform == "android" else "IPA SHA-256"}: <code>{info["sha256"]}</code>.</p></section>')
     import re as regex
     updated, count = regex.subn(r'<section class="section" id="download">.*?</section>', lambda _: section, page, count=1, flags=regex.S)

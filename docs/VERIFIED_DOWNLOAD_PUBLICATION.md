@@ -18,7 +18,7 @@ The active download pipeline is fail-closed, exact-SHA pinned and platform-owned
 
 ## Signing and acceptance boundaries
 
-- Android output is a debug-signed preview APK, not a Google Play release.
+- Android validation provides a release-signed candidate for publication and a separate debug APK for emulator acceptance; neither is a Google Play release.
 - iOS output is unsigned, requires separate trusted personal signing, has no iCloud Save, and is not directly installable through Safari, TestFlight or the App Store.
 - iPhone/iPad simulator walkthroughs are required for iOS publication on the same iOS source SHA; they do not establish physical-device acceptance.
 - The pipeline uses the GitHub Actions token for repository publication and dispatch. It does not use Apple credentials or signing secrets.

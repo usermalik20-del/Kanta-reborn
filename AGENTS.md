@@ -116,7 +116,7 @@ Use synthetic or explicitly approved test fixtures.
 
 Follow docs/GITHUB_PUBLISHING_POLICY.md before publication. Review the complete bounded diff and generated artifacts for secrets, private data, media-library contents, signing assets and unintended historical material.
 
-Merging, releasing, deploying and running CI are authorized engineering actions (§9, §11). Signing is not gated by policy here; it is simply unavailable in this environment because no Apple credentials or macOS toolchain exist. Record that as a capability limit, never as an approval requirement.
+Merging, releasing, deploying and running CI are authorized engineering actions (§9, §11). Apple signing remains unavailable here because no Apple credentials or macOS toolchain exist. Android release signing uses the owner-approved PKCS#12 identity only through main-branch Actions secrets; the secret values must be configured by the owner because this GitHub token cannot write repository secrets. Record missing credentials as a capability/configuration limit; never commit or print them.
 
 ## 7. YouTube integration boundary
 
@@ -341,4 +341,4 @@ The `platform-download-publishing.yml` workflow now includes an Android-only ste
 
 ## OTA safeguard status
 
-Android OTA publication is fail-closed: the exact APK supplies version and signer metadata, source history and versionCode must advance, and release assets are immutable. A compatible persistent owner keystore and a pinned historical APK/certificate are required; absent evidence blocks publication. Never bootstrap, generate, rotate or expose signing material in this repository. Physical-device upgrade acceptance remains unverified and must follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.
+Android OTA publication is fail-closed: the exact APK supplies version and signer metadata, source history and versionCode must advance, and release assets are immutable. The owner approved a new persistent signer pinned by its public SHA-256 in `tools/verify-ota-publication.py`; the verifier still downloads and digest-checks the prior APK and permits only candidates matching that exact new pin. The intentional identity transition means APKs signed with the old certificate cannot update in place and users must reinstall, potentially losing app-private data. Keep the PKCS#12 and passwords out of Git; CI secrets are used only on main, never pull requests. Do not generate, rotate or expose signing material in the repository. Physical-device acceptance for the new identity remains unverified and must follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.

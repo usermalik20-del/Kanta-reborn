@@ -61,7 +61,7 @@ class PlatformPublisherTests(unittest.TestCase):
         self.root_patch.start()
         (self.root / "verified-downloads/android/build-info.json").write_text(json.dumps({
             "platform": "android", "source": self.new_source, "run": 100, "artifact": 101,
-            "file": "test.apk", "sha256": "c" * 64, "bytes": 123, "signed": "debug",
+            "file": "test.apk", "sha256": "c" * 64, "bytes": 123, "signed": "release",
         }))
 
     def git(self, *args):
