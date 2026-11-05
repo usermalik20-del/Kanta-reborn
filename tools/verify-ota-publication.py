@@ -12,7 +12,7 @@ def run(cmd):
 def parse_badging(text):
  line=next((x for x in text.splitlines() if x.startswith("package:")),"")
  v=dict(re.findall(r"(versionCode|versionName|name|sdkVersion)(?:=|:)'([^']*)'",line))
- if v.get("name")!=PACKAGE: raise OtaError("APK package identity is not "+PACKAGE)
+ if v.get("name")!=PACKAGE: raise OtaError("APK package identity is "+str(v.get("name"))+" not "+PACKAGE)
  try: code=int(v["versionCode"]); sdk=int(v["sdkVersion"])
  except (KeyError,ValueError) as e: raise OtaError("aapt metadata incomplete") from e
  if code<1 or code>2100000000 or sdk<26 or not re.fullmatch(r"[A-Za-z0-9.+-]{1,64}",v.get("versionName","")): raise OtaError("APK version metadata invalid")
