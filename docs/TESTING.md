@@ -581,3 +581,7 @@ The grouped navigation must retain visible and actionable Home, Sing, Performanc
 ## Supplied UI and SoundFont assets — validation requirements
 
 Exact-head Android validation must compile all supplied drawable resources, install a clean app, verify both bundled procedural banks appear in My Set's SoundFont inventory, and confirm selecting each bank persists through repository reload. Native SoundFont structure validation and representative MIDI/KAR program, sustain and channel-10 drum playback remain required before treating either bank as device-accepted. Visual review must confirm multicolor icons retain their source colors rather than being flattened by tinting. The OpenStage third-party candidates are not runtime assets and must not be treated as licensed audio integration; the KANTA-created procedural bank is separately covered by its restricted runtime asset license.
+
+## OTA upgrade acceptance (not yet device-verified)
+
+Before calling Android OTA production-ready, the owner must run the checklist in `docs/OTA_UPGRADE_ACCEPTANCE.md` on a physical device. CI currently verifies APK metadata, bounded CI version allocation, strict feed monotonicity/source ancestry, pinned prior APK digest, and signer continuity. It does not prove installation, rollback behavior, device restart behavior, or physical-device acceptance. A persistent compatible signing key must be configured by the owner; missing signing material is a publication blocker, not a reason to weaken the gate.
