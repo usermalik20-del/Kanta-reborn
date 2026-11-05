@@ -10,14 +10,9 @@ def run(cmd):
  except (OSError,subprocess.CalledProcessError,subprocess.TimeoutExpired) as e: raise OtaError("APK metadata command failed") from e
  return r.stdout+r.stderr
 def parse_badging(text):
- import sys
- sys.stderr.write("DEBUG: Full aapt output (first 3000 chars):\n" + text[:3000] + "\n=== END DEBUG ===\n")
  line=next((x for x in text.splitlines() if x.startswith("package:")),"")
- sys.stderr.write("DEBUG: Package line: " + repr(line) + "\n")
  matches=re.findall(r"(?<![A-Za-z])(versionCode|versionName|name|sdkVersion|platformBuildVersionCode)(?:=|:)'([^']*)'",line)
- sys.stderr.write("DEBUG: Regex matches: " + str(matches) + "\n")
  v=dict(matches)
- sys.stderr.write("DEBUG: Parsed dict: " + str(v) + "\n")
  if v.get("name")!=PACKAGE: raise OtaError("APK package identity is "+str(v.get("name"))+" not "+PACKAGE)
  try:
   code=int(v["versionCode"])
