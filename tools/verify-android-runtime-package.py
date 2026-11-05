@@ -6,7 +6,7 @@ import re
 import subprocess
 import zipfile
 
-apk = Path('apps/android/app/build/outputs/apk/debug/app-debug.apk')
+apk = Path('apps/android/app/build/outputs/apk/release/app-release.apk')
 aapt = Path(os.environ['ANDROID_HOME']) / 'build-tools/35.0.0/aapt'
 report = subprocess.check_output([str(aapt), 'dump', 'permissions', str(apk)], text=True, timeout=30)
 permissions = set(re.findall(r"uses-permission: name='([^']+)'", report))
