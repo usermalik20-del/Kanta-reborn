@@ -2,6 +2,8 @@
 
 This branch implements safe, automatable validation steps for PR #52 and records the manual validation gates that remain.
 
+> **Correction (2026-11-05):** no workflow named `reconstruction-validation.yml` exists in this repository. The presentation guard this plan describes now runs as `tools/check-ios-presentation-contract.py` inside `ios-validation.yml` (and `ios-smoke.yml`). The text below is kept as the record of the plan as written.
+
 Summary of changes in branch fix/pr52-safe-validation-plan-20261019:
 
 - Host presentation guard

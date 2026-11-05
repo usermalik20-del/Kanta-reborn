@@ -8,7 +8,8 @@ already in the repository or in the publishing job:
 
   * apps/web/downloads.json                -- which source SHA is published
   * verified-downloads/android/build-info.json -- APK file, SHA-256 and size
-  * the published source's app/build.gradle -- versionCode / versionName / minSdk
+  * verified-downloads/android/apk-metadata.json -- versionCode / versionName /
+    minSdk / signerSha256, read from the exact APK rather than from Gradle source
 
 The durable apkUrl is a GitHub release-asset URL under the repo's existing
 naming scheme (v<version>-preview-<sha8>), never an Actions artifact URL:
@@ -72,38 +73,24 @@ def published_android_source(downloads: dict) -> str:
 
 
 def build_identity(source_sha: str, root: Path = ROOT) -> dict:
-    """versionCode / versionName / minSdk read from the published source itself."""
-    try:
-        gradle = subprocess.run(
-            ["git", "show", source_sha + ":apps/android/app/build.gradle"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30,
-        ).stdout
-    except subprocess.CalledProcessError as failure:
-        raise FeedError(
-            "source " + source_sha[:12] + " has no readable app/build.gradle"
-        ) from failure
-    match = re.search(r"\bversionCode\s+(\d+)", gradle)
-    if match is None:
-        raise FeedError("versionCode missing from published build.gradle")
-    version_code = int(match.group(1))
-    match = re.search(r"\bversionName\s+'([^']+)'", gradle)
-    if match is None:
-        raise FeedError("versionName missing from published build.gradle")
-    version_name = match.group(1)
-    if not re.fullmatch(r"[A-Za-z0-9.+-]+", version_name) or len(version_name) > 64:
-        raise FeedError("published versionName is outside the allowed shape")
-    match = re.search(r"\bminSdk\s+(\d+)", gradle)
-    min_sdk = int(match.group(1)) if match else None
-    if min_sdk < ANDROID_MIN_SDK:
-        raise FeedError("published minSdk must be at least " + str(ANDROID_MIN_SDK))
-    if version_code < 1:
-        raise FeedError("published versionCode must be positive")
-    return {"versionCode": version_code, "versionName": version_name, "minSdk": min_sdk}
-
+    """Read identity extracted from the exact APK, never Gradle source."""
+    metadata = load_json(root / "verified-downloads/android/apk-metadata.json")
+    if metadata.get("source") not in (None, source_sha):
+        raise FeedError("APK metadata source does not match published source")
+    required = ("versionCode", "versionName", "minSdk", "signerSha256")
+    if any(key not in metadata for key in required):
+        raise FeedError("verified APK metadata is incomplete")
+    if (isinstance(metadata["versionCode"], bool) or not isinstance(metadata["versionCode"], int)
+            or metadata["versionCode"] < 1 or metadata["versionCode"] > 2100000000):
+        raise FeedError("verified APK versionCode is outside the bounded range")
+    if not isinstance(metadata["versionName"], str) or not re.fullmatch(r"[A-Za-z0-9.+-]{1,64}", metadata["versionName"]):
+        raise FeedError("verified APK versionName is outside the allowed shape")
+    if (isinstance(metadata["minSdk"], bool) or not isinstance(metadata["minSdk"], int)
+            or metadata["minSdk"] < ANDROID_MIN_SDK):
+        raise FeedError("verified APK minSdk is below the supported minimum")
+    if not isinstance(metadata["signerSha256"], str) or not HEX64.fullmatch(metadata["signerSha256"]):
+        raise FeedError("verified APK signer certificate is missing")
+    return {key: metadata[key] for key in required}
 
 def release_tag(source_sha: str, version_name: str) -> str:
     return "v" + version_name.split("-")[0] + "-preview-" + source_sha[:8]
@@ -157,6 +144,24 @@ def render_feed(downloads: dict, build_info: dict, source_sha: str,
     if not isinstance(apk_bytes, int) or apk_bytes < 1 or apk_bytes > 256 * 1024 * 1024:
         raise FeedError("build-info.json apk bytes out of range")
     identity = build_identity(source_sha, root)
+    previous_path = root / "apps/web/updates.json"
+    if previous_path.is_file():
+        previous = load_json(previous_path)
+        previous_android = previous.get("android")
+        if not isinstance(previous_android, dict):
+            raise FeedError("existing update feed has no android entry")
+        old_code = previous_android.get("versionCode")
+        if not isinstance(old_code, int) or identity["versionCode"] <= old_code:
+            raise FeedError("versionCode must increase strictly over the published feed")
+        old_source = previous.get("sourceCommit")
+        if not isinstance(old_source, str) or not HEX40.fullmatch(old_source):
+            raise FeedError("existing feed has no valid sourceCommit")
+        try:
+            ancestry = subprocess.run(["git", "merge-base", "--is-ancestor", old_source, source_sha], cwd=root, check=False)
+        except OSError as failure:
+            raise FeedError("cannot verify update source ancestry") from failure
+        if ancestry.returncode != 0:
+            raise FeedError("update source is not a descendant of the published source")
     apk_url = release_apk_url(source_sha, identity["versionName"], file_name)
     if not is_accepted_apk_url(apk_url):
         raise FeedError("derived apkUrl fails the app's own URL policy: " + apk_url)
@@ -170,6 +175,7 @@ def render_feed(downloads: dict, build_info: dict, source_sha: str,
             "versionCode": identity["versionCode"],
             "versionName": identity["versionName"],
             "minSdk": identity["minSdk"],
+            "signerSha256": identity["signerSha256"],
             "apkUrl": apk_url,
             "apkBytes": apk_bytes,
             "apkSha256": apk_sha256,

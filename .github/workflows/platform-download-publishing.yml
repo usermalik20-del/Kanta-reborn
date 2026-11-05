@@ -26,6 +26,7 @@ jobs:
     timeout-minutes: 50
     env:
       SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      SOURCE_RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
       PLATFORM: ${{ github.event.workflow_run.name == 'KANTA Android validation' && 'android' || 'ios' }}
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
@@ -43,26 +44,56 @@ jobs:
           path: verified-downloads/${{ env.PLATFORM }}/*
           if-no-files-found: error
           retention-days: 30
-      - name: Ensure a durable release asset for this Android build
+      - name: Put the Android build tools on PATH
+        if: env.PLATFORM == 'android'
+        run: |
+          set -euo pipefail
+          # tools/verify-ota-publication.py shells out to aapt and apksigner. A GitHub
+          # runner ships them under $ANDROID_HOME/build-tools but does not expose that
+          # directory, so verification collapsed into "APK metadata command failed".
+          # Fail here with the real reason instead of one line further down.
+          tools_dir="$(ls -d "${ANDROID_HOME:?ANDROID_HOME is not set}"/build-tools/* 2>/dev/null | sort -V | tail -1)"
+          if [ -z "${tools_dir}" ]; then
+            echo "::error::No Android build-tools under ${ANDROID_HOME}"
+            exit 1
+          fi
+          for binary in aapt apksigner; do
+            if [ ! -x "${tools_dir}/${binary}" ]; then
+              echo "::error::${binary} is missing from ${tools_dir}"
+              exit 1
+            fi
+          done
+          echo "${tools_dir}" >> "${GITHUB_PATH}"
+          echo "Android build tools: ${tools_dir}"
+      - name: Verify APK metadata and signer continuity
+        if: env.PLATFORM == 'android'
+        run: |
+          set -euo pipefail
+          apk="$(python3 -c 'from pathlib import Path; print(next(Path("verified-downloads/android").glob("*.apk")))')"
+          python3 tools/verify-ota-publication.py "$apk" \
+            --previous-feed apps/web/updates.json \
+            --output verified-downloads/android/apk-metadata.json \
+            --expected-version-code "${SOURCE_RUN_NUMBER}" --source "${SOURCE_SHA}"
+      - name: Ensure an immutable durable release asset
         if: env.PLATFORM == 'android'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          version_name="$(
-            git show "${SOURCE_SHA}:apps/android/app/build.gradle" \
-              | sed -n "s/.*versionName '\([^']*\)'.*/\1/p" | head -1
-          )"
-          tag="v${version_name%%-*}-preview-${SOURCE_SHA:0:8}"
-          apk="$(ls verified-downloads/android/*.apk | head -1)"
-          if ! gh release view "${tag}" --json tagName >/dev/null 2>&1; then
-            gh release create "${tag}" "${apk}" \
-              --title "KANTA Android preview ${SOURCE_SHA:0:8}" \
-              --notes "Verified CI build ${SOURCE_SHA:0:8} (run ${GITHUB_RUN_ID}). Durable OTA artifact served by apps/web/updates.json." \
-              --repo "${GITHUB_REPOSITORY}"
-          else
-            gh release upload "${tag}" "${apk}" --clobber --repo "${GITHUB_REPOSITORY}"
-          fi
+          apk="$(python3 -c 'from pathlib import Path; print(next(Path("verified-downloads/android").glob("*.apk")))')"
+          tag="$(python3 -c 'import json; print("v" + json.load(open("verified-downloads/android/apk-metadata.json"))["versionName"].split("-")[0] + "-preview-" + "${SOURCE_SHA}"[:8])')"
+          digest="$(sha256sum "$apk" | cut -d' ' -f1)"
+          for attempt in 1 2 3; do
+            if ! gh release view "$tag" --repo "${GITHUB_REPOSITORY}" --json assets >/tmp/release.json 2>/dev/null; then
+              gh release create "$tag" "$apk" --title "KANTA Android preview ${SOURCE_SHA:0:8}" --notes "Verified CI build ${SOURCE_SHA:0:8}. Durable OTA artifact." --repo "${GITHUB_REPOSITORY}" && break
+            fi
+            asset="$(jq -r --arg n "$(basename "$apk")" '.assets[] | select(.name==$n) | .digest // empty' /tmp/release.json)"
+            test -n "$asset" && test "${asset#sha256:}" = "$digest" && break
+            test -z "$asset" || { echo 'existing release asset differs; immutable publication refused' >&2; exit 1; }
+            gh release upload "$tag" "$apk" --repo "${GITHUB_REPOSITORY}" && break
+            sleep $((attempt * 2))
+          done
+          gh release view "$tag" --repo "${GITHUB_REPOSITORY}" --json assets | jq -e --arg n "$(basename "$apk")" --arg d "sha256:$digest" '.assets[] | select(.name==$n and .digest==$d)' >/dev/null
       - name: Publish only this platform's manifest and page
         env:
           GH_TOKEN: ${{ github.token }}

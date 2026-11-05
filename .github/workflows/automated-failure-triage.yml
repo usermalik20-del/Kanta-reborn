@@ -34,7 +34,7 @@ jobs:
           gh api "repos/$GH_REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '.jobs[] | select(.conclusion == "failure") | "- " + .name + ": " + .html_url' > failed-jobs.txt
           if [ ! -s failed-jobs.txt ]; then echo "- No failed job returned by GitHub API" > failed-jobs.txt; fi
           key="[CI failure] $WORKFLOW_NAME"
-          issue=$(gh issue list --state open --limit 100 --json number,title --jq ".[] | select(.title == \"$key\") | .number" | head -1)
+          issue=$(gh issue list --state open --limit 100 --json number,title --jq "[.[] | select(.title == \"$key\") | .number] | first // empty")
           {
             printf 'Automated failure report. Investigate the root cause; do not bypass assertions or disable tests.\n\n'
             printf '**Workflow:** %s\n**Run:** %s\n**Commit:** `%s`\n\n' "$WORKFLOW_NAME" "$RUN_URL" "$RUN_SHA"

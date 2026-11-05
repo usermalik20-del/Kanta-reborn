@@ -2,16 +2,16 @@
   "format": "kanta-update-feed",
   "formatVersion": 1,
   "channel": "stable-reconstruction",
-  "publishedAt": "2026-11-04T05:15:59Z",
-  "sourceCommit": "31f62b16515b340488cc2b9f7bdb4e5d464590bf",
+  "publishedAt": "2026-11-04T11:11:25Z",
+  "sourceCommit": "1f49555c8df67aee5aabc6dd1698a9f296cdb977",
   "android": {
     "versionCode": 10,
     "versionName": "0.10.0-reconstruction",
     "minSdk": 26,
-    "apkUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0-preview-31f62b16/KANTA-Android-preview-31f62b16.apk",
-    "apkBytes": 82261854,
-    "apkSha256": "23bb4744e8e5bce73f6c7854ae2da922867b781c86608935b74fec1068147e6c",
-    "notes": "KANTA preview built from 31f62b16",
+    "apkUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0-preview-1f49555c/KANTA-Android-preview-1f49555c.apk",
+    "apkBytes": 82474846,
+    "apkSha256": "194036faf3200251548edabbf504f5f95175e58e33ebeb307e346d4da7811f4c",
+    "notes": "KANTA preview built from 1f49555c",
     "mandatory": false
   }
 }

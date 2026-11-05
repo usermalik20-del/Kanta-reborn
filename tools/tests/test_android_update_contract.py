@@ -74,6 +74,11 @@ class FeedContractTests(unittest.TestCase):
         self.git("add", ".")
         self.git("commit", "-m", "source with build config")
         self.source_sha = self.git("rev-parse", "HEAD")
+        (self.root / "verified-downloads/android/apk-metadata.json").write_text(json.dumps({
+            "source": self.source_sha, "versionCode": 10,
+            "versionName": "0.10.0-reconstruction", "minSdk": 26,
+            "signerSha256": "b" * 64,
+        }))
 
     def git(self, *args):
         result = subprocess.run(
@@ -107,6 +112,7 @@ class FeedContractTests(unittest.TestCase):
         self.assertEqual(android["versionCode"], 10)
         self.assertEqual(android["versionName"], "0.10.0-reconstruction")
         self.assertEqual(android["minSdk"], 26)
+        self.assertEqual(android["signerSha256"], "b" * 64)
         self.assertTrue(feed.is_accepted_apk_url(android["apkUrl"]))
         self.assertEqual(android["apkBytes"], 52_767_115)
         self.assertEqual(android["apkSha256"], SHA64)
@@ -179,6 +185,34 @@ class FeedContractTests(unittest.TestCase):
             feed.render_feed(downloads_manifest(), build_info(bytes=512 * 1024 * 1024), SOURCE, NOW)
         with self.assertRaises(feed.FeedError):
             feed.render_feed(downloads_manifest(), build_info(file=42), SOURCE, NOW)
+
+    def test_verified_apk_metadata_without_min_sdk_is_refused(self):
+        identity = feed.build_identity(self.source_sha, self.root)
+        self.assertEqual(identity, {"versionCode": 10, "versionName": "0.10.0-reconstruction",
+                                    "minSdk": 26, "signerSha256": "b" * 64})
+
+        def metadata_with(**overrides):
+            payload = {"source": self.source_sha, "versionCode": 10,
+                       "versionName": "0.10.0-reconstruction", "minSdk": 26,
+                       "signerSha256": "b" * 64}
+            payload.update(overrides)
+            (self.root / "verified-downloads/android/apk-metadata.json").write_text(
+                json.dumps(payload))
+
+        # Every malformed identity is refused with FeedError. The old Gradle path
+        # compared a missing minSdk as None and raised a bare TypeError instead.
+        missing_min = {"source": self.source_sha, "versionCode": 10,
+                       "versionName": "0.10.0-reconstruction", "signerSha256": "b" * 64}
+        (self.root / "verified-downloads/android/apk-metadata.json").write_text(
+            json.dumps(missing_min))
+        with self.assertRaises(feed.FeedError):
+            feed.build_identity(self.source_sha, self.root)
+        for overrides in ({"minSdk": True}, {"minSdk": 25}, {"versionCode": 0},
+                          {"versionName": "bad name"}, {"signerSha256": "short"},
+                          {"versionCode": "10"}):
+            metadata_with(**overrides)
+            with self.assertRaises(feed.FeedError):
+                feed.build_identity(self.source_sha, self.root)
 
     def test_build_identity_comes_from_published_source(self):
         identity = feed.build_identity(self.source_sha, self.root)

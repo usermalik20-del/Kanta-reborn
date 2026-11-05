@@ -43,7 +43,7 @@ Read `Docs/ARCHITECTURE.md` before changing system boundaries. Update it in the 
 
 The current manual workflow is INTERNAL TestFlight only. Its export settings must retain `testFlightInternalTestingOnly=true` until a separately reviewed release batch closes device, public-contact/legal, and LAN confidentiality gates. It does not invite testers or approve external release.
 
-The current remote is PIN-authorized plaintext TCP for trusted LANs. Do not describe it as encrypted, expose it over the internet, or treat a PIN as confidentiality. See `Docs/LAN_SECURITY_DECISION.md` for the release decision and acceptance criteria. TLS/secure pairing implementation is still outstanding.
+The current remote is PIN-authorized plaintext TCP for trusted LANs. Do not describe it as encrypted, expose it over the internet, or treat a PIN as confidentiality. No `Docs/LAN_SECURITY_DECISION.md` exists in this repository: while the decision is open, treat the release decision and its acceptance criteria as unrecorded rather than following a missing file. TLS/secure pairing implementation is still outstanding.
 
 Signing inputs belong in GitHub Actions secrets, never chat, source, logs, or artifacts. The temporary keychain password is generated per job and no longer needs a repository secret. The manual workflow must fail its Linux preflight before allocating macOS when signing inputs are missing.
 
@@ -131,7 +131,7 @@ physical-device acceptance. Preserve FIFO and one-CI-only authorization.
 
 ## Vocal Pitch DSP safety contract — 2026-10-10
 
-The legal open-source DSP review is in `Docs/VOCAL_DSP_LICENSE_AND_ACCEPTANCE.md`. Current pitch stabilization is KANTA-owned `VocalPitchFollower` feeding the existing Apple TimePitch node; **no Signalsmith/AudioKit/Soundpipe effect code has been linked**. Do not advertise an MIT backend as shipping until exact-version licensing, notices, transitive assets, audio render safety, CI and physical wired/USB latency tests pass. Keep the existing graph, dry scoring isolation, neutral reset on unsafe route, and opt-in default-off behavior. No paid Actions without renewed authorization.
+The legal open-source DSP review is in `Docs/VOCAL_DSP_LICENSE_AND_ACCEPTANCE.md`. Current pitch stabilization is KANTA-owned `VocalPitchFollower` feeding the existing Apple TimePitch node. The `MicrophoneScoring` package does link **SoundpipeAudioKit 5.7.4 and AudioKit 5.7.2** (`Package.swift`), and `VocalPitchCorrection` carries a Soundpipe option, as the PR #46 section below and the in-app LegalView copy record. Do not advertise an MIT backend as shipping until exact-version licensing, notices, transitive assets, audio render safety, CI and physical wired/USB latency tests pass. Keep the existing graph, dry scoring isolation, neutral reset on unsafe route, and opt-in default-off behavior. No paid Actions without renewed authorization.
 
 ## Original KAR starter-pack invariant — October 10, 2026
 
@@ -203,7 +203,11 @@ a separate explicit user share or TestFlight facility.
 
 `.github/workflows/manual-ad-hoc-ipa.yml` is **manual-only** and gated
 for verified main with Apple-owned Ad Hoc profile/registered device
-preflight before macOS billing. It may export signed IPA privately but
+preflight before macOS billing. The file currently lives at
+`apps/ios/.github/workflows/manual-ad-hoc-ipa.yml`, below the repository
+workflow root, so GitHub Actions does not discover it: treat it as inactive
+until it is moved under `.github/workflows/` with every action pinned
+(see `Docs/IOS_CLOUD_SIGNING_AND_DEVICE_TESTING.md`). It may export signed IPA privately but
 **never uploads keys or IPA to BetaDrop**. BetaDrop is a hosting service,
 **not** signing. Do not trigger a paid signing/build workflow without
 the owner's authorization or merge unvalidated DSP. Full policy:

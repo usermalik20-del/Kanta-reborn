@@ -8,6 +8,11 @@ on:
         type: string
 permissions:
   contents: read
+concurrency:
+  # A domain attach is idempotent, but two dispatches racing on the same project
+  # would interleave their request logs; serialize them so the outcome is readable.
+  group: configure-domain-${{ inputs.domain }}
+  cancel-in-progress: false
 jobs:
   configure:
     runs-on: ubuntu-latest
