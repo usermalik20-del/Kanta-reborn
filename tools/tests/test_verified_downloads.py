@@ -32,11 +32,12 @@ def run_record(run_id=41, name="KANTA Android validation", source=SOURCE,
 
 
 def artifact_record(artifact_id=81, run_id=41, name="android-reconstruction-checks",
-                    source=SOURCE, expired=False):
+                    source=SOURCE, expired=False, created="2026-10-24T00:00:00Z"):
     return {
         "id": artifact_id,
         "name": name,
         "expired": expired,
+        "created_at": created,
         "digest": "",
         "workflow_run": {
             "id": run_id,
@@ -89,22 +90,21 @@ class DownloadContracts(unittest.TestCase):
         expected = {"run": 41, "artifact": 81, "source": SOURCE}
         module.accepted(run, found, expected)
 
-    def test_expired_or_ambiguous_artifacts_are_rejected(self):
+    def test_expired_artifacts_are_ignored_and_newest_retry_is_selected(self):
         run = run_record()
         with patch.object(
             module, "api",
             return_value={"artifacts": [artifact_record(expired=True)]},
         ):
-            with self.assertRaisesRegex(ValueError, "has expired"):
+            with self.assertRaisesRegex(ValueError, "all matching artifacts have expired"):
                 module.find_artifact(run, "android-reconstruction-checks")
-        with patch.object(
-            module, "api",
-            return_value={"artifacts": [
-                artifact_record(81), artifact_record(82)
-            ]},
-        ):
-            with self.assertRaisesRegex(ValueError, "found 2"):
-                module.find_artifact(run, "android-reconstruction-checks")
+        older=artifact_record(81,created="2026-10-24T00:00:00Z")
+        newer=artifact_record(82,created="2026-10-24T00:05:00Z")
+        with patch.object(module,"api",return_value={"artifacts":[newer,older]}):
+            self.assertEqual(module.find_artifact(run,"android-reconstruction-checks")["id"],82)
+        tied_low=artifact_record(81,created="2026-10-24T00:05:00Z")
+        with patch.object(module,"api",return_value={"artifacts":[tied_low,newer]}):
+            self.assertEqual(module.find_artifact(run,"android-reconstruction-checks")["id"],82)
 
     def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
         walkthrough = run_record(61, "KANTA iOS visual walkthrough")
