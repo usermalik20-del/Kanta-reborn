@@ -187,6 +187,7 @@ The root workflow triggers are intentionally scoped by ownership and source path
 - `website-validation.yml`: website source/tooling plus iOS PublicSite and native privacy-copy contract checks; documentation changes use this lightweight job, not native builds.
 - `vercel-deploy.yml`: production deployment on main pushes or explicit dispatch; no pull-request validation trigger.
 - `verified-downloads.yml`: exact-SHA release-contract tests and workflow-ownership tests on packaging/workflow changes; actual packaging is gated by successful same-SHA main-branch release runs or an explicit main-branch dispatch.
+- `platform-download-publishing.yml`: after a successful `KANTA Android validation` or `KANTA iOS unsigned artifacts` run on main it publishes only that platform's manifest and page. The Android path verifies the APK with `aapt` and `apksigner`, so the job exposes `$ANDROID_HOME/build-tools` on `PATH` first and fails loudly when they are missing; it keeps `contents: write` and `actions: write` (it dispatches `vercel-deploy.yml`) plus a credential-persisted checkout (it pushes the manifest).
 
 The verified-download packager binds to the exact workflow names in the root workflow files. Its Android artifact source is `KANTA Android validation`, not a separately named reconstruction workflow. Keep workflow names, packager constants and contract tests synchronized. Owner-approval labels and the retired `kanta-gelo` actor gate have been removed; they blocked work without adding safety.
 
