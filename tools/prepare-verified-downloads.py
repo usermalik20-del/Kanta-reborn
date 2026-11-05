@@ -228,7 +228,7 @@ def application_bytes(platform: str, source: dict) -> bytes:
         if sum(entry.file_size for entry in archive.infolist()) > LIMIT or archive.testzip() is not None:
             raise ValueError("Corrupt or oversized artifact archive")
         if platform == "android":
-            application = one(archive, "/app-debug.apk")
+            application = one(archive, "/outputs/apk/debug/app-debug.apk")
             with zipfile.ZipFile(io.BytesIO(application)) as apk:
                 if "AndroidManifest.xml" not in apk.namelist() or "classes.dex" not in apk.namelist():
                     raise ValueError("Not an Android application")
