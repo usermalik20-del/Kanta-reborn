@@ -228,3 +228,8 @@ populates title/artist/copyright, @P pause codes and backslash echo lines are ho
 imported songs and SoundFont banks can be removed from My Set. Stage search includes the
 active library. The transport Previous button restarts the current song (seek supported for MIDI/KAR and MP3/WAV). Key/tempo adjustments made during a song are remembered per song and reset from the Pitch & Tempo screen. SF3/Ogg SoundFont banks are now supported in addition to SF2. This is local review work on `feat/midi-kar-import-rework`; it is not merged
 and is not part of any released build.
+
+
+## OTA publication safety
+
+Android OTA publication is fail-closed. CI allocates a bounded monotonically increasing `kantaVersionCode`; metadata is extracted from the exact APK, and publication verifies the prior pinned APK digest and signer certificate. Release assets are immutable. A persistent compatible owner keystore is required; missing signing evidence blocks publication. Physical-device upgrade acceptance is **UNVERIFIED**; follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.

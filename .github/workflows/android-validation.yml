@@ -17,6 +17,7 @@ on:
       - 'tools/run-android-runtime.py'
       - 'tools/tests/test_prompt_bank.py'
       - 'tools/tests/test_android_*.py'
+      - 'tools/tests/test_ota_publication.py'
       - 'tools/tests/test_companion_*.py'
 
   pull_request:
@@ -31,6 +32,7 @@ on:
       - 'tools/run-android-runtime.py'
       - 'tools/tests/test_prompt_bank.py'
       - 'tools/tests/test_android_*.py'
+      - 'tools/tests/test_ota_publication.py'
       - 'tools/tests/test_companion_*.py'
 
 permissions:
@@ -68,7 +70,7 @@ jobs:
       - name: Verify Android runtime runner control flow
         run: python3 -m unittest tools.tests.test_android_runtime_runner
       - name: Verify OTA update feed contract
-        run: python3 -m unittest tools.tests.test_android_update_contract
+        run: python3 -m unittest tools.tests.test_android_update_contract tools.tests.test_ota_publication
       - name: Install required Android platform
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"'
       - name: Native SoundFont sanitizer regression
@@ -80,7 +82,7 @@ jobs:
         working-directory: apps/android
         run: |
           set -o pipefail
-          ./gradlew --no-daemon :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
+          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -791,3 +791,9 @@ The Android UI candidate consumes the supplied multicolor VectorDrawables direct
 ## Paired ShubBlob import candidate — 2026-11-03
 
 The Android legacy path now has a separate file-backed importer for user-supplied `shubidx` + `shubblob` pairs. It scans 1024-aligned MKMD records without loading the blob into memory, applies the fixed compatibility AES-256-CBC/raw-deflate contract only after bounded header validation, pairs decoded records with index titles, and persists materialized MIDI/WAV/MP3 files through `LibraryRepository`. The single-file import path still rejects `.idx`/`.blob`; the paired UI is the only entry point. This is a source candidate until exact-head Android compilation, real-container runtime acceptance, storage/cancellation tests and physical-device playback pass.
+
+## OTA publication safeguards (Android)
+
+Android version identity is taken from the exact APK produced by CI, not from Gradle source. CI passes a bounded `kantaVersionCode` allocation (the workflow run number) and the Gradle file retains only a local baseline for development. `tools/verify-ota-publication.py` extracts package/version/minSdk with `aapt` and the certificate SHA-256 with `apksigner`, then pins and re-verifies the prior feed APK before accepting signer continuity. A missing prior APK, digest mismatch, or signer change fails closed; it never generates or silently rotates a key. The feed requires verified APK metadata, a strictly increasing versionCode, and descendant source history. GitHub release assets are immutable and are never uploaded with `--clobber`.
+
+The permanent owner prerequisite is a compatible persistent Android signing key in CI. The current preview may remain publication-blocked when that key or a pinned historical APK cannot be verified. Debug-key CI output is not device-upgrade evidence.
