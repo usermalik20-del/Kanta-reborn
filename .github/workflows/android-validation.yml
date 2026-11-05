@@ -119,7 +119,7 @@ jobs:
         with:
           name: android-reconstruction-checks
           path: |
-            apps/android/app/build/outputs/apk/release/*.apk
+            apps/android/app/build/outputs/apk/debug/*.apk
             apps/android/app/build/reports/lint-results-debug.*
             apps/android/app/build/outputs/apk/androidTest/debug/*.apk
             android-runtime.log

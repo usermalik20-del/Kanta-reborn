@@ -77,7 +77,7 @@ def main() -> int:
         if not network_ok:
             raise RuntimeError(f"Emulator has no private IPv4 after Wi-Fi enable after retries")
         run(adb, "shell", "input", "keyevent", "82", timeout=15)
-        run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/release/app-release.apk", timeout=60)
+        run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/debug/app-debug.apk", timeout=60)
         run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk", timeout=60)
         with (ROOT / "android-runtime.log").open("wb") as output:
             run(adb, "shell", "am", "instrument", "-w", "ph.kanta.reborn.test/ph.kanta.reborn.RuntimeChecks",
