@@ -26,8 +26,15 @@ public final class LegacyFileContainerImporter {
     List<ShubIndexProbe.TitleRecord> titles = ShubIndexProbe.decodeTitleRecords(indexBytes);
     if (titles.isEmpty()) throw new IOException("The Shub index has no title records");
     if (!outputDir.isDirectory() && !outputDir.mkdirs()) throw new IOException("Cannot create legacy import directory");
-    ArrayList<Long> records = scanRecords(blob);
-    if (records.size() < titles.size()) throw new IOException("The blob has fewer MKMD records than the index");
+    long[] offsets = ShubIndexProbe.trailingUInt32Values(indexBytes);
+    ArrayList<Long> records;
+    if (offsets.length == titles.size() && offsets.length > 0) {
+      records = new ArrayList<>(offsets.length);
+      for (long offset : offsets) records.add(offset);
+    } else {
+      records = scanRecords(blob);
+      if (records.size() < titles.size()) throw new IOException("The blob has fewer MKMD records than the index");
+    }
     ArrayList<DecodedSong> songs = new ArrayList<>();
     ArrayList<ImportError> errors = new ArrayList<>();
     int limit = titles.size();
