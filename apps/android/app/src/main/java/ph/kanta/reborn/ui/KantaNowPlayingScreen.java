@@ -28,9 +28,6 @@ public class KantaNowPlayingScreen extends LinearLayout {
     void onNext();
     void onShuffle();
     void onRepeat();
-    void onQueue();
-    void onEffects();
-    void onCoach();
     void onKeyDown();
     void onKeyUp();
     void onTempoDown();
@@ -217,47 +214,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     tempoCol.addView(tempoLabel); tempoCol.addView(tempoStepper);
     perfRow.addView(keyCol); perfRow.addView(divider); perfRow.addView(tempoCol);
     addView(perfRow);
-    LinearLayout bottomNav = new LinearLayout(context);
-    bottomNav.setOrientation(HORIZONTAL);
-    bottomNav.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_ELEVATED);
-    bottomNav.setPadding(0, (int)(8*density), 0, (int)(16*density));
-    String[] navLabels = {"Queue", "Lyrics", "Effects", "Coach"};
-    int[] navIcons = {
-        ph.kanta.reborn.R.drawable.kanta_queue_color,
-        ph.kanta.reborn.R.drawable.kanta_library_color,
-        ph.kanta.reborn.R.drawable.kanta_visuals_color,
-        ph.kanta.reborn.R.drawable.kanta_microphone_color
-    };
-    for (int i = 0; i < navLabels.length; i++) {
-      final int destination = i;
-      Button b = new Button(context);
-      b.setText(navLabels[i]);
-      b.setTextSize(11);
-      b.setTypeface(null, Typeface.BOLD);
-      b.setGravity(Gravity.CENTER);
-      boolean selected = i == 1;
-      b.setTextColor(selected ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-      android.graphics.drawable.Drawable icon = context.getDrawable(navIcons[i]).mutate();
-      b.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
-      b.setCompoundDrawablePadding((int)(3*density));
-      b.setBackground(selected
-          ? ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
-              ph.kanta.reborn.ui.KantaTheme.SURFACE, 12,
-              ph.kanta.reborn.ui.KantaTheme.BORDER, 1, density)
-          : null);
-      b.setContentDescription(navLabels[i]);
-      LinearLayout.LayoutParams navParams = new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
-      navParams.bottomMargin = (int)(6*density);
-      b.setLayoutParams(navParams);
-      switch (destination) {
-        case 0: b.setTag("kanta.now-playing.queue"); b.setOnClickListener(v -> { if (listener != null) listener.onQueue(); }); break;
-        case 1: b.setTag("kanta.now-playing.lyrics"); break;
-        case 2: b.setTag("kanta.now-playing.effects"); b.setOnClickListener(v -> { if (listener != null) listener.onEffects(); }); break;
-        case 3: b.setTag("kanta.now-playing.coach"); b.setOnClickListener(v -> { if (listener != null) listener.onCoach(); }); break;
-      }
-      bottomNav.addView(b);
-    }
-    addView(bottomNav);
+
   }
   private TextView lyric(String text, int color, float sizeSp) {
     TextView tv = new TextView(context);

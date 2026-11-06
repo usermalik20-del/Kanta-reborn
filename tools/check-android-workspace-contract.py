@@ -26,6 +26,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(ROOT, "apps", "android", "app", "src", "main", "java", "ph", "kanta", "reborn")
 WORKSPACE = os.path.join(ANDROID, "KantaWorkspace.java")
 ACTIVITY = os.path.join(ANDROID, "MainActivity.java")
+CONTROL_DECK = os.path.join(ANDROID, "ui", "KantaControlDeck.java")
 RUNTIME_CHECKS = os.path.join(
     ROOT, "apps", "android", "app", "src", "androidTest", "java", "ph", "kanta", "reborn", "RuntimeChecks.java"
 )
@@ -53,6 +54,7 @@ if not os.path.exists(WORKSPACE):
 
 workspace = read(WORKSPACE)
 activity = read(ACTIVITY)
+control_deck = read(CONTROL_DECK)
 runtime = read(RUNTIME_CHECKS)
 
 # --- Architecture: the persistent stage and transient accessories ------------
@@ -170,23 +172,28 @@ check(
     "Android accessory dismiss action owns its own identity",
 )
 check(
-    'b.setContentDescription("KANTA " + label)' in activity,
-    "Android workspace toolbar buttons own their own identities",
+    'button.setContentDescription(label)' in control_deck,
+    "Android control-deck buttons own their accessible identities",
 )
 check(
-    'b.setTag("kanta.workspace." + accessoryId)' in activity,
-    "Android workspace toolbar buttons carry stable test identities",
-)
-
-toolbar = activity[activity.find("private LinearLayout workspaceToolbar()") :]
-toolbar = toolbar[: toolbar.find("private Button workspaceButton(")]
-check(
-    'workspaceButton("Controls"' in toolbar,
-    'Android workspace toolbar control entry is labelled "Controls"',
+    'button.setTag("kanta.control-deck." + action)' in control_deck,
+    "Android control-deck buttons carry stable test identities",
 )
 check(
-    'workspaceButton("Settings"' not in toolbar,
-    'Android workspace toolbar does not label its control entry "Settings"',
+    'String[] labels = {"Search", "Queue", "Visuals", "Controls", "Pitch", "Coach"' in activity,
+    'Android More menu integrates the six workspace actions',
+)
+check(
+    'body.addView(workspaceToolbar())' not in activity,
+    'Android removes the redundant always-visible workspace toolbar',
+)
+check(
+    'mark.setOnClickListener(v -> toggleControlDeck())' in activity,
+    'Android KANTA logo toggles the special control deck',
+)
+check(
+    'setTag("kanta.control-deck")' in control_deck and 'MASTER VOLUME' in control_deck,
+    'Android special control deck exposes its root and dominant master-volume dial',
 )
 
 # --- Regression guard: the redesign must not delete shipped functionality ----
