@@ -465,10 +465,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           button(
               name,
               () -> {
-                if ("More".equals(name)) {
-                  showWorkspaceActions(navigationButtons.get("More"));
-                  return;
-                }
                 controlDeckVisible = false;
                 lowerUtilityAccessory = null;
                 tab = name;
@@ -481,6 +477,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       b.setMaxLines(2);
       b.setSelected(name.equals(tab));
       b.setTag("kanta.nav." + name);
+      if ("More".equals(name)) {
+        b.setContentDescription("More. Long press for workspace actions.");
+        b.setOnLongClickListener(v -> { showWorkspaceActions(v); return true; });
+      }
       if (name.equals(tab)) b.setTextColor(ACCENT);
       navigationButtons.put(name, b);
       tabs.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
