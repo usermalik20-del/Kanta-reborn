@@ -37,6 +37,11 @@ final class StageMediaStore {
     options = new AtomicFile(new File(root, "selection.json"));
   }
 
+  /** Returns the root directory for stage media. */
+  public File getRoot() {
+    return root;
+  }
+
   Selection load() throws Exception {
     if (options.getBaseFile().exists() || new File(options.getBaseFile() + ".bak").exists()) {
       if (Math.max(
@@ -177,6 +182,24 @@ final class StageMediaStore {
       options.failWrite(stream);
       throw failure;
     }
+  }
+
+  /** Sets the video file name and kind to video, then persists. */
+  public void setVideo(String videoFileName) {
+    this.video = videoFileName;
+    this.kind = "video";
+    try { persist(); } catch (Exception ignored) {}
+  }
+
+  /** Sets the kind and persists. */
+  public void setKind(String kind) {
+    this.kind = kind;
+    try { persist(); } catch (Exception ignored) {}
+  }
+
+  /** Persists current selection. */
+  public void persistSelection() {
+    try { persist(); } catch (Exception ignored) {}
   }
 
   private static BitmapFactory.Options imageBounds(File file) throws IOException {

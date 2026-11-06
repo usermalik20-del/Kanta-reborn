@@ -8,6 +8,8 @@ import android.view.View;
 import android.widget.FrameLayout;
 
 import ph.kanta.reborn.SessionController;
+import ph.kanta.reborn.settings.SettingsStore;
+import ph.kanta.reborn.BundledBgvCatalog;
 import ph.kanta.reborn.FileAudioPlayback;
 import ph.kanta.reborn.core.MidiLyrics;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
@@ -79,6 +81,11 @@ public final class StagePresenterImpl extends FrameLayout
   private Runnable pendingReveal;
   private long revealGeneration;
 
+  // BGV auto-shuffle state
+  private final SettingsStore settingsStore;
+  private long lastBgvShuffleTime = 0;
+  private boolean bgvShuffleInitialized = false;
+
   public StagePresenterImpl(Context context, SessionController session,
       SongCatalog catalog, ReservationQueue queue) {
     this(context, null, session, catalog, queue);
@@ -90,6 +97,7 @@ public final class StagePresenterImpl extends FrameLayout
     this.session = session;
     this.catalog = catalog;
     this.queue = queue;
+    this.settingsStore = new SettingsStore(context);
 
     setWillNotDraw(false);
     setClipChildren(false);
@@ -524,6 +532,42 @@ public final class StagePresenterImpl extends FrameLayout
     }
     // Update remote status
     // This would be updated from CompanionControl
+
+    // BGV auto-shuffle: periodically switch to a random bundled BGV
+    maybeShuffleBgv();
+  }
+
+  /** Periodically shuffles to a random bundled BGV when auto-shuffle is enabled. */
+  private void maybeShuffleBgv() {
+    if (settingsStore == null) return;
+    if (!settingsStore.getBgvAutoShuffle()) return;
+    if (backgroundStage.getSource() != BackgroundStage.Source.BGV) return;
+
+    long now = System.currentTimeMillis();
+    int intervalMs = settingsStore.getBgvShuffleInterval() * 1000; // convert seconds to ms
+    if (intervalMs <= 0) return;
+
+    // Initialize on first call
+    if (!bgvShuffleInitialized) {
+      lastBgvShuffleTime = now;
+      bgvShuffleInitialized = true;
+      return;
+    }
+
+    if (now - lastBgvShuffleTime < intervalMs) return;
+
+    // Pick a random bundled BGV (different from current if possible)
+    BundledBgvCatalog.Clip nextClip = BundledBgvCatalog.random();
+    if (nextClip == null) return;
+
+    // Copy to stage-media directory
+    java.io.File stageMediaDir = new java.io.File(backgroundStage.getContext().getFilesDir(), "stage-media");
+    java.io.File dest = new java.io.File(stageMediaDir, nextClip.id + ".video");
+    if (BundledBgvCatalog.copyTo(backgroundStage.getContext(), nextClip, dest)) {
+      // Update session via public method
+      session.setBundledBgv(nextClip, dest);
+      lastBgvShuffleTime = now;
+    }
   }
 
   /** Sets whether the visual layer is active. */

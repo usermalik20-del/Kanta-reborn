@@ -14,6 +14,7 @@ import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 import ph.kanta.reborn.core.bgv.ScenicCatalog;
+import ph.kanta.reborn.BundledBgvCatalog;
 import ph.kanta.reborn.core.bgv.ScenicClip;
 import ph.kanta.reborn.BgvLibrary;
 
@@ -277,10 +278,32 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           try {
             stageStore = new StageMediaStore(context);
             StageMediaStore.Selection selection = stageStore.load();
+
+            // If no saved stage (default scenic with no video), initialize default BGV
+            final StageMediaStore.Selection finalSelection;
+            if ("scenic".equals(selection.kind) && selection.video == null && !settings.getBgvDefaultSelected()) {
+              BundledBgvCatalog.Clip defaultClip = BundledBgvCatalog.defaultClip();
+              if (defaultClip != null) {
+                File dest = new File(stageStore.getRoot(), defaultClip.id + ".video");
+                if (BundledBgvCatalog.copyTo(context, defaultClip, dest)) {
+                  stageStore.setVideo(dest.getName());
+                  settings.setBgvDefaultSelected(true);
+                  // Reload selection
+                  finalSelection = stageStore.load();
+                } else {
+                  finalSelection = selection;
+                }
+              } else {
+                finalSelection = selection;
+              }
+            } else {
+              finalSelection = selection;
+            }
+
             main.post(
                 () -> {
                   stageReady = true;
-                  applyStage(selection);
+                  applyStage(finalSelection);
                 });
           } catch (Exception failure) {
             main.post(
@@ -1779,6 +1802,19 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 });
           }
         });
+  }
+
+  /** Sets a bundled BGV as the background video (used for auto-shuffle). */
+  public void setBundledBgv(BundledBgvCatalog.Clip clip, java.io.File dest) {
+    if (clip == null || dest == null) return;
+    stageKind = "video";
+    stageVideo = dest;
+    visualEpoch = android.os.SystemClock.elapsedRealtime();
+    visualGeneration++;
+    if (stageStore != null) {
+      stageStore.setVideo(dest.getName());
+    }
+    publish();
   }
 
   void sceneResource(String name, int drawableResource) {

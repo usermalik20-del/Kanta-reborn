@@ -55,6 +55,9 @@ public final class SettingsStore {
   public static final String KEY_BGV_SOURCE_PRIORITY = "bgv.sourcePriority";
   public static final String KEY_BGV_LOOP = "bgv.loop";
   public static final String KEY_BGV_SCRIM_OPACITY = "bgv.scrimOpacity";
+  public static final String KEY_BGV_AUTO_SHUFFLE = "bgv.autoShuffle";
+  public static final String KEY_BGV_SHUFFLE_INTERVAL = "bgv.shuffleInterval";
+  public static final String KEY_BGV_DEFAULT_SELECTED = "bgv.defaultSelected";
 
   private final SharedPreferences prefs;
 
@@ -182,6 +185,15 @@ public final class SettingsStore {
   public void setBgvLoop(boolean v) { prefs.edit().putBoolean(KEY_BGV_LOOP, v).apply(); }
 
   public float getBgvScrimOpacity() { return prefs.getFloat(KEY_BGV_SCRIM_OPACITY, 0.8f); }
+
+  public boolean getBgvAutoShuffle() { return prefs.getBoolean(KEY_BGV_AUTO_SHUFFLE, true); }
+  public void setBgvAutoShuffle(boolean v) { prefs.edit().putBoolean(KEY_BGV_AUTO_SHUFFLE, v).apply(); }
+
+  public int getBgvShuffleInterval() { return prefs.getInt(KEY_BGV_SHUFFLE_INTERVAL, 300); }
+  public void setBgvShuffleInterval(int v) { prefs.edit().putInt(KEY_BGV_SHUFFLE_INTERVAL, v).apply(); }
+
+  public boolean getBgvDefaultSelected() { return prefs.getBoolean(KEY_BGV_DEFAULT_SELECTED, false); }
+  public void setBgvDefaultSelected(boolean v) { prefs.edit().putBoolean(KEY_BGV_DEFAULT_SELECTED, v).apply(); }
   public void setBgvScrimOpacity(float v) { prefs.edit().putFloat(KEY_BGV_SCRIM_OPACITY, v).apply(); }
 
   /** Resets all settings to defaults. */
