@@ -9,7 +9,7 @@ import android.widget.FrameLayout;
 
 import ph.kanta.reborn.SessionController;
 import ph.kanta.reborn.settings.SettingsStore;
-import ph.kanta.reborn.core.bgv.BundledBgvCatalog;
+import ph.kanta.reborn.BundledBgvCatalog;
 import ph.kanta.reborn.FileAudioPlayback;
 import ph.kanta.reborn.core.MidiLyrics;
 import ph.kanta.reborn.core.RenderedPlaybackClock;

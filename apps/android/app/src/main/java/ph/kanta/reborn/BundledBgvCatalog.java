@@ -1,4 +1,4 @@
-package ph.kanta.reborn.core.bgv;
+package ph.kanta.reborn;
 
 import android.content.Context;
 import android.content.res.AssetManager;

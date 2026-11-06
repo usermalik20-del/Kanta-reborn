@@ -14,7 +14,7 @@ import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 import ph.kanta.reborn.core.bgv.ScenicCatalog;
-import ph.kanta.reborn.core.bgv.BundledBgvCatalog;
+import ph.kanta.reborn.BundledBgvCatalog;
 import ph.kanta.reborn.core.bgv.ScenicClip;
 import ph.kanta.reborn.BgvLibrary;
 
