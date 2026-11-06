@@ -1308,6 +1308,18 @@ public final class RuntimeChecks extends Instrumentation {
     await(() -> visibleOnScreen("kanta.utility.search-input"),
         "Workspace Search did not open the lower utility panel");
     assertPersistentStage("kanta.utility.search-input");
+    check(visibleOnScreen("kanta.utility.keyboard-toggle"),
+        "Workspace Search did not expose the KANTA keyboard switch");
+    check(visibleOnScreen("kanta.utility.keyboard"),
+        "Workspace Search did not keep the KANTA keyboard visible");
+    runOnMainSync(() -> {
+      View toggle = activity.getWindow().getDecorView().findViewWithTag("kanta.utility.keyboard-toggle");
+      check(toggle instanceof android.widget.Button, "KANTA keyboard switch is not a button");
+      String before = String.valueOf(((android.widget.Button) toggle).getText());
+      check(toggle.performClick(), "KANTA keyboard switch did not accept a click");
+      String after = String.valueOf(((android.widget.Button) toggle).getText());
+      check(!before.equals(after), "KANTA keyboard switch did not change layout");
+    });
     check(state(() -> field(activity, "lowerUtilityAccessory") != null
             && workspace.activeAccessory() == null),
         "Workspace Search layered an overlay over the persistent stage");

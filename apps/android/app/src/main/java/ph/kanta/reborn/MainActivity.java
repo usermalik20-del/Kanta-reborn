@@ -32,6 +32,7 @@ import ph.kanta.reborn.update.UpdatePackageInspector;
 import ph.kanta.reborn.stage.QrCodeView;
 import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.ui.KantaTheme;
+import ph.kanta.reborn.ui.components.InlineKeyboard;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
@@ -533,33 +534,76 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   /** Search accessory: a compact read of the library with reservation. */
   private void searchAccessory(LinearLayout target) {
+    LinearLayout inputRow = new LinearLayout(this);
+    inputRow.setOrientation(LinearLayout.HORIZONTAL);
+    inputRow.setGravity(Gravity.CENTER_VERTICAL);
     EditText input = new EditText(this);
     input.setSingleLine(true);
+    input.setShowSoftInputOnFocus(false);
+    input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+        | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
     input.setTextColor(Color.WHITE);
     input.setTextSize(16);
     input.setHintTextColor(0xFFAFB8D0);
     input.setHint("Song code, title or artist");
     input.setText(query);
+    input.setSelection(input.length());
     input.setContentDescription("KANTA workspace search input");
     input.setTag("kanta.utility.search-input");
-    target.addView(input);
+    inputRow.addView(input, new LinearLayout.LayoutParams(0, -2, 1));
+
+    Button keyboardToggle = button("ABC", () -> {});
+    keyboardToggle.setTag("kanta.utility.keyboard-toggle");
+    keyboardToggle.setContentDescription("Switch KANTA keyboard layout");
+    keyboardToggle.setMinWidth(0);
+    keyboardToggle.setMinimumWidth(0);
+    keyboardToggle.setPadding(dp(10), dp(4), dp(10), dp(4));
+    inputRow.addView(keyboardToggle, new LinearLayout.LayoutParams(dp(64), dp(52)));
+    target.addView(inputRow);
+
+    InlineKeyboard keyboard = new InlineKeyboard(this, new InlineKeyboard.Listener() {
+      @Override public void onText(String value) {
+        int start = Math.max(0, input.getSelectionStart());
+        int end = Math.max(start, input.getSelectionEnd());
+        input.getText().replace(start, end, value);
+        input.setSelection(start + value.length());
+        input.requestFocus();
+      }
+      @Override public void onBackspace() {
+        int start = Math.max(0, input.getSelectionStart());
+        int end = Math.max(start, input.getSelectionEnd());
+        if (start != end) input.getText().delete(start, end);
+        else if (start > 0) input.getText().delete(start - 1, start);
+        input.requestFocus();
+      }
+      @Override public void onSubmit() { input.requestFocus(); }
+    });
+    keyboardToggle.setOnClickListener(v -> {
+      keyboard.toggle();
+      boolean letters = keyboard.isLetters();
+      keyboardToggle.setText(letters ? "123" : "ABC");
+      keyboardToggle.setContentDescription(letters
+          ? "Switch KANTA keyboard to numbers"
+          : "Switch KANTA keyboard to letters");
+      input.requestFocus();
+    });
+    target.addView(keyboard, new LinearLayout.LayoutParams(-1, dp(204)));
+
     final LinearLayout list = new LinearLayout(this);
     list.setOrientation(LinearLayout.VERTICAL);
     target.addView(list);
-    input.addTextChangedListener(
-        new TextWatcher() {
-          public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
 
-          public void onTextChanged(CharSequence s, int a, int b, int c) {
-            query = s.toString();
-            renderWorkspaceSearch(list);
-          }
-
-          public void afterTextChanged(Editable e) {}
-        });
+    input.addTextChangedListener(new TextWatcher() {
+      public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+      public void onTextChanged(CharSequence s, int a, int b, int c) {
+        query = s.toString();
+        renderWorkspaceSearch(list);
+      }
+      public void afterTextChanged(Editable e) {}
+    });
+    input.requestFocus();
     renderWorkspaceSearch(list);
   }
-
   /** Fills the workspace search list from the current query. */
   private void renderWorkspaceSearch(LinearLayout list) {
     list.removeAllViews();
