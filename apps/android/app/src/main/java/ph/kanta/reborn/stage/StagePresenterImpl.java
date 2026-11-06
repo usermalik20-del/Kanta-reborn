@@ -507,18 +507,18 @@ public final class StagePresenterImpl extends FrameLayout
     // the presenter's existing background renderer, never into a second stage.
     // Camera opt-in is authoritative for the visible source. Scenic selection must
     // never clobber a live preview during the 100ms refresh tick.
-    if ("camera".equals(session.stageKind) || session.cameraPreviewEnabled) {
+    if ("camera".equals(session.stageKind()) || session.cameraPreviewEnabled()) {
       backgroundStage.setSource(BackgroundStage.Source.CAMERA);
-    } else if (("photo".equals(session.stageKind) || "scenic".equals(session.stageKind))
-        && session.scenic != null) {
-      backgroundStage.setPhoto(session.scenic);
-    } else if ("video".equals(session.stageKind) && session.stageVideo != null) {
-      backgroundStage.setVideo(session.stageVideo);
+    } else if (("photo".equals(session.stageKind()) || "scenic".equals(session.stageKind()))
+        && session.scenicBitmap() != null) {
+      backgroundStage.setPhoto(session.scenicBitmap());
+    } else if ("video".equals(session.stageKind()) && session.stageVideo() != null) {
+      backgroundStage.setVideo(session.stageVideo());
     } else {
       backgroundStage.setSource(BackgroundStage.Source.SOLID);
     }
     // Update lyrics if playing
-    if (session.playing && session.lyrics != null && !session.lyrics.isEmpty()) {
+    if (session.isPlaying() && session.lyrics != null && !session.lyrics.isEmpty()) {
       MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);
       lyricStage.setLyrics(cues, session.getClock());
     }
