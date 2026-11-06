@@ -1298,7 +1298,8 @@ public final class RuntimeChecks extends Instrumentation {
             && workspace.activeAccessory() == null),
         "Workspace Search layered an overlay over the persistent stage");
     runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-    await(() -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+    await(() -> field(activity, "lowerUtilityAccessory") == null
+            && !visibleOnScreen("kanta.utility.search-input"),
         "Predictive back did not dismiss the lower utility panel");
     assertPersistentStage(null);
     check(
