@@ -179,6 +179,24 @@ final class StageMediaStore {
     }
   }
 
+  /** Sets the video file name and kind to video, then persists. */
+  public void setVideo(String videoFileName) {
+    this.video = videoFileName;
+    this.kind = "video";
+    try { persist(); } catch (Exception ignored) {}
+  }
+
+  /** Sets the kind and persists. */
+  public void setKind(String kind) {
+    this.kind = kind;
+    try { persist(); } catch (Exception ignored) {}
+  }
+
+  /** Persists current selection. */
+  public void persistSelection() {
+    try { persist(); } catch (Exception ignored) {}
+  }
+
   private static BitmapFactory.Options imageBounds(File file) throws IOException {
     BitmapFactory.Options bounds = new BitmapFactory.Options();
     bounds.inJustDecodeBounds = true;

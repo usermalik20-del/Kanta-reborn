@@ -285,9 +285,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
               if (defaultClip != null) {
                 File dest = new File(stageStore.root, defaultClip.id + ".video");
                 if (BundledBgvCatalog.copyTo(context, defaultClip, dest)) {
-                  stageStore.video = dest.getName();
-                  stageStore.kind = "video";
-                  stageStore.persist();
+                  stageStore.setVideo(dest.getName());
                   settings.setBgvDefaultSelected(true);
                   // Reload selection
                   selection = stageStore.load();
@@ -1807,9 +1805,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     visualEpoch = android.os.SystemClock.elapsedRealtime();
     visualGeneration++;
     if (stageStore != null) {
-      stageStore.video = dest.getName();
-      stageStore.kind = "video";
-      try { stageStore.persist(); } catch (Exception ignored) {}
+      stageStore.setVideo(dest.getName());
     }
     publish();
   }
