@@ -283,7 +283,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             if ("scenic".equals(selection.kind) && selection.video == null && !settings.getBgvDefaultSelected()) {
               BundledBgvCatalog.Clip defaultClip = BundledBgvCatalog.defaultClip();
               if (defaultClip != null) {
-                File dest = new File(stageStore.root, defaultClip.id + ".video");
+                File dest = new File(stageStore.getRoot(), defaultClip.id + ".video");
                 if (BundledBgvCatalog.copyTo(context, defaultClip, dest)) {
                   stageStore.setVideo(dest.getName());
                   settings.setBgvDefaultSelected(true);

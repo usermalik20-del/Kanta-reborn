@@ -37,6 +37,11 @@ final class StageMediaStore {
     options = new AtomicFile(new File(root, "selection.json"));
   }
 
+  /** Returns the root directory for stage media. */
+  public File getRoot() {
+    return root;
+  }
+
   Selection load() throws Exception {
     if (options.getBaseFile().exists() || new File(options.getBaseFile() + ".bak").exists()) {
       if (Math.max(
