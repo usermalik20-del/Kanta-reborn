@@ -1,5 +1,9 @@
 # KANTA Reborn architecture
 
+## Android persistent-stage composition — 2026-11-06 local candidate
+
+`MainActivity` owns navigation and one persistent primary `StagePresenterImpl`. The stage is not hidden or replaced for Home or reference destinations. Utility menus render below the stage; Now Playing is utility content, not a second primary renderer. Visual controls mutate existing session presentation state and the primary renderer projects that state. Fullscreen/external displays remain read-only projections, never playback/FIFO owners. The primary camera target is restored after explicit fullscreen dismissal. Existing `SessionController`, `LibraryRepository`, media-byte preservation and explicit microphone/DSP opt-in boundaries are unchanged. No iOS or website runtime changes accompany this candidate. Fresh Android compilation and runtime acceptance are still required.
+
 ## Android native SoundFont allocation ceiling
 
 `soundfont.c` bounds TinySoundFont payload allocations at **1536 MiB per worker** (previously 128 MiB), retaining overflow checks and failed-allocation cleanup. The counter remains worker-local and is not a device-wide memory reservation; allocator headers, file mappings and unrelated app allocations are outside the tracked payload. PCM16 sample data expands to float32 at load time: a 581,742,688-byte standalone piano needs roughly 1,163,416,536 bytes for samples before synth metadata. The cap permits that payload with headroom, but does not prove physical-memory availability, successful playback or compatibility with every bank. OS allocation failure and process memory-pressure termination remain possible. Structural and region checks, the 128-voice bound, import/storage policy, thread ownership and iOS behavior are unchanged. No large bank is bundled.
@@ -7,6 +11,10 @@
 ## Website privacy and third-party integrations
 
 The public website keeps Google Analytics and Google AdSense behind explicit optional consent. `apps/web/api/page.js` owns request-time HTML delivery, per-response nonce generation and the matching CSP; `apps/web/site-consent.js` owns the visitor choice and loads `analytics.js` plus AdSense only after acceptance. The persistent choice can be changed or revoked. The private `/songbook` route is deliberately excluded from the consent injection and third-party integrations. Native iOS and Android builds remain isolated from website scripts and ad SDKs. Actual ad delivery depends on Google publisher approval, account-side Auto Ads configuration and applicable consent-platform requirements. Do not treat code deployment as proof of account approval or live ads.
+
+## Website visual system
+
+All ten website routes share the dark KANTA visual system from `apps/web/style.css`. Its CSS custom properties own the palette, content width, page gutters and card radius; the primary header, navigation, brand mark and download action are kept consistent across routes. Route-specific content can vary, but should use the shared theme and reusable components. The Songbook's rendered paper pages are an intentional content-specific treatment, not a second site shell; its controls and surrounding layout remain within the shared theme.
 
 ## Website crawler and scraping boundary
 
@@ -122,7 +130,7 @@ StageMediaStore is owned by the serial IO executor. It copies selected files int
 
 SessionController remains the sole queue/transport owner and publishes the selected visual through independent operation and display generations. StageSurface owns only a lifecycle-bound muted looping MediaPlayer, its TextureView surface and the existing lyric projection. It starts visual video only in the foreground, releases it when inactive/detached, retains Scenic behind failed/unrendered video and fences stale preparation callbacks. Fullscreen suppresses the redundant primary video renderer; a separate external-display projection may own another decoder. No camera, audio monitoring, network permission or second karaoke queue is introduced.
 
-MainActivity retains its stage/transport/navigation tree across controller publication and rebuilds only the selected control panel. Five weighted navigation tabs remain visible on narrow phones. The app icon reuses the original recovered iOS artwork byte-for-byte. The test-only solid-color silent MP4 is procedurally generated and has documented provenance; no third-party clip is bundled. Cloud run 38825170997 passed source 2ced06c5c6063e15e227cc094b2462a36a03e7f2: APK/instrumentation assembly, lint, native sanitizer checks, all 201 domain checks, browser interoperability and 47 actual API 35 runtime checks. Physical-device acceptance remains open.
+MainActivity retains its stage/transport/navigation tree across controller publication and rebuilds only the selected control panel. Home and legacy utility destinations use that persistent layer; reference-led destination screens own their headers and actions, so MainActivity hides the persistent stage, transport, workspace toolbar and navigation row while they are active. Five weighted navigation tabs remain available on the persistent-layer screens. The app icon reuses the original recovered iOS artwork byte-for-byte. The test-only solid-color silent MP4 is procedurally generated and has documented provenance; no third-party clip is bundled. Cloud run 38825170997 passed source 2ced06c5c6063e15e227cc094b2462a36a03e7f2: APK/instrumentation assembly, lint, native sanitizer checks, all 201 domain checks, browser interoperability and 47 actual API 35 runtime checks. Physical-device acceptance remains open.
 
 ## Optional Android front-camera preview
 
@@ -689,8 +697,15 @@ A single token source defines the KANTA visual language:
 
 ### Reusable components (`ph.kanta.reborn.ui.components`)
 
-`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`, `KantaProgressBar`, `KantaStepper`,
-`KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`.
+`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaImageButton`, `KantaScreenHeader`,
+`KantaSearchBar`, `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`,
+`KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`.
+
+All non-home page destinations share the same 48dp icon back affordance and typography through
+`KantaScreenHeader`. Goal menus use accessible icon-led cards, and search tabs, media actions,
+queue/playback controls and legacy `MainActivity` buttons use the same KantaTheme palette and
+pressed/disabled states. These remain view-only changes; authoritative queue, playback and stage
+ownership is unchanged.
 
 ### Screens (`ph.kanta.reborn.ui`)
 

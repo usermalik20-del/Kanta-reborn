@@ -1,5 +1,13 @@
 # Codebase Context Packet — KANTA Reborn
 
+## Android persistent-stage context refresh — 2026-11-06
+
+- **Stack:** native Java 17 / Android Views, Android Gradle Plugin 8.13.2, compile/target SDK 36, min SDK 26, NDK 27.2.12479018; AndroidX Activity 1.10.1, CameraX 1.5.3, RecyclerView 1.3.2 and Core 1.13.1. No new dependency or UI framework.
+- **Composition:** `MainActivity` retains one primary `StagePresenterImpl` and changes lower utility content. Now Playing no longer owns a separate renderer/camera target. Explicit fullscreen remains a secondary read-only projection.
+- **Owners:** `SessionController` remains playback/FIFO owner; distinct reservation/playback identities and score-once semantics remain intact. `LibraryRepository` keeps app-private byte-preserved imports and atomic metadata; no storage/schema/search or remote protocol changes.
+- **Lifecycle/performance:** do not detach the primary renderer when changing menus; release or pause visual resources with host visibility, and restore camera targeting after fullscreen. Playback and import workers retain existing ownership. Source-review risks include small landscape heights, scroll/keyboard occlusion and stale visual callbacks; no latency measurements are claimed.
+- **Evidence:** local uncommitted candidate based on the checked-out Android UI branch, independent of iOS/web. Missing Java 17/platform/AAPT2/D8/apksigner blocks local APK validation; static/Python results are not runtime acceptance. See `docs/TESTING.md` for exact acceptance requirements.
+
 **Status (2026-11-05):** this packet is a dated snapshot of the candidate tree named below, not the current contract. One statement in the 2026-11-02 section is out of date: paired legacy `ShubBlob`/`kantablob`/index-container import **is** implemented and discoverable — MainActivity offers *Import legacy idx + blob* (`apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java:2110`), `SessionController.importLegacyPair` performs the import, and `LibraryRepository` rejects a lone container with a message naming that exact action. Regenerate this packet with the procedure in docs/CODING_CONTEXT_GUIDE.md before treating any section as current.
 
 ## Android library import-discoverability repair candidate — 2026-11-02

@@ -91,9 +91,28 @@ check(
     and "workspace.addPersistentLayer(stagePresenter)" in activity,
     "Android MainActivity mounts the workspace and installs the stage as the persistent layer",
 )
+routing = activity[activity.find("private void presentAccessory("):]
+routing = routing[:routing.find("\n  }")]
 check(
-    "workspace.activateAccessory(accessoryId)" in activity,
-    "Android MainActivity presents accessories through the workspace",
+    "workspace.activateAccessory(" not in routing
+    and "lowerUtilityAccessory = accessoryId;" in routing and "render();" in routing,
+    "Android workspace actions open lower utility destinations without covering the stage",
+)
+check(
+    "stagePane.setVisibility(View.VISIBLE)" in activity
+    and "main.setOrientation(LinearLayout.VERTICAL)" in activity
+    and "hideStage" not in activity,
+    "Android stage remains visible above utility panels at every width",
+)
+check(
+    "nowPlayingStage" not in activity and 'new StageSurface(this, session)' not in
+    activity[activity.find("private void nowPlayingScreen()"):activity.find("private void refreshNowPlayingScreen()")],
+    "Android Now Playing does not create a competing primary stage",
+)
+check(
+    "assertPersistentStage(" in runtime and "persistentStagePlaybackChecks();" in runtime
+    and '"Menu navigation changed authoritative reservations"' in runtime,
+    "Android runtime checks stage visibility and uninterrupted playback while navigating",
 )
 
 # --- Kanta-Connect pairing surface -------------------------------------------------
@@ -214,7 +233,7 @@ check(
 check(
     "workspaceBackNavigationChecks();" in runtime
     and "getOnBackPressedDispatcher().onBackPressed()" in runtime,
-    "Android instrumentation exercises dispatcher-based accessory dismissal",
+    "Android instrumentation exercises dispatcher-based lower-panel dismissal",
 )
 
 # --- The stage subtree must stay attached across session updates -------------

@@ -44,10 +44,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       MICROPHONE = 17,
       LEGACY_INDEX = 18,
       LEGACY_BLOB = 19;
-  private static final int NAVY = 0xFF0B1023,
-      PANEL = 0xFF19213E,
-      CYAN = 0xFF6FE5E8,
-      GOLD = 0xFFF6CE77;
+  private static final int NAVY = KantaTheme.BG_MAIN,
+      PANEL = KantaTheme.SURFACE_ELEVATED,
+      CYAN = KantaTheme.PRIMARY_CYAN,
+      ACCENT = KantaTheme.PRIMARY_CYAN;
   private SessionController session;
   private LinearLayout root, body, results, stagePane, navigationTabs;
   private View appHeader;
@@ -92,10 +92,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
   private ph.kanta.reborn.ui.KantaNowPlayingScreen nowPlayingScreen;
-  private StageSurface nowPlayingStage;
   private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
   private int visualsSelectedTab;
   private String searchSource = "All";
+  private String lowerUtilityAccessory;
   private boolean preparingExport = false;
   private byte[] exportBytes;
   private String exportCode;
@@ -107,7 +107,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           refreshMicrophoneReading();
           refreshNowPlayingScreen();
           if (stagePresenter != null) stagePresenter.refresh();
-          if (nowPlayingStage != null) nowPlayingStage.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
           refreshFullscreenControls();
           if (externalStage != null) externalStage.refresh();
@@ -136,7 +135,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new OnBackPressedCallback(false) {
           @Override
           public void handleOnBackPressed() {
-            if (workspace != null && workspace.activeAccessory() != null) {
+            if (lowerUtilityAccessory != null
+                || (workspace != null && workspace.activeAccessory() != null)) {
               dismissAccessory();
             } else if (isReferenceDestination(tab)) {
               navigateHome();
@@ -164,9 +164,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     youtubeForeground = true;
     session.hostVisible(true);
     if (stagePresenter != null)
-      stagePresenter.setVisualActive(
-          (fullscreen == null || !fullscreen.isShowing()) && !"Now Playing".equals(tab));
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(fullscreen == null || !fullscreen.isShowing());
+      stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
     if (fullscreenStage != null) fullscreenStage.setVisualActive(true);
     session.listen(this::render);
     handler.post(tick);
@@ -220,7 +218,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     session.listen(null);
     session.hostVisible(false);
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     if (fullscreenStage != null) fullscreenStage.setVisualActive(false);
     if (!isChangingConfigurations()) session.pause();
     if (presentation != null) presentation.dismiss();
@@ -281,14 +278,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private Button button(String label, Runnable action) {
-    Button b = new Button(this);
-    b.setText(label);
+    Button b = KantaTheme.secondaryButton(this, label, v -> action.run());
     b.setAllCaps(false);
-    b.setTextColor(Color.WHITE);
-    b.setTextSize(14);
     b.setMinHeight(dp(48));
-    b.setBackgroundTintList(ColorStateList.valueOf(PANEL));
-    b.setOnClickListener(v -> action.run());
     return b;
   }
 
@@ -335,41 +327,34 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     queryInput = null;
     results = null;
     if (root == null) buildWindow();
-    nowPlaying.setText(
-        session.current == null
-            ? "Ready for your next song"
-            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer));
-    playButton.setText(session.playing ? "Pause" : "Play");
-    playButton.setEnabled(session.ready && !session.loading);
-    nextButton.setEnabled(session.ready && !session.loading);
-    boolean home = "Home".equals(tab);
-    boolean referenceDestination = isReferenceDestination(tab);
+    refreshLowerUtilityState();
+    boolean destination = !"Home".equals(tab) || lowerUtilityAccessory != null;
     if (workspaceBackCallback != null
         && (workspace == null || workspace.activeAccessory() == null))
-      workspaceBackCallback.setEnabled(referenceDestination);
-    boolean groupDestination = isGroupDestination(tab);
-    boolean hideStage = home || (referenceDestination && !groupDestination);
-    if (appHeader != null) appHeader.setVisibility(hideStage ? View.GONE : View.VISIBLE);
-    if (stagePane != null) stagePane.setVisibility(hideStage ? View.GONE : View.VISIBLE);
-    if (navigationTabs != null)
-      navigationTabs.setVisibility(home || (referenceDestination && !groupDestination) ? View.GONE : View.VISIBLE);
+      workspaceBackCallback.setEnabled(destination);
+    // The stage is the one persistent playback surface. Destinations are rendered in the
+    // utility pane beneath it; never detach or hide the stage while navigating.
+    if (appHeader != null) appHeader.setVisibility(View.VISIBLE);
+    if (stagePane != null) stagePane.setVisibility(View.VISIBLE);
+    if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
-      entry.getValue().setTextColor(entry.getKey().equals(tab) ? GOLD : Color.WHITE);
+      entry.getValue().setTextColor(entry.getKey().equals(tab) ? ACCENT : Color.WHITE);
     }
-    if ("Now Playing".equals(tab) && nowPlayingScreen != null) {
+    // Now Playing is a live projection. Keep its view tree stable while the
+    // clock/session publishes; rebuilding it every 100ms drops focus and is
+    // needlessly expensive. Navigation into it still builds once below.
+    if ("Now Playing".equals(tab) && lowerUtilityAccessory == null
+        && nowPlayingScreen != null && body != null) {
       refreshNowPlayingScreen();
+      if (stagePresenter != null) stagePresenter.refresh();
       return;
     }
-    if (!"Now Playing".equals(tab) && nowPlayingStage != null) {
-      nowPlayingStage.setVisualActive(false);
-      camera.moveTo(stagePresenter);
-      if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
-      nowPlayingStage = null;
-      nowPlayingScreen = null;
-    }
     body.removeAllViews();
-    renderPanel();
+    nowPlayingScreen = null;
+    renderLowerUtility();
+    refreshLowerUtilityState();
+    if (lowerUtilityAccessory == null) renderPanel();
     if (stagePresenter != null) stagePresenter.refresh();
   }
 
@@ -400,12 +385,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     header.addView(button("Help", this::help));
     root.addView(header);
     LinearLayout main = new LinearLayout(this);
-    boolean wide = getResources().getConfiguration().screenWidthDp >= 700;
-    main.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+    // The live stage is always the first row. Utilities flow below it on every
+    // form factor; a tablet must not turn the stage into a side rail.
+    main.setOrientation(LinearLayout.VERTICAL);
     root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
     stagePane = column();
-    // Compact Workspace: the stage is the persistent base layer. Utilities are
-    // transient accessories presented above it, so the player is never lost.
+    // The workspace now owns only the persistent presenter. Utility actions are
+    // routed to the lower panel, never layered over this surface.
     workspace = new KantaWorkspace(this, null);
     workspace.setListener(
         new KantaWorkspace.Listener() {
@@ -447,38 +433,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     workspace.addPersistentLayer(stagePresenter);
     // Register as ScoreSink
     session.setScoreSink(stagePresenter);
-    stagePane.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
-    nowPlaying =
-        text(
-            session.current == null
-                ? "Ready for your next song"
-                : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer),
-            15,
-            Color.WHITE);
-    stagePane.addView(nowPlaying);
-    LinearLayout transport = row();
-    playButton = button("Play", this::playWithCountdown);
-    addWeighted(transport, playButton);
-    nextButton = button("Next", session::next);
-    addWeighted(transport, nextButton);
-    Button openFullscreen = button("Fullscreen", this::fullscreen);
-    openFullscreen.setTag("kanta.fullscreen.open");
-    addWeighted(transport, openFullscreen);
-    stagePane.addView(transport);
-    stagePane.addView(workspaceToolbar());
-    if (wide) main.addView(stagePane, new LinearLayout.LayoutParams(0, -1, 1.2f));
-    else
-      main.addView(
-          stagePane,
-          new LinearLayout.LayoutParams(
-              -1, dp(getResources().getConfiguration().orientation == 2 ? 200 : 300)));
+    stagePane.addView(workspace, new LinearLayout.LayoutParams(-1, -1));
+    // Split the available main area instead of reserving a fixed landscape height;
+    // compact displays must leave usable space for the lower utility destination.
+    stagePane.setMinimumHeight(dp(140));
+    main.addView(stagePane, new LinearLayout.LayoutParams(-1, 0, 0.42f));
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(true);
     body = column();
     body.setPadding(dp(4), 0, dp(4), dp(14));
     scroll.addView(body);
-    if (wide) main.addView(scroll, new LinearLayout.LayoutParams(0, -1, 1));
-    else main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+    main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 0.58f));
     LinearLayout tabs = row();
     navigationTabs = tabs;
     for (String name : new String[] {"Home", "Sing", "Performance", "Experience", "More"}) {
@@ -486,6 +451,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           button(
               name,
               () -> {
+                lowerUtilityAccessory = null;
                 tab = name;
                 render();
               });
@@ -496,7 +462,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       b.setMaxLines(2);
       b.setSelected(name.equals(tab));
       b.setTag("kanta.nav." + name);
-      if (name.equals(tab)) b.setTextColor(GOLD);
+      if (name.equals(tab)) b.setTextColor(ACCENT);
       navigationButtons.put(name, b);
       tabs.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
     }
@@ -548,52 +514,21 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     return b;
   }
 
-  /**
-   * Presents one transient accessory above the persistent stage. The stage is
-   * never rebuilt, so playback, lyrics and camera are preserved.
-   */
+  /** Routes a workspace action into the lower utility panel. */
   private void presentAccessory(String accessoryId) {
-    if (workspace == null) return;
-    if (workspace.activeAccessory() != null
-        && !workspace.activeAccessory().equals(accessoryId)) returnToHomeAfterAccessory = false;
-    workspaceSearchGeneration++;
-    workspace.activateAccessory(accessoryId);
-    LinearLayout target = workspace.accessoryContent();
-    target.removeAllViews();
-    switch (accessoryId) {
-      case KantaWorkspace.ACCESSORY_SEARCH:
-        workspace.addAccessoryHeader("Search");
-        // Use the StagePresenterImpl's SearchOverlay
-        if (stagePresenter != null) stagePresenter.showSearch();
-        break;
-      case KantaWorkspace.ACCESSORY_QUEUE:
-        workspace.addAccessoryHeader("Queue");
-        // Use the StagePresenterImpl's QueueOverlay
-        if (stagePresenter != null) stagePresenter.showQueue();
-        break;
-      case KantaWorkspace.ACCESSORY_VISUALS:
-        workspace.addAccessoryHeader("Stage Visuals");
-        visualsAccessory(target);
-        break;
-      case KantaWorkspace.ACCESSORY_PITCH_GAME:
-        workspace.addAccessoryHeader("Pitch Practice");
-        if (stagePresenter != null) stagePresenter.showPitchGame(session.practiceTargetHz());
-        break;
-      case KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT:
-        workspace.addAccessoryHeader("Voice Coach");
-        if (stagePresenter != null) stagePresenter.showLearningAssistant();
-        break;
-      default:
-        workspace.addAccessoryHeader("Controls");
-        controlsAccessory(target);
-        break;
-    }
+    if (accessoryId == null) return;
+    if (workspace != null && workspace.activeAccessory() != null) workspace.deactivateAccessory();
+    returnToHomeAfterAccessory = false;
+    lowerUtilityAccessory = accessoryId;
+    render();
   }
 
   /** Dismisses the active accessory, leaving the stage untouched. */
   private void dismissAccessory() {
     workspaceSearchGeneration++;
+    lowerUtilityAccessory = null;
     if (workspace != null) workspace.deactivateAccessory();
+    render();
   }
 
   /** Search accessory: a compact read of the library with reservation. */
@@ -606,6 +541,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     input.setHint("Song code, title or artist");
     input.setText(query);
     input.setContentDescription("KANTA workspace search input");
+    input.setTag("kanta.utility.search-input");
     target.addView(input);
     final LinearLayout list = new LinearLayout(this);
     list.setOrientation(LinearLayout.VERTICAL);
@@ -641,7 +577,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           }
           handler.post(
               () -> {
-                if (token != searchGeneration || isDestroyed()) return;
+                if (token != workspaceSearchGeneration || isDestroyed()) return;
                 list.removeAllViews();
                 if (found.isEmpty()) {
                   list.addView(text("No matching songs", 14, 0xFFAFB8D0));
@@ -666,7 +602,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   /** Queue accessory: a read-only projection of the current queue. */
   private void queueAccessory(LinearLayout target) {
-    target.addView(text("Up Next \u00b7 " + session.queue.snapshot().size(), 18, GOLD));
+    target.addView(text("Up Next \u00b7 " + session.queue.snapshot().size(), 18, ACCENT));
     List<ReservationQueue.Entry> entries = session.queue.snapshot();
     if (entries.isEmpty()) {
       target.addView(text("Reserve a song, then choose Play to begin.", 14, 0xFFAFB8D0));
@@ -793,7 +729,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     int pad = dp(20);
     content.setPadding(pad, pad, pad, pad);
 
-    TextView heading = text("Kanta-Connect", 20, GOLD);
+    TextView heading = text("Kanta-Connect", 20, ACCENT);
     heading.setTypeface(null, android.graphics.Typeface.BOLD);
     content.addView(heading);
     content.addView(text(info.endpoint(), 15, Color.WHITE));
@@ -848,7 +784,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     LinearLayout content = column();
     content.setPadding(dp(24), dp(16), dp(24), dp(16));
 
-    TextView title = text("Pitch Settings", 20, GOLD);
+    TextView title = text("Pitch Settings", 20, ACCENT);
     title.setTypeface(null, android.graphics.Typeface.BOLD);
     title.setGravity(android.view.Gravity.CENTER);
     content.addView(title);
@@ -867,7 +803,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     sensSeek.setProgress((int) ((currentSens - 0.1f) / 2.9f * 200));
     content.addView(sensSeek);
 
-    TextView sensValue = text(String.format("%.2f", currentSens), 18, GOLD);
+    TextView sensValue = text(String.format("%.2f", currentSens), 18, ACCENT);
     sensValue.setGravity(android.view.Gravity.CENTER);
     content.addView(sensValue);
 
@@ -1000,11 +936,74 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     return addresses;
   }
 
+  private void refreshLowerUtilityState() {
+    if (nowPlaying == null || playButton == null || nextButton == null) return;
+    nowPlaying.setText(
+        session.current == null
+            ? "Ready for your next song"
+            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer));
+    playButton.setText(session.playing ? "Pause" : "Play");
+    playButton.setEnabled(session.ready && !session.loading);
+    nextButton.setEnabled(session.ready && !session.loading);
+  }
+
+  /** Lower utility strip; deliberately outside the persistent stage row. */
+  private void renderLowerUtility() {
+    nowPlaying = text(
+        session.current == null ? "Ready for your next song"
+            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer),
+        15, Color.WHITE);
+    body.addView(nowPlaying);
+    LinearLayout transport = row();
+    playButton = button("Play", this::playWithCountdown);
+    addWeighted(transport, playButton);
+    nextButton = button("Next", session::next);
+    addWeighted(transport, nextButton);
+    Button openFullscreen = button("Fullscreen", this::fullscreen);
+    openFullscreen.setTag("kanta.fullscreen.open");
+    addWeighted(transport, openFullscreen);
+    body.addView(transport);
+    body.addView(workspaceToolbar());
+    if (lowerUtilityAccessory != null)
+      body.addView(button("Close utility", this::dismissAccessory));
+    if (KantaWorkspace.ACCESSORY_SEARCH.equals(lowerUtilityAccessory)) {
+      body.addView(text("Search", 18, ACCENT));
+      searchAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_QUEUE.equals(lowerUtilityAccessory)) {
+      body.addView(text("Queue", 18, ACCENT));
+      queueAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_VISUALS.equals(lowerUtilityAccessory)) {
+      body.addView(text("Visuals", 18, ACCENT));
+      visualsAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_MORE.equals(lowerUtilityAccessory)) {
+      body.addView(text("Controls", 18, ACCENT));
+      controlsAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_PITCH_GAME.equals(lowerUtilityAccessory)) {
+      body.addView(text("Pitch Practice", 18, ACCENT));
+      body.addView(button("Start pitch practice", () -> stagePresenter.startPitchPractice()));
+      ph.kanta.reborn.stage.PitchGameOverlay overlay = stagePresenter.detachPitchGameOverlay();
+      overlay.showPanel();
+      body.addView(overlay, new LinearLayout.LayoutParams(-1, dp(420)));
+    } else if (KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT.equals(lowerUtilityAccessory)) {
+      body.addView(text("Voice Coach", 18, ACCENT));
+      body.addView(button("Start voice coach", () -> stagePresenter.startVoiceCoach()));
+      ph.kanta.reborn.stage.LearningAssistantOverlay overlay = stagePresenter.detachLearningAssistantOverlay();
+      overlay.showPanel();
+      body.addView(overlay, new LinearLayout.LayoutParams(-1, dp(420)));
+    }
+  }
+
   private void renderPanel() {
     microphoneReading = null;
     monitorReading = null;
     scoreReading = null;
     nowPlayingScreen = null;
+    String legacyTitle = legacyDestinationTitle();
+    if (legacyTitle != null) {
+      String tag = "kanta.legacy." + tab.toLowerCase(Locale.ROOT).replace(' ', '-') + ".back";
+      body.addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
+          this, legacyTitle, "Back to Home", tag, v -> navigateHome()));
+    }
     if (!"Home".equals(tab) && !isReferenceDestination(tab)) {
       body.addView(text(session.message, 13, CYAN));
       body.addView(button("YouTube video (online)", this::openYouTubeVideo));
@@ -1061,16 +1060,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
+  private String legacyDestinationTitle() {
+    switch (tab) {
+      case "My Set": return "My Set";
+      case "Scenic": return "Scenic";
+      case "Realm": return "Realm";
+      case "Control": return "Settings";
+      case "Loop": return "Party Mode";
+      default: return null;
+    }
+  }
+
 
   private void openHomeAccessory(String accessoryId) {
-    if (!"Home".equals(tab)) {
-      presentAccessory(accessoryId);
-      return;
-    }
-    tab = "Control";
-    render();
     presentAccessory(accessoryId);
-    returnToHomeAfterAccessory = true;
   }
 
   private boolean isGroupDestination(String destination) {
@@ -1106,15 +1109,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     render();
   }
 
-  /** Now Playing projects live session state over a real StageSurface, never a sample backdrop. */
+  /** Now Playing is a utility projection below the persistent live stage. */
   private void nowPlayingScreen() {
-    if (nowPlayingStage == null) {
-      nowPlayingStage = new StageSurface(this, session);
-      nowPlayingStage.setTag("kanta.now-playing.stage");
-      nowPlayingStage.setVisualActive(true);
-      if (stagePresenter != null) stagePresenter.setVisualActive(false);
-      camera.moveTo(nowPlayingStage);
-    }
     nowPlayingScreen=new ph.kanta.reborn.ui.KantaNowPlayingScreen(this,new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener(){
       @Override public void onBack(){navigateHome();}
       @Override public void onFullscreen(){fullscreen();}
@@ -1132,10 +1128,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onTempoUp(){session.controls(session.volume,Math.min(2f,session.tempo+.05f),session.pitch);}
       @Override public void onFavorite(){}
       @Override public void onOverflow(){}
-    }, nowPlayingStage);
+    });
 
     nowPlayingScreen.setTag("kanta.screen.now-playing");
-    body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-1));
+    body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-2));
     refreshNowPlayingScreen();
   }
   private void refreshNowPlayingScreen() {
@@ -1622,43 +1618,43 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void singGroup() {
     body.addView(groupScreen("Sing", "What do you want to sing?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("find-song", "Find a song", "KANTA, YouTube or Local", "⌕"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("my-songs", "My songs", "My Set and playlists", "♫"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("favorites", "Favorites", "Saved songs", "★"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("recent", "Recent", "Recently played", "↺"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("queue", "Queue", "Up next", "☷"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("youtube", "YouTube", "Optional online video", "▶")
+      new ph.kanta.reborn.ui.GroupScreen.Item("find-song", "Find a song", "KANTA, YouTube or Local", ph.kanta.reborn.R.drawable.kanta_search_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("my-songs", "My songs", "My Set and playlists", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("favorites", "Favorites", "Saved songs", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("recent", "Recent", "Recently played", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("queue", "Queue", "Up next", ph.kanta.reborn.R.drawable.kanta_queue_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("youtube", "YouTube", "Optional online video", ph.kanta.reborn.R.drawable.kanta_youtube_color)
     }));
   }
 
   private void performanceGroup() {
     body.addView(groupScreen("Performance", "Help me while I’m singing.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("now-playing", "Now Playing", "Playback controls", "▶"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("lyrics", "Lyrics", "Follow along while singing", "▤"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("voice", "Voice", "Microphone and hear my voice", "♫"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("key-tempo", "Key & Tempo", "Fit the song to your voice", "↕"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("coach", "Singing Coach", "Scoring and practice", "✦")
+      new ph.kanta.reborn.ui.GroupScreen.Item("now-playing", "Now Playing", "Playback controls", ph.kanta.reborn.R.drawable.kanta_play_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("lyrics", "Lyrics", "Follow along while singing", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("voice", "Voice", "Microphone and hear my voice", ph.kanta.reborn.R.drawable.kanta_microphone_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("key-tempo", "Key & Tempo", "Fit the song to your voice", ph.kanta.reborn.R.drawable.kanta_pitch_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("coach", "Singing Coach", "Scoring and practice", ph.kanta.reborn.R.drawable.kanta_microphone_color)
     }));
   }
 
   private void experienceGroup() {
     body.addView(groupScreen("Experience", "How should your karaoke session look and feel?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("background", "Background", "Choose your stage", "▧"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("camera", "Camera", "Add a live preview", "▣"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("effects", "Effects", "Stage and voice sound", "✧"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("scenic", "Scenic", "Animated stage scenes", "◈"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("realm", "Realm", "Ambient stage mood", "◎"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("party", "Party Mode", "Between-song music and sounds", "🎉"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("display", "Display", "Fullscreen and external stage", "▣")
+      new ph.kanta.reborn.ui.GroupScreen.Item("background", "Background", "Choose your stage", ph.kanta.reborn.R.drawable.kanta_scenic_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("camera", "Camera", "Add a live preview", ph.kanta.reborn.R.drawable.kanta_visuals_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("effects", "Effects", "Stage and voice sound", ph.kanta.reborn.R.drawable.kanta_microphone_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("scenic", "Scenic", "Animated stage scenes", ph.kanta.reborn.R.drawable.kanta_scenic_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("realm", "Realm", "Ambient stage mood", ph.kanta.reborn.R.drawable.kanta_scenic_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("party", "Party Mode", "Between-song music and sounds", ph.kanta.reborn.R.drawable.kanta_more_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("display", "Display", "Fullscreen and external stage", ph.kanta.reborn.R.drawable.kanta_visuals_color)
     }));
   }
 
   private void moreGroup() {
     body.addView(groupScreen("More", "Advanced settings and tools.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("settings", "Settings", "Advanced voice and app settings", "⚙"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", "⌘"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", "⌁"),
-      new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", "?")
+      new ph.kanta.reborn.ui.GroupScreen.Item("settings", "Settings", "Advanced voice and app settings", ph.kanta.reborn.R.drawable.kanta_settings_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", ph.kanta.reborn.R.drawable.kanta_remote_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", ph.kanta.reborn.R.drawable.kanta_settings_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", ph.kanta.reborn.R.drawable.kanta_more_color)
     }));
   }
 
@@ -1797,7 +1793,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 session.publish();
               });
       option.setEnabled(session.monitor.enabled());
-      if (session.monitor.mode() == value) option.setTextColor(GOLD);
+      if (session.monitor.mode() == value) option.setTextColor(ACCENT);
       addWeighted(effects, option);
     }
     Button correction =
@@ -1897,7 +1893,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 + "\n"
                 + result,
             15,
-            GOLD);
+            ACCENT);
     label.setTag("kanta.score.last");
     body.addView(label);
   }
@@ -1919,7 +1915,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(voiceSettings);
     lastScore();
     if (voiceExpanded) voiceControls();
-    body.addView(text("Sound & pace", 18, GOLD));
+    body.addView(text("Sound & pace", 18, ACCENT));
     LinearLayout tuning = row();
     addWeighted(
         tuning,
@@ -1967,7 +1963,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           }
         });
     body.addView(volume);
-    body.addView(text("Advanced settings", 18, GOLD));
+    body.addView(text("Advanced settings", 18, ACCENT));
     body.addView(text("Song discovery is available from Sing → Find a song.", 14, 0xFFAFB8D0));
   }
 
@@ -1995,7 +1991,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               () -> {
                 if (token != searchGeneration || target != results || isDestroyed()) return;
                 target.removeAllViews();
-                target.addView(text(count + " matching songs", 13, GOLD));
+                target.addView(text(count + " matching songs", 13, ACCENT));
                 for (Song s : found) {
                   LinearLayout item = row();
                   TextView name =
@@ -2022,7 +2018,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void queue() {
-    body.addView(text("Up Next · " + session.queue.snapshot().size(), 20, GOLD));
+    body.addView(text("Up Next · " + session.queue.snapshot().size(), 20, ACCENT));
     int n = 0;
     for (ReservationQueue.Entry e : session.queue.snapshot()) {
       if (n >= queueLimit) break;
@@ -2050,7 +2046,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void mySet() {
-    body.addView(text("My Set", 22, Color.WHITE));
     Button importButton =
         button(
             session.importing ? "Importing…" : "Add music or SoundFont",
@@ -2072,7 +2067,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(folder);
     if (session.importing) body.addView(button("Cancel import", session::cancelImports));
     body.addView(text("Active SoundFont · " + session.soundFontName, 14, CYAN));
-    body.addView(text("SoundFonts", 20, GOLD));
+    body.addView(text("SoundFonts", 20, ACCENT));
     for (LibraryRepository.SoundFontEntry bank : session.soundFonts) {
       LinearLayout item = row();
       item.addView(
@@ -2085,7 +2080,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     body.addView(
         text(
-            "Imported MIDI/KAR and audio", 20, GOLD));
+            "Imported MIDI/KAR and audio", 20, ACCENT));
     List<Song> importedSongs = new ArrayList<>();
     for (Song song : session.songs) if (!song.starter) importedSongs.add(song);
     if (importedSongs.isEmpty()) {
@@ -2118,11 +2113,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(button("Save played songs as Favorites", () -> nameSet(true)));
     body.addView(button("Export private Songbook", () -> export(true)));
     body.addView(button("Export song list (CSV)", () -> export(false)));
-    body.addView(text("Saved sets", 20, GOLD));
+    body.addView(text("Saved sets", 20, ACCENT));
     for (LibraryRepository.SavedSet set : session.savedSets)
       body.addView(
           button(set.name + " · " + set.songs.size() + " songs", () -> session.loadSet(set)));
-    body.addView(text("Original starter songs", 20, GOLD));
+    body.addView(text("Original starter songs", 20, ACCENT));
     for (int i = 0; i < LibraryRepository.STARTERS.length; i++) {
       final String id = "starter:" + LibraryRepository.STARTERS[i];
       boolean present = session.songs.stream().anyMatch(s -> s.id.equals(id));
@@ -2455,7 +2450,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void loop() {
-    body.addView(text("Loop & party sounds", 22, GOLD));
+    body.addView(text("Loop & party sounds", 22, ACCENT));
     body.addView(
         text(
             "Choose an imported MP3/WAV for between-song music. It stops for karaoke and when you"
@@ -2486,7 +2481,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         "Party sound volume",
         session.party.sfxVolume,
         value -> session.partyVolumes(value, session.party.loopVolume));
-    body.addView(text("Original synthesized party sounds", 18, GOLD));
+    body.addView(text("Original synthesized party sounds", 18, ACCENT));
     body.addView(button("Stop all party audio", session::stopParty));
     for (int i = 0; i < PartySounds.TITLES.size(); i++) {
       final int slot = i;
@@ -2542,7 +2537,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void volumeControl(
       String title, float initial, java.util.function.Consumer<Float> apply) {
-    body.addView(text(title, 16, GOLD));
+    body.addView(text(title, 16, ACCENT));
     SeekBar bar = new SeekBar(this);
     bar.setMax(100);
     bar.setProgress(Math.round(initial * 100));
@@ -2561,7 +2556,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void realm() {
-    body.addView(text("Realm", 22, GOLD));
     body.addView(
         text(
             "Animated lights behind your lyrics. Turn this off for a still stage.",
@@ -2574,7 +2568,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               session.realm = !session.realm;
               session.publish();
             }));
-    body.addView(text("Lyric size", 18, GOLD));
+    body.addView(text("Lyric size", 18, ACCENT));
     SeekBar size = new SeekBar(this);
     size.setMax(75);
     size.setProgress(Math.round((session.lyricScale - .75f) * 100));
@@ -2727,18 +2721,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           fullscreenQueue = null;
           fullscreenProgress = null;
           fullscreenPlayButton = null;
-          if ("Now Playing".equals(tab) && nowPlayingStage != null) {
-            nowPlayingStage.setVisualActive(true);
-            if (stagePresenter != null) stagePresenter.setVisualActive(false);
-          } else if (stagePresenter != null) {
-            stagePresenter.setVisualActive(true);
-          }
           // The primary presenter remains the authoritative camera owner after fullscreen
-          // dismissal. Now Playing is a content projection, not a second primary stage.
+          // dismissal; utility destinations never own or replace the camera stage.
+          if (stagePresenter != null) stagePresenter.setVisualActive(true);
           camera.moveTo(stagePresenter);
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     fullscreen.show();
     if (fullscreen.getWindow() != null) fullscreen.getWindow().setLayout(-1, -1);
     camera.moveTo(fullscreenStage);
@@ -3032,7 +3020,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     LinearLayout content = column();
     int pad = dp(20);
     content.setPadding(pad, pad, pad, pad);
-    TextView heading = text("App update", 20, GOLD);
+    TextView heading = text("App update", 20, ACCENT);
     heading.setTypeface(null, android.graphics.Typeface.BOLD);
     content.addView(heading);
     content.addView(

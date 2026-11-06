@@ -1,15 +1,14 @@
 package ph.kanta.reborn.ui;
 
 import android.content.Context;
-import android.graphics.Typeface;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Button;
 
-import ph.kanta.reborn.ui.components.KantaIconButton;
 import ph.kanta.reborn.ui.components.KantaMediaRow;
 import ph.kanta.reborn.ui.components.KantaSearchBar;
+import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaTabSelector;
 import ph.kanta.reborn.ui.components.InlineKeyboard;
 
@@ -43,23 +42,8 @@ public class KantaSearchScreen extends LinearLayout {
     build();
   }
   private void build() {
-    LinearLayout top = new LinearLayout(context);
-    top.setOrientation(HORIZONTAL);
-    top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
-    KantaIconButton back = new KantaIconButton(context);
-    back.setText("\u2190"); back.setTextSize(18); back.setTag("kanta.screen.search.back");
-    back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    TextView title = new TextView(context);
-    title.setText("Search");
-    title.setTextSize(18);
-    title.setTypeface(null, Typeface.BOLD);
-    title.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
-    LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    tp.weight = 1;
-    title.setLayoutParams(tp);
-    top.addView(back); top.addView(title);
-    addView(top);
+    addView(new KantaScreenHeader(context, "Search", "Back to Home", "kanta.screen.search.back",
+        v -> { if (listener != null) listener.onBack(); }));
     tabSelector = new KantaTabSelector(context);
     tabSelector.setTabs(new String[]{"All", "KANTA", "YouTube", "Local"}, 0,
         (index, label) -> {

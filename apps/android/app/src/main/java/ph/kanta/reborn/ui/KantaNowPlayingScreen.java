@@ -15,6 +15,7 @@ import android.text.style.ForegroundColorSpan;
 
 import ph.kanta.reborn.ui.components.KantaIconButton;
 import ph.kanta.reborn.ui.components.KantaProgressBar;
+import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaStepper;
 import ph.kanta.reborn.ui.components.KantaTransportControls;
 
@@ -69,28 +70,12 @@ public class KantaNowPlayingScreen extends LinearLayout {
     build();
   }
   private void build() {
-    LinearLayout top = new LinearLayout(context);
-    top.setOrientation(HORIZONTAL);
-    top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
-    KantaIconButton back = new KantaIconButton(context);
-    back.setTag("kanta.screen.now-playing.back");
-    back.setText("\u2190"); back.setTextSize(18);
-    back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    TextView nowPlaying = new TextView(context);
-    nowPlaying.setText("Now Playing");
-    nowPlaying.setTextSize(18);
-    nowPlaying.setTypeface(null, Typeface.BOLD);
-    nowPlaying.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
-    LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    np.weight = 1;
-    nowPlaying.setLayoutParams(np);
-    KantaIconButton fullscreen = new KantaIconButton(context);
-    fullscreen.setTag("kanta.now-playing.fullscreen");
-    fullscreen.setText("\u2306"); fullscreen.setTextSize(18);
-    fullscreen.setOnClickListener(v -> { if (listener != null) listener.onFullscreen(); });
-    top.addView(back); top.addView(nowPlaying); top.addView(fullscreen);
-    addView(top);
+    KantaScreenHeader header = new KantaScreenHeader(
+        context, "Now Playing", "Back to Home", "kanta.screen.now-playing.back",
+        v -> { if (listener != null) listener.onBack(); });
+    header.addAction("Full screen", "kanta.now-playing.fullscreen",
+        v -> { if (listener != null) listener.onFullscreen(); });
+    addView(header);
     FrameLayout stage = new FrameLayout(context);
     stage.setBackground(ph.kanta.reborn.ui.KantaTheme.stageBackground(context, false));
     LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
@@ -120,7 +105,9 @@ public class KantaNowPlayingScreen extends LinearLayout {
       // StageSurface already owns the selected background, camera/video layers and timed lyrics.
       lyrics.setVisibility(View.GONE);
     }
-    addView(stage);
+    // MainActivity owns the only attached live stage. This destination remains a
+    // utility projection when no stage view is supplied.
+    if (stageView != null) addView(stage);
     LinearLayout info = new LinearLayout(context);
     info.setOrientation(HORIZONTAL);
     info.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);
@@ -139,17 +126,19 @@ public class KantaNowPlayingScreen extends LinearLayout {
     infoCol.setGravity(Gravity.CENTER);
     infoCol.addView(titleView); infoCol.addView(artistView);
     info.addView(infoCol);
-    KantaIconButton favorite = new KantaIconButton(context);
-    favorite.setText("\u2605"); favorite.setTextSize(20);
-    favorite.setEnabled(false); favorite.setAlpha(.4f);
+    ph.kanta.reborn.ui.components.KantaImageButton favorite =
+        new ph.kanta.reborn.ui.components.KantaImageButton(
+            context, ph.kanta.reborn.R.drawable.kanta_favorite_color, "Favorite song", false);
+    favorite.setEnabled(false);
     favorite.setOnClickListener(v -> { if (listener != null) listener.onFavorite(); });
-    LinearLayout.LayoutParams favParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    LinearLayout.LayoutParams favParams = new LinearLayout.LayoutParams((int)(48*density), (int)(48*density));
     favParams.weight = 1; favParams.gravity = Gravity.END;
     favorite.setLayoutParams(favParams);
     info.addView(favorite);
-    KantaIconButton overflow = new KantaIconButton(context);
-    overflow.setText("\u22EE"); overflow.setTextSize(20);
-    overflow.setEnabled(false); overflow.setAlpha(.4f);
+    ph.kanta.reborn.ui.components.KantaImageButton overflow =
+        new ph.kanta.reborn.ui.components.KantaImageButton(
+            context, ph.kanta.reborn.R.drawable.kanta_more_color, "More playback options", false);
+    overflow.setEnabled(false);
     overflow.setOnClickListener(v -> { if (listener != null) listener.onOverflow(); });
     info.addView(overflow);
     addView(info);
@@ -232,28 +221,39 @@ public class KantaNowPlayingScreen extends LinearLayout {
     bottomNav.setOrientation(HORIZONTAL);
     bottomNav.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_ELEVATED);
     bottomNav.setPadding(0, (int)(8*density), 0, (int)(16*density));
-    String[][] nav = {
-        {"Queue", "\uD83D\uDC51", "onQueue", "false"},
-        {"Lyrics", "\ud83c\udf1e", "onLyrics", "true"},
-        {"Effects", "\ud83c\udfab", "onEffects", "false"},
-        {"Coach", "\ud83d\udcbb", "onCoach", "false"},
+    String[] navLabels = {"Queue", "Lyrics", "Effects", "Coach"};
+    int[] navIcons = {
+        ph.kanta.reborn.R.drawable.kanta_queue_color,
+        ph.kanta.reborn.R.drawable.kanta_library_color,
+        ph.kanta.reborn.R.drawable.kanta_visuals_color,
+        ph.kanta.reborn.R.drawable.kanta_microphone_color
     };
-    for (String[] n : nav) {
+    for (int i = 0; i < navLabels.length; i++) {
+      final int destination = i;
       Button b = new Button(context);
-      b.setText(n[0] + "\n" + n[1]);
-      b.setTextSize(12);
+      b.setText(navLabels[i]);
+      b.setTextSize(11);
       b.setTypeface(null, Typeface.BOLD);
       b.setGravity(Gravity.CENTER);
-      b.setTextColor(n[3].equals("true") ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-      b.setBackground(null);
+      boolean selected = i == 1;
+      b.setTextColor(selected ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
+      android.graphics.drawable.Drawable icon = context.getDrawable(navIcons[i]).mutate();
+      b.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
+      b.setCompoundDrawablePadding((int)(3*density));
+      b.setBackground(selected
+          ? ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
+              ph.kanta.reborn.ui.KantaTheme.SURFACE, 12,
+              ph.kanta.reborn.ui.KantaTheme.BORDER, 1, density)
+          : null);
+      b.setContentDescription(navLabels[i]);
       LinearLayout.LayoutParams navParams = new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
       navParams.bottomMargin = (int)(6*density);
       b.setLayoutParams(navParams);
-      switch (n[2]) {
-        case "onQueue": b.setTag("kanta.now-playing.queue"); b.setOnClickListener(v -> { if (listener != null) listener.onQueue(); }); break;
-        case "onLyrics": b.setTag("kanta.now-playing.lyrics"); break;
-        case "onEffects": b.setTag("kanta.now-playing.effects"); b.setOnClickListener(v -> { if (listener != null) listener.onEffects(); }); break;
-        case "onCoach": b.setTag("kanta.now-playing.coach"); b.setOnClickListener(v -> { if (listener != null) listener.onCoach(); }); break;
+      switch (destination) {
+        case 0: b.setTag("kanta.now-playing.queue"); b.setOnClickListener(v -> { if (listener != null) listener.onQueue(); }); break;
+        case 1: b.setTag("kanta.now-playing.lyrics"); break;
+        case 2: b.setTag("kanta.now-playing.effects"); b.setOnClickListener(v -> { if (listener != null) listener.onEffects(); }); break;
+        case 3: b.setTag("kanta.now-playing.coach"); b.setOnClickListener(v -> { if (listener != null) listener.onCoach(); }); break;
       }
       bottomNav.addView(b);
     }

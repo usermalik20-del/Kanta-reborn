@@ -2,6 +2,7 @@ package ph.kanta.reborn.ui.components;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -30,10 +31,12 @@ public class KantaTabSelector extends LinearLayout {
       tab.setTypeface(null, Typeface.BOLD);
       tab.setGravity(Gravity.CENTER);
       boolean selected = (i == initiallySelected);
-      tab.setTextColor(selected ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
-      LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-      p.leftMargin = (int)(4*density); p.rightMargin = (int)(4*density); p.bottomMargin = (int)(4*density);
+      applyStyle(tab, selected);
+      tab.setPadding((int)(8*density), 0, (int)(8*density), 0);
+      LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, (int)(42*density), 1);
+      p.leftMargin = (int)(3*density); p.rightMargin = (int)(3*density);
       tab.setLayoutParams(p);
+      tab.setContentDescription(tabs[i]);
       tab.setOnClickListener(v -> {
         selectedIndex = index;
         refresh();
@@ -47,7 +50,26 @@ public class KantaTabSelector extends LinearLayout {
     for (int i = 0; i < childCount; i++) {
       TextView tab = (TextView) getChildAt(i);
       boolean selected = (i == selectedIndex);
-      tab.setTextColor(selected ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN : ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
+      applyStyle(tab, selected);
     }
+  }
+  private void applyStyle(TextView tab, boolean selected) {
+    tab.setTextColor(selected
+        ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN
+        : ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
+    StateListDrawable backgrounds = new StateListDrawable();
+    backgrounds.addState(new int[]{android.R.attr.state_pressed},
+        ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
+            ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED, 12,
+            ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN, 1, density));
+    backgrounds.addState(new int[]{},
+        ph.kanta.reborn.ui.KantaTheme.backgroundDrawable(
+            selected ? ph.kanta.reborn.ui.KantaTheme.SURFACE_ELEVATED
+                : ph.kanta.reborn.ui.KantaTheme.BG_ELEVATED,
+            12,
+            selected ? ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN
+                : ph.kanta.reborn.ui.KantaTheme.BORDER,
+            1, density));
+    tab.setBackground(backgrounds);
   }
 }

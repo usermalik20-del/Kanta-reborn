@@ -1,5 +1,11 @@
 # Reconstruction validation
 
+## Android persistent-stage acceptance — local candidate
+
+`RuntimeChecks` must assert that the same attached `kanta.stage.primary` is visible above Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing, including after changing a background. Now Playing must not mount `kanta.now-playing.stage`. During actual MIDI playback, switching the primary menus must preserve the backend, playback identity and reservation IDs while the audible clock advances. Existing named destination screenshots remain whole-window captures so reviewers can see both stage and lower controls; do not crop away the stage.
+
+Run the Android workspace, Java structure, companion-interface and branding guards plus `python3 -m unittest discover -s tools/tests`. Android compilation/lint and `RuntimeChecks` require the hosted Android environment; also require portrait/landscape layout acceptance, live background/photo/video preview, keyboard accessibility and fullscreen/camera restoration before reporting device acceptance. Local static checks cannot establish those results.
+
 Start with `python3 tools/preflight.py`: it selects the guards the changed paths require, prints the owner documents that must change in the same commit, and lists the cloud-only gates it cannot prove. The change-type matrix and the workflow invariants are in [Pre-flight](#pre-flight-run-the-guards-a-change-actually-needs). Each section below records why a specific guard exists; a static check passing never proves a build, a package, a simulator run or device acceptance.
 
 ## Java structure guard
@@ -43,7 +49,7 @@ Tests and production source must describe the same behavior. Keep recovered test
 
 ## Website route and responsive navigation contract
 
-The website validation job runs `tools/verify-website.py` and `tools/tests/test_website_security_contract.py`. These checks cover all ten public routes, local links and anchors, route-specific CSP, verified download provenance, the shared six-link primary navigation, visible wrapping behavior at narrow viewports, adjacent duplicate feature headings, and stylesheet source hygiene. After a production deployment, inspect the canonical Vercel alias and affected routes; a successful build/deploy alone does not prove mobile usability.
+The website validation job runs `tools/verify-website.py` and `tools/tests/test_website_security_contract.py`. These checks cover all ten public routes, their shared theme stylesheet and header (brand, single six-link primary navigation and Download App action), theme tokens, local links and anchors, route-specific CSP, verified download provenance, visible nav wrapping at narrow viewports, adjacent duplicate feature headings, and stylesheet source hygiene. After a production deployment, inspect the canonical Vercel alias and affected routes; a successful build/deploy alone does not prove mobile usability.
 
 ## Android lyric-stage animation checks
 
@@ -519,19 +525,22 @@ owned by `SessionController` and `StagePresenterImpl`.
 ### What is tested
 
 - Design tokens (`KantaTheme`) expose the specified color values, radii and gradient policy
-- Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaSearchBar`,
-  `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`, `KantaTabSelector`, `KantaSongArtwork`,
-  `KantaMediaRow`, `KantaTransportControls`) instantiate with correct colors, radii and states
+- Reusable components (`KantaCard`, `KantaButton`, `KantaIconButton`, `KantaImageButton`,
+  `KantaScreenHeader`, `KantaSearchBar`, `KantaProgressBar`, `KantaStepper`, `KantaSectionHeader`,
+  `KantaTabSelector`, `KantaSongArtwork`, `KantaMediaRow`, `KantaTransportControls`) instantiate
+  with correct colors, radii and states
 - Screens (`HomeScreen`, `KantaNowPlayingScreen`, `KantaSearchScreen`, `KantaQueueScreen`,
   `KantaPitchTempoScreen`, `KantaMicVoiceScreen`, `KantaVisualsScreen`, `KantaFullscreenStage`)
   wire their `Listener` callbacks into `MainActivity`, which delegates to existing backend methods
+- Android runtime checks require themed drawable icons and accessible labels on goal cards and
+  destination back controls, and image-based icons on all Now Playing transport controls
 - Browser remote restyling preserves all 22 element IDs queried by `remote.js` and keeps the wire
   protocol, action allowlist, pairing flow and fingerprint verification unchanged
 
 ### What is NOT tested by these checks
 
-- Canvas/Surface rendering, StaticLayout, ValueAnimator or emoji rendering (covered by the Android
-  emulator runtime instrumentation gate)
+- Canvas/Surface rendering, StaticLayout, ValueAnimator and drawable rendering (covered by the
+  Android emulator runtime instrumentation gate)
 - Visual, reduced-motion, APK/lint and emulator acceptance (separate gates on the Android
   validation workflow)
 - Device acceptance (remains open)
@@ -589,7 +598,7 @@ The Swift package suite includes deterministic cancellation coverage for a suspe
 
 ## Android reference-led screen acceptance
 
-The Android emulator runtime walkthrough opens each reference-led destination from the Home dashboard, exercises Search/Queue navigation, Pitch reset, Visuals selection, Mic & Voice effect selection, fullscreen controls and Now Playing stage embedding, then captures the screen. A screenshot is accepted only after the destination's tagged view is attached, shown by its ancestors and has a non-empty global visible rectangle; the capture helper waits for UI idle and a bounded compositor settle before taking the screenshot. The Android workflow artifact allowlist and `tools/run-android-runtime.py` collector must retain all nine destination captures plus `my-set-imported-library.png` and `my-set-active-soundfont.png`. Verify all eleven files in the uploaded artifact, not only in app-private storage. This is emulator visual evidence; physical-device acceptance remains separate.
+The Android emulator runtime walkthrough opens each reference-led destination from the Home dashboard, verifies that the destination-owned header and controls are visible without the persistent stage/transport/workspace toolbar or navigation row, exercises Search/Queue navigation, Pitch reset, Visuals selection, Mic & Voice effect selection, fullscreen controls and Now Playing stage embedding, then captures the screen. A screenshot is accepted only after the destination's tagged view is attached, shown by its ancestors and has a non-empty global visible rectangle; the capture helper waits for UI idle and a bounded compositor settle before taking the screenshot. The Android workflow artifact allowlist and `tools/run-android-runtime.py` collector must retain all nine destination captures plus `my-set-imported-library.png` and `my-set-active-soundfont.png`. Verify all eleven files in the uploaded artifact, not only in app-private storage. This is emulator visual evidence; physical-device acceptance remains separate.
 
 ## Independent platform download publication
 

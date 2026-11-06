@@ -5,6 +5,8 @@ import android.content.*;
 import android.graphics.Bitmap;
 import android.os.*;
 import android.view.*;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import java.io.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -19,6 +21,7 @@ public final class RuntimeChecks extends Instrumentation {
   private int checks;
   private MainActivity activity;
   private SessionController session;
+  private View persistentPrimaryStage;
 
   @Override
   public void onCreate(Bundle arguments) {
@@ -54,6 +57,32 @@ public final class RuntimeChecks extends Instrumentation {
     return false;
   }
 
+  private boolean containsImageAsset(View view) {
+    if (view instanceof ImageView && ((ImageView) view).getDrawable() != null) return true;
+    if (view instanceof ViewGroup) {
+      ViewGroup group = (ViewGroup) view;
+      for (int i = 0; i < group.getChildCount(); i++)
+        if (containsImageAsset(group.getChildAt(i))) return true;
+    }
+    return false;
+  }
+
+  private void checkIconTile(View view, String label) {
+    check(view != null && view.isClickable(), label + " tile is not clickable");
+    check(containsImageAsset(view), label + " tile is missing its themed icon");
+    check(view.getContentDescription() != null, label + " tile is missing its accessible label");
+  }
+
+  private void checkIconImageButton(View view, String label) {
+    check(view instanceof ImageButton, label + " is not an image button");
+    check(((ImageButton) view).getDrawable() != null, label + " icon is missing");
+    check(view.getContentDescription() != null, label + " is missing its accessible label");
+  }
+
+  private void checkIconBack(View view, String label) {
+    checkIconImageButton(view, label + " back control");
+  }
+
   private boolean clickText(View view, String text) {
     if (view instanceof android.widget.Button
         && ((android.widget.Button) view).getText().toString().equals(text))
@@ -81,6 +110,9 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "Music brings people together.")),
           "Reference-led Home dashboard was not mounted at launch");
+      runOnMainSync(() -> persistentPrimaryStage = activity.getWindow().getDecorView()
+          .findViewWithTag("kanta.stage.primary"));
+      assertPersistentStage(null);
       capture("home_dashboard.png");
       runOnMainSync(() -> {
         View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Sing");
@@ -89,9 +121,11 @@ public final class RuntimeChecks extends Instrumentation {
       });
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.find-song") != null,
           "Sing group did not open for Find a song");
+      assertPersistentStage("kanta.group.find-song");
       runOnMainSync(() -> {
         View search = activity.getWindow().getDecorView().findViewWithTag("kanta.group.find-song");
         check(search != null, "Sing Find a song action missing");
+        checkIconTile(search, "Find a song");
         search.performClick();
       });
       await(
@@ -101,6 +135,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.search.back");
         check(back != null, "Search back control missing");
+        checkIconBack(back, "Search");
         back.performClick();
       });
       await(
@@ -114,9 +149,11 @@ public final class RuntimeChecks extends Instrumentation {
       });
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.queue") != null,
           "Sing group did not open");
+      assertPersistentStage("kanta.group.queue");
       runOnMainSync(() -> {
         View queue = activity.getWindow().getDecorView().findViewWithTag("kanta.group.queue");
         check(queue != null, "Sing Queue action missing");
+        checkIconTile(queue, "Queue");
         queue.performClick();
       });
       await(
@@ -126,6 +163,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue.back");
         check(back != null, "Queue back control missing");
+        checkIconBack(back, "Queue");
         back.performClick();
       });
       await(
@@ -138,9 +176,11 @@ public final class RuntimeChecks extends Instrumentation {
       });
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.key-tempo") != null,
           "Performance group did not open");
+      assertPersistentStage("kanta.group.key-tempo");
       runOnMainSync(() -> {
         View pitch = activity.getWindow().getDecorView().findViewWithTag("kanta.group.key-tempo");
         check(pitch != null, "Performance Key & Tempo action missing");
+        checkIconTile(pitch, "Key & Tempo");
         pitch.performClick();
       });
       await(
@@ -163,6 +203,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.pitch-tempo.back");
         check(back != null, "Pitch & Tempo back control missing");
+        checkIconBack(back, "Pitch & Tempo");
         back.performClick();
       });
       await(
@@ -178,6 +219,7 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View visuals = activity.getWindow().getDecorView().findViewWithTag("kanta.group.background");
         check(visuals != null, "Experience Background action missing");
+        checkIconTile(visuals, "Background");
         visuals.performClick();
       });
       await(
@@ -194,6 +236,15 @@ public final class RuntimeChecks extends Instrumentation {
           () -> "stageLights".equals(session.scenicName) && session.scenic != null
               && session.scenic != previousScene,
           "Generated Stage Lights artwork did not reach the live SessionController stage");
+      await(() -> {
+        Object background = field(persistentPrimaryStage, "backgroundStage");
+        Object photo = field(background, "photoView");
+        if (!(photo instanceof ImageView)) return false;
+        android.graphics.drawable.Drawable drawable = ((ImageView) photo).getDrawable();
+        return drawable instanceof android.graphics.drawable.BitmapDrawable
+            && ((android.graphics.drawable.BitmapDrawable) drawable).getBitmap() == session.scenic;
+      }, "Background selection did not update the visible primary stage bitmap in place");
+      assertPersistentStage("kanta.screen.visuals");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
       await(
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
@@ -205,9 +256,11 @@ public final class RuntimeChecks extends Instrumentation {
       });
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.voice") != null,
           "Performance group did not open for Voice");
+      assertPersistentStage("kanta.group.voice");
       runOnMainSync(() -> {
         View mic = activity.getWindow().getDecorView().findViewWithTag("kanta.group.voice");
         check(mic != null, "Performance Voice action missing");
+        checkIconTile(mic, "Voice");
         mic.performClick();
       });
       await(
@@ -227,7 +280,10 @@ public final class RuntimeChecks extends Instrumentation {
       });
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice.back");
-        if (back != null) back.performClick();
+        if (back != null) {
+          checkIconBack(back, "Mic & Voice");
+          back.performClick();
+        }
         else {
           View top = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice");
           check(top != null, "Mic & Voice destination disappeared unexpectedly");
@@ -276,19 +332,26 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(referencePrimaryStage::performClick);
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing") != null,
           "Tapping the persistent stage did not open Now Playing");
-      check(state(() -> {
-        View mountedStage = activity.getWindow().getDecorView().findViewWithTag("kanta.now-playing.stage");
-        return mountedStage != null && mountedStage.getParent() != null;
-      }), "Now Playing did not embed its live StageSurface");
+      assertPersistentStage("kanta.screen.now-playing");
       check(state(() -> contains(activity.getWindow().getDecorView(), "Nothing playing")),
           "Now Playing did not display the truthful empty playback state");
-      check(
-          state(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.now-playing.stage") != null),
-          "Now Playing did not mount the live StageSurface");
+      check(state(() -> activity.getWindow().getDecorView()
+              .findViewWithTag("kanta.now-playing.stage") == null),
+          "Now Playing created a competing stage instead of retaining the primary presenter");
+      runOnMainSync(() -> {
+        for (String tag : new String[] {
+            "kanta.transport.shuffle", "kanta.transport.previous", "kanta.transport.play-pause",
+            "kanta.transport.next", "kanta.transport.repeat"
+        }) {
+          View control = activity.getWindow().getDecorView().findViewWithTag(tag);
+          checkIconImageButton(control, "Now Playing transport " + tag);
+        }
+      });
       capture("now_playing_screen.png", "kanta.screen.now-playing");
       runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.now-playing.back");
         check(back != null, "Now Playing back control missing");
+        checkIconBack(back, "Now Playing");
         back.performClick();
       });
       await(() -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
@@ -404,6 +467,11 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party") != null,
           "Experience group did not expose Party Mode");
       runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.party").performClick());
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.loop.back") != null,
+          "Party Mode did not expose the shared destination header");
+      runOnMainSync(() -> checkIconBack(
+          activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.loop.back"),
+          "Party Mode"));
       runOnMainSync(
           () -> check(
               clickText(activity.getWindow().getDecorView(), "Sing"),
@@ -420,6 +488,10 @@ public final class RuntimeChecks extends Instrumentation {
               && contains(activity.getWindow().getDecorView(), "ACTIVE")
               && contains(activity.getWindow().getDecorView(), "Use"),
           "My Set did not show imported songs and SoundFont actions");
+      runOnMainSync(() -> {
+        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.my-set.back");
+        checkIconBack(back, "My Set");
+      });
       capture("my-set-imported-library.png");
       runOnMainSync(
           () -> check(
@@ -989,6 +1061,7 @@ public final class RuntimeChecks extends Instrumentation {
           state(() -> session.queue.snapshot().size() == 1 && session.singer.equals("First")),
           "Start acknowledgement violated FIFO");
       await(() -> session.position() >= 300, "AudioTrack audible clock did not advance");
+      persistentStagePlaybackChecks();
       runOnMainSync(() -> session.setScoring(true));
       await(session::scoreReady, "Scoring target did not prepare alongside real MIDI playback");
       check(
@@ -1179,6 +1252,50 @@ public final class RuntimeChecks extends Instrumentation {
     }
   }
 
+  private void persistentStagePlaybackChecks() {
+    String priorTab = (String) field(activity, "tab");
+    AtomicReference<Object> backend = new AtomicReference<>();
+    AtomicReference<java.util.UUID> identity = new AtomicReference<>();
+    AtomicReference<java.util.List<ReservationQueue.Entry>> reservations = new AtomicReference<>();
+    runOnMainSync(() -> {
+      backend.set(session.player);
+      identity.set(session.playbackIdentity);
+      reservations.set(session.queue.snapshot());
+    });
+    long before = position();
+    for (String destination : new String[] {"Home", "Sing", "Performance", "Experience", "More"}) {
+      runOnMainSync(() -> {
+        View button = activity.getWindow().getDecorView().findViewWithTag("kanta.nav." + destination);
+        check(button != null && button.performClick(), "Persistent navigation missing: " + destination);
+      });
+      assertPersistentStage(null);
+      check(state(() -> session.playing && session.player == backend.get()
+              && identity.get().equals(session.playbackIdentity)),
+          "Menu navigation replaced or interrupted the playback owner: " + destination);
+    }
+    await(() -> session.position() > before + 200, "Menu navigation stalled the audible clock");
+    check(state(() -> {
+      java.util.List<ReservationQueue.Entry> after = session.queue.snapshot();
+      if (after.size() != reservations.get().size()) return false;
+      for (int i = 0; i < after.size(); i++)
+        if (!after.get(i).id.equals(reservations.get().get(i).id)) return false;
+      return true;
+    }), "Menu navigation changed authoritative reservations");
+    // Restore the control projection used by the following score UI assertions.
+    runOnMainSync(() -> {
+      try {
+        java.lang.reflect.Field tab = activity.getClass().getDeclaredField("tab");
+        tab.setAccessible(true);
+        tab.set(activity, "Control");
+        session.publish();
+      } catch (ReflectiveOperationException failure) {
+        throw new AssertionError(failure);
+      }
+    });
+    await(() -> "Control".equals(field(activity, "tab")),
+        "Persistent-stage playback check did not restore the control destination");
+  }
+
   private void workspaceBackNavigationChecks() {
     KantaWorkspace workspace = (KantaWorkspace) field(activity, "workspace");
     runOnMainSync(
@@ -1188,21 +1305,26 @@ public final class RuntimeChecks extends Instrumentation {
           check(search != null, "Workspace Search action missing");
           search.performClick();
         });
-    await(
-        () -> workspace.activeAccessory() != null && !workspace.isStageOnly(),
-        "Workspace Search did not open an accessory");
+    await(() -> visibleOnScreen("kanta.utility.search-input"),
+        "Workspace Search did not open the lower utility panel");
+    assertPersistentStage("kanta.utility.search-input");
+    check(state(() -> field(activity, "lowerUtilityAccessory") != null
+            && workspace.activeAccessory() == null),
+        "Workspace Search layered an overlay over the persistent stage");
     runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-    await(workspace::isStageOnly, "Predictive back did not dismiss the workspace accessory");
+    await(() -> field(activity, "lowerUtilityAccessory") == null
+            && !visibleOnScreen("kanta.utility.search-input"),
+        "Predictive back did not dismiss the lower utility panel");
+    assertPersistentStage(null);
     check(
         state(
             () -> {
               View stage =
                   activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
-              androidx.activity.OnBackPressedCallback callback =
-                  (androidx.activity.OnBackPressedCallback) field(activity, "workspaceBackCallback");
-              return stage != null && !callback.isEnabled();
+              return stage != null && stage.isAttachedToWindow()
+                  && field(activity, "lowerUtilityAccessory") == null;
             }),
-        "Back dismissal detached the persistent stage or left the callback enabled");
+        "Back dismissal detached the persistent stage or retained the lower utility");
   }
 
   private Object field(Object target, String name) {
@@ -1468,9 +1590,29 @@ public final class RuntimeChecks extends Instrumentation {
     return view.getGlobalVisibleRect(bounds) && bounds.width() > 0 && bounds.height() > 0;
   }
 
+  /** Navigation must project the same mounted, visible presenter above every utility panel. */
+  private void assertPersistentStage(String lowerPanelTag) {
+    await(() -> {
+      View primary = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
+      if (primary == null || primary != persistentPrimaryStage
+          || !primary.isAttachedToWindow() || !visibleOnScreen("kanta.stage.primary")) return false;
+      if (lowerPanelTag == null) return true;
+      View panel = activity.getWindow().getDecorView().findViewWithTag(lowerPanelTag);
+      // Long group menus can place a tile below the current ScrollView viewport;
+      // attachment and geometry still prove it belongs to the lower utility region.
+      if (panel == null || !panel.isAttachedToWindow() || panel.getHeight() <= 0) return false;
+      int[] stageLocation = new int[2];
+      int[] panelLocation = new int[2];
+      primary.getLocationInWindow(stageLocation);
+      panel.getLocationInWindow(panelLocation);
+      return panelLocation[1] >= stageLocation[1] + primary.getHeight();
+    }, "Navigation hid, replaced or overlapped the persistent stage: " + lowerPanelTag);
+  }
+
   private void capture(String name, String requiredVisibleTag) throws IOException {
     await(() -> visibleOnScreen(requiredVisibleTag),
         "Destination was present in the view tree but not visible before capture: " + requiredVisibleTag);
+    assertPersistentStage(requiredVisibleTag);
     capture(name);
   }
 

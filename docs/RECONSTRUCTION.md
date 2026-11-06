@@ -1,5 +1,9 @@
 # Reconstruction evidence and work ledger
 
+## Android persistent-stage navigation — 2026-11-06 local candidate
+
+Owner requested Android-only persistent karaoke playback above all menu/control content, including realtime background previews. Source inspection found `MainActivity.render()` hid the persistent stage for Home/reference destinations and Now Playing constructed another `StageSurface`. This candidate retains the primary stage and moves menu utilities below it, removing the duplicate Now Playing renderer and its camera handoff. Instrumentation is extended to check presenter identity, visible lower-panel placement and continued playback/backend/reservation identity during navigation. No iOS code, workflow, website, signing or publishing changes are part of this work. Local Android doctor reports missing Java 17, platform, AAPT2, D8 and apksigner; no APK build or emulator/device acceptance is claimed.
+
 ## Android large SoundFont RAM ceiling — local candidate
 
 Owner requested a larger budget for full-tail SoundFonts. Changed only the native tracked-allocation ceiling from 128 MiB to 1536 MiB, with existing validation, overflow rejection and allocation-failure cleanup retained. Added lightweight exact-cap, over-cap, grow/shrink realloc and SIZE_MAX accounting cases to the existing native harness; they simulate live allocation totals rather than allocating gigabytes. Local C11 compilation with strict warnings passed; starter-tone pitch/transposition, truncation rejection, six malformed-table cases and 2000 mutation checks passed, and allocation accounting returned to zero. Layout preflight passed. Local Android doctor reports missing Java 17/platform/AAPT2/D8/apksigner; APK/lint/emulator and ASan/UBSan are not established by this run. The large external piano remains unbundled and playback/device acceptance is open. Raising a software cap cannot fix the local iSH malloc/mmap capacity limitation or guarantee low-memory Android TV operation. This is not deployed or released.
@@ -142,9 +146,10 @@ companion) remains owned by `SessionController` and `StagePresenterImpl`.
 
 ### Backward compatibility
 
-The existing workspace/StagePresenterImpl/transport/toolbar/body structure is preserved. The new
-design-system screens are presented as an overlay via contentContainer; the existing UI remains
-fully functional.
+The existing workspace/StagePresenterImpl/transport/toolbar/body structure remains the owner
+for Home and legacy utility destinations. Reference-led design-system screens own their destination
+controls; MainActivity hides the persistent stage and navigation layer while those screens are active
+so the same actions are not rendered twice.
 
 ### Verification
 

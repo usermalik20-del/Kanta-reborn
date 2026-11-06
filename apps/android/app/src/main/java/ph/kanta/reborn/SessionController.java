@@ -101,6 +101,14 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   public String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
+
+  /** Read-only stage state for the presenter in the stage subpackage. */
+  public synchronized String stageKind() { return stageKind; }
+  public synchronized boolean cameraPreviewEnabled() { return cameraPreviewEnabled; }
+  public synchronized android.graphics.Bitmap scenicBitmap() { return scenic; }
+  public synchronized File stageVideo() { return stageVideo; }
+  public synchronized boolean isPlaying() { return playing; }
+
   boolean libraryImporting = false;
   private Listener listener;
   private ScoreSink scoreSink;

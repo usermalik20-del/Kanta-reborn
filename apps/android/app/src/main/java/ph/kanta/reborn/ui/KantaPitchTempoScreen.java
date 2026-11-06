@@ -3,12 +3,11 @@ package ph.kanta.reborn.ui;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.view.Gravity;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.SeekBar;
 
-import ph.kanta.reborn.ui.components.KantaIconButton;
+import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaStepper;
 
 public class KantaPitchTempoScreen extends LinearLayout {
@@ -39,32 +38,12 @@ public class KantaPitchTempoScreen extends LinearLayout {
     build();
   }
   private void build() {
-    LinearLayout top = new LinearLayout(context);
-    top.setOrientation(HORIZONTAL);
-    top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(8*density));
-    KantaIconButton back = new KantaIconButton(context);
-    back.setText("\u2190"); back.setTextSize(18); back.setTag("kanta.screen.pitch-tempo.back");
-    back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    TextView title = new TextView(context);
-    title.setText("Pitch & Tempo");
-    title.setTextSize(18);
-    title.setTypeface(null, Typeface.BOLD);
-    title.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
-    LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    tp.weight = 1;
-    title.setLayoutParams(tp);
-    Button reset = new Button(context);
-    reset.setTag("kanta.pitch.reset");
-    reset.setText("Reset");
-    reset.setTextSize(12);
-    reset.setTextColor(ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN);
-    reset.setTypeface(null, Typeface.BOLD);
-    reset.setBackground(null);
-    reset.setPadding(0, 0, 0, 0);
-    reset.setOnClickListener(v -> { if (listener != null) listener.onReset(); });
-    top.addView(back); top.addView(title); top.addView(reset);
-    addView(top);
+    KantaScreenHeader header = new KantaScreenHeader(
+        context, "Pitch & Tempo", "Back to Home", "kanta.screen.pitch-tempo.back",
+        v -> { if (listener != null) listener.onBack(); });
+    header.addAction("Reset", "kanta.pitch.reset",
+        v -> { if (listener != null) listener.onReset(); });
+    addView(header);
     LinearLayout keyCard = card("Key", String.valueOf(key), "Original Key",
         new KantaStepper.OnChangeListener() {
           @Override public void onDecrement() {

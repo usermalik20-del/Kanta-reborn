@@ -67,9 +67,9 @@ class Page(HTMLParser):
 
 def validate_public_resources():
     ads_path = WEB / "ads.txt"
-    uppercase_ads_path = WEB / "Ads.txt"
+    resource_names = {entry.name for entry in WEB.iterdir()}
     assert ads_path.is_file(), "Missing lowercase public resource: apps/web/ads.txt"
-    assert not uppercase_ads_path.exists(), (
+    assert "Ads.txt" not in resource_names, (
         "Remove apps/web/Ads.txt; case-sensitive hosts publish it at the wrong URL"
     )
     assert ads_path.read_text(encoding="utf-8").strip() == ADS_DECLARATION, (
@@ -146,6 +146,20 @@ def validate_navigation_contract(source, name):
     ):
         assert marker in header, (name, "missing shared navigation contract: " + marker)
 
+    assert len(re.findall(r"<nav\b", header, re.IGNORECASE)) == 1, (
+        name, "shared header must have one primary navigation"
+    )
+    assert re.search(r'class=["\'][^"\']*\bbrand-mark\b', header, re.IGNORECASE), (
+        name, "shared header must use the branded mark"
+    )
+    assert re.search(r'class=["\']header-actions["\'][\s\S]*?class=["\']button primary header-cta["\']', header, re.IGNORECASE), (
+        name, "shared header must include the Download App action"
+    )
+    assert re.search(
+        r'<link\b(?=[^>]*\brel=["\']stylesheet["\'])(?=[^>]*\bhref=["\']/style\.css["\'])[^>]*>',
+        source, re.IGNORECASE
+    ), (name, "page must load the shared website theme stylesheet")
+
     nav = re.search(r"<nav\b([^>]*)>([\s\S]*?)</nav>", header, re.IGNORECASE)
     assert nav, (name, "missing primary navigation")
     attributes, body = nav.groups()
@@ -173,6 +187,16 @@ def validate_navigation_contract(source, name):
 
 def validate_responsive_navigation_styles():
     source = (WEB / "style.css").read_text(encoding="utf-8")
+    root = re.search(r":root\s*\{([^}]*)\}", source, re.IGNORECASE | re.DOTALL)
+    assert root, "The website theme must declare shared design tokens"
+    for token in (
+        "--page-background", "--surface", "--text-primary", "--accent-cyan",
+        "--accent-purple", "--accent-gold", "--content-width", "--page-gutter",
+    ):
+        assert re.search(r"(?m)^\s*" + re.escape(token) + r"\s*:", root.group(1)), (
+            "The shared website theme is missing token " + token
+        )
+
     nav_rule = re.search(
         r"(?:^|})\s*nav\s*,\s*\.site-nav\s*,\s*\.nav-links\s*\{([^}]*)\}",
         source, re.IGNORECASE | re.DOTALL

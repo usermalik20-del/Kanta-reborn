@@ -1,12 +1,18 @@
 # KANTA Android reconstruction preview
 
+## Persistent stage and lower control panel — local candidate
+
+The primary `StagePresenterImpl` tagged `kanta.stage.primary` remains attached and visible while navigation changes the utility content below it. Now Playing no longer creates a competing `StageSurface` or takes camera ownership. Menus, background selection and playback controls project `SessionController` state; they do not start a new playback attempt or alter reservations simply by opening. Fullscreen explicitly suspends the embedded visual projection and returns camera ownership to the primary presenter on dismissal.
+
+Acceptance requires a fresh APK build and instrumentation on portrait and landscape displays: keep the stage visible above each panel, preview background changes in place, retain playback identity and audible-clock progress, dismiss panels with predictive/system Back, and verify camera/video handoff through fullscreen. Local source/static checks are not emulator or physical-device acceptance.
+
 ## Large SoundFont RAM ceiling — local candidate
 
 TinySoundFont tracked allocations are capped at **1536 MiB (1.5 GiB) per worker**, raised from 128 MiB. PCM16 banks expand to float samples (approximately twice their sample-data bytes), with additional tables, channels and voices. This ceiling does not allocate RAM in advance, change Android heap/process limits, or guarantee that a bank fits a low-memory phone/TV. Allocation failures remain failures and malformed-bank checks remain enabled; the 128-voice bound is unchanged. Large-bank memory-pressure and sustained playback acceptance require a capable physical Android device. No SoundFont asset or source media is modified by this change.
 
 ## Compact Workspace back-navigation contract
 
-The persistent stage stays attached while Search, Queue, Visuals or Controls is open. Android system/predictive back dismisses that active accessory first through the lifecycle-bound AndroidX `OnBackPressedDispatcher` callback; the callback is disabled when the workspace is stage-only so normal navigation remains available. Keep this behavior covered by `RuntimeChecks.workspaceBackNavigationChecks` and `tools/check-android-workspace-contract.py`.
+The primary stage stays attached and visible for Home and all utility destinations. Navigation changes only the lower menu/control area; it must not hide the live preview to avoid duplicate controls. Android system/predictive Back dismisses the active utility first through the lifecycle-bound AndroidX `OnBackPressedDispatcher` callback. Keep stage visibility, lower-panel placement and Back behavior covered by `RuntimeChecks.workspaceBackNavigationChecks` and `tools/check-android-workspace-contract.py`.
 
 ## Companion Remote candidate in PR #51 — October 18, 2026
 
@@ -209,14 +215,20 @@ the KANTA dark entertainment design system against the supplied UI concept:
   media rows with Sing action), Queue (count, items, Add Songs CTA), Pitch & Tempo (key/tempo
   cards), Mic & Voice (mic toggle, input level, reverb/echo, voice FX, coach), Visuals
   (Background/Camera/Effects tabs with thumbnail grid), Fullscreen Stage (clean stage with lyrics)
-- **Components**: KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar,
-  KantaStepper, KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow,
-  KantaTransportControls
+- **Consistent destinations**: shared KantaScreenHeader app bars, themed vector icons and pill-style
+  source tabs unify goal menus, search, queue, controls and playback surfaces with Home
+- **Components**: KantaCard, KantaButton, KantaIconButton, KantaImageButton, KantaScreenHeader,
+  KantaSearchBar, KantaProgressBar, KantaStepper, KantaSectionHeader, KantaTabSelector,
+  KantaSongArtwork, KantaMediaRow, KantaTransportControls
 
 This is a presentation-only refactor. All playback, queue, persistence, sensor, companion and
 playback logic remains owned by `SessionController` and `StagePresenterImpl`; no backend behavior is
 duplicated or replaced. The existing workspace/StagePresenterImpl/transport/toolbar/body structure
 is preserved; the new screens are presented as an overlay via `contentContainer`.
+
+`MainActivity`'s legacy destination controls use the same KantaTheme surfaces and accent colors.
+Android runtime checks verify category-card icons, accessible image back controls, and vector-based
+Now Playing transport controls; hosted emulator acceptance remains a separate validation gate.
 
 The browser remote (`apps/android/app/src/main/assets/companion/`) is restyled with the same KANTA
 design system: responsive 3-column desktop layout collapsing below 1000px, cyan active states, and

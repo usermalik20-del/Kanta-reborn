@@ -51,21 +51,9 @@ public final class KantaMicVoiceScreen extends LinearLayout {
   }
 
   private void build() {
-    LinearLayout top = new LinearLayout(context);
-    top.setOrientation(HORIZONTAL);
-    top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding(dp(16), dp(12), dp(16), dp(8));
-    android.widget.ImageButton back = new android.widget.ImageButton(context);
-    back.setImageResource(R.drawable.kanta_back_color);
-    back.setBackground(null);
-    back.setPadding(dp(10), dp(10), dp(10), dp(10));
-    back.setContentDescription("Back to Home");
-    back.setTag("kanta.screen.mic-voice.back");
-    back.setOnClickListener(v -> { if (listener != null) listener.onBack(); });
-    TextView title = KantaTheme.titleText(context, "Voice", 20);
-    top.addView(back);
-    top.addView(title, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
-    addView(top);
+    addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
+        context, "Mic & Voice", "Back to Home", "kanta.screen.mic-voice.back",
+        v -> { if (listener != null) listener.onBack(); }));
 
     android.widget.ScrollView scroll = new android.widget.ScrollView(context);
     scroll.setFillViewport(false);

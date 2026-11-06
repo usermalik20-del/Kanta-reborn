@@ -1,5 +1,9 @@
 # KANTA Reborn
 
+## Android persistent-stage navigation — local candidate
+
+The Android main screen keeps the same live karaoke stage above the menu/control area. Home, song search, Queue, Now Playing, Performance and Experience are lower-panel destinations rather than stage replacements. Background and other presentation controls operate on the existing session so their changes can be previewed without leaving the stage. Explicit fullscreen remains a separate read-only stage projection. iOS, the website, playback/FIFO ownership and opt-in microphone behavior are unchanged. This is a local source candidate, not a built, device-accepted or published APK; see `docs/TESTING.md` for acceptance requirements.
+
 ## Android SoundFont RAM ceiling — local candidate
 
 The Android native renderer now permits up to **1536 MiB (1.5 GiB)** of tracked TinySoundFont allocations per worker, raised from 128 MiB for large decoded banks. This is a hard ceiling, not reserved or guaranteed memory: the operating system can refuse smaller allocations or terminate a memory-heavy process. Full-tail piano banks can require over 1 GiB before other app work. Format validation, voice limits, storage checks and source-byte preservation remain unchanged. Local native regression passes; APK, sanitizer and large-bank device acceptance remain separate gates. No new bank is bundled.
@@ -11,7 +15,7 @@ Native Android and iOS karaoke applications built around the **Compact Workspace
 
 ## What shipped
 
-The Compact Workspace redesign implements an **"Always on Stage"** architecture: the karaoke player stays visible and live as the base layer, while utility panels appear and disappear as transient overlays above it.
+The Compact Workspace redesign keeps the karaoke player live on Home and legacy utility destinations. Reference-led destination screens own their headers, navigation and action controls; the persistent stage/toolbars are hidden there so controls are not rendered twice.
 
 | Capability | iOS | Android |
 | --- | --- | --- |
@@ -34,6 +38,10 @@ Download pages under `apps/web/` (`ios-download.html`, `android.html`, `download
 ## Website privacy and advertising
 
 The public website retains Google Analytics (`G-L0QV01MWR4`) and Google AdSense (`ca-pub-6290349358884298`) behind an explicit optional-consent choice. Visitors can accept, reject or later change their choice. The private browser Songbook is excluded. These integrations are website-only: neither native app bundles the website scripts or loads website ads. Ad delivery remains subject to Google's publisher approval and account configuration; see [website operations](apps/web/README.md) and [privacy](apps/web/privacy.html).
+
+## Website visual consistency
+
+All ten website routes use one shared dark KANTA theme, color/spacing tokens, primary navigation, brand mark and download action from `apps/web/style.css`. The private Songbook keeps its printed-paper catalog treatment inside the same site shell.
 
 ## Website crawler and scraping defense
 
@@ -60,9 +68,12 @@ the KANTA dark entertainment design system against the supplied UI concept:
   media rows with Sing action), Queue (count, items, Add Songs CTA), Pitch & Tempo (key/tempo cards),
   Mic & Voice (mic toggle, input level, reverb/echo, voice FX, coach), Visuals (Background/Camera/
   Effects tabs with thumbnail grid), Fullscreen Stage (clean stage with lyrics and controls)
-- **Reusable components**: KantaCard, KantaButton, KantaIconButton, KantaSearchBar, KantaProgressBar,
-  KantaStepper, KantaSectionHeader, KantaTabSelector, KantaSongArtwork, KantaMediaRow,
-  KantaTransportControls
+- **Consistent destinations**: shared KantaScreenHeader app bars and KANTA vector icons across the
+  goal menus, search, queue, controls and playback surfaces; pill-style source tabs and icon-led
+  category cards use the same palette as Home
+- **Reusable components**: KantaCard, KantaButton, KantaIconButton, KantaImageButton,
+  KantaScreenHeader, KantaSearchBar, KantaProgressBar, KantaStepper, KantaSectionHeader,
+  KantaTabSelector, KantaSongArtwork, KantaMediaRow, KantaTransportControls
 
 The UI refactor is presentation-only. All playback, queue, persistence, sensor, companion and
 playback logic remains owned by `SessionController` and `StagePresenterImpl`; no backend behavior is
