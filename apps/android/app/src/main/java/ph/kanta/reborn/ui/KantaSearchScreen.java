@@ -66,21 +66,20 @@ public class KantaSearchScreen extends LinearLayout {
     inputRow.setPadding((int)(16*density), (int)(12*density), (int)(16*density), (int)(4*density));
     inputRow.addView(searchBar, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     keyboardToggle = new Button(context);
-    keyboardToggle.setText("123");
+    keyboardToggle.setText("ABC");
     keyboardToggle.setAllCaps(false);
+    keyboardToggle.setTag("kanta.search.keyboard-toggle");
     keyboardToggle.setTextSize(12);
     keyboardToggle.setTextColor(KantaTheme.PRIMARY_CYAN);
-    keyboardToggle.setContentDescription("Open KANTA keypad");
+    keyboardToggle.setContentDescription("Switch KANTA keypad to letters");
     keyboardToggle.setOnClickListener(v -> {
-      if (keyboard.getVisibility() == VISIBLE) {
-        keyboard.setVisibility(GONE);
-        keyboardToggle.setText("123");
-        keyboardToggle.setContentDescription("Open KANTA keypad");
-      } else {
-        keyboard.setVisibility(VISIBLE);
-        keyboardToggle.setText("⌨");
-        keyboardToggle.setContentDescription("Switch KANTA keypad layout");
-      }
+      keyboard.toggle();
+      boolean letters = keyboard.isLetters();
+      keyboardToggle.setText(letters ? "123" : "ABC");
+      keyboardToggle.setContentDescription(letters
+          ? "Switch KANTA keypad to numbers"
+          : "Switch KANTA keypad to letters");
+      searchBar.requestFocusInput();
     });
     inputRow.addView(keyboardToggle, new LinearLayout.LayoutParams((int)(52*density), (int)(52*density)));
     addView(inputRow);
@@ -97,7 +96,8 @@ public class KantaSearchScreen extends LinearLayout {
         if (listener != null) listener.onSearchTextChanged(searchBar.getText());
       }
     });
-    keyboard.setVisibility(GONE);
+    keyboard.setTag("kanta.search.keyboard");
+    keyboard.setVisibility(VISIBLE);
     addView(keyboard, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, (int)(204*density)));
     searchBar.addTextChangedListener(new android.text.TextWatcher() {
       @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
