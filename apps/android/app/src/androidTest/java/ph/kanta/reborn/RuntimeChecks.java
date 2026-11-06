@@ -1584,7 +1584,9 @@ public final class RuntimeChecks extends Instrumentation {
           || !primary.isAttachedToWindow() || !visibleOnScreen("kanta.stage.primary")) return false;
       if (lowerPanelTag == null) return true;
       View panel = activity.getWindow().getDecorView().findViewWithTag(lowerPanelTag);
-      if (panel == null || !visibleOnScreen(lowerPanelTag)) return false;
+      // Long group menus can place a tile below the current ScrollView viewport;
+      // attachment and geometry still prove it belongs to the lower utility region.
+      if (panel == null || !panel.isAttachedToWindow() || panel.getHeight() <= 0) return false;
       int[] stageLocation = new int[2];
       int[] panelLocation = new int[2];
       primary.getLocationInWindow(stageLocation);
