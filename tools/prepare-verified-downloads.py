@@ -16,7 +16,7 @@ import urllib.request
 import zipfile
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "usermalik20-del/Kanta-reborn")
-LIMIT = 128 * 1024 * 1024
+LIMIT = 256 * 1024 * 1024
 SOURCE_WAIT_SECONDS = 2700
 # Peer release gates share this exact SHA; poll conservatively to limit API traffic.
 POLL_INTERVAL_SECONDS = 15
@@ -109,22 +109,31 @@ def find_source_run(source_sha: str, workflow_name: str, *, wait_seconds=SOURCE_
 
 
 def find_artifact(run: dict, artifact_name: str) -> dict:
+    """Select the newest unexpired same-name artifact from the exact source run.
+
+    GitHub Actions creates another artifact with the same name on every job
+    rerun. The source SHA/run remains exact; select by artifact creation time,
+    then numeric artifact ID for deterministic ties.
+    """
     payload = api("actions/runs/" + str(run["id"]) + "/artifacts")
     matches = [
         artifact for artifact in payload.get("artifacts", [])
-        if artifact.get("name") == artifact_name
+        if artifact.get("name") == artifact_name and not artifact.get("expired")
     ]
-    if len(matches) != 1:
-        raise ValueError(
-            "Expected exactly one " + artifact_name + " artifact from run "
-            + str(run["id"]) + "; found " + str(len(matches))
-        )
-    artifact = matches[0]
-    if artifact.get("expired"):
-        raise ValueError(
-            artifact_name + " from run " + str(run["id"]) + " has expired"
-        )
-    return artifact
+    if not matches:
+        same_name = [a for a in payload.get("artifacts", []) if a.get("name") == artifact_name]
+        detail = "all matching artifacts have expired" if same_name else "no matching artifact"
+        raise ValueError(artifact_name + " from run " + str(run["id"]) + ": " + detail)
+    def order(artifact: dict):
+        created = artifact.get("created_at")
+        if not isinstance(created, str) or not created:
+            raise ValueError("Artifact " + str(artifact.get("id")) + " has no creation timestamp")
+        try:
+            artifact_id = int(artifact["id"])
+        except (KeyError, TypeError, ValueError) as failure:
+            raise ValueError("Artifact has invalid identity") from failure
+        return created, artifact_id
+    return max(matches, key=order)
 
 
 def accepted(run: dict, artifact: dict, expected: dict):
@@ -228,7 +237,7 @@ def application_bytes(platform: str, source: dict) -> bytes:
         if sum(entry.file_size for entry in archive.infolist()) > LIMIT or archive.testzip() is not None:
             raise ValueError("Corrupt or oversized artifact archive")
         if platform == "android":
-            application = one(archive, "/app-debug.apk")
+            application = one(archive, "/outputs/apk/release/app-release.apk")
             with zipfile.ZipFile(io.BytesIO(application)) as apk:
                 if "AndroidManifest.xml" not in apk.namelist() or "classes.dex" not in apk.namelist():
                     raise ValueError("Not an Android application")

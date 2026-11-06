@@ -116,7 +116,7 @@ Use synthetic or explicitly approved test fixtures.
 
 Follow docs/GITHUB_PUBLISHING_POLICY.md before publication. Review the complete bounded diff and generated artifacts for secrets, private data, media-library contents, signing assets and unintended historical material.
 
-Merging, releasing, deploying and running CI are authorized engineering actions (§9, §11). Signing is not gated by policy here; it is simply unavailable in this environment because no Apple credentials or macOS toolchain exist. Record that as a capability limit, never as an approval requirement.
+Merging, releasing, deploying and running CI are authorized engineering actions (§9, §11). Apple signing remains unavailable here because no Apple credentials or macOS toolchain exist. Android release signing uses the owner-approved PKCS#12 identity only through main-branch Actions secrets; the secret values must be configured by the owner because this GitHub token cannot write repository secrets. Record missing credentials as a capability/configuration limit; never commit or print them.
 
 ## 7. YouTube integration boundary
 
@@ -307,7 +307,8 @@ The iOS download remains an unsigned personal-signing input; this automation doe
 
 ## Android CI runner regression contract — 2026-11-01
 
-When editing `.github/workflows/android-validation.yml`, keep `workflow_dispatch`, `push` and `pull_request` as independent top-level event keys. A manual ref input may select the checkout SHA, but it must not silently select a reduced validation mode. The Android emulator runner's private-network check is a prerequisite guard only; APK installation, instrumentation and evidence capture must remain reachable after it succeeds. Keep screenshot destination paths synchronized between `tools/run-android-runtime.py` and artifact upload configuration. Execute `tools.tests.test_android_runtime_runner` in the Android workflow and update the CI repair ledger for any recurrence. Never interpret a static runner test as successful Android emulator acceptance.
+When editing `.github/workflows/android-validation.yml`, keep `workflow_dispatch`, `push` and `pull_request` as independent top-level event keys. A manual ref input may select the checkout SHA, but it must not silently select a reduced validation mode. The Android emulator runner's private-network check is a prerequisite guard only; APK installation, instrumentation and evidence capture must remain reachable after it succeeds. Keep screenshot destination paths synchronized between `tools/run-android-runtime.py` and artifact upload configuration. Execute `tools.tests.test_android_runtime_runner` in the Android workflow and update the CI repair ledger for any recurrence. Never interpret a static runner test as successful Android emulator acceptance. CI explicitly runs both `:app:assembleDebug` and `:app:assembleRelease`: `app-release.apk` is the OTA/publication candidate; `app-debug.apk` is used by emulator installation, runtime permission checks and instrumentation. Keep the packager pointed at `outputs/apk/release/app-release.apk`, runtime tools at `outputs/apk/debug/app-debug.apk`, and upload both `outputs/apk/release/*.apk` and `outputs/apk/debug/*.apk` in the Android validation artifact. Retain `assembleDebugAndroidTest`; this project does not define `assembleReleaseAndroidTest`.
+
 
 ## Android stage presenter and camera ownership regression — 2026-11-01
 
@@ -330,7 +331,7 @@ The Android reference-led UI and companion changes remain subject to the reposit
 
 ## Android OTA self-update workflow contract
 
-The `platform-download-publishing.yml` workflow now includes an Android-only step "Ensure a durable release asset for this Android build" that creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset. The existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
+The `platform-download-publishing.yml` workflow constructs the durable Android tag in shell as `v<version>-preview-<source-sha8>`; do not interpolate shell variables inside single-quoted Python snippets. Before creating/editing a release it runs `tools/generate-android-release-notes.py`, which compares the exact source range with the latest valid Android preview tag, includes merged PR descriptions and source commit subjects, and records exact-run/APK/signing evidence. It fails closed on missing evidence and sanitizes HTML, trackers and credential-bearing lines. It includes an Android-only step "Ensure a durable release asset for this Android build" that creates (or `--clobber` updates) a GitHub Release tag `v<versionName-without-suffix>-preview-<sha8>` with the built APK as its asset. The existing publish step also runs `tools/prepare-update-feed.py` for Android and stages `apps/web/updates.json` into the downloads commit.
 
 **Contract requirements:**
 - The durable release asset creation is a **post-merge publication side effect** — every successful Android build on `main` becomes a public GitHub Release asset automatically.
@@ -340,4 +341,4 @@ The `platform-download-publishing.yml` workflow now includes an Android-only ste
 
 ## OTA safeguard status
 
-Android OTA publication is fail-closed: the exact APK supplies version and signer metadata, source history and versionCode must advance, and release assets are immutable. A compatible persistent owner keystore and a pinned historical APK/certificate are required; absent evidence blocks publication. Never bootstrap, generate, rotate or expose signing material in this repository. Physical-device upgrade acceptance remains unverified and must follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.
+Android OTA publication is fail-closed: the exact APK supplies version and signer metadata, source history and versionCode must advance, and release assets are immutable. The owner approved a new persistent signer pinned by its public SHA-256 in `tools/verify-ota-publication.py`; the verifier still downloads and digest-checks the prior APK and permits only candidates matching that exact new pin. The intentional identity transition means APKs signed with the old certificate cannot update in place and users must reinstall, potentially losing app-private data. Keep the PKCS#12 and passwords out of Git; CI secrets are used only on main, never pull requests. Do not generate, rotate or expose signing material in the repository. Physical-device acceptance for the new identity remains unverified and must follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.

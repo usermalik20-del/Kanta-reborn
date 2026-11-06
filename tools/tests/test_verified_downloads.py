@@ -32,11 +32,12 @@ def run_record(run_id=41, name="KANTA Android validation", source=SOURCE,
 
 
 def artifact_record(artifact_id=81, run_id=41, name="android-reconstruction-checks",
-                    source=SOURCE, expired=False):
+                    source=SOURCE, expired=False, created="2026-10-24T00:00:00Z"):
     return {
         "id": artifact_id,
         "name": name,
         "expired": expired,
+        "created_at": created,
         "digest": "",
         "workflow_run": {
             "id": run_id,
@@ -89,22 +90,21 @@ class DownloadContracts(unittest.TestCase):
         expected = {"run": 41, "artifact": 81, "source": SOURCE}
         module.accepted(run, found, expected)
 
-    def test_expired_or_ambiguous_artifacts_are_rejected(self):
+    def test_expired_artifacts_are_ignored_and_newest_retry_is_selected(self):
         run = run_record()
         with patch.object(
             module, "api",
             return_value={"artifacts": [artifact_record(expired=True)]},
         ):
-            with self.assertRaisesRegex(ValueError, "has expired"):
+            with self.assertRaisesRegex(ValueError, "all matching artifacts have expired"):
                 module.find_artifact(run, "android-reconstruction-checks")
-        with patch.object(
-            module, "api",
-            return_value={"artifacts": [
-                artifact_record(81), artifact_record(82)
-            ]},
-        ):
-            with self.assertRaisesRegex(ValueError, "found 2"):
-                module.find_artifact(run, "android-reconstruction-checks")
+        older=artifact_record(81,created="2026-10-24T00:00:00Z")
+        newer=artifact_record(82,created="2026-10-24T00:05:00Z")
+        with patch.object(module,"api",return_value={"artifacts":[newer,older]}):
+            self.assertEqual(module.find_artifact(run,"android-reconstruction-checks")["id"],82)
+        tied_low=artifact_record(81,created="2026-10-24T00:05:00Z")
+        with patch.object(module,"api",return_value={"artifacts":[tied_low,newer]}):
+            self.assertEqual(module.find_artifact(run,"android-reconstruction-checks")["id"],82)
 
     def test_resolver_requires_walkthrough_and_both_builds_for_same_sha(self):
         walkthrough = run_record(61, "KANTA iOS visual walkthrough")
@@ -293,6 +293,25 @@ class AutomaticVerifiedDownloadPublishingContracts(unittest.TestCase):
         cls.visual = (root / ".github/workflows/ios-visual-walkthrough.yml").read_text(encoding="utf-8")
         cls.publisher = (root / ".github/workflows/platform-download-publishing.yml").read_text(encoding="utf-8")
         cls.contracts = (root / ".github/workflows/verified-downloads.yml").read_text(encoding="utf-8")
+
+    def test_artifact_response_limit_covers_both_android_apk_variants(self):
+        self.assertEqual(module.LIMIT, 256 * 1024 * 1024)
+
+    def test_android_artifact_retains_release_candidate_and_debug_runtime_apks(self):
+        self.assertIn("apps/android/app/build/outputs/apk/release/*.apk", self.android)
+        self.assertIn("apps/android/app/build/outputs/apk/debug/*.apk", self.android)
+        prepare = (pathlib.Path(__file__).resolve().parents[1] / "prepare-verified-downloads.py").read_text()
+        self.assertIn('one(archive, "/outputs/apk/release/app-release.apk")', prepare)
+
+    def test_android_release_notes_are_detailed_and_evidence_backed(self):
+        self.assertIn("tools/generate-android-release-notes.py", self.publisher)
+        self.assertIn("--notes-file", self.publisher)
+        self.assertIn("pull-requests: read", self.publisher)
+        self.assertIn("SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}", self.publisher)
+        self.assertNotIn("Verified CI build ${SOURCE_SHA:0:8}. Durable OTA artifact.", self.publisher)
+        self.assertLess(self.publisher.index("generate-android-release-notes.py"),
+                        self.publisher.index("gh release create"))
+        self.assertNotIn("gh release edit", self.publisher)
 
     def test_android_and_ios_publishing_are_separate_completion_paths(self):
         self.assertIn("KANTA Android validation", self.publisher)

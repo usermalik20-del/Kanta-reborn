@@ -50,7 +50,7 @@ def build_info(**overrides) -> dict:
         "file": "KANTA-Android-preview-" + SOURCE[:8] + ".apk",
         "sha256": SHA64,
         "bytes": 52_767_115,
-        "signed": "debug",
+        "signed": "release",
     }
     info.update(overrides)
     return info
@@ -112,7 +112,8 @@ class FeedContractTests(unittest.TestCase):
         self.assertEqual(android["versionCode"], 10)
         self.assertEqual(android["versionName"], "0.10.0-reconstruction")
         self.assertEqual(android["minSdk"], 26)
-        self.assertEqual(android["signerSha256"], "b" * 64)
+        self.assertEqual(android["signingCertSha256"], "b" * 64)
+        self.assertNotIn("signerSha256", android)
         self.assertTrue(feed.is_accepted_apk_url(android["apkUrl"]))
         self.assertEqual(android["apkBytes"], 52_767_115)
         self.assertEqual(android["apkSha256"], SHA64)

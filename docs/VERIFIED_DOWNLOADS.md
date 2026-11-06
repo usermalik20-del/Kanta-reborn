@@ -13,7 +13,7 @@ The released native source is [`41c8ddde`](https://github.com/usermalik20-del/Ka
 - **iPhone/iPad walkthrough:** [run #40424816930](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/40424816930) passed both simulator jobs on the same SHA. The iPhone and iPad jobs uploaded runtime evidence and presentation diagnostics.
 - Raw Actions artifacts require GitHub sign-in and expire. They are preview/testing artifacts; the GitHub Release assets are the durable public copies.
 - The public manifest at [`/downloads.json`](https://kanta-public.vercel.app/downloads.json) and the [iOS](https://kanta-public.vercel.app/ios-download) and [Android](https://kanta-public.vercel.app/android) pages agree on source `41c8ddde`, artifact IDs, digests and the passing walkthrough run. The website security-contract baseline is advanced to `41c8ddde`.
-- No signed production IPA is verified. The released iOS IPA is unsigned and needs trusted personal signing; the Android APK remains debug-signed.
+- No signed production IPA is verified. The currently published Android APK is debug-signed; the next release pipeline transitions to the owner-approved release certificate, so old APK installs will not update in place. The released iOS IPA remains unsigned and needs trusted personal signing.
 
 ### Predictive-back repair on `9a2a0fc` (post-release)
 

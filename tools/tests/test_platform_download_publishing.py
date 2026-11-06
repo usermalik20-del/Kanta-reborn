@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("platform_publisher", ROOT / "publish-platform-download.py")
 publisher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(publisher)
+notes_spec = importlib.util.spec_from_file_location("release_notes", ROOT / "generate-android-release-notes.py")
+release_notes = importlib.util.module_from_spec(notes_spec)
+notes_spec.loader.exec_module(release_notes)
 
 class PlatformPublisherTests(unittest.TestCase):
     def setUp(self):
@@ -61,7 +64,7 @@ class PlatformPublisherTests(unittest.TestCase):
         self.root_patch.start()
         (self.root / "verified-downloads/android/build-info.json").write_text(json.dumps({
             "platform": "android", "source": self.new_source, "run": 100, "artifact": 101,
-            "file": "test.apk", "sha256": "c" * 64, "bytes": 123, "signed": "debug",
+            "file": "test.apk", "sha256": "c" * 64, "bytes": 123, "signed": "release",
         }))
 
     def git(self, *args):
@@ -184,6 +187,78 @@ class PlatformPublisherTests(unittest.TestCase):
 
         self.assertEqual(result["android"]["source"], self.new_source)
         self.assertEqual(result["android"]["run"], 200)
+
+class AndroidReleaseNotesTests(unittest.TestCase):
+    REPO = "usermalik20-del/Kanta-reborn"
+    SHA = "a" * 40
+    SIGNER = "b" * 64
+
+    def test_previous_android_release_skips_malformed_or_non_android_releases(self):
+        releases = [
+            {"tag_name":"v0.10.0-preview-${SOURCE", "created_at":"2026-11-05T00:00:00Z", "assets":[{"name":"KANTA-Android-preview-x.apk"}]},
+            {"tag_name":"v0.10.0-preview-deadbee", "created_at":"2026-11-04T00:00:00Z", "assets":[{"name":"KANTA-Android-preview-deadbee.apk"}]},
+            {"tag_name":"v0.10.0-preview-cafebabe", "created_at":"2026-11-03T00:00:00Z", "assets":[{"name":"KANTA-Android-preview-cafebabe.apk"}]},
+            {"tag_name":"v0.10.0-preview-ffffffff", "created_at":"2026-11-06T00:00:00Z", "assets":[{"name":"KANTA-iOS-personal-unsigned-ffffffff.ipa"}]},
+        ]
+        self.assertEqual(release_notes.previous_android_release(releases,self.SHA)["tag_name"],"v0.10.0-preview-deadbee")
+
+    def test_pr_body_keeps_detail_and_removes_html_trackers_and_credentials(self):
+        body="## What changed\n- Better queue flow\n![pixel](https://tracker.invalid/pixel)\n<iframe src=\"x\"></iframe>\nAPI_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz012345\n"
+        text=release_notes.summarize_pr_body(body)
+        self.assertIn("Better queue flow",text)
+        self.assertNotIn("tracker.invalid",text)
+        self.assertNotIn("<iframe",text)
+        self.assertNotIn("ghp_abcdefghijklmnopqrstuvwxyz",text)
+        self.assertIn("credential-bearing line omitted",text)
+
+    def test_notes_are_detailed_and_source_exact(self):
+        pr={"number":155,"title":"Android stage changes","html_url":"https://github.com/x/pull/155","body":"## What it adds\n- Detailed vocal-monitor controls\n- Party pads\nValidation: Earlier candidate passed"}
+        meta={"versionName":"0.10.0-reconstruction","versionCode":702,"minSdk":26,"apkSha256":"c"*64,"apkBytes":81800964,"signerSha256":self.SIGNER,"signerTransition":False}
+        previous={"tag_name":"v0.10.0-preview-deadbee"}
+        text=release_notes.render_notes(self.REPO,self.SHA,{"id":123,"run_number":456},"789",meta,"KANTA-Android-preview-aaaaaaaa.apk",previous,"d"*40,[pr],[])
+        for value in (self.SHA,"v0.10.0-preview-deadbee","#155 — Android stage changes","Detailed vocal-monitor controls","Run #456","Run #789","81,800,964","c"*64,self.SIGNER,"same signing identity","not physical-device acceptance"):
+            self.assertIn(value,text)
+        self.assertLess(text.index("What changed"),text.index("Validation and limits"))
+        self.assertNotIn("Earlier candidate passed",text)
+
+    def test_signer_transition_warns_of_required_reinstall(self):
+        meta={"versionName":"0.10.0-reconstruction","versionCode":702,"minSdk":26,"apkSha256":"c"*64,"apkBytes":800,"signerSha256":self.SIGNER,"signerTransition":True}
+        text=release_notes.render_notes(self.REPO,self.SHA,{"id":1,"run_number":2},"3",meta,"a.apk",None,None,[],[])
+        self.assertIn("new signing identity",text)
+        self.assertIn("cannot update in place",text)
+
+    def test_compare_hides_generated_download_publication_commit(self):
+        commit=lambda sha,msg:{"sha":sha,"commit":{"message":msg}}
+        with patch.object(release_notes,"api_json",side_effect=[
+            {"object":{"type":"commit","sha":"d"*40}},
+            {"status":"ahead","commits":[commit("a"*40,"chore(downloads): publish verified android build"),commit("b"*40,"fix: user-facing correction")]},
+            [],[]]):
+            _,_,prs,direct=release_notes.change_summary(self.REPO,self.SHA,{"tag_name":"v0.10.0-preview-ddddddd"},"token")
+        self.assertEqual(prs,[])
+        self.assertEqual(direct,["fix: user-facing correction"])
+
+    def test_release_tag_resolves_actual_commit_and_checks_suffix(self):
+        with patch.object(release_notes,"api_json",return_value={"object":{"type":"commit","sha":"d"*40}}):
+            self.assertEqual(release_notes.resolve_release_commit(self.REPO,"v0.10.0-preview-"+"d"*8,"token"),"d"*40)
+        with patch.object(release_notes,"api_json",return_value={"object":{"type":"commit","sha":"e"*40}}):
+            with self.assertRaisesRegex(release_notes.NotesError,"suffix does not match"):
+                release_notes.resolve_release_commit(self.REPO,"v0.10.0-preview-"+"d"*8,"token")
+
+    def test_compare_refuses_truncated_commit_range(self):
+        with patch.object(release_notes,"api_json",side_effect=[
+            {"object":{"type":"commit","sha":"d"*40}},
+            {"status":"ahead","total_commits":101,"commits":[]}]):
+            with self.assertRaisesRegex(release_notes.NotesError,"bounded release-note query"):
+                release_notes.change_summary(self.REPO,self.SHA,{"tag_name":"v0.10.0-preview-ddddddd"},"token")
+
+    def test_compare_collects_and_deduplicates_merged_prs(self):
+        pr={"number":9,"title":"Detailed feature","merged_at":"2026-11-01T00:00:00Z","body":"details"}
+        with patch.object(release_notes,"api_json",side_effect=[{"object":{"type":"commit","sha":"d"*40}},{"status":"ahead","commits":[{"sha":"a"*40,"commit":{"message":"merge one"}},{"sha":"b"*40,"commit":{"message":"merge two"}}]},[pr],[pr]]):
+            prior,_,prs,commits=release_notes.change_summary(self.REPO,self.SHA,{"tag_name":"v0.10.0-preview-ddddddd"},"token")
+        self.assertEqual(prior,"d"*40)
+        self.assertEqual([item["number"] for item in prs],[9])
+        self.assertEqual(commits,[])
+
 
 if __name__ == "__main__":
     unittest.main()

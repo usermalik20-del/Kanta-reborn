@@ -73,6 +73,23 @@ jobs:
         run: python3 -m unittest tools.tests.test_android_update_contract tools.tests.test_ota_publication
       - name: Install required Android platform
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"'
+      - name: Prepare owner-controlled Android release signing
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          KANTA_SIGNING_KEYSTORE_BASE64: ${{ secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 }}
+          KANTA_SIGNING_PASSWORD: ${{ secrets.KANTA_ANDROID_SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KANTA_SIGNING_KEYSTORE_BASE64}" ] || [ -z "${KANTA_SIGNING_PASSWORD}" ]; then
+            echo "::error::Required Android release signing secrets are not configured. Add KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 and KANTA_ANDROID_SIGNING_PASSWORD before main validation."
+            exit 1
+          fi
+          key_path="${RUNNER_TEMP}/kanta-release-signing.p12"
+          printf '%s' "${KANTA_SIGNING_KEYSTORE_BASE64}" | base64 --decode > "${key_path}"
+          test -s "${key_path}"
+          chmod 600 "${key_path}"
+          echo "KANTA_ANDROID_SIGNING_STORE_FILE=${key_path}" >> "${GITHUB_ENV}"
+          echo "KANTA_ANDROID_SIGNING_PASSWORD=${KANTA_SIGNING_PASSWORD}" >> "${GITHUB_ENV}"
       - name: Native SoundFont sanitizer regression
         run: |
           cc -D_POSIX_C_SOURCE=200809L -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer apps/android/tests/soundfont-test.c -lm -o /tmp/kanta-soundfont-test
@@ -82,7 +99,7 @@ jobs:
         working-directory: apps/android
         run: |
           set -o pipefail
-          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
+          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:assembleRelease :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -120,6 +137,7 @@ jobs:
           name: android-reconstruction-checks
           path: |
             apps/android/app/build/outputs/apk/debug/*.apk
+            apps/android/app/build/outputs/apk/release/*.apk
             apps/android/app/build/reports/lint-results-debug.*
             apps/android/app/build/outputs/apk/androidTest/debug/*.apk
             android-runtime.log
