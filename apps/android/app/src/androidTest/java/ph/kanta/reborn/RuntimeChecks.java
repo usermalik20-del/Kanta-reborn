@@ -1307,11 +1307,10 @@ public final class RuntimeChecks extends Instrumentation {
             () -> {
               View stage =
                   activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
-              androidx.activity.OnBackPressedCallback callback =
-                  (androidx.activity.OnBackPressedCallback) field(activity, "workspaceBackCallback");
-              return stage != null && !callback.isEnabled();
+              return stage != null && stage.isAttachedToWindow()
+                  && field(activity, "lowerUtilityAccessory") == null;
             }),
-        "Back dismissal detached the persistent stage or left the callback enabled");
+        "Back dismissal detached the persistent stage or retained the lower utility");
   }
 
   private Object field(Object target, String name) {
