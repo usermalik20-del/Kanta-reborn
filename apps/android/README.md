@@ -4,6 +4,8 @@
 
 The primary `StagePresenterImpl` tagged `kanta.stage.primary` remains attached and visible while navigation changes the utility content below it. Now Playing no longer creates a competing `StageSurface` or takes camera ownership. Menus, background selection and playback controls project `SessionController` state; they do not start a new playback attempt or alter reservations simply by opening. Fullscreen explicitly suspends the embedded visual projection and returns camera ownership to the primary presenter on dismissal.
 
+The always-visible duplicate utility rows are removed. The persistent five-tab navigation owns primary navigation, **More** expands the six workspace destinations, and the KANTA header logo toggles a lower-panel-only hardware-inspired Control Deck. The deck delegates master volume, transport, microphone/monitor, camera, key/tempo and destination actions to existing owners; it never creates playback, queue, stage or microphone state. Logo re-tap and Android Back restore the prior destination.
+
 Acceptance requires a fresh APK build and instrumentation on portrait and landscape displays: keep the stage visible above each panel, preview background changes in place, retain playback identity and audible-clock progress, dismiss panels with predictive/system Back, and verify camera/video handoff through fullscreen. Local source/static checks are not emulator or physical-device acceptance.
 
 ## Large SoundFont RAM ceiling — local candidate

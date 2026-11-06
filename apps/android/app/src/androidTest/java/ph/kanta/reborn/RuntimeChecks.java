@@ -115,6 +115,19 @@ public final class RuntimeChecks extends Instrumentation {
       assertPersistentStage(null);
       capture("home_dashboard.png");
       runOnMainSync(() -> {
+        View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");
+        check(logo != null && logo.performClick(), "KANTA logo did not open the control deck");
+      });
+      await(() -> visibleOnScreen("kanta.control-deck"),
+          "KANTA logo did not reveal the special control deck");
+      assertPersistentStage("kanta.control-deck");
+      check(visibleOnScreen("kanta.control-deck.volume"),
+          "Special control deck did not expose the master-volume dial");
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(() -> !visibleOnScreen("kanta.control-deck"),
+          "Android Back did not close the special control deck");
+      assertPersistentStage(null);
+      runOnMainSync(() -> {
         View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Sing");
         check(sing != null, "Home Sing destination missing");
         sing.performClick();
@@ -1300,11 +1313,15 @@ public final class RuntimeChecks extends Instrumentation {
     KantaWorkspace workspace = (KantaWorkspace) field(activity, "workspace");
     runOnMainSync(
         () -> {
-          View search =
-              activity.getWindow().getDecorView().findViewWithTag("kanta.workspace.search");
-          check(search != null, "Workspace Search action missing");
-          search.performClick();
+          View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");
+          check(logo != null && logo.performClick(), "KANTA logo did not reopen the control deck");
         });
+    await(() -> visibleOnScreen("kanta.control-deck.search"),
+        "Special control deck Search action missing");
+    runOnMainSync(() -> {
+      View search = activity.getWindow().getDecorView().findViewWithTag("kanta.control-deck.search");
+      check(search != null && search.performClick(), "Control deck Search action did not open");
+    });
     await(() -> visibleOnScreen("kanta.utility.search-input"),
         "Workspace Search did not open the lower utility panel");
     assertPersistentStage("kanta.utility.search-input");

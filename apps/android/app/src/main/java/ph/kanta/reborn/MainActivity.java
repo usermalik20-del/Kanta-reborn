@@ -97,6 +97,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int visualsSelectedTab;
   private String searchSource = "All";
   private String lowerUtilityAccessory;
+  private boolean controlDeckVisible;
+  private String controlDeckReturnTab = "Home";
   private boolean preparingExport = false;
   private byte[] exportBytes;
   private String exportCode;
@@ -136,7 +138,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new OnBackPressedCallback(false) {
           @Override
           public void handleOnBackPressed() {
-            if (lowerUtilityAccessory != null
+            if (controlDeckVisible) {
+              closeControlDeck();
+            } else if (lowerUtilityAccessory != null
                 || (workspace != null && workspace.activeAccessory() != null)) {
               dismissAccessory();
             } else if (isReferenceDestination(tab)) {
@@ -329,7 +333,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     results = null;
     if (root == null) buildWindow();
     refreshLowerUtilityState();
-    boolean destination = !"Home".equals(tab) || lowerUtilityAccessory != null;
+    boolean destination = controlDeckVisible || !"Home".equals(tab) || lowerUtilityAccessory != null;
     if (workspaceBackCallback != null
         && (workspace == null || workspace.activeAccessory() == null))
       workspaceBackCallback.setEnabled(destination);
@@ -353,6 +357,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     body.removeAllViews();
     nowPlayingScreen = null;
+    if (controlDeckVisible) {
+      renderControlDeck();
+      if (stagePresenter != null) stagePresenter.refresh();
+      return;
+    }
     renderLowerUtility();
     refreshLowerUtilityState();
     if (lowerUtilityAccessory == null) renderPanel();
@@ -378,8 +387,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     appHeader = header;
     ImageView mark = new ImageView(this);
     mark.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
-    mark.setContentDescription("KANTA");
-    header.addView(mark, new LinearLayout.LayoutParams(dp(40), dp(40)));
+    mark.setContentDescription("Open KANTA control deck");
+    mark.setTag("kanta.header.logo");
+    mark.setClickable(true);
+    mark.setFocusable(true);
+    mark.setOnClickListener(v -> toggleControlDeck());
+    header.addView(mark, new LinearLayout.LayoutParams(dp(48), dp(48)));
     TextView brand = text("KANTA · ᜃᜈ᜔ᜆ", 22, ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN);
     brand.setTypeface(null, android.graphics.Typeface.BOLD);
     header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
@@ -452,6 +465,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           button(
               name,
               () -> {
+                if ("More".equals(name)) {
+                  showWorkspaceActions(navigationButtons.get("More"));
+                  return;
+                }
+                controlDeckVisible = false;
                 lowerUtilityAccessory = null;
                 tab = name;
                 render();
@@ -471,48 +489,87 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (stagePresenter != null) stagePresenter.refresh();
   }
 
-  /**
-   * Compact Workspace toolbar (Search | Queue | Visuals | Controls).
-   *
-   * Mirrors the iOS compact workspace action row: each entry presents a
-   * transient accessory above the persistent stage instead of navigating away
-   * from it. RC1: every button owns its own identity, so no container
-   * identifier can be inherited by a child. RC2: the control-opening entry is
-   * labelled "Controls", never "Settings", because Settings is a separate
-   * navigation destination and the duplicate label made assistive queries
-   * ambiguous.
-   */
-  private LinearLayout workspaceToolbar() {
-    LinearLayout bar = row();
-    bar.setBackgroundColor(PANEL);
-    bar.setPadding(dp(4), dp(4), dp(4), dp(4));
-
-    Button search = workspaceButton("Search", KantaWorkspace.ACCESSORY_SEARCH);
-    Button queue = workspaceButton("Queue", KantaWorkspace.ACCESSORY_QUEUE);
-    Button visuals = workspaceButton("Visuals", KantaWorkspace.ACCESSORY_VISUALS);
-    Button controls = workspaceButton("Controls", KantaWorkspace.ACCESSORY_MORE);
-    Button pitchGame = workspaceButton("Pitch", KantaWorkspace.ACCESSORY_PITCH_GAME);
-    Button learning = workspaceButton("Coach", KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT);
-    addWeighted(bar, search);
-    addWeighted(bar, queue);
-    addWeighted(bar, visuals);
-    addWeighted(bar, controls);
-    addWeighted(bar, pitchGame);
-    addWeighted(bar, learning);
-    return bar;
+  /** Logo-triggered special controller; the header, live stage and bottom tabs stay mounted. */
+  private void toggleControlDeck() {
+    if (controlDeckVisible) {
+      closeControlDeck();
+      return;
+    }
+    controlDeckReturnTab = tab;
+    lowerUtilityAccessory = null;
+    controlDeckVisible = true;
+    render();
   }
 
-  /** One workspace action. Its own identity lives on the button itself. */
-  private Button workspaceButton(String label, String accessoryId) {
-    Button b = button(label, () -> presentAccessory(accessoryId));
-    b.setTag("kanta.workspace." + accessoryId);
-    b.setContentDescription("KANTA " + label);
-    b.setMinWidth(0);
-    b.setMinimumWidth(0);
-    b.setPadding(dp(3), dp(4), dp(3), dp(4));
-    b.setTextSize(12);
-    b.setMaxLines(1);
-    return b;
+  private void closeControlDeck() {
+    controlDeckVisible = false;
+    tab = controlDeckReturnTab == null ? "Home" : controlDeckReturnTab;
+    render();
+  }
+
+  /** The More tab is the canonical home for utility destinations. */
+  private void showWorkspaceActions(View anchor) {
+    if (anchor == null) return;
+    PopupMenu menu = new PopupMenu(this, anchor);
+    String[] labels = {"Search", "Queue", "Visuals", "Controls", "Pitch", "Coach", "More & Settings"};
+    for (String label : labels) menu.getMenu().add(label);
+    menu.setOnMenuItemClickListener(item -> {
+      String label = String.valueOf(item.getTitle());
+      controlDeckVisible = false;
+      if ("Search".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_SEARCH);
+      else if ("Queue".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_QUEUE);
+      else if ("Visuals".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_VISUALS);
+      else if ("Controls".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_MORE);
+      else if ("Pitch".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_PITCH_GAME);
+      else if ("Coach".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT);
+      else { lowerUtilityAccessory = null; tab = "More"; render(); }
+      return true;
+    });
+    menu.show();
+  }
+
+  private void renderControlDeck() {
+    TextView heading = text("KANTA Control Deck", 18, ACCENT);
+    heading.setTypeface(null, android.graphics.Typeface.BOLD);
+    body.addView(heading);
+    ph.kanta.reborn.ui.KantaControlDeck deck =
+        new ph.kanta.reborn.ui.KantaControlDeck(this, new ph.kanta.reborn.ui.KantaControlDeck.Listener() {
+          @Override public void onVolumeDelta(float delta) {
+            session.setVolume(Math.max(0f, Math.min(1f, session.volume + delta)));
+            render();
+          }
+          @Override public void onAction(String action) { handleControlDeckAction(action); }
+        });
+    deck.setVolume(session.volume);
+    body.addView(deck, new LinearLayout.LayoutParams(-1, -2));
+  }
+
+  private void handleControlDeckAction(String action) {
+    switch (action) {
+      case "search": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_SEARCH); break;
+      case "queue": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_QUEUE); break;
+      case "visuals": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_VISUALS); break;
+      case "controls": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_MORE); break;
+      case "pitch": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_PITCH_GAME); break;
+      case "coach": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT); break;
+      case "play": playWithCountdown(); break;
+      case "restart": session.restartCurrent(); break;
+      case "next": session.next(); break;
+      case "stop": session.stop(); break;
+      case "microphone": toggleMicrophone(); break;
+      case "monitor": toggleMonitoring(); break;
+      case "camera": toggleCamera(); break;
+      case "fullscreen": fullscreen(); break;
+      case "key_down": session.controls(session.volume, session.tempo, Math.max(-12, session.pitch - 1)); break;
+      case "key_up": session.controls(session.volume, session.tempo, Math.min(12, session.pitch + 1)); break;
+      case "tempo_down": session.controls(session.volume, Math.max(.5f, session.tempo - .05f), session.pitch); break;
+      case "tempo_up": session.controls(session.volume, Math.min(2f, session.tempo + .05f), session.pitch); break;
+      case "now_playing": controlDeckVisible = false; tab = "Now Playing"; render(); break;
+      case "my_set": controlDeckVisible = false; tab = "My Set"; render(); break;
+      case "youtube": openYouTubeVideo(); break;
+      case "help": help(); break;
+      default: break;
+    }
   }
 
   /** Routes a workspace action into the lower utility panel. */
@@ -994,21 +1051,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   /** Lower utility strip; deliberately outside the persistent stage row. */
   private void renderLowerUtility() {
-    nowPlaying = text(
-        session.current == null ? "Ready for your next song"
-            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer),
-        15, Color.WHITE);
-    body.addView(nowPlaying);
-    LinearLayout transport = row();
-    playButton = button("Play", this::playWithCountdown);
-    addWeighted(transport, playButton);
-    nextButton = button("Next", session::next);
-    addWeighted(transport, nextButton);
-    Button openFullscreen = button("Fullscreen", this::fullscreen);
-    openFullscreen.setTag("kanta.fullscreen.open");
-    addWeighted(transport, openFullscreen);
-    body.addView(transport);
-    body.addView(workspaceToolbar());
+    nowPlaying = null;
+    playButton = null;
+    nextButton = null;
     if (lowerUtilityAccessory != null)
       body.addView(button("Close utility", this::dismissAccessory));
     if (KantaWorkspace.ACCESSORY_SEARCH.equals(lowerUtilityAccessory)) {
@@ -1164,9 +1209,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onNext(){session.next();}
       @Override public void onShuffle(){}
       @Override public void onRepeat(){}
-      @Override public void onQueue(){tab="Queue";render();}
-      @Override public void onEffects(){tab="Mic & Voice";render();}
-      @Override public void onCoach(){tab="Control";voiceExpanded=true;render();}
       @Override public void onKeyDown(){session.controls(session.volume,session.tempo,Math.max(-12,session.pitch-1));}
       @Override public void onKeyUp(){session.controls(session.volume,session.tempo,Math.min(12,session.pitch+1));}
       @Override public void onTempoDown(){session.controls(session.volume,Math.max(.5f,session.tempo-.05f),session.pitch);}
