@@ -1253,6 +1253,7 @@ public final class RuntimeChecks extends Instrumentation {
   }
 
   private void persistentStagePlaybackChecks() {
+    String priorTab = (String) field(activity, "tab");
     AtomicReference<Object> backend = new AtomicReference<>();
     AtomicReference<java.util.UUID> identity = new AtomicReference<>();
     AtomicReference<java.util.List<ReservationQueue.Entry>> reservations = new AtomicReference<>();
@@ -1280,13 +1281,13 @@ public final class RuntimeChecks extends Instrumentation {
         if (!after.get(i).id.equals(reservations.get().get(i).id)) return false;
       return true;
     }), "Menu navigation changed authoritative reservations");
-    // Leave the harness in its canonical Home state for subsequent acceptance flows.
+    // Restore the destination that owned the surrounding acceptance flow.
     runOnMainSync(() -> {
-      View home = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Home");
-      if (home != null) home.performClick();
+      View destination = activity.getWindow().getDecorView().findViewWithTag("kanta.nav." + priorTab);
+      if (destination != null) destination.performClick();
     });
-    await(() -> "Home".equals(field(activity, "tab")),
-        "Persistent-stage playback check did not restore Home");
+    await(() -> priorTab.equals(field(activity, "tab")),
+        "Persistent-stage playback check did not restore its destination");
   }
 
   private void workspaceBackNavigationChecks() {
