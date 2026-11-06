@@ -1,5 +1,9 @@
 # KANTA Reborn
 
+## Android persistent-stage navigation — local candidate
+
+The Android main screen keeps the same live karaoke stage above the menu/control area. Home, song search, Queue, Now Playing, Performance and Experience are lower-panel destinations rather than stage replacements. Background and other presentation controls operate on the existing session so their changes can be previewed without leaving the stage. Explicit fullscreen remains a separate read-only stage projection. iOS, the website, playback/FIFO ownership and opt-in microphone behavior are unchanged. This is a local source candidate, not a built, device-accepted or published APK; see `docs/TESTING.md` for acceptance requirements.
+
 ## Android SoundFont RAM ceiling — local candidate
 
 The Android native renderer now permits up to **1536 MiB (1.5 GiB)** of tracked TinySoundFont allocations per worker, raised from 128 MiB for large decoded banks. This is a hard ceiling, not reserved or guaranteed memory: the operating system can refuse smaller allocations or terminate a memory-heavy process. Full-tail piano banks can require over 1 GiB before other app work. Format validation, voice limits, storage checks and source-byte preservation remain unchanged. Local native regression passes; APK, sanitizer and large-bank device acceptance remain separate gates. No new bank is bundled.

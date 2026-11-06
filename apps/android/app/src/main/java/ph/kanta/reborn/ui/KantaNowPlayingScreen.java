@@ -105,7 +105,9 @@ public class KantaNowPlayingScreen extends LinearLayout {
       // StageSurface already owns the selected background, camera/video layers and timed lyrics.
       lyrics.setVisibility(View.GONE);
     }
-    addView(stage);
+    // MainActivity owns the only attached live stage. This destination remains a
+    // utility projection when no stage view is supplied.
+    if (stageView != null) addView(stage);
     LinearLayout info = new LinearLayout(context);
     info.setOrientation(HORIZONTAL);
     info.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);

@@ -92,10 +92,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
   private ph.kanta.reborn.ui.KantaNowPlayingScreen nowPlayingScreen;
-  private StageSurface nowPlayingStage;
   private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
   private int visualsSelectedTab;
   private String searchSource = "All";
+  private String lowerUtilityAccessory;
   private boolean preparingExport = false;
   private byte[] exportBytes;
   private String exportCode;
@@ -107,7 +107,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           refreshMicrophoneReading();
           refreshNowPlayingScreen();
           if (stagePresenter != null) stagePresenter.refresh();
-          if (nowPlayingStage != null) nowPlayingStage.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
           refreshFullscreenControls();
           if (externalStage != null) externalStage.refresh();
@@ -136,7 +135,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new OnBackPressedCallback(false) {
           @Override
           public void handleOnBackPressed() {
-            if (workspace != null && workspace.activeAccessory() != null) {
+            if (lowerUtilityAccessory != null
+                || (workspace != null && workspace.activeAccessory() != null)) {
               dismissAccessory();
             } else if (isReferenceDestination(tab)) {
               navigateHome();
@@ -164,9 +164,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     youtubeForeground = true;
     session.hostVisible(true);
     if (stagePresenter != null)
-      stagePresenter.setVisualActive(
-          (fullscreen == null || !fullscreen.isShowing()) && !"Now Playing".equals(tab));
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(fullscreen == null || !fullscreen.isShowing());
+      stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
     if (fullscreenStage != null) fullscreenStage.setVisualActive(true);
     session.listen(this::render);
     handler.post(tick);
@@ -220,7 +218,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     session.listen(null);
     session.hostVisible(false);
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     if (fullscreenStage != null) fullscreenStage.setVisualActive(false);
     if (!isChangingConfigurations()) session.pause();
     if (presentation != null) presentation.dismiss();
@@ -330,42 +327,34 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     queryInput = null;
     results = null;
     if (root == null) buildWindow();
-    nowPlaying.setText(
-        session.current == null
-            ? "Ready for your next song"
-            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer));
-    playButton.setText(session.playing ? "Pause" : "Play");
-    playButton.setEnabled(session.ready && !session.loading);
-    nextButton.setEnabled(session.ready && !session.loading);
-    boolean home = "Home".equals(tab);
-    boolean referenceDestination = isReferenceDestination(tab);
+    refreshLowerUtilityState();
+    boolean destination = !"Home".equals(tab) || lowerUtilityAccessory != null;
     if (workspaceBackCallback != null
         && (workspace == null || workspace.activeAccessory() == null))
-      workspaceBackCallback.setEnabled(referenceDestination);
-    // Destination screens own their headers, navigation and action controls. Keeping the
-    // persistent stage/toolbars mounted here duplicates those controls beneath the screen.
-    boolean hideStage = home || referenceDestination;
-    if (appHeader != null) appHeader.setVisibility(hideStage ? View.GONE : View.VISIBLE);
-    if (stagePane != null) stagePane.setVisibility(hideStage ? View.GONE : View.VISIBLE);
-    if (navigationTabs != null)
-      navigationTabs.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
+      workspaceBackCallback.setEnabled(destination);
+    // The stage is the one persistent playback surface. Destinations are rendered in the
+    // utility pane beneath it; never detach or hide the stage while navigating.
+    if (appHeader != null) appHeader.setVisibility(View.VISIBLE);
+    if (stagePane != null) stagePane.setVisibility(View.VISIBLE);
+    if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
       entry.getValue().setTextColor(entry.getKey().equals(tab) ? ACCENT : Color.WHITE);
     }
-    if ("Now Playing".equals(tab) && nowPlayingScreen != null) {
+    // Now Playing is a live projection. Keep its view tree stable while the
+    // clock/session publishes; rebuilding it every 100ms drops focus and is
+    // needlessly expensive. Navigation into it still builds once below.
+    if ("Now Playing".equals(tab) && lowerUtilityAccessory == null
+        && nowPlayingScreen != null && body != null) {
       refreshNowPlayingScreen();
+      if (stagePresenter != null) stagePresenter.refresh();
       return;
     }
-    if (!"Now Playing".equals(tab) && nowPlayingStage != null) {
-      nowPlayingStage.setVisualActive(false);
-      camera.moveTo(stagePresenter);
-      if (stagePresenter != null) stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
-      nowPlayingStage = null;
-      nowPlayingScreen = null;
-    }
     body.removeAllViews();
-    renderPanel();
+    nowPlayingScreen = null;
+    renderLowerUtility();
+    refreshLowerUtilityState();
+    if (lowerUtilityAccessory == null) renderPanel();
     if (stagePresenter != null) stagePresenter.refresh();
   }
 
@@ -396,12 +385,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     header.addView(button("Help", this::help));
     root.addView(header);
     LinearLayout main = new LinearLayout(this);
-    boolean wide = getResources().getConfiguration().screenWidthDp >= 700;
-    main.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+    // The live stage is always the first row. Utilities flow below it on every
+    // form factor; a tablet must not turn the stage into a side rail.
+    main.setOrientation(LinearLayout.VERTICAL);
     root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
     stagePane = column();
-    // Compact Workspace: the stage is the persistent base layer. Utilities are
-    // transient accessories presented above it, so the player is never lost.
+    // The workspace now owns only the persistent presenter. Utility actions are
+    // routed to the lower panel, never layered over this surface.
     workspace = new KantaWorkspace(this, null);
     workspace.setListener(
         new KantaWorkspace.Listener() {
@@ -443,38 +433,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     workspace.addPersistentLayer(stagePresenter);
     // Register as ScoreSink
     session.setScoreSink(stagePresenter);
-    stagePane.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
-    nowPlaying =
-        text(
-            session.current == null
-                ? "Ready for your next song"
-                : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer),
-            15,
-            Color.WHITE);
-    stagePane.addView(nowPlaying);
-    LinearLayout transport = row();
-    playButton = button("Play", this::playWithCountdown);
-    addWeighted(transport, playButton);
-    nextButton = button("Next", session::next);
-    addWeighted(transport, nextButton);
-    Button openFullscreen = button("Fullscreen", this::fullscreen);
-    openFullscreen.setTag("kanta.fullscreen.open");
-    addWeighted(transport, openFullscreen);
-    stagePane.addView(transport);
-    stagePane.addView(workspaceToolbar());
-    if (wide) main.addView(stagePane, new LinearLayout.LayoutParams(0, -1, 1.2f));
-    else
-      main.addView(
-          stagePane,
-          new LinearLayout.LayoutParams(
-              -1, dp(getResources().getConfiguration().orientation == 2 ? 200 : 300)));
+    stagePane.addView(workspace, new LinearLayout.LayoutParams(-1, -1));
+    // Split the available main area instead of reserving a fixed landscape height;
+    // compact displays must leave usable space for the lower utility destination.
+    stagePane.setMinimumHeight(dp(140));
+    main.addView(stagePane, new LinearLayout.LayoutParams(-1, 0, 0.42f));
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(true);
     body = column();
     body.setPadding(dp(4), 0, dp(4), dp(14));
     scroll.addView(body);
-    if (wide) main.addView(scroll, new LinearLayout.LayoutParams(0, -1, 1));
-    else main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+    main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 0.58f));
     LinearLayout tabs = row();
     navigationTabs = tabs;
     for (String name : new String[] {"Home", "Sing", "Performance", "Experience", "More"}) {
@@ -482,6 +451,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           button(
               name,
               () -> {
+                lowerUtilityAccessory = null;
                 tab = name;
                 render();
               });
@@ -544,52 +514,21 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     return b;
   }
 
-  /**
-   * Presents one transient accessory above the persistent stage. The stage is
-   * never rebuilt, so playback, lyrics and camera are preserved.
-   */
+  /** Routes a workspace action into the lower utility panel. */
   private void presentAccessory(String accessoryId) {
-    if (workspace == null) return;
-    if (workspace.activeAccessory() != null
-        && !workspace.activeAccessory().equals(accessoryId)) returnToHomeAfterAccessory = false;
-    workspaceSearchGeneration++;
-    workspace.activateAccessory(accessoryId);
-    LinearLayout target = workspace.accessoryContent();
-    target.removeAllViews();
-    switch (accessoryId) {
-      case KantaWorkspace.ACCESSORY_SEARCH:
-        workspace.addAccessoryHeader("Search");
-        // Use the StagePresenterImpl's SearchOverlay
-        if (stagePresenter != null) stagePresenter.showSearch();
-        break;
-      case KantaWorkspace.ACCESSORY_QUEUE:
-        workspace.addAccessoryHeader("Queue");
-        // Use the StagePresenterImpl's QueueOverlay
-        if (stagePresenter != null) stagePresenter.showQueue();
-        break;
-      case KantaWorkspace.ACCESSORY_VISUALS:
-        workspace.addAccessoryHeader("Stage Visuals");
-        visualsAccessory(target);
-        break;
-      case KantaWorkspace.ACCESSORY_PITCH_GAME:
-        workspace.addAccessoryHeader("Pitch Practice");
-        if (stagePresenter != null) stagePresenter.showPitchGame(session.practiceTargetHz());
-        break;
-      case KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT:
-        workspace.addAccessoryHeader("Voice Coach");
-        if (stagePresenter != null) stagePresenter.showLearningAssistant();
-        break;
-      default:
-        workspace.addAccessoryHeader("Controls");
-        controlsAccessory(target);
-        break;
-    }
+    if (accessoryId == null) return;
+    if (workspace != null && workspace.activeAccessory() != null) workspace.deactivateAccessory();
+    returnToHomeAfterAccessory = false;
+    lowerUtilityAccessory = accessoryId;
+    render();
   }
 
   /** Dismisses the active accessory, leaving the stage untouched. */
   private void dismissAccessory() {
     workspaceSearchGeneration++;
+    lowerUtilityAccessory = null;
     if (workspace != null) workspace.deactivateAccessory();
+    render();
   }
 
   /** Search accessory: a compact read of the library with reservation. */
@@ -602,6 +541,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     input.setHint("Song code, title or artist");
     input.setText(query);
     input.setContentDescription("KANTA workspace search input");
+    input.setTag("kanta.utility.search-input");
     target.addView(input);
     final LinearLayout list = new LinearLayout(this);
     list.setOrientation(LinearLayout.VERTICAL);
@@ -637,7 +577,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           }
           handler.post(
               () -> {
-                if (token != searchGeneration || isDestroyed()) return;
+                if (token != workspaceSearchGeneration || isDestroyed()) return;
                 list.removeAllViews();
                 if (found.isEmpty()) {
                   list.addView(text("No matching songs", 14, 0xFFAFB8D0));
@@ -996,6 +936,63 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     return addresses;
   }
 
+  private void refreshLowerUtilityState() {
+    if (nowPlaying == null || playButton == null || nextButton == null) return;
+    nowPlaying.setText(
+        session.current == null
+            ? "Ready for your next song"
+            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer));
+    playButton.setText(session.playing ? "Pause" : "Play");
+    playButton.setEnabled(session.ready && !session.loading);
+    nextButton.setEnabled(session.ready && !session.loading);
+  }
+
+  /** Lower utility strip; deliberately outside the persistent stage row. */
+  private void renderLowerUtility() {
+    nowPlaying = text(
+        session.current == null ? "Ready for your next song"
+            : session.current.title + (session.singer.isEmpty() ? "" : " · " + session.singer),
+        15, Color.WHITE);
+    body.addView(nowPlaying);
+    LinearLayout transport = row();
+    playButton = button("Play", this::playWithCountdown);
+    addWeighted(transport, playButton);
+    nextButton = button("Next", session::next);
+    addWeighted(transport, nextButton);
+    Button openFullscreen = button("Fullscreen", this::fullscreen);
+    openFullscreen.setTag("kanta.fullscreen.open");
+    addWeighted(transport, openFullscreen);
+    body.addView(transport);
+    body.addView(workspaceToolbar());
+    if (lowerUtilityAccessory != null)
+      body.addView(button("Close utility", this::dismissAccessory));
+    if (KantaWorkspace.ACCESSORY_SEARCH.equals(lowerUtilityAccessory)) {
+      body.addView(text("Search", 18, ACCENT));
+      searchAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_QUEUE.equals(lowerUtilityAccessory)) {
+      body.addView(text("Queue", 18, ACCENT));
+      queueAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_VISUALS.equals(lowerUtilityAccessory)) {
+      body.addView(text("Visuals", 18, ACCENT));
+      visualsAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_MORE.equals(lowerUtilityAccessory)) {
+      body.addView(text("Controls", 18, ACCENT));
+      controlsAccessory(body);
+    } else if (KantaWorkspace.ACCESSORY_PITCH_GAME.equals(lowerUtilityAccessory)) {
+      body.addView(text("Pitch Practice", 18, ACCENT));
+      body.addView(button("Start pitch practice", () -> stagePresenter.startPitchPractice()));
+      ph.kanta.reborn.stage.PitchGameOverlay overlay = stagePresenter.detachPitchGameOverlay();
+      overlay.showPanel();
+      body.addView(overlay, new LinearLayout.LayoutParams(-1, dp(420)));
+    } else if (KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT.equals(lowerUtilityAccessory)) {
+      body.addView(text("Voice Coach", 18, ACCENT));
+      body.addView(button("Start voice coach", () -> stagePresenter.startVoiceCoach()));
+      ph.kanta.reborn.stage.LearningAssistantOverlay overlay = stagePresenter.detachLearningAssistantOverlay();
+      overlay.showPanel();
+      body.addView(overlay, new LinearLayout.LayoutParams(-1, dp(420)));
+    }
+  }
+
   private void renderPanel() {
     microphoneReading = null;
     monitorReading = null;
@@ -1076,14 +1073,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
 
   private void openHomeAccessory(String accessoryId) {
-    if (!"Home".equals(tab)) {
-      presentAccessory(accessoryId);
-      return;
-    }
-    tab = "Control";
-    render();
     presentAccessory(accessoryId);
-    returnToHomeAfterAccessory = true;
   }
 
   private boolean isGroupDestination(String destination) {
@@ -1119,15 +1109,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     render();
   }
 
-  /** Now Playing projects live session state over a real StageSurface, never a sample backdrop. */
+  /** Now Playing is a utility projection below the persistent live stage. */
   private void nowPlayingScreen() {
-    if (nowPlayingStage == null) {
-      nowPlayingStage = new StageSurface(this, session);
-      nowPlayingStage.setTag("kanta.now-playing.stage");
-      nowPlayingStage.setVisualActive(true);
-      if (stagePresenter != null) stagePresenter.setVisualActive(false);
-      camera.moveTo(nowPlayingStage);
-    }
     nowPlayingScreen=new ph.kanta.reborn.ui.KantaNowPlayingScreen(this,new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener(){
       @Override public void onBack(){navigateHome();}
       @Override public void onFullscreen(){fullscreen();}
@@ -1145,10 +1128,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onTempoUp(){session.controls(session.volume,Math.min(2f,session.tempo+.05f),session.pitch);}
       @Override public void onFavorite(){}
       @Override public void onOverflow(){}
-    }, nowPlayingStage);
+    });
 
     nowPlayingScreen.setTag("kanta.screen.now-playing");
-    body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-1));
+    body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-2));
     refreshNowPlayingScreen();
   }
   private void refreshNowPlayingScreen() {
@@ -2738,18 +2721,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           fullscreenQueue = null;
           fullscreenProgress = null;
           fullscreenPlayButton = null;
-          if ("Now Playing".equals(tab) && nowPlayingStage != null) {
-            nowPlayingStage.setVisualActive(true);
-            if (stagePresenter != null) stagePresenter.setVisualActive(false);
-          } else if (stagePresenter != null) {
-            stagePresenter.setVisualActive(true);
-          }
           // The primary presenter remains the authoritative camera owner after fullscreen
-          // dismissal. Now Playing is a content projection, not a second primary stage.
+          // dismissal; utility destinations never own or replace the camera stage.
+          if (stagePresenter != null) stagePresenter.setVisualActive(true);
           camera.moveTo(stagePresenter);
         });
     if (stagePresenter != null) stagePresenter.setVisualActive(false);
-    if (nowPlayingStage != null) nowPlayingStage.setVisualActive(false);
     fullscreen.show();
     if (fullscreen.getWindow() != null) fullscreen.getWindow().setLayout(-1, -1);
     camera.moveTo(fullscreenStage);

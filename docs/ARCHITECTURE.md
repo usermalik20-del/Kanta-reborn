@@ -1,5 +1,9 @@
 # KANTA Reborn architecture
 
+## Android persistent-stage composition — 2026-11-06 local candidate
+
+`MainActivity` owns navigation and one persistent primary `StagePresenterImpl`. The stage is not hidden or replaced for Home or reference destinations. Utility menus render below the stage; Now Playing is utility content, not a second primary renderer. Visual controls mutate existing session presentation state and the primary renderer projects that state. Fullscreen/external displays remain read-only projections, never playback/FIFO owners. The primary camera target is restored after explicit fullscreen dismissal. Existing `SessionController`, `LibraryRepository`, media-byte preservation and explicit microphone/DSP opt-in boundaries are unchanged. No iOS or website runtime changes accompany this candidate. Fresh Android compilation and runtime acceptance are still required.
+
 ## Android native SoundFont allocation ceiling
 
 `soundfont.c` bounds TinySoundFont payload allocations at **1536 MiB per worker** (previously 128 MiB), retaining overflow checks and failed-allocation cleanup. The counter remains worker-local and is not a device-wide memory reservation; allocator headers, file mappings and unrelated app allocations are outside the tracked payload. PCM16 sample data expands to float32 at load time: a 581,742,688-byte standalone piano needs roughly 1,163,416,536 bytes for samples before synth metadata. The cap permits that payload with headroom, but does not prove physical-memory availability, successful playback or compatibility with every bank. OS allocation failure and process memory-pressure termination remain possible. Structural and region checks, the 128-voice bound, import/storage policy, thread ownership and iOS behavior are unchanged. No large bank is bundled.

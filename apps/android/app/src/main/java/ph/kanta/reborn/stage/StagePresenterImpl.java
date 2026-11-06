@@ -135,7 +135,6 @@ public final class StagePresenterImpl extends FrameLayout
       @Override public void onGameEnded(int score, int maxStreak) {}
       @Override public void onDismissed() {}
     });
-    addView(pitchGameOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
     learningAssistantOverlay = new LearningAssistantOverlay(context);
     learningAssistantOverlay.setPitchSource(session);
@@ -143,7 +142,6 @@ public final class StagePresenterImpl extends FrameLayout
       @Override public void onAdviceGenerated(String advice) {}
       @Override public void onDismissed() {}
     });
-    addView(learningAssistantOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
     // Configure search overlay
     searchOverlay.setCatalog(catalog, queue);
@@ -488,6 +486,11 @@ public final class StagePresenterImpl extends FrameLayout
     return celebration.currentTier();
   }
 
+  /** Exposes the live renderer state for acceptance checks without owning session state. */
+  public BackgroundStage.Source backgroundSource() {
+    return backgroundStage.getSource();
+  }
+
   /** Sets the remote connection state. */
   public void setRemoteState(RemoteStatusView.State state) {
     remoteStatusView.setState(state);
@@ -500,8 +503,22 @@ public final class StagePresenterImpl extends FrameLayout
 
   /** Refreshes all stage components. Called periodically from MainActivity. */
   public void refresh() {
+    // SessionController is authoritative for visual selection; project it into
+    // the presenter's existing background renderer, never into a second stage.
+    // Camera opt-in is authoritative for the visible source. Scenic selection must
+    // never clobber a live preview during the 100ms refresh tick.
+    if ("camera".equals(session.stageKind) || session.cameraPreviewEnabled) {
+      backgroundStage.setSource(BackgroundStage.Source.CAMERA);
+    } else if (("photo".equals(session.stageKind) || "scenic".equals(session.stageKind))
+        && session.scenic != null) {
+      backgroundStage.setPhoto(session.scenic);
+    } else if ("video".equals(session.stageKind) && session.stageVideo != null) {
+      backgroundStage.setVideo(session.stageVideo);
+    } else {
+      backgroundStage.setSource(BackgroundStage.Source.SOLID);
+    }
     // Update lyrics if playing
-    if (isPlaying && session.lyrics != null && !session.lyrics.isEmpty()) {
+    if (session.playing && session.lyrics != null && !session.lyrics.isEmpty()) {
       MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);
       lyricStage.setLyrics(cues, session.getClock());
     }
@@ -511,8 +528,27 @@ public final class StagePresenterImpl extends FrameLayout
 
   /** Sets whether the visual layer is active. */
   public void setVisualActive(boolean active) {
-    // BackgroundStage handles its own visibility
-    // LyricStage is always drawn
+    backgroundStage.setVisualActive(active);
+  }
+
+  /** Starts microphone-backed pitch practice only after explicit user action. */
+  public void startPitchPractice() { showPitchGame(session.practiceTargetHz()); }
+
+  /** Starts microphone-backed voice coaching only after explicit user action. */
+  public void startVoiceCoach() { showLearningAssistant(); }
+
+  /** Reparents the original practice feature into MainActivity's lower utility panel. */
+  public PitchGameOverlay detachPitchGameOverlay() {
+    if (pitchGameOverlay.getParent() instanceof android.view.ViewGroup)
+      ((android.view.ViewGroup) pitchGameOverlay.getParent()).removeView(pitchGameOverlay);
+    return pitchGameOverlay;
+  }
+
+  /** Reparents the original coach feature into MainActivity's lower utility panel. */
+  public LearningAssistantOverlay detachLearningAssistantOverlay() {
+    if (learningAssistantOverlay.getParent() instanceof android.view.ViewGroup)
+      ((android.view.ViewGroup) learningAssistantOverlay.getParent()).removeView(learningAssistantOverlay);
+    return learningAssistantOverlay;
   }
 
   /** Delegates to BackgroundStage for camera mounting. */

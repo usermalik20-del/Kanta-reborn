@@ -124,6 +124,12 @@ public class PitchGameOverlay extends FrameLayout {
         this.listener = listener;
     }
 
+    /** Shows the practice panel without opening the microphone. */
+    public void showPanel() {
+        statusTextView.setText("Tap Start to begin pitch practice");
+        setVisibility(VISIBLE);
+    }
+
     public void startGame(float targetPitchHz) {
         // If no explicit target provided (0 or negative), use stored default
         if (targetPitchHz <= 0 && settingsStore != null) {

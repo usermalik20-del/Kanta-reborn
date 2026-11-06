@@ -174,6 +174,11 @@ public class LearningAssistantOverlay extends FrameLayout {
         this.listener = listener;
     }
 
+    /** Shows the coach panel without opening the microphone. */
+    public void showPanel() {
+        setVisibility(VISIBLE);
+    }
+
     public void startSession() {
         if (learningAssistant == null) {
             learningAssistant = new LearningAssistant();
