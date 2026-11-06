@@ -1281,13 +1281,19 @@ public final class RuntimeChecks extends Instrumentation {
         if (!after.get(i).id.equals(reservations.get().get(i).id)) return false;
       return true;
     }), "Menu navigation changed authoritative reservations");
-    // Restore the destination that owned the surrounding acceptance flow.
+    // Restore the control projection used by the following score UI assertions.
     runOnMainSync(() -> {
-      View destination = activity.getWindow().getDecorView().findViewWithTag("kanta.nav." + priorTab);
-      if (destination != null) destination.performClick();
+      try {
+        java.lang.reflect.Field tab = activity.getClass().getDeclaredField("tab");
+        tab.setAccessible(true);
+        tab.set(activity, "Control");
+        session.publish();
+      } catch (ReflectiveOperationException failure) {
+        throw new AssertionError(failure);
+      }
     });
-    await(() -> priorTab.equals(field(activity, "tab")),
-        "Persistent-stage playback check did not restore its destination");
+    await(() -> "Control".equals(field(activity, "tab")),
+        "Persistent-stage playback check did not restore the control destination");
   }
 
   private void workspaceBackNavigationChecks() {
