@@ -280,6 +280,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             StageMediaStore.Selection selection = stageStore.load();
 
             // If no saved stage (default scenic with no video), initialize default BGV
+            final StageMediaStore.Selection finalSelection;
             if ("scenic".equals(selection.kind) && selection.video == null && !settings.getBgvDefaultSelected()) {
               BundledBgvCatalog.Clip defaultClip = BundledBgvCatalog.defaultClip();
               if (defaultClip != null) {
@@ -288,15 +289,21 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   stageStore.setVideo(dest.getName());
                   settings.setBgvDefaultSelected(true);
                   // Reload selection
-                  selection = stageStore.load();
+                  finalSelection = stageStore.load();
+                } else {
+                  finalSelection = selection;
                 }
+              } else {
+                finalSelection = selection;
               }
+            } else {
+              finalSelection = selection;
             }
 
             main.post(
                 () -> {
                   stageReady = true;
-                  applyStage(selection);
+                  applyStage(finalSelection);
                 });
           } catch (Exception failure) {
             main.post(
