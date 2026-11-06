@@ -245,3 +245,5 @@ and is not part of any released build.
 ## OTA publication safety
 
 Android OTA publication is fail-closed. CI allocates a bounded monotonically increasing `kantaVersionCode`; metadata is extracted from the exact APK, and publication verifies the prior APK digest plus the explicitly pinned owner-approved new signer. Release assets are immutable. The new signer intentionally cannot update earlier APKs in place; existing users must uninstall/reinstall (which may erase private app data). The release key is stored only in main-only GitHub Actions secrets, never in Git. Physical-device acceptance for installs signed by the new key remains **UNVERIFIED**; follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.
+### Android Search input
+Android Search uses the persistent in-app KANTA keyboard with number and letter layouts; it does not invoke the phone system IME.

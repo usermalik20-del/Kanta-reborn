@@ -524,3 +524,5 @@ CI ASan found a heap-buffer-overflow in tsf_voice_interpolate: the Catmull-Rom i
 ## OTA/versioning reconstruction boundary
 
 The Android OTA feed is a release-provenance surface. `tools/verify-ota-publication.py` is authoritative for APK metadata and signer continuity; `tools/prepare-update-feed.py` emits the contract field `signingCertSha256` from the exact APK metadata. The owner-approved signer pin permits only the new certificate fingerprint while still verifying the prior APK digest. This intentionally starts a new install identity: old-signer APKs cannot update in place. Release secrets are restricted to trusted main CI. Do not restore Gradle-source scraping or mutable release-asset behavior.
+### Android search keyboard
+The reconstructed Android search flow includes a persistent KANTA keypad, an ABC/123 layout switch, cursor-aware editing, and no phone keyboard invocation.
