@@ -342,12 +342,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (workspaceBackCallback != null
         && (workspace == null || workspace.activeAccessory() == null))
       workspaceBackCallback.setEnabled(referenceDestination);
-    boolean groupDestination = isGroupDestination(tab);
-    boolean hideStage = home || (referenceDestination && !groupDestination);
+    // Destination screens own their headers, navigation and action controls. Keeping the
+    // persistent stage/toolbars mounted here duplicates those controls beneath the screen.
+    boolean hideStage = home || referenceDestination;
     if (appHeader != null) appHeader.setVisibility(hideStage ? View.GONE : View.VISIBLE);
     if (stagePane != null) stagePane.setVisibility(hideStage ? View.GONE : View.VISIBLE);
     if (navigationTabs != null)
-      navigationTabs.setVisibility(home || (referenceDestination && !groupDestination) ? View.GONE : View.VISIBLE);
+      navigationTabs.setVisibility(home || referenceDestination ? View.GONE : View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       entry.getValue().setSelected(entry.getKey().equals(tab));
       entry.getValue().setTextColor(entry.getKey().equals(tab) ? ACCENT : Color.WHITE);

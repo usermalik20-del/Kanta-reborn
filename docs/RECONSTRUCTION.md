@@ -142,9 +142,10 @@ companion) remains owned by `SessionController` and `StagePresenterImpl`.
 
 ### Backward compatibility
 
-The existing workspace/StagePresenterImpl/transport/toolbar/body structure is preserved. The new
-design-system screens are presented as an overlay via contentContainer; the existing UI remains
-fully functional.
+The existing workspace/StagePresenterImpl/transport/toolbar/body structure remains the owner
+for Home and legacy utility destinations. Reference-led design-system screens own their destination
+controls; MainActivity hides the persistent stage and navigation layer while those screens are active
+so the same actions are not rendered twice.
 
 ### Verification
 

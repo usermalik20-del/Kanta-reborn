@@ -6,7 +6,7 @@ TinySoundFont tracked allocations are capped at **1536 MiB (1.5 GiB) per worker*
 
 ## Compact Workspace back-navigation contract
 
-The persistent stage stays attached while Search, Queue, Visuals or Controls is open. Android system/predictive back dismisses that active accessory first through the lifecycle-bound AndroidX `OnBackPressedDispatcher` callback; the callback is disabled when the workspace is stage-only so normal navigation remains available. Keep this behavior covered by `RuntimeChecks.workspaceBackNavigationChecks` and `tools/check-android-workspace-contract.py`.
+The persistent stage stays attached for Home and legacy utility destinations. Reference-led destination screens own their headers, navigation and action controls, so MainActivity hides the persistent stage, transport row, workspace toolbar and navigation row while one is active; this prevents duplicated controls. Android system/predictive back still dismisses an active workspace accessory first through the lifecycle-bound AndroidX `OnBackPressedDispatcher` callback. Keep this behavior covered by `RuntimeChecks.workspaceBackNavigationChecks` and `tools/check-android-workspace-contract.py`.
 
 ## Companion Remote candidate in PR #51 — October 18, 2026
 

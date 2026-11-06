@@ -11,7 +11,7 @@ Native Android and iOS karaoke applications built around the **Compact Workspace
 
 ## What shipped
 
-The Compact Workspace redesign implements an **"Always on Stage"** architecture: the karaoke player stays visible and live as the base layer, while utility panels appear and disappear as transient overlays above it.
+The Compact Workspace redesign keeps the karaoke player live on Home and legacy utility destinations. Reference-led destination screens own their headers, navigation and action controls; the persistent stage/toolbars are hidden there so controls are not rendered twice.
 
 | Capability | iOS | Android |
 | --- | --- | --- |
