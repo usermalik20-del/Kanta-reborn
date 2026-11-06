@@ -307,14 +307,14 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
           "Mic & Voice did not return to Home");
       runOnMainSync(() -> {
-        View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
-        check(more != null, "Home dashboard More destination missing");
-        more.performClick();
+        View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");
+        check(logo != null && logo.performClick(), "KANTA logo did not open the control deck");
       });
+      await(() -> visibleOnScreen("kanta.control-deck.fullscreen"),
+          "Control deck fullscreen action missing");
       runOnMainSync(() -> {
-        View open = activity.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.open");
-        check(open != null, "Stage fullscreen entry missing");
-        open.performClick();
+        View open = activity.getWindow().getDecorView().findViewWithTag("kanta.control-deck.fullscreen");
+        check(open != null && open.performClick(), "Control deck fullscreen action did not open");
       });
       Dialog fullscreenDialog = (Dialog) field(activity, "fullscreen");
       await(
