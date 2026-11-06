@@ -1280,6 +1280,13 @@ public final class RuntimeChecks extends Instrumentation {
         if (!after.get(i).id.equals(reservations.get().get(i).id)) return false;
       return true;
     }), "Menu navigation changed authoritative reservations");
+    // Leave the harness in its canonical Home state for subsequent acceptance flows.
+    runOnMainSync(() -> {
+      View home = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Home");
+      if (home != null) home.performClick();
+    });
+    await(() -> "Home".equals(field(activity, "tab")),
+        "Persistent-stage playback check did not restore Home");
   }
 
   private void workspaceBackNavigationChecks() {
