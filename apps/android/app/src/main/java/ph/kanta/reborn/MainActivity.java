@@ -587,6 +587,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           : "Switch KANTA keyboard to letters");
       input.requestFocus();
     });
+    keyboard.setTag("kanta.utility.keyboard");
     target.addView(keyboard, new LinearLayout.LayoutParams(-1, dp(204)));
 
     final LinearLayout list = new LinearLayout(this);
