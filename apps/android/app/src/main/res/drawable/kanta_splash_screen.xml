@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KANTA Splash Screen - Full screen image with brand color background -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background color (KANTA canvas color) -->
+    <item android:drawable="@color/kanta_canvas" />
+
+    <!-- Centered splash image -->
+    <item
+        android:gravity="center"
+        android:width="300dp"
+        android:height="300dp"
+        android:drawable="@drawable/kanta_splash_image" />
+</layer-list>
