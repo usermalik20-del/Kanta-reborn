@@ -86,24 +86,6 @@ public class HomeScreen extends LinearLayout {
     header.addView(settings, new LayoutParams(dp(44), dp(44)));
     addView(header);
 
-    LinearLayout hero = new LinearLayout(context);
-    hero.setOrientation(VERTICAL);
-    hero.setGravity(Gravity.CENTER_VERTICAL);
-    hero.setPadding(dp(20), dp(16), dp(20), dp(16));
-    hero.setBackground(KantaTheme.stageBackground(context, false));
-    hero.setElevation(dp(2));
-    TextView greeting = KantaTheme.bodyText(context, "Good evening", 13);
-    greeting.setTextColor(KantaTheme.TEXT_SECONDARY);
-    TextView headline = KantaTheme.titleText(context, "Music brings people together.", 27);
-    headline.setLineSpacing(dp(1), 1.0f);
-    headline.setMaxLines(2);
-    headline.setPadding(0, dp(3), 0, 0);
-    hero.addView(greeting);
-    hero.addView(headline);
-    LayoutParams heroParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(142));
-    heroParams.setMargins(dp(16), dp(2), dp(16), dp(14));
-    addView(hero, heroParams);
-
     LinearLayout searchRow = new LinearLayout(context);
     searchRow.setOrientation(HORIZONTAL);
     searchRow.setGravity(Gravity.CENTER_VERTICAL);
