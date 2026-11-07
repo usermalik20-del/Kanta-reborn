@@ -128,7 +128,7 @@ public final class RuntimeChecks extends Instrumentation {
           "Android Back did not close the special control deck");
       assertPersistentStage(null);
       runOnMainSync(() -> {
-        View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Sing");
+        View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Sing");
         check(sing != null, "Home Sing destination missing");
         sing.performClick();
       });
@@ -156,7 +156,7 @@ public final class RuntimeChecks extends Instrumentation {
           "Search did not return to Home");
       capture("home_dashboard_restored.png");
       runOnMainSync(() -> {
-        View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Sing");
+        View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Sing");
         check(sing != null, "Home Sing destination missing");
         sing.performClick();
       });
@@ -183,7 +183,7 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Queue did not return to Home");
       runOnMainSync(() -> {
-        View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Performance");
+        View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Performance");
         check(performance != null, "Home Performance destination missing");
         performance.performClick();
       });
@@ -223,7 +223,7 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Pitch & Tempo did not return to Home");
       runOnMainSync(() -> {
-        View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Experience");
+        View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Experience");
         check(experience != null, "Home Experience destination missing");
         experience.performClick();
       });
@@ -263,7 +263,7 @@ public final class RuntimeChecks extends Instrumentation {
           () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Visuals did not return to Home");
       runOnMainSync(() -> {
-        View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Performance");
+        View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Performance");
         check(performance != null, "Home Performance destination missing");
         performance.performClick();
       });
@@ -370,7 +370,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Now Playing did not return to Home");
       runOnMainSync(() -> {
-        View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
+        View more = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
         check(more != null, "Home More destination missing after Now Playing");
         more.performClick();
       });
