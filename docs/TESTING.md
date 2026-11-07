@@ -1,4 +1,10 @@
 # Reconstruction validation
+## Download-page section contract
+`tools/publish-platform-download.py` rewrites exactly one `#download` section on the platform
+download page. It matches any `class="section …"` token set (the website redesign renders
+`class="section reveal"`), preserves the extra class tokens on rewrite, and fails if the section
+is missing or duplicated. Unit-covered in `tools/tests/test_platform_download_publishing.py`.
+
 
 ## Android splash screen
 `KantaTheme.windowBackground` (`@drawable/kanta_splash_screen`) must render a full-bleed splash from `@drawable/kanta_splash_image`: portrait `drawable-nodpi/kanta_splash_image.webp` by default and landscape `drawable-land-nodpi/kanta_splash_image.webp` (selected automatically for tablets in landscape and Android TV). The legacy `drawable/kanta_splash_image.png` must be gone. A layout/inflate guard should confirm both drawables resolve and that no `R.drawable.kanta_splash_image` references a removed resource.
