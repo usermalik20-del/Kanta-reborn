@@ -256,3 +256,4 @@ public class HomeScreen extends LinearLayout {
       default: break;
     }
   }
+}
