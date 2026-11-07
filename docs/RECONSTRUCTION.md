@@ -2,6 +2,8 @@
 
 The Home hero (dynamic greeting + `Music brings people together.` tagline banner) was an awkward duplicate of the KANTA header `SING MORE. TOGETHER.` shown directly above it. It is removed, leaving header → search as the dashboard start; the 142dp vertical space is reclaimed. Runtime tests updated to assert the stable search hint.
 
+Also removed on the same pass: the quick-cards row (My Set/Favorites/Recent -> one destination) and the header Settings gear (already covered by the dock's More tab).
+
 ## Android premium icon system — local candidate (2026-11-07)
 
 The icon layer was rebuilt as one coherent outline family derived from the KANTA Premium icon pack (24x24 viewBox, 1.8 stroke, cyan `#29D9FF`, one violet `#7657FF` detail). It replaced the mixed filled/gradient glyphs and the shared Settings icon reused by Diagnostics. New `res/drawable/kanta_*_color.xml` vectors (18 new + semantic rewrites) cover the five-tab dock (home/sing/performance/experience/more), the More page (settings sliders, companion phone+wireless, diagnostics waveform, help circled-?), and Sing/Performance/Experience destinations. Navigation is one floating dock; GroupScreen cards gained the soft edge-lit treatment.
