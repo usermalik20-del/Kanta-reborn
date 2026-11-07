@@ -1,3 +1,7 @@
+## Android premium icon system — local candidate
+
+Android's UI now uses one coherent outline icon family (`res/drawable/kanta_*_color.xml`, 24x24 view, 1.8 stroke, primary cyan `#29D9FF` with one violet `#7657FF` detail). The bottom five tabs form one continuous floating dock (icon over label, muted inactive / cyan active glow); the More page uses dedicated sliders/phone+wireless/waveform/circled-? marks (Diagnostics no longer shares Settings); and Sing/Performance/Experience menus carry the same geometry.
+
 # KANTA Reborn
 
 ## Android persistent-stage navigation — local candidate
