@@ -4,6 +4,8 @@ All Dashboard-return runtime checks were repointed from the removed `Music bring
 
 The duplicate bottom-nav fix (removing HomeScreen's internal dock) does not affect these sentinels: no runtime assertion referenced HomeScreen's `kanta.home.nav.*` tags.
 
+The duplicate bottom-nav fix (removing HomeScreen's internal dock) does not affect these sentinels: no runtime assertion referenced HomeScreen's `kanta.home.nav.*` tags.
+
 These sentinel semantics are unaffected by the further Home pruning (quick-cards row and header Settings gear removal) because they gate on the search hint, which is retained.
 
 Home persistent search integration updates `InlineKeyboard` labels (`CLR` / `RES`) and routes text changes to `SearchOverlay.setQuery()`.

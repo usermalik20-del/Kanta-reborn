@@ -4,6 +4,8 @@ The Home hero (dynamic greeting + `Music brings people together.` tagline banner
 
 The duplicate-dock issue (HomeScreen's own bottom nav vs the persistent MainActivity dock) was resolved by removing the HomeScreen dock, leaving the persistent dock as the single nav bar.
 
+The duplicate-dock issue (HomeScreen's own bottom nav vs the persistent MainActivity dock) was resolved by removing the HomeScreen dock, leaving the persistent dock as the single nav bar.
+
 Also removed on the same pass: the quick-cards row (My Set/Favorites/Recent -> one destination) and the header Settings gear (already covered by the dock's More tab).
 
 Persistent Home search with numeric/alpha inline keyboard replaces the static search placeholder button and hidden workspace search menu, projecting live search results directly onto the stage.
