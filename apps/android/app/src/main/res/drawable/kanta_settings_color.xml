@@ -1,5 +1,6 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="28dp" android:height="28dp" android:viewportWidth="24" android:viewportHeight="24">
-  <path android:fillColor="#17294C" android:pathData="M12,2 A10,10 0,1 0,12,22 A10,10 0,1 0,12,2"/>
-  <path android:fillColor="#00000000" android:strokeColor="#29D9FF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M12,5 V8 M12,16 V19 M5,12 H8 M16,12 H19 M7,7 L9,9 M15,15 L17,17 M15,9 L17,7 M7,17 L9,15"/>
-  <path android:fillColor="#D946EF" android:pathData="M12,9 A3,3 0,1 0,12,15 A3,3 0,1 0,12,9"/>
+  <path android:fillColor="#00000000" android:strokeColor="#29D9FF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M4 7h16M4 12h16M4 17h16"/>
+  <path android:fillColor="#00000000" android:strokeColor="#29D9FF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M7.00 7.00 Q9.00,5.00 11.00,7.00 Q9.00,9.00 7.00,7.00 Z"/>
+  <path android:fillColor="#00000000" android:strokeColor="#7657FF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M13.00 12.00 Q15.00,10.00 17.00,12.00 Q15.00,14.00 13.00,12.00 Z"/>
+  <path android:fillColor="#00000000" android:strokeColor="#29D9FF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M5.00 17.00 Q7.00,15.00 9.00,17.00 Q7.00,19.00 5.00,17.00 Z"/>
 </vector>

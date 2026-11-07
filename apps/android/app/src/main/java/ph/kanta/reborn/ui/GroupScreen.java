@@ -50,8 +50,7 @@ public final class GroupScreen extends LinearLayout {
     StateListDrawable backgrounds = new StateListDrawable();
     backgrounds.addState(new int[]{android.R.attr.state_pressed}, KantaTheme.backgroundDrawable(
         KantaTheme.SURFACE, 16, KantaTheme.PRIMARY_CYAN, 1, density));
-    backgrounds.addState(new int[]{}, KantaTheme.backgroundDrawable(
-        KantaTheme.SURFACE_ELEVATED, 16, KantaTheme.BORDER, 1, density));
+    backgrounds.addState(new int[]{}, KantaTheme.edgeLitCard(density));
     card.setBackground(backgrounds);
     card.setClickable(true);
     card.setFocusable(true);

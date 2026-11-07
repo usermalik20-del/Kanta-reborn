@@ -1,3 +1,7 @@
+## Premium icon system and floating navigation dock — local candidate
+
+Android's icon set was replaced wholesale with a coherent outline family from the KANTA Premium icon pack: 24x24 viewBox, 1.8dp monoline stroke, primary cyan (`#29D9FF`) plus a single violet (`#7657FF`) `<path>` detail. New dedicated drawables include `kanta_sing`, `kanta_performance`, `kanta_experience`, `kanta_companion`, `kanta_diagnostics`, `kanta_help`, `kanta_my_songs`, `kanta_favorites`, `kanta_recent`, `kanta_lyrics`, `kanta_key_tempo`, `kanta_coach`, `kanta_background`, `kanta_camera`, `kanta_effects`, `kanta_realm`, `kanta_party`, `kanta_display`. The five primary tabs are now one `BG_ELEVATED` floating dock (tag `kanta.nav.*`) with muted-inactive / cyan-active states; GroupScreen cards use a soft edge-lit deep-navy background (`KantaTheme.edgeLitCard`).
+
 # KANTA Android reconstruction preview
 
 The launch splash is a full-bleed `KantaTheme` window background

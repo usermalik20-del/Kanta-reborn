@@ -5,6 +5,7 @@ import android.app.*;
 import android.content.*;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.*;
@@ -343,8 +344,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (stagePane != null) stagePane.setVisibility(View.VISIBLE);
     if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
-      entry.getValue().setSelected(entry.getKey().equals(tab));
-      entry.getValue().setTextColor(entry.getKey().equals(tab) ? ACCENT : Color.WHITE);
+      Button nav = entry.getValue();
+      boolean active = entry.getKey().equals(tab);
+      nav.setSelected(active);
+      nav.setTextColor(active ? ACCENT : KantaTheme.TEXT_MUTED);
+      final float navDensity = getResources().getDisplayMetrics().density;
+      nav.setBackground(active
+          ? KantaTheme.backgroundDrawable(KantaTheme.PRIMARY_BLUE, 16, ACCENT, 1, navDensity)
+          : null);
+      android.graphics.drawable.Drawable[] dr = nav.getCompoundDrawables();
+      if (dr[1] != null) dr[1].setAlpha(active ? 255 : 96);
     }
     // Now Playing is a live projection. Keep its view tree stable while the
     // clock/session publishes; rebuilding it every 100ms drops focus and is
@@ -458,9 +467,28 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.setPadding(dp(4), 0, dp(4), dp(14));
     scroll.addView(body);
     main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 0.58f));
+    // Bottom navigation is one continuous floating dock: icon over label,
+    // muted when inactive, cyan + a subtle glow pill when the destination is active.
     LinearLayout tabs = row();
     navigationTabs = tabs;
+    tabs.setPadding(dp(6), dp(5), dp(6), dp(5));
+    tabs.setBackground(KantaTheme.backgroundDrawable(
+        KantaTheme.BG_ELEVATED, 22, KantaTheme.BORDER, 1,
+        getResources().getDisplayMetrics().density));
+    LinearLayout.LayoutParams dockParams = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    dockParams.setMargins(dp(12), dp(2), dp(12), dp(12));
+    tabs.setLayoutParams(dockParams);
+    final int[] navIcons = {
+      R.drawable.kanta_home_color,
+      R.drawable.kanta_sing_color,
+      R.drawable.kanta_performance_color,
+      R.drawable.kanta_experience_color,
+      R.drawable.kanta_more_color
+    };
     for (String name : new String[] {"Home", "Sing", "Performance", "Experience", "More"}) {
+      final int iconIndex = java.util.Arrays.asList(
+          new String[]{"Home", "Sing", "Performance", "Experience", "More"}).indexOf(name);
       Button b =
           button(
               name,
@@ -472,18 +500,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               });
       b.setMinWidth(0);
       b.setMinimumWidth(0);
-      b.setPadding(dp(3), dp(4), dp(3), dp(4));
-      b.setTextSize(12);
-      b.setMaxLines(2);
+      b.setPadding(dp(2), dp(4), dp(2), dp(4));
+      b.setTextSize(11);
+      b.setMaxLines(1);
       b.setSelected(name.equals(tab));
       b.setTag("kanta.nav." + name);
+      Drawable icon = getDrawable(navIcons[iconIndex]).mutate();
+      icon.setAlpha(name.equals(tab) ? 255 : 96);
+      b.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
+      b.setCompoundDrawablePadding(dp(3));
+      b.setTextColor(name.equals(tab) ? ACCENT : KantaTheme.TEXT_MUTED);
+      b.setBackground(name.equals(tab)
+          ? KantaTheme.backgroundDrawable(KantaTheme.PRIMARY_BLUE, 16, ACCENT, 1,
+              getResources().getDisplayMetrics().density)
+          : null);
       if ("More".equals(name)) {
         b.setContentDescription("More. Long press for workspace actions.");
         b.setOnLongClickListener(v -> { showWorkspaceActions(v); return true; });
       }
-      if (name.equals(tab)) b.setTextColor(ACCENT);
       navigationButtons.put(name, b);
-      tabs.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
+      tabs.addView(b, new LinearLayout.LayoutParams(0, dp(56), 1));
     }
     root.addView(tabs);
     if (stagePresenter != null) stagePresenter.refresh();
@@ -1706,9 +1742,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void singGroup() {
     body.addView(groupScreen("Sing", "What do you want to sing?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
       new ph.kanta.reborn.ui.GroupScreen.Item("find-song", "Find a song", "KANTA, YouTube or Local", ph.kanta.reborn.R.drawable.kanta_search_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("my-songs", "My songs", "My Set and playlists", ph.kanta.reborn.R.drawable.kanta_library_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("favorites", "Favorites", "Saved songs", ph.kanta.reborn.R.drawable.kanta_library_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("recent", "Recent", "Recently played", ph.kanta.reborn.R.drawable.kanta_library_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("my-songs", "My songs", "My Set and playlists", ph.kanta.reborn.R.drawable.kanta_my_songs_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("favorites", "Favorites", "Saved songs", ph.kanta.reborn.R.drawable.kanta_favorites_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("recent", "Recent", "Recently played", ph.kanta.reborn.R.drawable.kanta_recent_color),
       new ph.kanta.reborn.ui.GroupScreen.Item("queue", "Queue", "Up next", ph.kanta.reborn.R.drawable.kanta_queue_color),
       new ph.kanta.reborn.ui.GroupScreen.Item("youtube", "YouTube", "Optional online video", ph.kanta.reborn.R.drawable.kanta_youtube_color)
     }));
@@ -1716,32 +1752,32 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void performanceGroup() {
     body.addView(groupScreen("Performance", "Help me while I’m singing.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("now-playing", "Now Playing", "Playback controls", ph.kanta.reborn.R.drawable.kanta_play_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("lyrics", "Lyrics", "Follow along while singing", ph.kanta.reborn.R.drawable.kanta_library_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("voice", "Voice", "Microphone and hear my voice", ph.kanta.reborn.R.drawable.kanta_microphone_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("key-tempo", "Key & Tempo", "Fit the song to your voice", ph.kanta.reborn.R.drawable.kanta_pitch_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("coach", "Singing Coach", "Scoring and practice", ph.kanta.reborn.R.drawable.kanta_microphone_color)
+      new ph.kanta.reborn.ui.GroupScreen.Item("now-playing", "Now Playing", "Playback controls", ph.kanta.reborn.R.drawable.kanta_performance_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("lyrics", "Lyrics", "Follow along while singing", ph.kanta.reborn.R.drawable.kanta_lyrics_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("voice", "Voice", "Microphone and hear my voice", ph.kanta.reborn.R.drawable.kanta_sing_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("key-tempo", "Key & Tempo", "Fit the song to your voice", ph.kanta.reborn.R.drawable.kanta_key_tempo_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("coach", "Singing Coach", "Scoring and practice", ph.kanta.reborn.R.drawable.kanta_coach_color)
     }));
   }
 
   private void experienceGroup() {
     body.addView(groupScreen("Experience", "How should your karaoke session look and feel?", new ph.kanta.reborn.ui.GroupScreen.Item[] {
-      new ph.kanta.reborn.ui.GroupScreen.Item("background", "Background", "Choose your stage", ph.kanta.reborn.R.drawable.kanta_scenic_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("camera", "Camera", "Add a live preview", ph.kanta.reborn.R.drawable.kanta_visuals_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("effects", "Effects", "Stage and voice sound", ph.kanta.reborn.R.drawable.kanta_microphone_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("background", "Background", "Choose your stage", ph.kanta.reborn.R.drawable.kanta_background_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("camera", "Camera", "Add a live preview", ph.kanta.reborn.R.drawable.kanta_camera_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("effects", "Effects", "Stage and voice sound", ph.kanta.reborn.R.drawable.kanta_effects_color),
       new ph.kanta.reborn.ui.GroupScreen.Item("scenic", "Scenic", "Animated stage scenes", ph.kanta.reborn.R.drawable.kanta_scenic_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("realm", "Realm", "Ambient stage mood", ph.kanta.reborn.R.drawable.kanta_scenic_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("party", "Party Mode", "Between-song music and sounds", ph.kanta.reborn.R.drawable.kanta_more_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("display", "Display", "Fullscreen and external stage", ph.kanta.reborn.R.drawable.kanta_visuals_color)
+      new ph.kanta.reborn.ui.GroupScreen.Item("realm", "Realm", "Ambient stage mood", ph.kanta.reborn.R.drawable.kanta_realm_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("party", "Party Mode", "Between-song music and sounds", ph.kanta.reborn.R.drawable.kanta_party_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("display", "Display", "Fullscreen and external stage", ph.kanta.reborn.R.drawable.kanta_display_color)
     }));
   }
 
   private void moreGroup() {
     body.addView(groupScreen("More", "Advanced settings and tools.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
       new ph.kanta.reborn.ui.GroupScreen.Item("settings", "Settings", "Advanced voice and app settings", ph.kanta.reborn.R.drawable.kanta_settings_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", ph.kanta.reborn.R.drawable.kanta_remote_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", ph.kanta.reborn.R.drawable.kanta_settings_color),
-      new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", ph.kanta.reborn.R.drawable.kanta_more_color)
+      new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", ph.kanta.reborn.R.drawable.kanta_companion_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", ph.kanta.reborn.R.drawable.kanta_diagnostics_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", ph.kanta.reborn.R.drawable.kanta_help_color)
     }));
   }
 

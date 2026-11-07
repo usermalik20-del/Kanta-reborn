@@ -1,3 +1,7 @@
+### Android premium icon system
+
+Android navigation and goal-menu icons are a single coherent outline family (`res/drawable/kanta_*_color.xml`, 24x24 viewBox, 1.8dp stroke, cyan `#29D9FF` + one violet `#7657FF` detail). The five tabs render as one continuous `BG_ELEVATED` floating dock with muted-inactive and cyan-active glow states; the More page gives Settings/Companion/Diagnostics/Help distinct identities (Diagnostics no longer reuses the Settings glyph); Sing/Performance/Experience menus share the geometry via `GroupScreen`; cards use `KantaTheme.edgeLitCard` (subdued cyan edge, soft top highlight) while primary actions keep the vivid gradient.
+
 # KANTA Reborn architecture
 
 ## Android persistent-stage composition — 2026-11-06 local candidate
