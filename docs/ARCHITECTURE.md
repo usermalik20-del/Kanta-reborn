@@ -890,3 +890,4 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `stage-preview.js` — fixed phone frame on `/features` mirroring scrolled section
 - `guide-parallax.js` — pinned phone illustration + palette shift per guide step
 - `songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock transitions
+<!-- nav removal doc sync -->
