@@ -174,6 +174,7 @@ public class HomeScreen extends LinearLayout {
       public void afterTextChanged(android.text.Editable e) {}
     });
     searchInput.requestFocus();
+  }
 
   private Button groupCard(String title, String detail, String icon, int action) {
     Button card = new Button(context);
@@ -255,6 +256,3 @@ public class HomeScreen extends LinearLayout {
       default: break;
     }
   }
-
-
-}
