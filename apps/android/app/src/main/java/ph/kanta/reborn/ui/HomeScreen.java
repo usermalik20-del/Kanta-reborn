@@ -132,6 +132,7 @@ public class HomeScreen extends LinearLayout {
     searchRow.addView(code, codeParams);
 
     addView(searchRow);
+  }
 
     // Inline keyboard
     InlineKeyboard keyboard = new InlineKeyboard(context, new InlineKeyboard.Listener() {
@@ -174,51 +175,6 @@ public class HomeScreen extends LinearLayout {
       public void afterTextChanged(android.text.Editable e) {}
     });
     searchInput.requestFocus();
-
-    View bottomSpacer = new View(context);
-    addView(bottomSpacer, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1));
-
-    LinearLayout bottom = new LinearLayout(context);
-    bottom.setOrientation(HORIZONTAL);
-    bottom.setGravity(Gravity.CENTER);
-    bottom.setBackground(KantaTheme.backgroundDrawable(
-        KantaTheme.BG_ELEVATED, 18, KantaTheme.BORDER, 1, density));
-    bottom.setPadding(dp(4), dp(5), dp(4), dp(5));
-    String[] labels = {"Home", "Sing", "Performance", "Experience", "More"};
-    // Coherent KANTA set: home / mic+sparkle / play+waveform / stage sparkle / 2x2 grid.
-    int[] icons = {
-      R.drawable.kanta_home_color,
-      R.drawable.kanta_sing_color,
-      R.drawable.kanta_performance_color,
-      R.drawable.kanta_experience_color,
-      R.drawable.kanta_more_color
-    };
-    for (int i = 0; i < labels.length; i++) {
-      final int destination = i;
-      Button nav = new Button(context);
-      nav.setTag("kanta.home.nav." + labels[i]);
-      nav.setAllCaps(false);
-      nav.setText(labels[i]);
-      nav.setTextSize(10);
-      nav.setTypeface(null, Typeface.BOLD);
-      nav.setGravity(Gravity.CENTER);
-      nav.setTextColor(i == 0 ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_MUTED);
-      Drawable icon = context.getDrawable(icons[i]).mutate();
-      icon.setAlpha(i == 0 ? 255 : 96);
-      nav.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
-      nav.setCompoundDrawablePadding(dp(3));
-      nav.setPadding(0, dp(5), 0, dp(5));
-      nav.setBackground(i == 0
-          ? KantaTheme.backgroundDrawable(KantaTheme.SURFACE_ELEVATED, 12, KantaTheme.BORDER, 1, density)
-          : null);
-      nav.setContentDescription(labels[i]);
-      nav.setOnClickListener(v -> dispatchNavigation(destination));
-      bottom.addView(nav, new LayoutParams(0, dp(58), 1));
-    }
-    LayoutParams bottomParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-    bottomParams.setMargins(dp(12), dp(2), dp(12), dp(10));
-    addView(bottom, bottomParams);
-  }
 
   private Button groupCard(String title, String detail, String icon, int action) {
     Button card = new Button(context);
@@ -301,15 +257,5 @@ public class HomeScreen extends LinearLayout {
     }
   }
 
-  private void dispatchNavigation(int destination) {
-    if (listener == null) return;
-    switch (destination) {
-      case 0: listener.onHome(); break;
-      case 1: listener.onSing(); break;
-      case 2: listener.onPerformance(); break;
-      case 3: listener.onExperience(); break;
-      case 4: listener.onMore(); break;
-      default: break;
-    }
-  }
+
 }

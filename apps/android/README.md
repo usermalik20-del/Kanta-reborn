@@ -4,6 +4,8 @@ The Home dashboard's hero banner (dynamic greeting + `Music brings people togeth
 
 Also pruned for redundancy: the `My Set`/`Favorites`/`Recent` quick-cards row (every card opened the same My Set destination) and the header Settings gear (a duplicate of the persistent More dock tab).
 
+The duplicate bottom dock is also removed: HomeScreen's own 5-tab dock (tags `kanta.home.nav.*`) duplicated the persistent MainActivity dock (`kanta.nav.*`) on Home. The internal dock is gone; the persistent dock is the single bottom navigation surface.
+
 Home dashboard now includes persistent search with an inline keyboard (`CLR` clear, `RES` reserve). Text/code queries dynamically stream search results to the karaoke stage.
 
 ## Premium icon system and floating navigation dock — local candidate

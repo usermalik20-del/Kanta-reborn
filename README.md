@@ -2,6 +2,8 @@
 
 The Home dashboard no longer shows the large hero banner (`Good evening` greeting + `Music brings people together.`). The KANTA header with its `SING MORE. TOGETHER.` tagline directly above already carried that messaging, so the 142dp hero was redundant and is removed; the search row now sits directly under the header.
 
+The duplicate bottom dock is also gone: HomeScreen rendered its own 5-tab bar inside the Home tab while MainActivity mounts the persistent dock on every screen, so Home used to show two nav bars. HomeScreen's internal dock is removed; the persistent dock is the single navigation surface (tags `kanta.nav.*`).
+
 As part of the same Home pass, the redundant quick-cards row (`My Set`/`Favorites`/`Recent` — all three opened the same My Set destination) and the header Settings gear (which opened the More tab, already reachable from the persistent dock) are removed. Settings remains under More -> Settings.
 
 The Home dashboard now features persistent in-app search with an inline keypad (`123` / `ABC` toggle, `RES` reserve button, `CLR` clear button). Typed song codes, titles, or artists project live search results directly onto the karaoke stage above.
