@@ -160,11 +160,12 @@ public class HomeScreen extends LinearLayout {
         KantaTheme.BG_ELEVATED, 18, KantaTheme.BORDER, 1, density));
     bottom.setPadding(dp(4), dp(5), dp(4), dp(5));
     String[] labels = {"Home", "Sing", "Performance", "Experience", "More"};
+    // Coherent KANTA set: home / mic+sparkle / play+waveform / stage sparkle / 2x2 grid.
     int[] icons = {
       R.drawable.kanta_home_color,
-      R.drawable.kanta_search_color,
-      R.drawable.kanta_microphone_color,
-      R.drawable.kanta_scenic_color,
+      R.drawable.kanta_sing_color,
+      R.drawable.kanta_performance_color,
+      R.drawable.kanta_experience_color,
       R.drawable.kanta_more_color
     };
     for (int i = 0; i < labels.length; i++) {
@@ -178,11 +179,12 @@ public class HomeScreen extends LinearLayout {
       nav.setGravity(Gravity.CENTER);
       nav.setTextColor(i == 0 ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_MUTED);
       Drawable icon = context.getDrawable(icons[i]).mutate();
+      icon.setAlpha(i == 0 ? 255 : 96);
       nav.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
       nav.setCompoundDrawablePadding(dp(3));
       nav.setPadding(0, dp(5), 0, dp(5));
       nav.setBackground(i == 0
-          ? KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 12, KantaTheme.BORDER, 1, density)
+          ? KantaTheme.backgroundDrawable(KantaTheme.SURFACE_ELEVATED, 12, KantaTheme.BORDER, 1, density)
           : null);
       nav.setContentDescription(labels[i]);
       nav.setOnClickListener(v -> dispatchNavigation(destination));

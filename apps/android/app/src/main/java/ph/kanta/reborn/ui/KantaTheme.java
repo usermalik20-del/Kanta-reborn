@@ -48,6 +48,24 @@ public final class KantaTheme {
     d.setCornerRadius(radiusDp * density);
     return d;
   }
+
+  /**
+   * Premium deep-navy card: translucent elevated fill, a faint top highlight and a very subtle
+   * cyan edge light. Reserved for group/menu cards; primary actions keep the vivid gradient.
+   */
+  public static Drawable edgeLitCard(float density) {
+    int radius = (int) (16 * density);
+    GradientDrawable base = new GradientDrawable();
+    base.setColor(0xCC13233F);
+    base.setCornerRadius(radius);
+    base.setStroke((int) (1 * density), 0x2E29D9FF);
+    // soft top highlight
+    GradientDrawable highlight =
+        new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{0x1A29D9FF, 0x0033E4FF});
+    highlight.setCornerRadius(radius);
+    return new LayerDrawable(new Drawable[]{highlight, base});
+  }
   public static Button primaryButton(Context context, String label, android.view.View.OnClickListener action) {
     float density = context.getResources().getDisplayMetrics().density;
     Button b = new Button(context);
