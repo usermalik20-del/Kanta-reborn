@@ -1,6 +1,7 @@
 package ph.kanta.reborn.ui;
 
 import ph.kanta.reborn.R;
+import ph.kanta.reborn.ui.components.InlineKeyboard;
 
 import android.content.Context;
 import android.graphics.Typeface;
@@ -8,6 +9,7 @@ import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -20,6 +22,7 @@ public class HomeScreen extends LinearLayout {
     void onExperience();
     void onSettings();
     void onSearch();
+    void onSearchQueryChanged(String query);
     void onQueue();
     void onYouTube();
     void onVisuals();
@@ -78,27 +81,48 @@ public class HomeScreen extends LinearLayout {
 
     addView(header);
 
+    // Persistent search with inline keyboard
     LinearLayout searchRow = new LinearLayout(context);
     searchRow.setOrientation(HORIZONTAL);
     searchRow.setGravity(Gravity.CENTER_VERTICAL);
     searchRow.setPadding(dp(16), 0, dp(16), 0);
 
-    Button searchField = new Button(context);
-    searchField.setAllCaps(false);
-    searchField.setText("Search songs, artists, or enter code");
-    searchField.setTextColor(KantaTheme.TEXT_SECONDARY);
-    searchField.setTextSize(13);
-    searchField.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-    searchField.setPadding(dp(14), 0, dp(10), 0);
+    EditText searchInput = new EditText(context);
+    searchInput.setSingleLine(true);
+    searchInput.setShowSoftInputOnFocus(false);
+    searchInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+        | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    searchInput.setTextColor(KantaTheme.TEXT_PRIMARY);
+    searchInput.setHintTextColor(KantaTheme.TEXT_MUTED);
+    searchInput.setHint("Search songs, artists, or enter code");
+    searchInput.setTextSize(14);
+    searchInput.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+    searchInput.setPadding(dp(14), 0, dp(10), 0);
     Drawable searchIcon = context.getDrawable(R.drawable.kanta_search_color).mutate();
-    searchField.setCompoundDrawablesWithIntrinsicBounds(searchIcon, null, null, null);
-    searchField.setCompoundDrawablePadding(dp(10));
-    searchField.setBackground(KantaTheme.backgroundDrawable(
+    searchInput.setCompoundDrawablesWithIntrinsicBounds(searchIcon, null, null, null);
+    searchInput.setCompoundDrawablePadding(dp(10));
+    searchInput.setBackground(KantaTheme.backgroundDrawable(
         KantaTheme.SURFACE_ELEVATED, 14, KantaTheme.BORDER, 1, density));
-    searchField.setMinHeight(dp(54));
-    searchField.setOnClickListener(v -> { if (listener != null) listener.onSing(); });
-    searchRow.addView(searchField, new LayoutParams(0, dp(54), 1));
+    searchInput.setMinHeight(dp(54));
+    searchRow.addView(searchInput, new LayoutParams(0, dp(54), 1));
 
+    // Keyboard toggle (ABC/123)
+    Button keyboardToggle = new Button(context);
+    keyboardToggle.setAllCaps(false);
+    keyboardToggle.setText("ABC");
+    keyboardToggle.setTextSize(11);
+    keyboardToggle.setTypeface(null, Typeface.BOLD);
+    keyboardToggle.setTextColor(KantaTheme.TEXT_PRIMARY);
+    keyboardToggle.setPadding(dp(10), dp(4), dp(10), dp(4));
+    keyboardToggle.setBackground(KantaTheme.backgroundDrawable(
+        KantaTheme.SURFACE, 12, KantaTheme.BORDER, 1, density));
+    keyboardToggle.setMinWidth(0);
+    keyboardToggle.setMinimumWidth(0);
+    LayoutParams toggleParams = new LayoutParams(dp(64), dp(52));
+    toggleParams.leftMargin = dp(6);
+    searchRow.addView(keyboardToggle, toggleParams);
+
+    // Code entry shortcut
     ImageView code = new ImageView(context);
     code.setImageResource(R.drawable.kanta_code_color);
     code.setContentDescription("Enter song code");
@@ -106,9 +130,50 @@ public class HomeScreen extends LinearLayout {
     LayoutParams codeParams = new LayoutParams(dp(48), dp(48));
     codeParams.leftMargin = dp(6);
     searchRow.addView(code, codeParams);
+
     addView(searchRow);
 
+    // Inline keyboard
+    InlineKeyboard keyboard = new InlineKeyboard(context, new InlineKeyboard.Listener() {
+      @Override public void onText(String value) {
+        int start = Math.max(0, searchInput.getSelectionStart());
+        int end = Math.max(start, searchInput.getSelectionEnd());
+        searchInput.getText().replace(start, end, value);
+        searchInput.setSelection(start + value.length());
+        searchInput.requestFocus();
+      }
+      @Override public void onBackspace() {
+        int start = Math.max(0, searchInput.getSelectionStart());
+        int end = Math.max(start, searchInput.getSelectionEnd());
+        if (start != end) searchInput.getText().delete(start, end);
+        else if (start > 0) searchInput.getText().delete(start - 1, start);
+        searchInput.requestFocus();
+      }
+      @Override public void onSubmit() { searchInput.requestFocus(); }
+    });
+    keyboard.setTag("kanta.home.keyboard");
+    addView(keyboard, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
+    // Toggle between letters and numbers
+    keyboardToggle.setOnClickListener(v -> {
+      keyboard.toggle();
+      boolean letters = keyboard.isLetters();
+      keyboardToggle.setText(letters ? "123" : "ABC");
+      keyboardToggle.setContentDescription(letters
+          ? "Switch keyboard to numbers"
+          : "Switch keyboard to letters");
+      searchInput.requestFocus();
+    });
+
+    // Live search as you type
+    searchInput.addTextChangedListener(new android.text.TextWatcher() {
+      public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+      public void onTextChanged(CharSequence s, int a, int b, int c) {
+        if (listener != null) listener.onSearchQueryChanged(s.toString());
+      }
+      public void afterTextChanged(android.text.Editable e) {}
+    });
+    searchInput.requestFocus();
 
     View bottomSpacer = new View(context);
     addView(bottomSpacer, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1));

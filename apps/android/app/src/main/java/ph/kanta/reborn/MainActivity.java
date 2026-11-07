@@ -1638,6 +1638,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onExperience() { tab = "Experience"; render(); }
               @Override public void onSettings() { tab = "More"; render(); }
               @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
+              @Override public void onSearchQueryChanged(String query) {
+                if (stagePresenter != null && stagePresenter.searchOverlay != null) {
+                  stagePresenter.searchOverlay.setQuery(query);
+                }
+              }
               @Override public void onQueue() { tab = "Queue"; render(); }
               @Override public void onYouTube() { openYouTubeVideo(); }
               @Override public void onVisuals() { tab = "Visuals"; render(); }

@@ -4,6 +4,8 @@ The Home dashboard no longer shows the large hero banner (`Good evening` greetin
 
 As part of the same Home pass, the redundant quick-cards row (`My Set`/`Favorites`/`Recent` — all three opened the same My Set destination) and the header Settings gear (which opened the More tab, already reachable from the persistent dock) are removed. Settings remains under More -> Settings.
 
+The Home dashboard now features persistent in-app search with an inline keypad (`123` / `ABC` toggle, `RES` reserve button, `CLR` clear button). Typed song codes, titles, or artists project live search results directly onto the karaoke stage above.
+
 ## Android premium icon system — local candidate
 
 Android's UI now uses one coherent outline icon family (`res/drawable/kanta_*_color.xml`, 24x24 view, 1.8 stroke, primary cyan `#29D9FF` with one violet `#7657FF` detail). The bottom five tabs form one continuous floating dock (icon over label, muted inactive / cyan active glow); the More page uses dedicated sliders/phone+wireless/waveform/circled-? marks (Diagnostics no longer shares Settings); and Sing/Performance/Experience menus carry the same geometry.
