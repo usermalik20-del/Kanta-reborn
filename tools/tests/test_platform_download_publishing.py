@@ -98,6 +98,19 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertIn("SHA256.txt is included", android_page)
         self.assertIn("Old", (self.root / "apps/web/ios-download.html").read_text())
 
+    def test_android_publish_handles_redesigned_section_reveal_class(self):
+        # The website redesign renders the download section as class="section reveal".
+        # The publisher must still rewrite it and preserve the extra class token.
+        (self.root / "apps/web/android.html").write_text(
+            '<section class="section reveal" id="download"><h2>Old redesign</h2></section><p>Keep page content</p>'
+        )
+        result = publisher.publish()
+        page = (self.root / "apps/web/android.html").read_text()
+        self.assertIn('<section class="section reveal" id="download">', page)
+        self.assertIn('SHA256.txt is included', page)
+        self.assertIn("Keep page content", page)
+        self.assertEqual(result["android"]["downloadUrl"].rsplit("/", 1)[-1], "901")
+
     def test_ios_publish_requires_walkthrough_and_preserves_android(self):
         with patch.dict(os.environ, {"PLATFORM": "ios"}):
             (self.root / "verified-downloads/ios/build-info.json").write_text(json.dumps({

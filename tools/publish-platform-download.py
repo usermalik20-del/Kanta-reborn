@@ -157,7 +157,14 @@ def publish():
       + ('<p>Owner-signed Android preview; not a Google Play release. This new signing identity cannot update earlier debug-signed installs in place; reinstall may remove app-private data. SHA256.txt is included in this Android bundle.</p>' if platform == "android" else '<p><strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable.</p><p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/' + REPO + '/actions/runs/' + str(int(info["walkthroughRun"])) + '">run #' + str(int(info["walkthroughRun"])) + '</a>. Simulator results do not establish physical-device acceptance.</p>')
       + f'<p>Artifact ZIP SHA-256: <code>{digest}</code>. {"APK SHA-256" if platform == "android" else "IPA SHA-256"}: <code>{info["sha256"]}</code>.</p></section>')
     import re as regex
-    updated, count = regex.subn(r'<section class="section" id="download">.*?</section>', lambda _: section, page, count=1, flags=regex.S)
+    # Match the download section regardless of extra class tokens (e.g. the
+    # website redesign's "reveal") and preserve those tokens on rewrite so the
+    # generated section keeps the current page's styling hooks.
+    def _replace_download_section(match):
+        extra_classes = match.group(1)
+        return section.replace('class="section"', 'class="section%s"' % extra_classes, 1)
+    pattern = re.compile(r'<section class="section([^"]*)" id="download">.*?</section>', regex.S)
+    updated, count = pattern.subn(_replace_download_section, page, count=1)
     if count != 1:
         raise ValueError("Expected exactly one download section in " + str(page_path))
     page_path.write_text(updated, encoding="utf-8")
