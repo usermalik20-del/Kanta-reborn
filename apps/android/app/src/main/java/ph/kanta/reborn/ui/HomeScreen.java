@@ -94,7 +94,7 @@ public class HomeScreen extends LinearLayout {
         | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
     searchInput.setTextColor(KantaTheme.TEXT_PRIMARY);
     searchInput.setHintTextColor(KantaTheme.TEXT_MUTED);
-    searchInput.setHint("Search songs, artists, or enter code");
+    searchInput.setText("Search songs, artists, or enter code");
     searchInput.setTextSize(14);
     searchInput.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
     searchInput.setPadding(dp(14), 0, dp(10), 0);
