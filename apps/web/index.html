@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="system">
 <head>
 <script defer src="/analytics.js"></script>
 <meta charset="utf-8">
@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="kanta-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="kanta-icon.png">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
 
 </head>
 <body id="home">
@@ -29,6 +30,9 @@
     <a href="/support">Help</a>
   </nav>
   <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
     <a class="button primary header-cta" href="/android">Download App</a>
   </div>
 </header>
@@ -50,80 +54,83 @@
       </div>
     </div>
 
-    <!-- Multi-Device Showcase Mockup -->
-    <div class="device-showcase">
-      <div class="mockup-glow"></div>
-      <div class="mockup-desktop">
-        <div class="mockup-desktop-bar">
-          <div class="dot-ctrl dot-red"></div>
-          <div class="dot-ctrl dot-yellow"></div>
-          <div class="dot-ctrl dot-green"></div>
-          <span style="font-size: 0.75rem; color: #8d99c0; margin-left: 12px; font-weight: 600;">KANTA Stage &bull; Live Session</span>
-        </div>
-        <div class="mockup-desktop-body">
-          <div class="mockup-sidebar">
-            <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: #b866d7; font-weight: 800; margin-bottom: 12px;">Up Next Queue</div>
-            <div style="background: rgba(255,255,255,0.04); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.85rem; font-weight: 700; color: #fff;">1. Morning Light &mdash; You</div>
-            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.85rem; color: #94a0c4;">2. Starlight Echo &mdash; Alex</div>
-            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #94a0c4;">3. Sing Together &mdash; Sam</div>
+    <!-- Dynamic Hero: canvas gradient + animated stage mockup -->
+    <div class="device-showcase" style="position:relative;overflow:hidden;">
+      <canvas id="hero-gradient" style="position:absolute;inset:0;z-index:0;width:100%;height:100%;"></canvas>
+      <div style="position:relative;z-index:1;max-width:1100px;margin:0 auto;">
+        <div class="mockup-desktop" data-mockup-stage>
+          <div class="mockup-desktop-bar">
+            <div class="dot-ctrl dot-red"></div>
+            <div class="dot-ctrl dot-yellow"></div>
+            <div class="dot-ctrl dot-green"></div>
+            <span style="font-size: 0.75rem; color: #8d99c0; margin-left: 12px; font-weight: 600;">KANTA Stage &bull; Live Session</span>
           </div>
-          <div class="mockup-stage">
-            <div style="font-size: 0.75rem; letter-spacing: 0.2em; color: #f7c968; font-weight: 800; margin-bottom: 8px;">NOW PERFORMING</div>
-            <div style="font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 900; color: #fff; margin-bottom: 12px;" class="gradient-text">When the morning light breaks through…</div>
-            <div style="font-size: 0.9rem; color: #95dfec; background: rgba(95,209,217,0.1); padding: 6px 16px; border-radius: 999px; border: 1px solid rgba(95,209,217,0.3);">Character-level timed lyrics active</div>
+          <div class="mockup-desktop-body">
+            <div class="mockup-sidebar">
+              <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: #b866d7; font-weight: 800; margin-bottom: 12px;">Up Next Queue</div>
+              <div data-mockup-queue style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+            <div class="mockup-stage">
+              <div style="font-size: 0.75rem; letter-spacing: 0.2em; color: #f7c968; font-weight: 800; margin-bottom: 8px;">NOW PERFORMING</div>
+              <div data-mockup-line style="font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 900; color: #fff; margin-bottom: 12px; min-height: 2.5em;" class="gradient-text">When the morning light breaks through…</div>
+              <div data-mockup-chip style="font-size: 0.9rem; color: #95dfec; background: rgba(95,209,217,0.1); padding: 6px 16px; border-radius: 999px; border: 1px solid rgba(95,209,217,0.3);">Character-level timed lyrics active</div>
+              <div data-mockup-meter style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden;margin-top:16px;">
+                <i style="display:block;width:0%;height:100%;background:linear-gradient(90deg,var(--accent-purple),var(--accent-cyan));transition:width 0.1s;"></i>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="mockup-phone-float">
-        <div style="width: 40px; height: 6px; background: #111530; border-radius: 99px; margin: 0 auto 16px;"></div>
-        <div style="width: 50px; height: 50px; border-radius: 16px; background: linear-gradient(135deg,#b866d7,#6d4fd0); display: grid; place-items: center; margin: 0 auto 12px; font-weight: 900; font-size: 1.4rem; color: #fff; box-shadow: 0 8px 20px rgba(184,102,215,0.4);">K</div>
-        <div style="font-weight: 900; font-size: 1.1rem; color: #fff; letter-spacing: 0.15em;">KANTA MOBILE</div>
-        <div style="font-size: 0.78rem; color: #94a0c4; margin-top: 6px;">Personal Stage &bull; iOS &amp; Android</div>
+        <div class="mockup-phone-float" style="position:absolute;top:-20px;right:-40px;z-index:2;">
+          <div style="width: 40px; height: 6px; background: #111530; border-radius: 99px; margin: 0 auto 16px;"></div>
+          <div style="width: 50px; height: 50px; border-radius: 16px; background: linear-gradient(135deg,#b866d7,#6d4fd0); display: grid; place-items: center; margin: 0 auto 12px; font-weight: 900; font-size: 1.4rem; color: #fff; box-shadow: 0 8px 20px rgba(184,102,215,0.4);">K</div>
+          <div style="font-weight: 900; font-size: 1.1rem; color: #fff; letter-spacing: 0.15em;">KANTA MOBILE</div>
+          <div style="font-size: 0.78rem; color: #94a0c4; margin-top: 6px;">Personal Stage &bull; iOS & Android</div>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- Features Section -->
-  <section class="section" id="features">
+  <section class="section reveal" id="features">
     <div class="section-head">
       <div class="eyebrow"><span style="width:7px;height:7px;border-radius:50%;background:#5fd1d9;display:inline-block;"></span> Precision Engineering</div>
       <h2>Features designed for singing, not scrolling.</h2>
       <p>Everything you need for an elite karaoke party, engineered with native performance across iOS and Android.</p>
     </div>
-    <div class="features-grid">
+    <div class="features-grid reveal-stagger">
       <article class="feature-card">
         <div class="mark">&#127925;</div>
         <h3>Your own library</h3>
         <p>Import MIDI, KAR, MP3 and WAV files directly. Only music you own and choose ever enters your private player.</p>
-        <div class="platform-tags"><span class="tag-both">iOS &amp; Android</span></div>
+        <div class="platform-tags"><span class="tag-both">iOS & Android</span></div>
       </article>
       <article class="feature-card">
         <div class="mark">&#128234;</div>
         <h3>Timed lyrics</h3>
         <p>Bold, beautifully centered lyrics that track the music in real time with character-level highlighting on every line.</p>
-        <div class="platform-tags"><span class="tag-both">iOS &amp; Android</span></div>
+        <div class="platform-tags"><span class="tag-both">iOS & Android</span></div>
       </article>
       <article class="feature-card">
         <div class="mark">&#128101;</div>
         <h3>Singer queue</h3>
         <p>Named reservations, reorderable Up Next, and saved sets for your next karaoke night &mdash; one authoritative queue.</p>
-        <div class="platform-tags"><span class="tag-both">iOS &amp; Android</span></div>
+        <div class="platform-tags"><span class="tag-both">iOS & Android</span></div>
       </article>
       <article class="feature-card">
         <div class="mark">&#127882;</div>
         <h3>Personal stage</h3>
         <p>Full-screen karaoke stage with scenic backgrounds, external display support, and picture-in-picture controls.</p>
-        <div class="platform-tags"><span class="tag-both">iOS &amp; Android</span></div>
+        <div class="platform-tags"><span class="tag-both">iOS & Android</span></div>
       </article>
       <article class="feature-card">
         <div class="mark">&#127910;</div>
         <h3>Private Songbook</h3>
         <p>Encrypt your song list and open it in any browser with a separate access code. Zero server uploads or cloud lock-in.</p>
-        <div class="platform-tags"><span class="tag-both">iOS &amp; Android</span></div>
+        <div class="platform-tags"><span class="tag-both">iOS & Android</span></div>
       </article>
       <article class="feature-card">
         <div class="mark">&#127908;</div>
-        <h3>Voice &amp; scoring</h3>
+        <h3>Voice & scoring</h3>
         <p>Optional wired/USB voice monitoring with studio effects and pitch-following estimates for solo practice. Effects start muted while routing is checked and stop on a route change.</p>
         <div class="platform-tags"><span class="tag-both">Experimental tools</span></div>
       </article>
@@ -141,15 +148,15 @@
       </article>
       <article class="feature-card">
         <div class="mark">&#127881;</div>
-        <h3>Party &amp; intermission</h3>
+        <h3>Party & intermission</h3>
         <p>Eight original stage effects with independent volume, plus your own between-song music that steps aside when the next singer starts.</p>
-        <div class="platform-tags"><span class="tag-both">iOS &amp; Android</span></div>
+        <div class="platform-tags"><span class="tag-both">iOS & Android</span></div>
       </article>
       <article class="feature-card">
         <div class="mark">&#128247;</div>
-        <h3>Camera &amp; personal visuals</h3>
+        <h3>Camera & personal visuals</h3>
         <p>Ten scenic presets, your own photo or video backgrounds, and an optional front-camera stage. Camera is off by default, records nothing and releases when you leave.</p>
-        <div class="platform-tags"><span class="tag-both">iOS &amp; Android</span></div>
+        <div class="platform-tags"><span class="tag-both">iOS & Android</span></div>
       </article>
       <article class="feature-card">
         <div class="mark">&#128241;</div>
@@ -161,7 +168,7 @@
   </section>
 
   <!-- How It Works / Platforms Section -->
-  <section class="section" id="howto">
+  <section class="section reveal" id="howto">
     <div class="split-banner">
       <div>
         <div class="eyebrow">Getting Started</div>
@@ -173,41 +180,41 @@
         </div>
       </div>
       <div class="stat">
-        <strong>100%</strong>
-        <span>Private &amp; Local</span>
+        <strong data-count-to="100" data-count-suffix="%">0%</strong>
+        <span>Private & Local</span>
         <small>No cloud tracking</small>
       </div>
     </div>
   </section>
 
   <!-- Downloads Section -->
-  <section class="section" id="downloads">
+  <section class="section reveal" id="downloads">
     <div class="section-head">
       <div class="eyebrow"><span style="width:7px;height:7px;border-radius:50%;background:#f2a5e8;display:inline-block;"></span> Release Builds</div>
       <h2>Choose your platform.</h2>
       <p>Select your device to access verified pre-release testing builds, provenance summaries, and step-by-step instructions.</p>
     </div>
-    <div class="download-row">
+    <div class="download-row reveal-stagger">
       <div class="download-card">
         <div style="font-size: 2.2rem; margin-bottom: 14px;">🍏</div>
-        <h3>iPhone &amp; iPad</h3>
+        <h3>iPhone & iPad</h3>
         <p>Recovered iOS development build. Unsigned IPA requiring personal signing or simulator walkthrough.</p>
         <ul>
           <li>Original starter songs included</li>
-          <li>Full timed lyrics &amp; queue manager</li>
+          <li>Full timed lyrics & queue manager</li>
           <li>Private browser Songbook export</li>
         </ul>
         <a class="btn primary" href="/ios-download">View iOS Build →</a>
       </div>
       <div class="download-card">
         <div style="font-size: 2.2rem; margin-bottom: 14px;">🤖</div>
-        <h3>Android Phone &amp; Tablet</h3>
+        <h3>Android Phone & Tablet</h3>
         <p>Signed Android testing preview for Android 8 or newer, complete with SoundFont MIDI playback and scenic stages; not a Google Play release.</p>
         <ul>
           <li>Native TinySoundFont audio engine</li>
-          <li>Scenic stage presets &amp; camera backgrounds</li>
+          <li>Scenic stage presets & camera backgrounds</li>
           <li>Encrypted companion control options</li>
-          <li>On-device pitch training &amp; SoundFont import</li>
+          <li>On-device pitch training & SoundFont import</li>
         </ul>
         <a class="btn primary" href="/android">View Android Build →</a>
       </div>
@@ -239,7 +246,7 @@
       </ul>
     </div>
     <div class="col">
-      <h4>Legal &amp; Privacy</h4>
+      <h4>Legal & Privacy</h4>
       <ul>
         <li><a href="/privacy">Privacy Policy</a></li>
         <li><a href="/legal">Music Rights</a></li>
@@ -251,6 +258,11 @@
     </div>
   </div>
 </footer>
+
+<script defer src="/theme.js"></script>
+<script defer src="/micro-interactions.js"></script>
+<script defer src="/command-palette.js"></script>
+<script defer src="/hero-animation.js"></script>
 
 </body>
 </html>
