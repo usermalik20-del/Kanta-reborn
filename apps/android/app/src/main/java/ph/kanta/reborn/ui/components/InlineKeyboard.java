@@ -16,11 +16,11 @@ public final class InlineKeyboard extends LinearLayout {
   private final GridLayout grid;
   private boolean letters;
   private final float density;
-  private static final String[] NUMBERS = {"1","2","3","4","5","6","7","8","9","⌫","0","✓"};
+  private static final String[] NUMBERS = {"1","2","3","4","5","6","7","8","9","CLR","0","RES"};
   private static final String[] LETTERS = {
       "q","w","e","r","t","y","u","i","o","p",
-      "a","s","d","f","g","h","j","k","l","⌫",
-      "z","x","c","v","b","n","m","'","-","✓",
+      "a","s","d","f","g","h","j","k","l","CLR",
+      "z","x","c","v","b","n","m","'","-","RES",
       "123","space",".","/"};
 
   public InlineKeyboard(Context context, Listener listener) {
@@ -46,8 +46,8 @@ public final class InlineKeyboard extends LinearLayout {
     }
   }
   private void click(String value) {
-    if ("⌫".equals(value)) listener.onBackspace();
-    else if ("✓".equals(value)) listener.onSubmit();
+    if ("CLR".equals(value)) listener.onBackspace();
+    else if ("RES".equals(value)) listener.onSubmit();
     else if ("123".equals(value)) { letters = false; refresh(); }
     else if ("space".equals(value)) listener.onText(" ");
     else listener.onText(value);

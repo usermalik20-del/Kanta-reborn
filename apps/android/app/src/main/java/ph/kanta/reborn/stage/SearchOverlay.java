@@ -178,6 +178,14 @@ public final class SearchOverlay extends FrameLayout {
     };
     postDelayed(searchRunnable, 150);
   }
+  /** Sets the query programmatically and shows results (for persistent search). */
+  public void setQuery(String query) {
+    if (query == null) query = "";
+    searchField.setText(query);
+    performSearch(query);
+    if (!isVisible) show();
+  }
+
 
   private Runnable searchRunnable = () -> {};
 

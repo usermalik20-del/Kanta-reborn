@@ -4,6 +4,8 @@ All Dashboard-return runtime checks were repointed from the removed `Music bring
 
 These sentinel semantics are unaffected by the further Home pruning (quick-cards row and header Settings gear removal) because they gate on the search hint, which is retained.
 
+Home persistent search integration updates `InlineKeyboard` labels (`CLR` / `RES`) and routes text changes to `SearchOverlay.setQuery()`.
+
 ## Android premium icon-system regression (2026-11-07)
 
 All `res/drawable/kanta_*_color.xml` vectors are 24x24 viewBox outlines with 1.8dp strokes, primary cyan `#29D9FF` and at most one violet `#7657FF` `<path>`. Diagnostics must map to `kanta_diagnostics_color` (never `kanta_settings_color`). The five navigation tabs are one continuous `kanta.nav.*` dock with muted-inactive (alpha 96) and cyan-active glow states; the HomeScreen `kanta.home.nav.*` bar uses the same five-icon set. GroupScreen cards keep pressed/cyan-border states; the resting card is `KantaTheme.edgeLitCard`. A runtime check should sample each new drawable (resolves, non-empty) and confirm the More page shows four distinct glyphs.
