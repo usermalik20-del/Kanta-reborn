@@ -132,7 +132,6 @@ public class HomeScreen extends LinearLayout {
     searchRow.addView(code, codeParams);
 
     addView(searchRow);
-  }
 
     // Inline keyboard
     InlineKeyboard keyboard = new InlineKeyboard(context, new InlineKeyboard.Listener() {
@@ -176,6 +175,7 @@ public class HomeScreen extends LinearLayout {
     });
     searchInput.requestFocus();
 
+  }
   private Button groupCard(String title, String detail, String icon, int action) {
     Button card = new Button(context);
     card.setAllCaps(false);
