@@ -1,3 +1,9 @@
+### Android home hero removed
+
+The Home dashboard drops its 142dp hero banner (greeting + `Music brings people together.`), which duplicated the header tagline. The search row becomes the first content element below the header. No destination or navigation change.
+
+The same pass removed two redundant Home elements: the quick-cards row (all three cards = the My Set destination) and the header Settings gear (duplicate of the dock's More tab).
+
 ### Android premium icon system
 
 Android navigation and goal-menu icons are a single coherent outline family (`res/drawable/kanta_*_color.xml`, 24x24 viewBox, 1.8dp stroke, cyan `#29D9FF` + one violet `#7657FF` detail). The five tabs render as one continuous `BG_ELEVATED` floating dock with muted-inactive and cyan-active glow states; the More page gives Settings/Companion/Diagnostics/Help distinct identities (Diagnostics no longer reuses the Settings glyph); Sing/Performance/Experience menus share the geometry via `GroupScreen`; cards use `KantaTheme.edgeLitCard` (subdued cyan edge, soft top highlight) while primary actions keep the vivid gradient.

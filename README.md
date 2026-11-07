@@ -1,3 +1,9 @@
+## Android home hero greeting/tagline removed — local candidate
+
+The Home dashboard no longer shows the large hero banner (`Good evening` greeting + `Music brings people together.`). The KANTA header with its `SING MORE. TOGETHER.` tagline directly above already carried that messaging, so the 142dp hero was redundant and is removed; the search row now sits directly under the header.
+
+As part of the same Home pass, the redundant quick-cards row (`My Set`/`Favorites`/`Recent` — all three opened the same My Set destination) and the header Settings gear (which opened the More tab, already reachable from the persistent dock) are removed. Settings remains under More -> Settings.
+
 ## Android premium icon system — local candidate
 
 Android's UI now uses one coherent outline icon family (`res/drawable/kanta_*_color.xml`, 24x24 view, 1.8 stroke, primary cyan `#29D9FF` with one violet `#7657FF` detail). The bottom five tabs form one continuous floating dock (icon over label, muted inactive / cyan active glow); the More page uses dedicated sliders/phone+wireless/waveform/circled-? marks (Diagnostics no longer shares Settings); and Sing/Performance/Experience menus carry the same geometry.

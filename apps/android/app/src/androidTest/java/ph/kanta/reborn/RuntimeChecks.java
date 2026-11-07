@@ -108,7 +108,7 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> session.stageReady, "Stage media store did not become ready");
       capture("library_ready.png");
       check(
-          state(() -> contains(activity.getWindow().getDecorView(), "Music brings people together.")),
+          state(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code")),
           "Reference-led Home dashboard was not mounted at launch");
       runOnMainSync(() -> persistentPrimaryStage = activity.getWindow().getDecorView()
           .findViewWithTag("kanta.stage.primary"));
@@ -152,7 +152,7 @@ public final class RuntimeChecks extends Instrumentation {
         back.performClick();
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Search did not return to Home");
       capture("home_dashboard_restored.png");
       runOnMainSync(() -> {
@@ -180,7 +180,7 @@ public final class RuntimeChecks extends Instrumentation {
         back.performClick();
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Queue did not return to Home");
       runOnMainSync(() -> {
         View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Performance");
@@ -220,7 +220,7 @@ public final class RuntimeChecks extends Instrumentation {
         back.performClick();
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Pitch & Tempo did not return to Home");
       runOnMainSync(() -> {
         View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Experience");
@@ -260,7 +260,7 @@ public final class RuntimeChecks extends Instrumentation {
       assertPersistentStage("kanta.screen.visuals");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Visuals did not return to Home");
       runOnMainSync(() -> {
         View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.Performance");
@@ -304,7 +304,7 @@ public final class RuntimeChecks extends Instrumentation {
         }
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Mic & Voice did not return to Home");
       runOnMainSync(() -> {
         View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");
@@ -367,7 +367,7 @@ public final class RuntimeChecks extends Instrumentation {
         checkIconBack(back, "Now Playing");
         back.performClick();
       });
-      await(() -> contains(activity.getWindow().getDecorView(), "Music brings people together."),
+      await(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
           "Now Playing did not return to Home");
       runOnMainSync(() -> {
         View more = activity.getWindow().getDecorView().findViewWithTag("kanta.home.nav.More");
