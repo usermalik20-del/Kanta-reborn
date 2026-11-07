@@ -328,3 +328,4 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `guide-parallax.js` — pinned phone illustration + palette shift per guide step
 - `songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock transitions
 <!-- nav removal doc sync -->
+<!-- nav removal doc sync v2 -->

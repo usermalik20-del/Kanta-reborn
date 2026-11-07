@@ -330,3 +330,4 @@ CI passes `kantaVersionCode` from its monotonic workflow allocation. Release met
 ### Search keyboard
 The Home/Search utility uses an app-owned persistent keyboard with a working number/letter switch and system-IME suppression.
 <!-- nav removal doc sync -->
+<!-- nav removal doc sync v2 -->
