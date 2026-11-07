@@ -714,3 +714,14 @@ All animations disabled under `prefers-reduced-motion: reduce`:
 | `/songbook` | ✓ | ✓ | ✓ | — | — | — | — | ✓ | ✓ |
 
 Run `python3 tools/verify-website.py` (local route/anchor/CSP checks) and `tools/verify-website.py` in CI. Vercel build must succeed.
+
+### Website redesign JS modules (2026-11-07)
+The redesign is implemented as modular JS files loaded by all pages:
+- `theme.js` — theme toggle (dark/light/system) with localStorage persistence
+- `micro-interactions.js` — button ripple, magnetic pull, 3D card tilt, scroll reveals, count-up stats
+- `command-palette.js` — ⌘K/⌃K fuzzy search over pages, features, guide steps
+- `hero-animation.js` — audio-reactive gradient canvas + animated stage mockup
+- `download-progress.js` — sticky artifact status bar on `/android` + `/ios-download`
+- `stage-preview.js` — fixed phone frame on `/features` mirroring scrolled section
+- `guide-parallax.js` — pinned phone illustration + palette shift per guide step
+- `songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock transitions
