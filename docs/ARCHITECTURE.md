@@ -2,6 +2,8 @@
 
 The Home dashboard drops its 142dp hero banner (greeting + `Music brings people together.`), which duplicated the header tagline. The search row becomes the first content element below the header. No destination or navigation change.
 
+The duplicate bottom dock is also removed: HomeScreen's internal 5-tab dock duplicated the persistent MainActivity dock on the Home tab; the persistent dock is now the single navigation surface.
+
 The same pass removed two redundant Home elements: the quick-cards row (all three cards = the My Set destination) and the header Settings gear (duplicate of the dock's More tab).
 
 Persistent in-app search on Home routes live query changes directly to `StagePresenterImpl.searchOverlay.setQuery()`, displaying real-time search overlays on the karaoke stage.
