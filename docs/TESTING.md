@@ -633,3 +633,84 @@ Exact-head Android validation must compile all supplied drawable resources, inst
 Before calling Android OTA production-ready, the owner must run `docs/OTA_UPGRADE_ACCEPTANCE.md` on a physical device. CI verifies APK metadata, bounded version allocation, feed monotonicity/source ancestry, prior APK digest, and the new pinned signer. The approved signer transition is limited to the exact certificate fingerprint in `tools/verify-ota-publication.py`; a candidate with any other signer is refused. The PKCS#12 and password are Actions secrets exposed only to trusted main runs; PR jobs must not receive them. Earlier APKs signed by the old certificate cannot update in place, so physical acceptance starts with a clean install of the first new-signer release and tests updates from that release onward. CI does not prove install, rollback, restart behavior or physical-device acceptance.
 ### Android search keyboard coverage
 Runtime acceptance verifies the workspace search keypad is visible and that its ABC/123 switch changes layout without opening the system IME.
+
+## Website redesign validation — 2026-11-07
+
+The website redesign adds new shared assets and page-specific features. Validation must cover both the design-system layer and the individual page FX.
+
+### Theme system (`theme.css`, `theme.js`)
+- Verify dark/light/system modes render correctly (palette swap, smooth 300ms cross-fade via `.theme-transitioning`)
+- Theme preference persists to `localStorage` and survives reload
+- `prefers-color-scheme: light` respected when system mode active
+- Theme toggle buttons (☀️/🌙/💻) in header on all six pages; `aria-pressed` reflects state
+- No flash of wrong theme on navigation (CSS variables on `:root`)
+
+### Micro-interactions (`micro-interactions.js`)
+- Button ripple on click (primary + secondary buttons)
+- Magnetic pull on `.button.primary` / `.nav-cta` (cursor attraction)
+- 3D tilt on `.feature-card` hover (±6° perspective, `--tilt-x/--tilt-y`)
+- Scroll reveals: `.reveal` fade/slide up, `.reveal-stagger` children cascade (80ms increments)
+- Count-up stats: `[data-count-to]` animates on scroll into view
+- All disabled under `prefers-reduced-motion: reduce` (instant, no animations)
+
+### Command palette (`command-palette.js`)
+- ⌘K / Ctrl+K opens palette anywhere on site
+- Fuzzy search over 25+ entries (pages, features, guide steps, download anchors)
+- Keyboard: ↑/↓/Enter/Esc, mouse click, hover highlight
+- Floating FAB hint (⌘K) on desktop (hidden mobile)
+- Deep links work: `/guide#soundcard`, `/features#pitch-training`, etc.
+
+### Hero animation (`hero-animation.js`)
+- Canvas gradient blobs + waveform strip animated (simulated audio bands)
+- Stage mockup: typing lyric sweep, live queue render, pitch meter
+- Single static frame under `prefers-reduced-motion: reduce`
+- Canvas clears on unmount/no leak
+
+### Download progress bar (`download-progress.js`)
+- Sticky top bar appears on `/android` + `/ios-download`
+- Shows verification pipeline steps (fetch → verify → ready)
+- Dismissible, session-scoped (sessionStorage)
+- Jump link to `#download` when ready
+
+### Stage preview (`stage-preview.js`)
+- Fixed phone frame on `/features` (`data-stage-preview` on `<html>`)
+- Desktop: right side; Mobile: bottom
+- Scene updates per scrolled section (`starter-songs`, `player`, `stage-display`, `party-sfx`, `pitch-training`, `android-stage-v2`)
+- Scene types render correctly: queue, lyrics (highlight sweep), stage (bars), pads, meter, score
+- Cross-fade swap animation between scenes
+
+### Guide parallax (`guide-parallax.js`)
+- Pinned phone illustration on `/guide` (`data-guide-parallax`)
+- Per-step screen animation + palette shift (`--guide-hue`)
+- Steps: `first-run` (home), `library` (import progress), `songbook` (book pages), `soundcard` (mic waveform), `personal-stage` (stage), `remote` (code)
+- Screens animate: progress bar, waveform, floating backgrounds
+
+### Songbook FX (`songbook-fx.js`)
+- 3D page flip: prev/next buttons + keyboard ←/→ keys
+- Ambient gold/cyan dust particles over `.book-card`
+- Search highlight pulse on `.song-list li.highlight`
+- Lock/unlock cross-fade transitions
+- Keyboard navigation ←/→
+
+### Theme toggle UI
+- Three-button group (☀️/🌙/💻) in header on all pages
+- `data-theme-toggle` attribute drives `theme.js`
+- `aria-pressed` reflects active mode
+- Smooth 300ms cross-fade, no flash
+
+### Reduced motion
+All animations disabled under `prefers-reduced-motion: reduce`:
+- CSS: `animation-duration: 0.01ms`, `transition-duration: 0.01ms`
+- JS: instant reveals, no canvas loops, no scroll animations, no magnetic pull
+
+### Browser test matrix
+| Page | Theme | Micro | Palette | Hero | DL Bar | Stage | Parallax | Songbook | Palette |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `/` | ✓ | ✓ | ✓ | ✓ | — | — | — | — | ✓ |
+| `/android` | ✓ | ✓ | ✓ | — | ✓ | — | — | — | ✓ |
+| `/ios-download` | ✓ | ✓ | ✓ | — | ✓ | — | — | — | ✓ |
+| `/features` | ✓ | ✓ | ✓ | — | — | ✓ | — | — | ✓ |
+| `/guide` | ✓ | ✓ | ✓ | — | — | — | ✓ | — | ✓ |
+| `/songbook` | ✓ | ✓ | ✓ | — | — | — | — | ✓ | ✓ |
+
+Run `python3 tools/verify-website.py` (local route/anchor/CSP checks) and `tools/verify-website.py` in CI. Vercel build must succeed.

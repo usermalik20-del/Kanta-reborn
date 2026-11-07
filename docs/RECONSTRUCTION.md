@@ -528,3 +528,51 @@ CI ASan found a heap-buffer-overflow in tsf_voice_interpolate: the Catmull-Rom i
 The Android OTA feed is a release-provenance surface. `tools/verify-ota-publication.py` is authoritative for APK metadata and signer continuity; `tools/prepare-update-feed.py` emits the contract field `signingCertSha256` from the exact APK metadata. The owner-approved signer pin permits only the new certificate fingerprint while still verifying the prior APK digest. This intentionally starts a new install identity: old-signer APKs cannot update in place. Release secrets are restricted to trusted main CI. Do not restore Gradle-source scraping or mutable release-asset behavior.
 ### Android search keyboard
 The reconstructed Android search flow includes a persistent KANTA keypad, an ABC/123 layout switch, cursor-aware editing, and no phone keyboard invocation.
+
+## Website redesign — 2026-11-07
+
+Major website redesign adding a design-system theme layer, micro-interactions, and page-specific visual features. Owner approved all changes except the interactive feature comparison table (item 4).
+
+### New shared assets
+| File | Purpose |
+| --- | --- |
+| `theme.css` | Dark/light/system theme tokens, animated gradients, micro-interaction utilities, component styles |
+| `theme.js` | Theme toggle (dark/light/system) with localStorage persistence, smooth cross-fade |
+| `micro-interactions.js` | Button ripple, magnetic pull, 3D card tilt, scroll reveals, count-up stats |
+| `command-palette.js` | ⌘K/⌃K fuzzy search over pages, features, guide steps; floating FAB on desktop |
+| `hero-animation.js` | Audio-reactive gradient canvas + animated stage mockup |
+| `download-progress.js` | Sticky artifact status bar on `/android` + `/ios-download` |
+| `stage-preview.js` | Fixed phone frame on `/features` mirroring scrolled section |
+| `guide-parallax.js` | Pinned phone illustration + palette shift per guide step |
+| `songbook-fx.js` | 3D page flip, ambient particles, search highlight, lock/unlock transitions |
+
+### Updated HTML pages
+All six pages (`index.html`, `android.html`, `ios-download.html`, `features.html`, `guide.html`, `songbook.html`) now:
+- Load `theme.css`, `theme.js`, `micro-interactions.js`, `command-palette.js`
+- Include page-specific scripts
+- Have theme toggle buttons (☀️/🌙/💻) in header
+- Use `.reveal` / `.reveal-stagger` for scroll animations
+- Carry `data-theme="system"` and page-specific `data-*` attributes
+
+### Hero replacement
+Static `device-showcase` replaced by animated canvas + stage mockup (`hero-animation.js`). Respects `prefers-reduced-motion`.
+
+### Stage preview on /features
+`data-stage-preview` activates `stage-preview.js` — fixed phone frame updating scene per scrolled section.
+
+### Guide parallax
+`data-guide-parallax` activates `guide-parallax.js` — pinned phone with per-step animation and palette shift.
+
+### Songbook FX
+`songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock/unlock transitions.
+
+### Theme toggle UI
+Three-button group (☀️/🌙/💻) in header on all pages.
+
+### Accessibility
+All animations disabled under `prefers-reduced-motion: reduce` via CSS and JS guards.
+
+### Documentation updates
+- `README.md` — website redesign section added
+- `apps/web/README.md` — detailed asset inventory and integration notes added
+- `docs/ARCHITECTURE.md` — theme system, micro-interactions, components documented

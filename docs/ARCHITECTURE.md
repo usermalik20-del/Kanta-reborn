@@ -818,3 +818,47 @@ Android version identity is taken from the exact APK produced by CI, not from Gr
 The persistent owner-controlled release key and its certificate pin are required in CI. The prior APK must remain URL- and digest-verified even during the explicitly approved signer transition. APKs signed by the old identity cannot update in place; start upgrade acceptance from the first release signed by the new identity.
 ### Android search input ownership
 Search input owns an app-local keyboard projection (number and letter layouts) and suppresses the platform IME; keyboard edits flow through the search field.
+
+## Website redesign — 2026-11-07
+
+The public website receives a new design-system layer and page-specific visual features.
+
+### Theme system (`apps/web/theme.css`, `apps/web/theme.js`)
+Shared CSS custom properties for palette, spacing, motion tokens, component styles. `theme.js` provides dark/light/system toggle with `localStorage` persistence, smooth 300ms cross-fade via `.theme-transitioning`, and respects `prefers-color-scheme`.
+
+### Micro-interactions (`apps/web/micro-interactions.js`)
+- Button ripple (CSS custom properties `--ripple-x/--ripple-y`)
+- Magnetic pull on `.button.primary` (cursor attraction, 18% strength)
+- 3D perspective tilt on `.feature-card` (`--tilt-x/--tilt-y` up to ±6°)
+- IntersectionObserver scroll reveals (`.reveal`, `.reveal-stagger` with staggered delays)
+- Count-up animated stats (`data-count-to`)
+
+### Command palette (`apps/web/command-palette.js`)
+⌘K/⌃K fuzzy search over 25+ entries (pages, features, guide steps, download anchors). Keyboard navigation, floating FAB hint on desktop.
+
+### Hero animation (`apps/web/hero-animation.js`)
+Replaces static `device-showcase` with:
+- Canvas gradient blobs + waveform strip driven by simulated FFT bands
+- Animated stage mockup: typing lyric sweep, live queue, pitch meter
+- Single static frame under `prefers-reduced-motion: reduce`
+
+### Download progress bar (`apps/web/download-progress.js`)
+Sticky top bar on `/android` + `/ios-download` showing artifact verification pipeline. Dismissible, session-scoped.
+
+### Stage preview (`apps/web/stage-preview.js`)
+Fixed phone frame on `/features` (`data-stage-preview` on `<html>`) that updates scene per scrolled section. Scene types: queue, lyrics (highlight sweep), stage (bars), pads, meter, score.
+
+### Guide parallax (`apps/web/guide-parallax.js`)
+Pinned phone illustration on `/guide` (`data-guide-parallax`) with per-step screen animation and palette shift (`--guide-hue`).
+
+### Songbook FX (`apps/web/songbook-fx.js`)
+- 3D CSS page flip (prev/next keys, buttons)
+- Ambient gold/cyan dust particles over `.book-card`
+- Search highlight pulse on `.song-list li.highlight`
+- Lock/unlock cross-fade transitions
+
+### Theme toggle UI
+Three-button group (☀️/🌙/💻) in header on all pages (`data-theme-toggle`).
+
+### Reduced motion
+All animations disabled under `prefers-reduced-motion: reduce` via CSS (`animation-duration: 0.01ms`, `transition-duration: 0.01ms`) and JS guards (instant reveals, no canvas loops, no scroll animations).

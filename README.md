@@ -249,3 +249,54 @@ and is not part of any released build.
 Android OTA publication is fail-closed. CI allocates a bounded monotonically increasing `kantaVersionCode`; metadata is extracted from the exact APK, and publication verifies the prior APK digest plus the explicitly pinned owner-approved new signer. Release assets are immutable. The new signer intentionally cannot update earlier APKs in place; existing users must uninstall/reinstall (which may erase private app data). The release key is stored only in main-only GitHub Actions secrets, never in Git. Physical-device acceptance for installs signed by the new key remains **UNVERIFIED**; follow `docs/OTA_UPGRADE_ACCEPTANCE.md`.
 ### Android Search input
 Android Search uses the persistent in-app KANTA keyboard with number and letter layouts; it does not invoke the phone system IME.
+
+## Website redesign — 2026-11-07
+
+The public website receives a comprehensive redesign adding a design-system theme layer, micro-interactions, and page-specific visual features.
+
+### Design-system theme (`apps/web/theme.css`, `apps/web/theme.js`)
+- Dark/light/system theme tokens with smooth cross-fade transitions
+- CSS custom properties for palette, spacing, motion tokens
+- Persisted `localStorage` preference, respects `prefers-color-scheme`
+- Animated gradient brand mark (✦) and gradient-text headlines
+
+### Micro-interactions (`apps/web/micro-interactions.js`)
+- Button ripple on click (CSS custom properties)
+- Magnetic pull on primary buttons (cursor attraction)
+- 3D perspective tilt on `.feature-card` hover
+- IntersectionObserver scroll reveals (`.reveal`, `.reveal-stagger`)
+- Count-up animated stats (`data-count-to`)
+
+### Command palette (`apps/web/command-palette.js`)
+- ⌘K / Ctrl+K fuzzy search over 25+ pages, features, guide steps
+- Keyboard navigation (↑/↓/Enter/Esc), floating FAB hint on desktop
+- Deep links into guide sections and feature anchors
+
+### Hero animation (`apps/web/hero-animation.js`)
+- Audio-reactive gradient canvas (simulated FFT bands → flowing blobs + waveform strip)
+- Animated stage mockup: typing lyric sweep, live queue, pitch meter
+- Respects `prefers-reduced-motion` (single static frame)
+
+### Download progress bar (`apps/web/download-progress.js`)
+- Sticky top bar on `/android` + `/ios-download` showing artifact verification pipeline
+- Dismissible, session-scoped memory
+
+### Stage preview (`apps/web/stage-preview.js`)
+- Fixed phone frame on `/features` that mirrors the scrolled section
+- Scene types: queue, lyrics (highlight sweep), stage (bars), pads, meter, score
+
+### Guide parallax (`apps/web/guide-parallax.js`)
+- Pinned phone illustration on `/guide` with per-step palette shift
+- Animated screens: import progress, mic waveform, stage background, remote code
+
+### Songbook FX (`apps/web/songbook-fx.js`)
+- 3D CSS page flip (prev/next keys, button clicks)
+- Ambient gold/cyan dust particles over `.book-card`
+- Search highlight pulse on matching `.song-list li`
+- Lock/unlock state transitions with cross-fade
+
+### Theme toggle UI
+- Three-button group (☀️/🌙/💻) in header on all pages
+- `data-theme-toggle` attribute drives `theme.js`
+
+All new assets respect `prefers-reduced-motion: reduce` (animations disabled, instant reveals).

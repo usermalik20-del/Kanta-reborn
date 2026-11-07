@@ -39,3 +39,69 @@ The static file `apps/web/updates.json` is a generated artifact, not edited by h
 `apps/web/vercel.json` exposes it via a static route `^/updates\.json$` -> `/updates.json` with `Cache-Control: public, max-age=0, must-revalidate`, evaluated before the page rewrites. The pinned feed URL is `https://kanta-public.vercel.app/updates.json`.
 
 The feed format is "kanta-update-feed" version 1, channel "stable-reconstruction". It is fetched by the Android app over HTTPS only; the app validates the manifest strictly (schema, URL policy against a durable host allowlist, SHA-256 digest, version ordering) and stages downloads in app-private storage. The publisher regenerates `apps/web/updates.json` after every successful Android build on `main` (initial committed entry: release `v0.10.0-preview-aaa41898`), so the endpoint stays current without hand editing.
+
+## Website redesign — 2026-11-07
+
+The website receives a major redesign adding a theme system, micro-interactions, and page-specific FX.
+
+### New shared assets
+| File | Purpose |
+| --- | --- |
+| `theme.css` | Dark/light/system theme tokens, animated gradients, micro-interaction utilities, component styles (dl-bar, cmdk, stage-preview, guide-rail, book-particles) |
+| `theme.js` | Theme toggle (dark/light/system) with localStorage persistence, smooth cross-fade |
+| `micro-interactions.js` | Button ripple, magnetic pull, 3D card tilt, scroll reveals, count-up stats |
+| `command-palette.js` | ⌘K/⌃K fuzzy search over pages, features, guide steps; floating FAB on desktop |
+| `hero-animation.js` | Audio-reactive gradient canvas + animated stage mockup (replaces static hero mockup) |
+| `download-progress.js` | Sticky artifact status bar on `/android` + `/ios-download` |
+| `stage-preview.js` | Fixed phone frame on `/features` mirroring scrolled section |
+| `guide-parallax.js` | Pinned phone illustration + palette shift per guide step |
+| `songbook-fx.js` | 3D page flip, ambient particles, search highlight, lock/unlock transitions |
+
+### Updated HTML pages
+All six pages (`index.html`, `android.html`, `ios-download.html`, `features.html`, `guide.html`, `songbook.html`) now:
+- Load `theme.css`, `theme.js`, `micro-interactions.js`, `command-palette.js`
+- Include page-specific scripts (`hero-animation.js` on index, `download-progress.js` on download pages, `stage-preview.js` on features, `guide-parallax.js` on guide, `songbook-fx.js` on songbook)
+- Have theme toggle buttons (☀️/🌙/💻) in header
+- Use `.reveal` / `.reveal-stagger` classes for scroll-triggered animations
+- Carry `data-theme="system"` on `<html>` and page-specific `data-*` attributes
+
+### Hero replacement
+The static `device-showcase` mockup on `index.html` is replaced by:
+- `<canvas id="hero-gradient">` — animated gradient blobs + waveform driven by simulated audio bands
+- Animated `data-mockup-stage` with typing lyric sweep, live queue render, pitch meter
+- Respects `prefers-reduced-motion: reduce` (single static frame)
+
+### Stage preview on /features
+`data-stage-preview` on `<html>` activates `stage-preview.js` — fixed phone frame (desktop right, mobile bottom) that updates its scene as the user scrolls sections:
+- `starter-songs` → queue list
+- `player` → lyrics with highlight sweep
+- `stage-display` → animated bars
+- `party-sfx` → hit pads
+- `pitch-training` / `inputs` → pitch meter
+- `android-stage-v2` → score count-up
+
+### Guide parallax
+`data-guide-parallax` on `<html>` activates `guide-parallax.js` — pinned phone illustration (desktop right) with per-step screen animation and palette shift:
+- `first-run` → home screen
+- `library` → import progress bar
+- `songbook` → book pages
+- `soundcard` → mic waveform
+- `personal-stage` → stage with background
+- `remote` → code + buttons
+
+### Songbook FX
+`songbook-fx.js` adds:
+- 3D CSS page flip on prev/next (keyboard arrows + buttons)
+- Ambient gold/cyan dust particles over `.book-card` canvas
+- Search highlight pulse on `.song-list li.highlight`
+- Lock/unlock state transitions with cross-fade
+- Keyboard navigation (←/→)
+
+### Theme toggle
+Three-button group (☀️ light / 🌙 dark / 💻 system) in header on all pages, driven by `theme.js`. Smooth 300ms cross-fade via `.theme-transitioning` class.
+
+### Accessibility
+All animations disabled under `prefers-reduced-motion: reduce`:
+- CSS: `animation-duration: 0.01ms`, `transition-duration: 0.01ms`
+- JS: instant reveals, no canvas loops, no scroll animations
+- Focus states preserved (gold outline)
