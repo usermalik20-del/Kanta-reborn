@@ -132,7 +132,6 @@ public class HomeScreen extends LinearLayout {
     searchRow.addView(code, codeParams);
 
     addView(searchRow);
-  }
 
     // Inline keyboard
     InlineKeyboard keyboard = new InlineKeyboard(context, new InlineKeyboard.Listener() {
