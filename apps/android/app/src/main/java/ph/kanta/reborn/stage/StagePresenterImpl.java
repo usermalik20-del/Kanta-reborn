@@ -509,6 +509,11 @@ public final class StagePresenterImpl extends FrameLayout
     remoteStatusView.setConnectedCount(count);
   }
 
+  /** Projects live search results onto the stage search overlay. */
+  public void setSearchQuery(String query) {
+    if (searchOverlay != null) searchOverlay.setQuery(query);
+  }
+
   /** Refreshes all stage components. Called periodically from MainActivity. */
   public void refresh() {
     // SessionController is authoritative for visual selection; project it into

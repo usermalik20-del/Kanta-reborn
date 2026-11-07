@@ -1640,7 +1640,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
               @Override public void onSearchQueryChanged(String query) {
                 if (stagePresenter != null && stagePresenter.searchOverlay != null) {
-                  stagePresenter.searchOverlay.setQuery(query);
+                  stagePresenter.setSearchQuery(query);
                 }
               }
               @Override public void onQueue() { tab = "Queue"; render(); }
