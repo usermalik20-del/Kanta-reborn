@@ -1,5 +1,8 @@
 # Reconstruction validation
 
+## Android splash screen
+`KantaTheme.windowBackground` (`@drawable/kanta_splash_screen`) must render a full-bleed splash from `@drawable/kanta_splash_image`: portrait `drawable-nodpi/kanta_splash_image.webp` by default and landscape `drawable-land-nodpi/kanta_splash_image.webp` (selected automatically for tablets in landscape and Android TV). The legacy `drawable/kanta_splash_image.png` must be gone. A layout/inflate guard should confirm both drawables resolve and that no `R.drawable.kanta_splash_image` references a removed resource.
+
 ## Android persistent-stage acceptance — local candidate
 
 `RuntimeChecks` must assert that the same attached `kanta.stage.primary` is visible above Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing, including after changing a background. Now Playing must not mount `kanta.now-playing.stage`. During actual MIDI playback, switching the primary menus must preserve the backend, playback identity and reservation IDs while the audible clock advances. Existing named destination screenshots remain whole-window captures so reviewers can see both stage and lower controls; do not crop away the stage.

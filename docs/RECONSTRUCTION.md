@@ -529,6 +529,9 @@ The Android OTA feed is a release-provenance surface. `tools/verify-ota-publicat
 ### Android search keyboard
 The reconstructed Android search flow includes a persistent KANTA keypad, an ABC/123 layout switch, cursor-aware editing, and no phone keyboard invocation.
 
+### Android splash screen (full-bleed, orientation-aware)
+The launch window background `res/drawable/kanta_splash_screen.xml` now renders a full-bleed splash instead of a centered mark. Assets: `drawable-nodpi/kanta_splash_image.webp` (portrait) and `drawable-land-nodpi/kanta_splash_image.webp` (landscape, used automatically by tablets in landscape and Android TV). The old `drawable/kanta_splash_image.png` was removed.
+
 ## Website redesign — 2026-11-07
 
 Major website redesign adding a design-system theme layer, micro-interactions, and page-specific visual features. Owner approved all changes except the interactive feature comparison table (item 4).

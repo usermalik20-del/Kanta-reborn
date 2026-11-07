@@ -43,6 +43,8 @@ The public website retains Google Analytics (`G-L0QV01MWR4`) and Google AdSense 
 
 ## Website visual consistency
 
+The Android launch screen is a full-bleed splash shared with the app theme's window background: a portrait image (`drawable-nodpi/kanta_splash_image.webp`) and a landscape image (`drawable-land-nodpi/kanta_splash_image.webp`) that Android selects automatically for tablets in landscape and Android TV. See apps/android/README.md.
+
 All ten website routes use one shared dark KANTA theme, color/spacing tokens, primary navigation, brand mark and download action from `apps/web/style.css`. The private Songbook keeps its printed-paper catalog treatment inside the same site shell.
 
 ## Website crawler and scraping defense

@@ -16,6 +16,9 @@ The public website keeps Google Analytics and Google AdSense behind explicit opt
 
 ## Website visual system
 
+### Android splash screen
+The Android theme's `windowBackground` draws a full-bleed splash from `kanta_splash_screen.xml`: portrait `drawable-nodpi/kanta_splash_image.webp` by default, landscape `drawable-land-nodpi/kanta_splash_image.webp` for tablets in landscape and Android TV.
+
 All ten website routes share the dark KANTA visual system from `apps/web/style.css`. Its CSS custom properties own the palette, content width, page gutters and card radius; the primary header, navigation, brand mark and download action are kept consistent across routes. Route-specific content can vary, but should use the shared theme and reusable components. The Songbook's rendered paper pages are an intentional content-specific treatment, not a second site shell; its controls and surrounding layout remain within the shared theme.
 
 ## Website crawler and scraping boundary

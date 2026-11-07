@@ -1,5 +1,11 @@
 # KANTA Android reconstruction preview
 
+The launch splash is a full-bleed `KantaTheme` window background
+(`res/drawable/kanta_splash_screen.xml`): a portrait image
+(`drawable-nodpi/kanta_splash_image.webp`) by default and a landscape image
+(`drawable-land-nodpi/kanta_splash_image.webp`) that Android picks automatically for tablets
+in landscape and Android TV. The prior centered `kanta_splash_image.png` was replaced.
+
 ## Persistent stage and lower control panel — local candidate
 
 The primary `StagePresenterImpl` tagged `kanta.stage.primary` remains attached and visible while navigation changes the utility content below it. Now Playing no longer creates a competing `StageSurface` or takes camera ownership. Menus, background selection and playback controls project `SessionController` state; they do not start a new playback attempt or alter reservations simply by opening. Fullscreen explicitly suspends the embedded visual projection and returns camera ownership to the primary presenter on dismissal.
