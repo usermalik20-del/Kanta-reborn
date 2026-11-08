@@ -21,11 +21,11 @@
   ],
   "rewrites": [
     {
-      "source": "/blog/category/(.*)",
+      "source": "/blog/category/:slug*",
       "destination": "/blog/index.html"
     },
     {
-      "source": "/blog/category/(.*)/",
+      "source": "/blog/category/:slug*/",
       "destination": "/blog/index.html"
     },
     {

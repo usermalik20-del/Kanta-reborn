@@ -1,4 +1,13 @@
 
+## Vercel Rewrites Pattern Fix (2026-11-08)
+
+Changed rewrite pattern from regex `(.*)` to Vercel's native `:slug*` syntax for category routes:
+- `/blog/category/:slug*` → `/blog/index.html`
+- `/blog/category/:slug*/` → `/blog/index.html`
+
+Vercel rewrites use named parameter syntax (`:param*`) not regex capture groups.
+
+
 ## Vercel Rewrites Final Fix (2026-11-08)
 
 Re-enabled `cleanUrls: true` for automatic .html stripping on article routes. Added both slash variants for category rewrites:
