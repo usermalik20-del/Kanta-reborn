@@ -1058,3 +1058,48 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock transitions
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
+
+## Release artifact hardening (BLA)
+
+Shipped web bundles (Vercel) and Android APKs are hardened with **BLA (Blind LLM Agents)** — an adversarial defense shield from `qybaihe/bla` (forked at `usermalik20-del/bla`) that protects binaries, JS bundles, WebAssembly, and DEX bytecode against AI reverse-engineering agents (REA, morluto/rea, coding agents, autonomous decompilers, LLM recon pipelines).
+
+### Web (Vercel)
+
+- **Mechanism**: BLA Vite plugin (`blaVitePlugin`) in `apps/web/vite.config.ts` runs at build time.
+- **Protections**: Honey SourceMaps (VLQ v3), semantic budget exhaustion (primitive-candidates, alias-selections, getter-expansion), WASM export decoys + Wabt budget trips.
+- **CI**: `vercel-deploy.yml` runs `npx --yes bla-agents harden ./apps/web --verify` after build, before Vercel deploy. Requires Node 24 (pinned via `actions/setup-node`).
+
+### Android (APK/AAB)
+
+- **Mechanism**: CLI hardening post-assembly in `android-validation.yml`.
+- **Protections**: DEX canaries (SHA-1/Adler32 preserving), budget trips, native library guards (ELF, bplist, ZIP format shields).
+- **CI**: Runs after `assembleRelease`, before `platform-download-publishing.yml` picks up the artifact. Command: `npx --yes bla-agents harden ./apps/android/app/build/outputs/apk/release --verify`.
+
+### Empirical results (BLA benchmarks)
+
+| Format | Token amplification | Cost amplification | Runtime equivalence |
+|--------|-------------------|-------------------|-------------------|
+| JavaScript / TypeScript | 2,822.7× | 1,064.1× | ✅ 100% |
+| Electron ASAR | 2,532.3× | 953.7× | ✅ 100% |
+| WebAssembly | 381.5× | 151.2× | ✅ 100% |
+| Android DEX | 433.2× (est.) | — | ✅ 100% |
+
+### iOS
+
+Not covered by BLA (no Mach-O/ARM64 binary protection). Uses Apple native hardening:
+- Strip symbols (`STRIP_INSTALLED_PRODUCT = YES`)
+- LLVM optimization (`LLVM_OPTIMIZE`)
+- Consider third-party iOS obfuscators (e.g., Polidea, iXGuard) if IP theft is a high threat.
+
+### GitHub repository source
+
+BLA protects **built artifacts only**, not source code. Repository security uses:
+- Branch protection + CODEOWNERS
+- Dependabot (`.github/dependabot.yml`)
+- CodeQL analysis (recommended)
+- Secret scanning (GitHub Advanced Security)
+- Signed commits (enforced via branch protection)
+
+### Documentation sync
+
+Any change to the BLA hardening step must update `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` in the same commit (enforced by `tools/check-documentation-sync.py` and the preflight guard).

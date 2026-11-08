@@ -198,6 +198,18 @@ Batch coherent changes and inspect failure evidence before rerunning.
 
 ## 10. Continuous execution and task selection
 
+## Release artifact hardening (BLA)
+
+The `vercel-deploy.yml` and `android-validation.yml` workflows include a BLA hardening step that protects shipped web bundles and Android APKs against AI reverse-engineering agents (REA, morluto/rea, autonomous decompilers, LLM recon pipelines).
+
+- **Web**: `npx --yes bla-agents harden ./apps/web --verify` runs after build and before Vercel deploy. Recommended: integrate `blaVitePlugin` into `apps/web/vite.config.ts` for build-time protection (honey SourceMaps, semantic budget exhaustion, WASM export decoys).
+- **Android**: `npx --yes bla-agents harden ./apps/android/app/build/outputs/apk/release --verify` runs after APK assembly and before publish. Protects `classes.dex` (DEX SHA-1/Adler32-preserving canaries, budget trips) and native libraries.
+- **Both**: Runs on main-branch pushes and release dispatches only. Requires Node 24 (pinned via `actions/setup-node`). The `--verify` flag re-runs shield checks to confirm integrity. 100% runtime equivalence (BLA benchmarks: 14/14 targets pass).
+- **iOS**: Not supported by BLA (no Mach-O/ARM64 binary protection). Use Apple native hardening (strip symbols, LLVM optimization, consider third-party iOS obfuscators if IP theft is high threat).
+- **GitHub repo source**: BLA protects built artifacts, not source. Repo security uses branch protection, CODEOWNERS, Dependabot, CodeQL, secret scanning (already configured).
+
+Documentation sync: any change to the BLA hardening step must update `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` in the same commit (enforced by `tools/check-documentation-sync.py` and the preflight guard).
+
 During an active engineering session, completion of one task transitions to the highest-priority unblocked task.
 
 Select work from:

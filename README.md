@@ -495,3 +495,13 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock transitions
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
+
+## Release artifact hardening (BLA)
+
+Shipped web bundles (Vercel) and Android APKs are hardened with **BLA (Blind LLM Agents)** — an adversarial defense shield that protects binaries, JS bundles, WebAssembly, and DEX bytecode against AI reverse-engineering agents (REA, coding agents, autonomous decompilers).
+
+- **Web**: BLA Vite plugin (`blaVitePlugin`) at build time → honey SourceMaps (VLQ v3), semantic budget exhaustion, WASM export decoys.
+- **Android**: CLI hardening post-build → DEX canaries (SHA-1/Adler32 preserving), budget trips, native lib guards.
+- **Effect**: 300×–2,800× token amplification for REA; 14/14 benchmark targets pass 100% runtime equivalence.
+- **CI integration**: `vercel-deploy.yml` and `android-validation.yml` run `npx --yes bla-agents harden <artifact> --verify` on main-branch releases only.
+- **iOS**: Not covered by BLA (no Mach-O support). Uses Apple native hardening (strip symbols, LLVM optimization).

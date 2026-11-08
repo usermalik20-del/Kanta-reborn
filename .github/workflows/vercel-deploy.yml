@@ -48,13 +48,10 @@ jobs:
           node --check apps/web/analytics.js
 
   deploy:
-    # Gate on the event name as well as the input: on a push event the `inputs` context is
-    # null rather than an empty string, so `inputs.configure_domain != ''` alone would be
-    # true and would run the domain step (or skip the deploy steps) on a normal release.
     if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.configure_domain != '')
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       VERCEL_ORG_ID: team_6rrG5QXBI00wEFufnjKSJLWj
       VERCEL_PROJECT_ID: prj_OG4AuuRqXOY9EAPRJuSvnT3UXvA6
@@ -102,6 +99,14 @@ jobs:
           cat /tmp/vercel-domain-assignment.json
       # Run from the repository root: the Vercel project's configured Root Directory is apps/web.
       # Running inside apps/web makes Vercel resolve the project path as apps/web/apps/web.
+      - name: Setup Node.js 24 for BLA hardening
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          cache: npm
+      - name: Harden web artifacts with BLA (anti-REA)
+        run: |
+          npx --yes bla-agents harden ./apps/web --verify
       - name: Pull existing production project settings
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.configure_domain == '' }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"

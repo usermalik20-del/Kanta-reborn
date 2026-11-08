@@ -43,7 +43,7 @@ concurrency:
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -122,6 +122,10 @@ jobs:
         run: node tools/verify-songbook-browser-interop.mjs apps/android/app/build/synthetic-songbook.json docs/evidence/website/2026-10-15/songbook.js
       - name: Verify companion private IPv4 interface selection
         run: python3 tools/verify-android-companion-interface.py
+      - name: Harden Android release APK with BLA (anti-REA)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          npx --yes bla-agents harden ./apps/android/app/build/outputs/apk/release --verify
       - name: Android emulator runtime checks
         timeout-minutes: 15
         run: python3 tools/run-android-runtime.py
