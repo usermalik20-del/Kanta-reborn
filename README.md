@@ -1,3 +1,27 @@
+
+## Blog System Addition (2026-11-08)
+
+Added a comprehensive blog/guide section to address AdSense "Low value content" rejection:
+
+**New files:**
+- `apps/web/blog/index.html` — Blog homepage with 6 categories, newsletter, dynamic posts grid
+- `apps/web/blog.css` — Complete styling for blog index, article pages, categories, related posts
+- `apps/web/blog.js` — Client-side rendering for posts grid, category filtering, reveal animations
+- 5 substantial articles (10-18 min read each):
+  - `apps/web/blog/midi-kar-mp3-wav-karaoke-file-formats-explained.html`
+  - `apps/web/blog/choosing-the-right-soundfont-for-karaoke.html`
+  - `apps/web/blog/building-your-personal-karaoke-library.html`
+  - `apps/web/blog/spice-pitch-estimation-how-it-works.html`
+  - `apps/web/blog/vocal-practice-techniques-pitch-training.html`
+
+**Integration:**
+- Added "Blog" link to main navigation on all 11 pages
+- Blog preview section on homepage with 6 article cards
+- Updated `sitemap.xml` with all blog routes (index, 5 articles, 6 categories)
+- Updated `tools/verify-website.py` validation for blog subdirectory routes
+
+**Purpose:** Provides authentic, high-quality karaoke expertise content beyond app downloads to meet AdSense quality guidelines.
+
 ## Android home hero greeting/tagline removed — local candidate
 
 The Home dashboard no longer shows the large hero banner (`Good evening` greeting + `Music brings people together.`). The KANTA header with its `SING MORE. TOGETHER.` tagline directly above already carried that messaging, so the 142dp hero was redundant and is removed; the search row now sits directly under the header.
