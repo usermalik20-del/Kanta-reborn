@@ -122,10 +122,16 @@ jobs:
         run: node tools/verify-songbook-browser-interop.mjs apps/android/app/build/synthetic-songbook.json docs/evidence/website/2026-10-15/songbook.js
       - name: Verify companion private IPv4 interface selection
         run: python3 tools/verify-android-companion-interface.py
-      - name: Harden Android release APK with BLA (anti-REA)
+      - name: Harden Android DEX with BLA (anti-REA)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
-          npx --yes bla-agents harden ./apps/android/app/build/outputs/apk/release --verify
+          # Harden DEX files before APK packaging (BLA cannot rewrite signed APKs)
+          DEX_DIR="apps/android/app/build/intermediates/dex/release"
+          if [ -d "$DEX_DIR" ]; then
+            npx --yes bla-agents harden "$DEX_DIR" --verify
+          else
+            echo "::warning::DEX directory not found at $DEX_DIR, skipping BLA hardening"
+          fi
       - name: Android emulator runtime checks
         timeout-minutes: 15
         run: python3 tools/run-android-runtime.py
