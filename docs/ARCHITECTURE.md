@@ -1,4 +1,13 @@
 
+## Vercel Routes-Based Category Rewrites (2026-11-08)
+
+Added legacy `routes` entries for blog category rewrites as fallback:
+- `^/blog/category/(.*)$` → `/blog/index.html`
+- `^/blog/category/(.*)/$` → `/blog/index.html`
+
+This uses Vercel's legacy routing which is evaluated after rewrites and may catch requests that rewrites miss due to cleanUrls redirect timing.
+
+
 ## Vercel Rewrites Pattern Fix (2026-11-08)
 
 Changed rewrite pattern from regex `(.*)` to Vercel's native `:slug*` syntax for category routes:
