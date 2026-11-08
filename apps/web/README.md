@@ -1,4 +1,13 @@
 
+## Vercel Rewrites Final Fix (2026-11-08)
+
+Re-enabled `cleanUrls: true` for automatic .html stripping on article routes. Added both slash variants for category rewrites:
+- `/blog/category/(.*)` → `/blog/index.html`
+- `/blog/category/(.*)/` → `/blog/index.html` (handles cleanUrls trailing-slash redirect)
+
+This allows both article deep-links (`/blog/article-slug`) and category deep-links (`/blog/category/topic`) to work simultaneously.
+
+
 ## Vercel Rewrites CleanUrls Fix (2026-11-08)
 
 Disabled `cleanUrls: true` in vercel.json to prevent trailing-slash redirects from interfering with blog category rewrites. Rewrites now use simple regex pattern `/blog/category/(.*)` → `/blog/index.html` for reliable deep-linking to category views.

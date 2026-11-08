@@ -1,5 +1,5 @@
 {
-  "cleanUrls": false,
+  "cleanUrls": true,
   "headers": [
     {
       "source": "/(.*)",
@@ -22,6 +22,10 @@
   "rewrites": [
     {
       "source": "/blog/category/(.*)",
+      "destination": "/blog/index.html"
+    },
+    {
+      "source": "/blog/category/(.*)/",
       "destination": "/blog/index.html"
     },
     {
@@ -82,7 +86,7 @@
     },
     {
       "src": "^/licenses$",
-      "dest": "/api/page?route=%2Flicenses"
+      "dest": "/api/page?route=%2Flegal"
     },
     {
       "src": "^/support$",
