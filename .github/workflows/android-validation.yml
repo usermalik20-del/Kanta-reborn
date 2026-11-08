@@ -122,6 +122,12 @@ jobs:
         run: node tools/verify-songbook-browser-interop.mjs apps/android/app/build/synthetic-songbook.json docs/evidence/website/2026-10-15/songbook.js
       - name: Verify companion private IPv4 interface selection
         run: python3 tools/verify-android-companion-interface.py
+      - name: Build unsigned release APK (generates DEX intermediates)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        working-directory: apps/android
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:assembleRelease 2>&1 | tee -a build.log
       - name: Harden Android DEX with BLA (anti-REA)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         continue-on-error: true
