@@ -42,18 +42,6 @@
       "status": 403
     },
     {
-      "src": "^/blog/category/.*$",
-      "dest": "/blog/index.html"
-    },
-    {
-      "src": "^/blog$",
-      "dest": "/blog/index.html"
-    },
-    {
-      "src": "^/blog/$",
-      "dest": "/blog/index.html"
-    },
-    {
       "src": "^/updates\\.json$",
       "dest": "/updates.json",
       "headers": {

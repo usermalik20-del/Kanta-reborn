@@ -1,4 +1,19 @@
 
+## Static Category Pages (2026-11-08)
+
+Created static HTML files for all 6 blog category pages:
+- `/blog/category/file-formats/index.html`
+- `/blog/category/soundfonts/index.html`
+- `/blog/category/stage-setup/index.html`
+- `/blog/category/vocal-practice/index.html`
+- `/blog/category/library-management/index.html`
+- `/blog/category/technical-deep-dives/index.html`
+
+Each page includes the blog index JavaScript and filters posts by category. This bypasses Vercel rewrite limitations for category deep-links.
+
+Simplified vercel.json to only handle blog index rewrites.
+
+
 ## Vercel Routes Regex for Categories (2026-11-08)
 
 Switched to legacy `routes` with regex for category rewrites:
