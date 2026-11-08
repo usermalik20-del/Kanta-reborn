@@ -1,4 +1,12 @@
 
+## Vercel Rewrites :slug** Pattern (2026-11-08)
+
+Changed rewrite pattern to Vercel's valid `:slug**` syntax:
+- `/blog/category/:slug**` → `/blog/index.html`
+
+`:slug**` matches zero or more path segments (including `/`), valid at end of pattern. Handles cleanUrls trailing-slash redirect automatically.
+
+
 ## Vercel Rewrites Glob Pattern (2026-11-08)
 
 Changed rewrite pattern to Vercel's glob syntax:
