@@ -1,4 +1,13 @@
 
+## Vercel Rewrites Only for Blog (2026-11-08)
+
+Simplified to rely on `rewrites` + `cleanUrls: true`:
+- `/blog/category/:slug*` → `/blog/index.html` (category deep-links)
+- `/blog` and `/blog/` → `/blog/index.html` (blog index)
+
+Removed conflicting `routes` entries. cleanUrls handles trailing slashes; rewrites evaluated after cleanUrls redirect per Vercel docs.
+
+
 ## Vercel Routes-Based Category Rewrites (2026-11-08)
 
 Added legacy `routes` entries for blog category rewrites as fallback:

@@ -25,10 +25,6 @@
       "destination": "/blog/index.html"
     },
     {
-      "source": "/blog/category/:slug*/",
-      "destination": "/blog/index.html"
-    },
-    {
       "source": "/blog",
       "destination": "/blog/index.html"
     },
@@ -48,22 +44,6 @@
         }
       ],
       "status": 403
-    },
-    {
-      "src": "^/blog/category/(.*)$",
-      "dest": "/blog/index.html"
-    },
-    {
-      "src": "^/blog/category/(.*)/$",
-      "dest": "/blog/index.html"
-    },
-    {
-      "src": "^/blog$",
-      "dest": "/blog/index.html"
-    },
-    {
-      "src": "^/blog/$",
-      "dest": "/blog/index.html"
     },
     {
       "src": "^/updates\\.json$",
