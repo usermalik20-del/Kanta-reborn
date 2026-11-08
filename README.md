@@ -1,4 +1,12 @@
 
+## Vercel Rewrites Glob Pattern (2026-11-08)
+
+Changed rewrite pattern to Vercel's glob syntax:
+- `/blog/category/*` → `/blog/index.html` (matches any path under /blog/category/)
+
+Vercel rewrites support `*` wildcard (matches any characters except `/`) and `**` (matches including `/`). Using simple glob pattern instead of `:param*` named parameter syntax.
+
+
 ## Vercel Rewrites Only for Blog (2026-11-08)
 
 Simplified to rely on `rewrites` + `cleanUrls: true`:

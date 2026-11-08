@@ -21,7 +21,7 @@
   ],
   "rewrites": [
     {
-      "source": "/blog/category/:slug*",
+      "source": "/blog/category/*",
       "destination": "/blog/index.html"
     },
     {
