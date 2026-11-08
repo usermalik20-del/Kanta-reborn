@@ -1,4 +1,20 @@
 
+## Vercel Rewrites for Blog Category Routes (2026-11-08)
+
+Added Vercel route rewrites to handle client-side blog category URLs:
+- `/blog/category/*` → `/blog/index.html` (handled by blog.js)
+- `/blog` and `/blog/` → `/blog/index.html`
+
+Created `/blog.js` with:
+- Client-side category filtering via history.pushState
+- popstate handling for browser back/forward
+- Dynamic posts grid rendering from blogPosts array
+- URL-aware initial render (reads category from pathname)
+- Active category highlighting
+
+This enables deep-linking to category views like `/blog/category/file-formats` without 404s.
+
+
 ## Blog Index Full Restoration (2026-11-08)
 
 Restored complete blog index with all sections:
