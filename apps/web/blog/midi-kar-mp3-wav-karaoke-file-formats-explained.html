@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="MIDI, KAR, MP3, WAV: Karaoke File Formats Explained">
+<meta name="theme-color" content="#111326">
+<title>MIDI, KAR, MP3, WAV: Karaoke File Formats Explained · KANTA Blog</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+<article class="article-page">
+  <header class="article-header reveal">
+    <span class="eyebrow">File Formats & Compatibility</span>
+    <h1>MIDI, KAR, MP3, WAV: Karaoke File Formats Explained</h1>
+    <div class="article-meta"><time datetime="2026-11-01">November 1, 2026</time><span class="author">By KANTA Team</span><span class="read-time">12 min read</span></div>
+  </header>
+  <div class="article-content">
+    <p class="lead">Not all karaoke files are created equal. Some carry synchronized lyrics down to the syllable. Others are just audio. Some need a SoundFont to make any sound at all. Understanding the differences saves you hours of frustration — and helps you build a library that actually works.</p>
+    <div class="article-body reveal-stagger">
+      <section id="midi"><h2>Standard MIDI Files (.mid, .midi)</h2><p>MIDI files contain <strong>instructions</strong> — which notes to play, when, how loud, and on which instrument channel.</p></section>
+      <section id="kar"><h2>KAR Files — MIDI with Lyrics</h2><p>A <strong>.kar</strong> file is a Standard MIDI File with lyrics stored as text meta events on the melody track.</p></section>
+      <section id="mp3"><h2>MP3 — Compressed Audio</h3><p>MP3 files are <strong>audio-only</strong> unless paired with a separate lyrics file.</p></section>
+      <section id="wav"><h2>WAV — Uncompressed Audio</h2><p>WAV is uncompressed PCM audio. Like MP3, it's audio-only for karaoke.</p></section>
+      <section id="comparison"><h2>Quick Comparison Table</h2><table><thead><tr><th>Feature</th><th>MIDI</th><th>KAR</th><th>MP3</th><th>WAV</th></tr></thead><tbody><tr><td>Contains audio</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr><tr><td>Timed lyrics</td><td>No</td><td><strong>Yes</strong></td><td>External</td><td>External</td></tr><tr><td>Change tempo</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Artifacts</td><td>Artifacts</td></tr><tr><td>Change pitch</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Artifacts</td><td>Artifacts</td></tr><tr><td>Mute instruments</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>No</td><td>No</td></tr><tr><td>File size (4-min)</td><td>~50 KB</td><td>~60 KB</td><td>~4 MB</td><td>~40 MB</td></tr><tr><td>SoundFont required</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>No</td><td>No</td></tr></tbody></table></section>
+      <section id="which"><h2>Which Format Should You Use?</h2><p><strong>KAR</strong> for best karaoke experience. <strong>MIDI</strong> for instrumental. <strong>MP3/WAV</strong> for backing tracks.</p></section>
+      <section id="kanta"><h2>How KANTA Handles Each Format</h2><p>KAR: Full support with character-level highlighting. MIDI: Playback only. MP3/WAV: Audio only.</p></section>
+    </div>
+  </div>
+</article>
+</main>
+</body>
+</html>
