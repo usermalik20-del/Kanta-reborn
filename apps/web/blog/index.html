@@ -8,14 +8,41 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/blog.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "KANTA Karaoke Blog",
+  "description": "Expert guides, tips, and tutorials for karaoke enthusiasts. Learn about MIDI/KAR file formats, SoundFont selection, stage setup, vocal techniques, and building your personal karaoke library.",
+  "url": "https://kanta-public.vercel.app/blog/",
+  "publisher": {
+    "@type": "Organization",
+    "name": "KANTA Karaoke",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://kanta-public.vercel.app/kanta-icon.png"
+    }
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://kanta-public.vercel.app/blog/"
+  }
+}
+</script>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <header class="site-header">
-  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <a class="brand" href="/" aria-label="KANTA home">
+    <span class="brand-mark" aria-hidden="true">✦</span>KANTA
+  </a>
   <nav class="site-nav" aria-label="Main navigation">
-    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
-    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/ios-download">iPhone / iPad</a>
+    <a href="/android">Android</a>
+    <a href="/guide">How to Use</a>
+    <a href="/features">Features</a>
+    <a href="/songbook">My Songbook</a>
+    <a href="/support">Help</a>
     <a href="/blog" aria-current="page">Blog</a>
   </nav>
   <div class="header-actions">
@@ -27,11 +54,121 @@
 </header>
 <main id="content">
 <nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+
 <section class="hero blog-hero reveal">
   <p class="eyebrow">KANTA KARAOKE BLOG</p>
   <h1>Karaoke expertise,<br><span class="gradient-text">shared openly.</span></h1>
   <p class="lead">Deep-dive guides on karaoke file formats, SoundFont curation, stage design, vocal practice, and building a personal song library that lasts. Written by the KANTA team for performers who care about quality.</p>
 </section>
+
+<section class="section blog-categories reveal">
+  <div class="section-head">
+    <h2>Explore by Topic</h2>
+  </div>
+  <div class="category-grid">
+    <a class="category-card" href="/blog/category/file-formats">
+      <div class="category-icon">📁</div>
+      <h3>File Formats & Compatibility</h3>
+      <p>MIDI, KAR, MP3, WAV, SF2 — what works, what doesn't, and how to convert.</p>
+      <span class="post-count">8 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/soundfonts">
+      <div class="category-icon">🎹</div>
+      <h3>SoundFont Selection</h3>
+      <p>Finding, evaluating, and optimizing SoundFont banks for realistic karaoke playback.</p>
+      <span class="post-count">6 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/stage-setup">
+      <div class="category-icon">🎭</div>
+      <h3>Stage & Visuals</h3>
+      <p>Scenic backgrounds, camera integration, external displays, and party effects.</p>
+      <span class="post-count">5 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/vocal-practice">
+      <div class="category-icon">🎤</div>
+      <h3>Vocal Practice & Technique</h3>
+      <p>Pitch training, scoring, microphone technique, and improving your performance.</p>
+      <span class="post-count">7 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/library-management">
+      <div class="category-icon">📚</div>
+      <h3>Library Management</h3>
+      <p>Organizing, tagging, backing up, and sharing your personal karaoke collection.</p>
+      <span class="post-count">6 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/technical-deep-dives">
+      <div class="category-icon">⚙️</div>
+      <h3>Technical Deep Dives</h3>
+      <p>How KANTA works under the hood: TinySoundFont, SPICE pitch estimation, encryption, and more.</p>
+      <span class="post-count">4 articles</span>
+    </a>
+  </div>
+</section>
+
+<section class="section latest-posts reveal">
+  <div class="section-head">
+    <h2>Latest Articles</h2>
+    <a class="view-all" href="/blog/all">View all posts →</a>
+  </div>
+  <div class="posts-grid" id="posts-grid">
+    <!-- Posts rendered by blog.js -->
+  </div>
+</section>
+
+<section class="section newsletter-section reveal">
+  <div class="newsletter-card">
+    <h3>Stay Updated</h3>
+    <p>Get karaoke tips, new guide notifications, and KANTA release notes — no spam, unsubscribe anytime.</p>
+    <form class="newsletter-form" id="newsletter-form">
+      <label for="email" class="visually-hidden">Email address</label>
+      <input type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="email">
+      <button type="submit" class="button primary">Subscribe</button>
+    </form>
+    <p class="newsletter-note">We respect your privacy. See our <a href="/privacy">Privacy Policy</a>.</p>
+  </div>
+</section>
 </main>
+
+<footer>
+  <div class="inner">
+    <div class="col">
+      <span class="brand" style="font-size: 1.1rem; margin-bottom: 8px;"><span class="brand-mark" aria-hidden="true" style="width:24px;height:24px;font-size:.85rem;">✦</span> KANTA</span>
+      <p>Your music. Your stage. Built from scratch for true karaoke enthusiasts.</p>
+    </div>
+    <div class="col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="/ios-download">iPhone / iPad</a></li>
+        <li><a href="/android">Android Preview</a></li>
+        <li><a href="/features">Feature Matrix</a></li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>Resources</h4>
+      <ul>
+        <li><a href="/guide">How to Use</a></li>
+        <li><a href="/songbook">My Songbook</a></li>
+        <li><a href="/support">Help</a></li>
+        <li><a href="/blog">Blog & Guides</a></li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>Legal & Privacy</h4>
+      <ul>
+        <li><a href="/privacy">Privacy Policy</a></li>
+        <li><a href="/legal">Music Rights</a></li>
+        <li><a href="/licenses">Open-Source Licenses</a></li>
+      </ul>
+    </div>
+    <div class="fine">
+      KANTA is an independent karaoke application. Not affiliated with or endorsed by any commercial karaoke network. All song files remain your personal property.
+    </div>
+  </div>
+</footer>
+
+<script defer src="/theme.js"></script>
+<script defer src="/micro-interactions.js"></script>
+<script defer src="/command-palette.js"></script>
+<script defer src="/blog.js"></script>
 </body>
 </html>
