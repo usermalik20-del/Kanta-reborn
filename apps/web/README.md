@@ -1,4 +1,13 @@
 
+## Vercel Rewrites for Blog Routes (2026-11-08)
+
+Updated vercel.json with `rewrites` section for proper SPA-style routing:
+- `/blog/category/:slug*` → `/blog/index.html` (handles `/blog/category/file-formats`, etc.)
+- `/blog` and `/blog/` → `/blog/index.html`
+
+Rewrites are evaluated before cleanUrls redirect, fixing 404s on category deep-links.
+
+
 ## Vercel Rewrites for Blog Category Routes (2026-11-08)
 
 Added Vercel route rewrites to handle client-side blog category URLs:

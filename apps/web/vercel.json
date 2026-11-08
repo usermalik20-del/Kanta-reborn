@@ -19,6 +19,20 @@
       ]
     }
   ],
+  "rewrites": [
+    {
+      "source": "/blog/category/:slug*",
+      "destination": "/blog/index.html"
+    },
+    {
+      "source": "/blog",
+      "destination": "/blog/index.html"
+    },
+    {
+      "source": "/blog/",
+      "destination": "/blog/index.html"
+    }
+  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -37,18 +51,6 @@
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate"
       }
-    },
-    {
-      "src": "^/blog/category/(.*)$",
-      "dest": "/blog/index.html"
-    },
-    {
-      "src": "^/blog$",
-      "dest": "/blog/index.html"
-    },
-    {
-      "src": "^/blog/$",
-      "dest": "/blog/index.html"
     },
     {
       "src": "^/$",
