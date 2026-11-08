@@ -1,4 +1,13 @@
 
+## Vercel Routes Regex for Categories (2026-11-08)
+
+Switched to legacy `routes` with regex for category rewrites:
+- `^/blog/category/.*$` → `/blog/index.html`
+- `^/blog$` and `^/blog/$` → `/blog/index.html`
+
+Legacy `routes` supports full regex in `src`, unlike `rewrites` which only allows wildcards at end. Kept `rewrites` for blog index (cleanUrls compatible). Category regex evaluated after cleanUrls redirect.
+
+
 ## Vercel Rewrites :slug** Pattern (2026-11-08)
 
 Changed rewrite pattern to Vercel's valid `:slug**` syntax:
