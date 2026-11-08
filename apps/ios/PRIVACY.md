@@ -1,3 +1,27 @@
+## Blog Expansion: 15 Substantial Articles + Fixed 404 (2026-11-08)
+
+Fixed 404 on `/blog/converting-karaoke-files-ffmpeg-tools` — the article was defined in blog.js but the HTML file was never created. Now all 15 blog posts have actual HTML files.
+
+Updated all readTime values from inflated "10-18 min read" claims to accurate estimates (2-7 min read) based on actual word counts.
+
+Expanded all 5 original stub articles (200-300 words) to substantial pieces (600-1100 words) with tables, code examples, and actionable guidance.
+
+Created 9 missing articles referenced in blog.js:
+- soundfont-bank-size-vs-quality
+- karaoke-songbook-export-sharing-privacy
+- external-display-hdmi-airplay-karaoke
+- microphone-selection-karaoke-recording
+- tinysoundfont-android-midi-engine
+- karaoke-party-effects-intermission-music
+- organizing-karaoke-files-metadata-tagging
+- pitch-correction-vs-pitch-training
+- encrypted-companion-control-android
+
+Updated blog.js with correct category counts (3,2,2,3,3,3) and accurate readTime per post.
+Updated blog/index.html category card counts to match.
+Updated sitemap.xml with all 15 blog article URLs + 6 category pages.
+Fixed vercel.json to use clean static category pages (cleanUrls compatible).
+
 # KANTA Privacy Policy
 
 **Effective:** October 10, 2026. KANTA is preparing for internal testing.
