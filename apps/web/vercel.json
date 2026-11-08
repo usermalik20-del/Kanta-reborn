@@ -39,6 +39,18 @@
       }
     },
     {
+      "src": "^/blog/category/(.*)$",
+      "dest": "/blog/index.html"
+    },
+    {
+      "src": "^/blog$",
+      "dest": "/blog/index.html"
+    },
+    {
+      "src": "^/blog/$",
+      "dest": "/blog/index.html"
+    },
+    {
       "src": "^/$",
       "dest": "/api/page?route=%2F"
     },
