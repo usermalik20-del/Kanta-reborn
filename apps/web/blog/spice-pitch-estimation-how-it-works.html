@@ -1,4 +1,131 @@
 <!doctype html>
 <html lang="en" data-theme="system">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="SPICE Pitch Estimation: How On-Device Vocal Analysis Works"><meta name="theme-color" content="#111326"><title>SPICE Pitch Estimation · KANTA Blog</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/theme.css"><link rel="stylesheet" href="/blog.css"></head>
-<body><a class="skip" href="#content">Skip to content</a><header class="site-header"><a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a><nav class="site-nav" aria-label="Main navigation"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a><a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a><a href="/blog" aria-current="page">Blog</a></nav><div class="header-actions"><button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button><button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button><button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button><a class="button primary header-cta" href="/android">Download App</a></div></header><main id="content"><nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav><article class="article-page"><header class="article-header reveal"><span class="eyebrow">Technical Deep Dives</span><h1>SPICE Pitch Estimation: How On-Device Vocal Analysis Works</h1><div class="article-meta"><time datetime="2026-10-22">October 22, 2026</time><span class="author">By KANTA Team</span><span class="read-time">18 min read</span></div></header><div class="article-content"><p class="lead">When you sing into KANTA and see a real-time pitch curve, that's <strong>SPICE</strong> running locally on your phone. No audio leaves the device.</p><div class="article-body reveal-stagger"><section id="why-spice"><h2>Why SPICE?</h2><p>Autocorrelation fails on octave errors, noise, voiced/unvoiced confusion. SPICE is trained on 10k+ hours of labeled vocals.</p></section><section id="architecture"><h2>Architecture</h2><p>Self-supervised pre-training + supervised fine-tuning. Conv encoder → BiLSTM → multi-task heads (pitch, confidence, voicing).</p></section><section id="model"><h2>Model: spice.tflite</h2><p>8.7 MB, TensorFlow Lite 2.16.1. Input: 100 frames × 128 mel bins. Outputs: pitch Hz, confidence 0-1, voiced flag.</p></section><section id="pipeline"><h2>Audio Pipeline</h2><p>48 kHz capture → anti-aliasing FIR (65 dB @ 20 kHz) → 16 kHz resample → SPICE inference → median filter + confidence thresholding.</p></section><section id="calibration"><h2>Calibration</h2><p>calibratedHz = rawHz * 1.0087 - 2.3. Brings median error to < 5 cents.</p></section><section id="confidence"><h2>Honest Confidence Gating</h2><p>Meter stays neutral until confidence > 0.3. No fake scores before you sing.</p></section><section id="song-key"><h2>Song-Key Targeting</h2><p>Reads MIDI key signature (0x59). Song in A minor → practice A4. Song in C major → practice C4.</p></section><section id="fallback"><h2>Graceful Fallback</h2><p>SPICE → autocorrelation → null estimator. Never crashes.</p></section><section id="privacy"><h2>Privacy by Architecture</h2><p>Zero outbound connections. Model bundled in APK. Only RECORD_AUDIO, CAMERA, INTERNET permissions.</p></section></div></div></article></main></body></html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Deep dive into Google's SPICE model running on TensorFlow Lite — how it estimates pitch from microphone input without sending audio to the cloud.">
+<meta name="theme-color" content="#111326">
+<title>SPICE Pitch Estimation: How On-Device Vocal Analysis Works · KANTA Blog</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+<article class="article-page">
+  <header class="article-header reveal">
+    <span class="eyebrow">Technical Deep Dives</span>
+    <h1>SPICE Pitch Estimation: How On-Device Vocal Analysis Works</h1>
+    <div class="article-meta"><time datetime="2026-10-22">2026-10-22</time><span class="author">By KANTA Team</span><span class="read-time">18 min read</span></div>
+  </header>
+  <div class="article-content">
+      <section id="what-spice-is">
+        <h2>What SPICE Is</h2>
+        <p>SPICE (Pitch Estimation) is Google's on-device machine learning model for estimating the fundamental frequency (pitch) of a singing voice in real time. It runs entirely on TensorFlow Lite, which means audio never leaves your device — no cloud processing, no server round-trips, no privacy exposure.</p>
+<p>KANTA uses SPICE to power its real-time pitch display and scoring. When you sing, KANTA captures microphone input, runs it through SPICE, and shows you your pitch against the target note — instantly, locally, privately.</p>
+      </section>
+
+      <section id="how-the-spice-model-works">
+        <h2>How the SPICE Model Works</h2>
+        <p>SPICE is a lightweight convolutional neural network trained to estimate pitch from audio. Here's the pipeline:</p>
+<h3>1. Audio Capture</h3>
+<p>KANTA records microphone input at 16 kHz, mono. This is the sample rate SPICE expects — higher rates are downsampled, lower rates lose pitch resolution.</p>
+<h3>2. Preprocessing</h3>
+<p>The raw audio is converted to a log-mel spectrogram — a visual representation of frequency content over time. SPICE processes frames of about 32 ms with 10 ms hop size, so it produces a pitch estimate roughly every 10 ms (100 Hz update rate).</p>
+<h3>3. Model Inference</h3>
+<p>The TensorFlow Lite model takes the spectrogram frames and outputs:</p>
+<ul>
+<li><strong>Pitch</strong> — the estimated fundamental frequency in Hz</li>
+<li><strong>Confidence</strong> — how sure the model is that this frame contains a clear singing voice</li>
+<li><strong>Voice activity</strong> — whether the frame contains singing at all, vs. silence or background noise</li>
+</ul>
+<h3>4. Post-processing</h3>
+<p>KANTA converts Hz to musical notes (A4 = 440 Hz reference), applies smoothing to eliminate jitter, and gates low-confidence estimates so breath noise or silence doesn't jump around on screen.</p>
+      </section>
+
+      <section id="calibration:-why-it-matters">
+        <h2>Calibration: Why It Matters</h2>
+        <p>Every microphone is different. Every device's audio chain has slight offsets. Without calibration, your pitch display might consistently read 20 cents sharp or flat.</p>
+<p>KANTA includes a calibration routine:</p>
+<ol>
+<li>Play a reference tone (A4 = 440 Hz) through headphones</li>
+<li>Sing or hum along into the microphone</li>
+<li>KANTA measures the offset between what you sang and what the model heard</li>
+<li>Applies a correction factor to all subsequent pitch estimates</li>
+</ol>
+<p>Recalibrate whenever you switch microphones, headphones, or devices. It takes 30 seconds and dramatically improves scoring accuracy.</p>
+      </section>
+
+      <section id="confidence-gating:-when-to-trust-the-display">
+        <h2>Confidence Gating: When to Trust the Display</h2>
+        <p>SPICE outputs a confidence score (0.0 to 1.0) for every frame. KANTA uses this to decide what to show you:</p>
+<table>
+<thead><tr><th>Confidence</th><th>Meaning</th><th>KANTA Behavior</th></tr></thead>
+<tbody>
+<tr><td>0.8 – 1.0</td><td>Clear, sustained singing voice</td><td>Show pitch note and scoring normally</td></tr>
+<tr><td>0.5 – 0.8</td><td>Probably voice, some noise</td><td>Show pitch with reduced opacity; exclude from scoring average</td></tr>
+<tr><td>0.3 – 0.5</td><td>Uncertain — could be voice or noise</td><td>Fade out pitch display; don't count toward score</td></tr>
+<tr><td>Below 0.3</td><td>Silence, breath, background noise</td><td>Hide pitch display entirely</td></tr>
+</tbody>
+</table>
+<p>This prevents the embarrassing scenario where coughing between songs registers as a high C and wrecks your accuracy score.</p>
+      </section>
+
+      <section id="song-key-targeting">
+        <h2>Song-Key Targeting</h2>
+        <p>KANTA lets you set a target key for each song. When you load a KAR/MIDI file, KANTA knows the melody notes. SPICE listens to your voice and compares each sung pitch to the nearest target note.</p>
+<p>The scoring pipeline:</p>
+<ol>
+<li><strong>Note segmentation</strong> — KANTA splits the melody into individual notes with start times and durations</li>
+<li><strong>Pitch tracking</strong> — SPICE estimates your pitch every 10 ms while you sing each note</li>
+<li><strong>Cent deviation</strong> — KANTA calculates how many cents (1/100th of a semitone) you're off from the target</li>
+<li><strong>Confidence weighting</strong> — only high-confidence frames count toward your score</li>
+<li><strong>Timing check</strong> — did you start and end the note at the right time?</li>
+</ol>
+<p>Your final score blends pitch accuracy (60%), timing (30%), and consistency (10%).</p>
+      </section>
+
+      <section id="privacy-architecture">
+        <h2>Privacy Architecture</h2>
+        <p>This is the part that matters most for a singing app. Here's KANTA's privacy guarantee:</p>
+<ul>
+<li><strong>100% on-device</strong> — SPICE runs via TensorFlow Lite entirely on your phone. No audio is uploaded.</li>
+<li><strong>No server round-trip</strong> — there's no "cloud scoring" mode. Even offline, pitch estimation works perfectly.</li>
+<li><strong>No audio storage</strong> — KANTA doesn't record or save your singing. The microphone buffer is processed in memory and discarded.</li>
+<li><strong>No network permission for audio</strong> — KANTA's network permission is used for app updates and companion control, never for audio transmission.</li>
+</ul>
+<p>You can sing in airplane mode and get the exact same pitch display and scoring as online. Your voice stays yours.</p>
+      </section>
+
+      <section id="tips-for-better-pitch-tracking">
+        <h2>Tips for Better Pitch Tracking</h2>
+        <ol>
+<li><strong>Use headphones</strong> so the backing track doesn't bleed into the microphone and confuse SPICE</li>
+<li><strong>Calibrate</strong> before each session, especially with a new microphone</li>
+<li><strong>Sing close to the mic</strong> (6–12 inches) for strong signal-to-noise ratio</li>
+<li><strong>Avoid vibrato at the start of notes</strong> — hold the pitch steady for the first 200 ms so SPICE can lock on</li>
+<li><strong>Quiet environment</strong> — background TV, fans, or conversation lower confidence and create spurious readings</li>
+</ol>
+      </section>
+
+
+  </div>
+</article>
+</main>
+</body>
+</html>

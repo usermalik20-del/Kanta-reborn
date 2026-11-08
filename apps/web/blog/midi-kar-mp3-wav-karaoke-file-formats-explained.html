@@ -2,7 +2,7 @@
 <html lang="en" data-theme="system">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="MIDI, KAR, MP3, WAV: Karaoke File Formats Explained">
+<meta name="description" content="Understand the differences between karaoke file formats, which ones support timed lyrics, how to convert between them, and which format to choose for your library.">
 <meta name="theme-color" content="#111326">
 <title>MIDI, KAR, MP3, WAV: Karaoke File Formats Explained · KANTA Blog</title>
 <link rel="stylesheet" href="/style.css">
@@ -31,19 +31,120 @@
   <header class="article-header reveal">
     <span class="eyebrow">File Formats & Compatibility</span>
     <h1>MIDI, KAR, MP3, WAV: Karaoke File Formats Explained</h1>
-    <div class="article-meta"><time datetime="2026-11-01">November 1, 2026</time><span class="author">By KANTA Team</span><span class="read-time">12 min read</span></div>
+    <div class="article-meta"><time datetime="2026-11-01">2026-11-01</time><span class="author">By KANTA Team</span><span class="read-time">14 min read</span></div>
   </header>
   <div class="article-content">
-    <p class="lead">Not all karaoke files are created equal. Some carry synchronized lyrics down to the syllable. Others are just audio. Some need a SoundFont to make any sound at all. Understanding the differences saves you hours of frustration — and helps you build a library that actually works.</p>
-    <div class="article-body reveal-stagger">
-      <section id="midi"><h2>Standard MIDI Files (.mid, .midi)</h2><p>MIDI files contain <strong>instructions</strong> — which notes to play, when, how loud, and on which instrument channel.</p></section>
-      <section id="kar"><h2>KAR Files — MIDI with Lyrics</h2><p>A <strong>.kar</strong> file is a Standard MIDI File with lyrics stored as text meta events on the melody track.</p></section>
-      <section id="mp3"><h2>MP3 — Compressed Audio</h3><p>MP3 files are <strong>audio-only</strong> unless paired with a separate lyrics file.</p></section>
-      <section id="wav"><h2>WAV — Uncompressed Audio</h2><p>WAV is uncompressed PCM audio. Like MP3, it's audio-only for karaoke.</p></section>
-      <section id="comparison"><h2>Quick Comparison Table</h2><table><thead><tr><th>Feature</th><th>MIDI</th><th>KAR</th><th>MP3</th><th>WAV</th></tr></thead><tbody><tr><td>Contains audio</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr><tr><td>Timed lyrics</td><td>No</td><td><strong>Yes</strong></td><td>External</td><td>External</td></tr><tr><td>Change tempo</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Artifacts</td><td>Artifacts</td></tr><tr><td>Change pitch</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Artifacts</td><td>Artifacts</td></tr><tr><td>Mute instruments</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>No</td><td>No</td></tr><tr><td>File size (4-min)</td><td>~50 KB</td><td>~60 KB</td><td>~4 MB</td><td>~40 MB</td></tr><tr><td>SoundFont required</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>No</td><td>No</td></tr></tbody></table></section>
-      <section id="which"><h2>Which Format Should You Use?</h2><p><strong>KAR</strong> for best karaoke experience. <strong>MIDI</strong> for instrumental. <strong>MP3/WAV</strong> for backing tracks.</p></section>
-      <section id="kanta"><h2>How KANTA Handles Each Format</h2><p>KAR: Full support with character-level highlighting. MIDI: Playback only. MP3/WAV: Audio only.</p></section>
-    </div>
+      <section id="standard-midi-files-(.mid,-.midi)">
+        <h2>Standard MIDI Files (.mid, .midi)</h2>
+        <p>A Standard MIDI File doesn't contain any sound at all. It contains <strong>instructions</strong> — which notes to play, when to play them, how loud, on which instrument channel, and for how long. Think of it as digital sheet music for synthesizers.</p>
+<p>When you play a MIDI file, your device's sound engine (or a SoundFont) reads those instructions and generates audio in real time. That's why the same MIDI file can sound completely different on an Android phone, an iPad, or a vintage keyboard — each device has its own instrument sounds.</p>
+<h3>What MIDI is good for:</h3>
+<ul>
+<li><strong>Tempo and pitch changes</strong> without quality loss — slow a song down to learn it, or raise the key to match your voice</li>
+<li><strong>Instrument muting</strong> — strip out the guide vocal, keep only the backing band</li>
+<li><strong>Tiny file sizes</strong> — a 4-minute song is typically 30–60 KB</li>
+<li><strong>Editable arrangements</strong> — you can rearrange, transpose, or remix the track</li>
+</ul>
+<h3>What MIDI is bad for:</h3>
+<ul>
+<li>No recorded vocals — it's all synthesized</li>
+<li>Sound quality depends entirely on your device's sound bank</li>
+<li>No lyrics by default (lyrics need a separate .kar file or embedded text events)</li>
+</ul>
+      </section>
+
+      <section id="kar-files-—-midi-with-lyrics">
+        <h2>KAR Files — MIDI with Lyrics</h2>
+        <p>A <strong>.kar</strong> file is a Standard MIDI File with one critical addition: lyrics stored as text meta events on the melody track. The Karaoke file format was designed specifically so that a player could display synchronized lyrics while the music plays.</p>
+<p>This is the native sweet spot for karaoke. You get everything MIDI offers (tempo control, pitch shifting, instrument muting) <em>plus</em> syllable-by-syllable lyric highlighting that scrolls in time with the music.</p>
+<h3>Why KAR is the karaoke standard:</h3>
+<ul>
+<li><strong>Timed lyrics</strong> — each syllable lights up as it should be sung</li>
+<li><strong>Full MIDI flexibility</strong> — change key, tempo, instruments on the fly</li>
+<li><strong>Small file size</strong> — still just tens of kilobytes per song</li>
+<li><strong>Universal support</strong> — playable on virtually every karaoke app and many hardware players</li>
+</ul>
+<h3>The catch:</h3>
+<ul>
+<li>Lyrics quality varies — some .kar files have sloppy timing or wrong lyrics</li>
+<li>Still relies on synthesized sound unless paired with a high-quality SoundFont</li>
+</ul>
+      </section>
+
+      <section id="mp3-—-compressed-audio">
+        <h2>MP3 — Compressed Audio</h2>
+        <p>MP3 is <strong>audio-only</strong>. It's a recording of a real performance — vocals, instruments, everything — compressed to about one-tenth the size of WAV. There are no instructions here, just sound.</p>
+<p>For karaoke, this means you get authentic-sounding backing tracks with real singers and real instruments. But you lose almost all the flexibility MIDI gives you.</p>
+<h3>What MP3 is good for:</h3>
+<ul>
+<li>Authentic sound — real vocals, real band, real production</li>
+<li>Universal playback — works on every device made in the last 25 years</li>
+<li>No SoundFont needed</li>
+</ul>
+<h3>What MP3 is bad for:</h3>
+<ul>
+<li><strong>No tempo or pitch changes</strong> without artifacts — slowing down makes voices sound robotic</li>
+<li><strong>No instrument muting</strong> — you can't remove the guide vocal or the drum track</li>
+<li><strong>No synchronized lyrics</strong> unless you pair it with a separate CDG or LRC file</li>
+<li>Larger files — about 3–4 MB for a 4-minute song at 192 kbps</li>
+</ul>
+      </section>
+
+      <section id="wav-—-uncompressed-audio">
+        <h2>WAV — Uncompressed Audio</h2>
+        <p>WAV is uncompressed PCM audio — a bit-for-bit copy of the original recording. No compression artifacts, no quality loss, just pure audio.</p>
+<p>For karaoke, WAV sits in the same category as MP3: it's audio-only, so you get authentic sound but no tempo/pitch control or instrument muting. The difference is purely fidelity and file size.</p>
+<h3>When to use WAV:</h3>
+<ul>
+<li>Professional backing tracks where audio quality is paramount</li>
+<li>Archival masters you want to preserve exactly</li>
+<li>Source files for editing before converting to a distribution format</li>
+</ul>
+<h3>When to avoid WAV:</h3>
+<ul>
+<li>Large libraries — a 4-minute song is ~40 MB, roughly 10× an MP3</li>
+<li>Mobile devices with limited storage</li>
+<li>Streaming or downloading over cellular connections</li>
+</ul>
+      </section>
+
+      <section id="quick-comparison-table">
+        <h2>Quick Comparison Table</h2>
+        <table>
+<thead><tr><th>Feature</th><th>MIDI</th><th>KAR</th><th>MP3</th><th>WAV</th></tr></thead>
+<tbody>
+<tr><td>Contains audio</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Timed lyrics</td><td>No</td><td><strong>Yes</strong></td><td>External only</td><td>External only</td></tr>
+<tr><td>Change tempo</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Artifacts</td><td>Artifacts</td></tr>
+<tr><td>Change pitch</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Artifacts</td><td>Artifacts</td></tr>
+<tr><td>Mute instruments</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>No</td><td>No</td></tr>
+<tr><td>File size (4-min)</td><td>~50 KB</td><td>~60 KB</td><td>~4 MB</td><td>~40 MB</td></tr>
+<tr><td>SoundFont required</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>No</td><td>No</td></tr>
+<tr><td>Authentic sound</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+</tbody>
+</table>
+      </section>
+
+      <section id="which-format-should-you-use?">
+        <h2>Which Format Should You Use?</h2>
+        <p><strong>Use KAR</strong> for the best karaoke experience. You get timed lyrics plus full MIDI flexibility — slow songs down to learn them, change the key to match your vocal range, mute the guide vocal, and keep file sizes tiny.</p>
+<p><strong>Use MIDI</strong> for instrumental tracks, practice backing, or when you want to rearrange the music. No lyrics, but maximum control.</p>
+<p><strong>Use MP3 or WAV</strong> for authentic backing tracks with real vocals and instruments. Choose MP3 for everyday use and portability; WAV for archival or professional work where quality matters more than size.</p>
+<p>Most serious karaoke singers maintain a mixed library: KAR/MIDI for practice and performance, MP3/WAV for authentic backing tracks when they want the real thing.</p>
+      </section>
+
+      <section id="how-kanta-handles-each-format">
+        <h2>How KANTA Handles Each Format</h2>
+        <p>KANTA is built around the MIDI/KAR workflow. Here's exactly what happens when you load each format:</p>
+<ul>
+<li><strong>KAR</strong> — Full support with character-level lyric highlighting, synchronized scrolling, tempo/pitch control, and instrument channel muting. KANTA reads the embedded text meta events and displays them in real time.</li>
+<li><strong>MIDI</strong> — Full playback with tempo, pitch, and instrument controls. No lyrics display unless the MIDI file contains embedded text events.</li>
+<li><strong>MP3/WAV</strong> — Audio playback only. You can play the track and sing along, but there are no lyrics, no tempo changes, no pitch shifting, and no instrument muting.</li>
+</ul>
+<p>KANTA uses TinySoundFont on Android to render MIDI/KAR with consistent, high-quality instrument sounds across devices — so your karaoke sounds the same whether you're on a Pixel, a Samsung, or a budget tablet.</p>
+      </section>
+
+
   </div>
 </article>
 </main>

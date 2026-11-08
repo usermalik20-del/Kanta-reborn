@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Converting Karaoke Files: FFmpeg, Tools, and Batch Processing">
+<meta name="theme-color" content="#111326">
+<title>Converting Karaoke Files: FFmpeg, Tools, and Batch Processing · KANTA Blog</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+<article class="article-page">
+  <header class="article-header reveal">
+    <span class="eyebrow">File Formats & Compatibility</span>
+    <h1>Converting Karaoke Files: FFmpeg, Tools, and Batch Processing</h1>
+    <div class="article-meta"><time datetime="2026-10-13">October 13, 2026</time><span class="author">By KANTA Team</span><span class="read-time">16 min read</span></div>
+  </header>
+  <div class="article-content">
+    <p class="lead">You've collected hundreds of karaoke tracks over the years. They're in different formats — MIDI, KAR, MP3+CDG, WAV, maybe even some obscure proprietary formats. Now you want them all in one place, playable on any device, with consistent metadata and synchronized lyrics. This guide walks you through the tools, commands, and workflows to make it happen.</p>
+    <div class="article-body reveal-stagger">
+      <section id="why-convert"><h2>Why Convert at All?</h2><p>Format fragmentation is the silent killer of karaoke libraries. A typical collection accumulated over a decade contains:</p>
+      <ul>
+        <li>MIDI/KAR files from early 2000s karaoke software</li>
+        <li>MP3+CDG pairs from CD ripping</li>
+        <li>WAV files from professional backing track purchases</li>
+        <li>Proprietary formats from discontinued apps (KFN, KOK, VS)</li>
+      </ul>
+      <p>Each format has different capabilities. MIDI/KAR supports tempo/pitch changes and instrument muting. Audio formats don't. CDG has pixel-perfect lyrics timing but huge file sizes. Converting to a unified format — or at least a managed set of formats — gives you:</p>
+      <ul>
+        <li><strong>Consistent playback</strong> across devices</li>
+        <li><strong>Metadata search</strong> by artist, title, genre, key, tempo</li>
+        <li><strong>Batch operations</strong> — normalize volume, strip silence, embed artwork</li>
+        <li><strong>Future-proofing</strong> — avoid format obsolescence</li>
+      </ul>
+    </section>
+
+    <section id="ffmpeg-basics"><h2>FFmpeg: The Swiss Army Knife</h2><p>FFmpeg handles virtually every karaoke-relevant format. Install it once, use it forever.</p>
+    <pre><code># macOS
+brew install ffmpeg
+
+# Linux (Debian/Ubuntu)
+sudo apt install ffmpeg
+
+# Windows
+winget install ffmpeg
+# or download from ffmpeg.org</code></pre>
+      <p>Key flags you'll use constantly:</p>
+      <table>
+        <thead><tr><th>Flag</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>-i</code></td><td>Input file</td></tr>
+          <tr><td><code>-c:a</code></td><td>Audio codec (libmp3lame, pcm_s16le, aac, flac)</td></tr>
+          <tr><td><code>-b:a</code></td><td>Audio bitrate (192k, 320k, etc.)</td></tr>
+          <tr><td><code>-ar</code></td><td>Sample rate (44100, 48000)</td></tr>
+          <tr><td><code>-ac</code></td><td>Channels (1=mono, 2=stereo)</td></tr>
+          <tr><td><code>-af</code></td><td>Audio filters (volume, normalization, silence removal)</td></tr>
+          <tr><td><code>-map_metadata</code></td><td>Copy metadata between files</td></tr>
+          <tr><td><code>-id3v2_version 3</code></td><td>Write ID3v2.3 tags (widest compatibility)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="common-conversions"><h2>Common Karaoke Conversions</h2>
+      <h3>MP3+CDG → MP3 (audio only)</h3>
+      <p>Extract audio from CDG pairs. CDG is a separate graphics file — FFmpeg can't read it directly, but you can extract the MP3 audio:</p>
+      <pre><code>ffmpeg -i song.mp3 -c:a libmp3lame -b:a 320k -id3v2_version 3 song_audio.mp3</code></pre>
+      <p><strong>Note:</strong> You lose the CDG lyrics. For full CDG→video conversion, see the <code>cdg2mp4</code> tool below.</p>
+
+      <h3>WAV → MP3 (high quality)</h3>
+      <pre><code>ffmpeg -i backing.wav -c:a libmp3lame -b:a 320k -id3v2_version 3 backing.mp3</code></pre>
+      <p>For archival, use FLAC instead:</p>
+      <pre><code>ffmpeg -i backing.wav -c:a flac -compression_level 5 backing.flac</code></pre>
+
+      <h3>MIDI → Audio (requires SoundFont)</h3>
+      <p>FFmpeg can render MIDI to audio if you have a SoundFont:</p>
+      <pre><code>ffmpeg -i song.mid -c:a libmp3lame -b:a 320k \
+  -f lavfi -i "amovie=FluidR3_GM.sf2:loop=0" \
+  -filter_complex "[0:a][1:a]amix=inputs=1" \
+  song_rendered.mp3</code></pre>
+      <p>Better: use <code>fluidsynth</code> directly for MIDI rendering (see below).</p>
+
+      <h3>Video → Audio (extract backing track)</h3>
+      <pre><code>ffmpeg -i karaoke_video.mp4 -vn -c:a libmp3lame -b:a 320k backing.mp3</code></pre>
+      <p><code>-vn</code> drops video stream. Use <code>-c:a copy</code> to extract without re-encoding if the audio is already MP3/AAC.</p>
+    </section>
+
+    <section id="metadata"><h2>Metadata: The Invisible Backbone</h2>
+      <p>Metadata lets you search, sort, and filter. Karaoke needs more than standard ID3 tags.</p>
+      
+      <h3>Essential Karaoke Tags</h3>
+      <table>
+        <thead><tr><th>Tag</th><th>ID3 Frame</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td>Title</td><td>TIT2</td><td>"Don't Stop Believin'"</td></tr>
+          <tr><td>Artist</td><td>TPE1</td><td>"Journey"</td></tr>
+          <tr><td>Album</td><td>TALB</td><td>"Escape"</td></tr>
+          <tr><td>Genre</td><td>TCON</td><td>"Rock / Karaoke"</td></tr>
+          <tr><td>Year</td><td>TDRC</td><td>"1981"</td></tr>
+          <tr><td>BPM</td><td>TBPM</td><td>"118"</td></tr>
+          <tr><td>Key</td><td>TKEY (custom)</td><td>"E major"</td></tr>
+          <tr><td>Language</td><td>TLAN</td><td>"eng"</td></tr>
+          <tr><td>Karaoke Type</td><td>Custom (TKAR)</td><td>"MIDI+Lyrics"</td></tr>
+          <tr><td>Catalog Code</td><td>Custom (TXXX:KANTA_CODE)</td><td>"JOU-001-DSB"</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Writing Tags with FFmpeg</h3>
+      <pre><code>ffmpeg -i input.mp3 -c:a copy \
+  -metadata title="Don't Stop Believin'" \
+  -metadata artist="Journey" \
+  -metadata album="Escape" \
+  -metadata genre="Rock" \
+  -metadata date="1981" \
+  -metadata comment="KANTA_CODE=JOU-001-DSB" \
+  -id3v2_version 3 \
+  output.mp3</code></pre>
+
+      <h3>Batch Tagging from CSV</h3>
+      <p>If you have a spreadsheet with metadata, use a script:</p>
+      <pre><code>#!/bin/bash
+# tag_from_csv.sh
+# CSV format: filename,title,artist,album,genre,year,bpm,key,code
+
+while IFS=',' read -r file title artist album genre year bpm key code; do
+  [[ "$file" == "filename" ]] && continue  # skip header
+  ffmpeg -i "$file" -c:a copy \
+    -metadata title="$title" \
+    -metadata artist="$artist" \
+    -metadata album="$album" \
+    -metadata genre="$genre" \
+    -metadata date="$year" \
+    -metadata comment="KANTA_CODE=$code" \
+    -id3v2_version 3 \
+    "tagged/$file"
+done < metadata.csv</code></pre>
+    </section>
+
+    <section id="normalization"><h2>Audio Normalization: Consistent Volume</h2>
+      <p>Nothing ruins a karaoke session like blasting from one track to a whisper on the next. EBU R128 loudness normalization is the broadcast standard.</p>
+
+      <h3>Single File (FFmpeg)</h3>
+      <pre><code># Analyze loudness
+ffmpeg -i song.mp3 -af loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json -f null -
+
+# Normalize to -16 LUFS (standard for streaming)
+ffmpeg -i song.mp3 -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a libmp3lame -b:a 320k song_norm.mp3</code></pre>
+
+      <h3>Batch Normalization (Python + FFmpeg)</h3>
+      <pre><code>#!/usr/bin/env python3
+# normalize_batch.py
+import subprocess, json, os, sys
+
+TARGET_LUFS = -16.0
+TARGET_TP = -1.5
+TARGET_LRA = 11.0
+
+def analyze_loudness(filepath):
+    cmd = [
+        'ffmpeg', '-i', filepath,
+        '-af', f'loudnorm=I={TARGET_LUFS}:TP={TARGET_TP}:LRA={TARGET_LRA}:print_format=json',
+        '-f', 'null', '-'
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    # FFmpeg outputs JSON to stderr for loudnorm
+    for line in result.stderr.split('\n'):
+        if line.startswith('{'):
+            return json.loads(line)
+    return None
+
+def normalize_file(input_path, output_path, measured):
+    cmd = [
+        'ffmpeg', '-y', '-i', input_path,
+        '-af', f'loudnorm=I={TARGET_LUFS}:TP={TARGET_TP}:LRA={TARGET_LRA}:'
+               f'measured_I={measured["input_i"]}:'
+               f'measured_TP={measured["input_tp"]}:'
+               f'measured_LRA={measured["input_lra"]}:'
+               f'measured_thresh={measured["input_thresh"]}:'
+               f'offset={measured["target_offset"]}:'
+               f'linear=true:print_format=summary',
+        '-c:a', 'libmp3lame', '-b:a', '320k',
+        '-id3v2_version', '3',
+        output_path
+    ]
+    subprocess.run(cmd, check=True)
+
+if __name__ == '__main__':
+    input_dir = sys.argv[1]
+    output_dir = sys.argv[2]
+    os.makedirs(output_dir, exist_ok=True)
+    
+    for fname in sorted(os.listdir(input_dir)):
+        if not fname.lower().endswith(('.mp3', '.wav', '.flac', '.m4a')):
+            continue
+        in_path = os.path.join(input_dir, fname)
+        out_path = os.path.join(output_dir, fname)
+        print(f"Analyzing {fname}...")
+        measured = analyze_loudness(in_path)
+        if measured:
+            print(f"  Input: {measured['input_i']:.1f} LUFS → Target: {TARGET_LUFS} LUFS")
+            normalize_file(in_path, out_path, measured)
+            print(f"  ✓ Done")
+        else:
+            print(f"  ✗ Failed to analyze")</code></pre>
+    </section>
+
+    <section id="silence"><h2>Trimming Silence: Clean Intros/Outros</h2>
+      <p>Many karaoke tracks have 5-10 seconds of silence at start/end. Auto-trim:</p>
+      <pre><code># Remove silence longer than 0.5s below -40dB
+ffmpeg -i input.mp3 -af "silenceremove=start_periods=1:start_threshold=-40dB:start_duration=0.5,dareverse,silenceremove=start_periods=1:start_threshold=-40dB:start_duration=0.5,dareverse" -c:a libmp3lame -b:a 320k trimmed.mp3</code></pre>
+      <p>For batch processing, the Python script above can incorporate this filter.</p>
+    </section>
+
+    <section id="specialized-tools"><h2>Specialized Karaoke Tools</h2>
+      <p>FFmpeg is general-purpose. These tools are built for karaoke:</p>
+
+      <h3>cdg2mp4 / cdg2video</h3>
+      <p>Convert MP3+CDG pairs to MP4 video with burned-in lyrics:</p>
+      <pre><code># Install (Python)
+pip install cdg2mp4
+
+# Convert
+cdg2mp4 song.mp3 song.cdg -o song.mp4
+
+# Batch
+for f in *.mp3; do
+  base="${f%.mp3}"
+  [[ -f "$base.cdg" ]] && cdg2mp4 "$f" "$base.cdg" -o "$base.mp4"
+done</code></pre>
+
+      <h3>Karaoke Mugen Tools</h3>
+      <p>The <a href="https://karaokemugen.app/" target="_blank">Karaoke Mugen</a> project has excellent open-source tools:</p>
+      <ul>
+        <li><code>kmtool</code> — metadata extraction, validation, conversion</li>
+        <li><code>karaokebase</code> — database management</li>
+      </ul>
+
+      <h3>Midicsv / Csvmidi</h3>
+      <p>Convert MIDI ↔ CSV for programmatic editing:</p>
+      <pre><code># MIDI → CSV (edit in Excel/Python)
+midicsv song.mid song.csv
+
+# CSV → MIDI
+csvmidi song.csv song.mid</code></pre>
+      <p>This lets you bulk-edit tempo, key, instrument assignments, or insert lyric events programmatically.</p>
+
+      <h3>FluidSynth (MIDI → Audio)</h3>
+      <p>Better than FFmpeg for MIDI rendering:</p>
+      <pre><code># Install
+brew install fluidsynth  # macOS
+sudo apt install fluidsynth  # Linux
+
+# Render with specific SoundFont
+fluidsynth -ni FluidR3_GM.sf2 song.mid -F song_rendered.wav -r 44100
+
+# Batch render
+for f in *.mid; do
+  fluidsynth -ni FluidR3_GM.sf2 "$f" -F "${f%.mid}.wav" -r 44100
+done</code></pre>
+    </section>
+
+    <section id="batch-workflow"><h2>Complete Batch Processing Workflow</h2>
+      <p>Here's a production-ready pipeline for a folder of mixed karaoke files:</p>
+      <pre><code>#!/bin/bash
+# karaoke_batch_process.sh
+# Usage: ./karaoke_batch_process.sh /input/folder /output/folder
+
+set -euo pipefail
+
+INPUT="$1"
+OUTPUT="$2"
+SOUNDFONT="/usr/share/sounds/sf2/FluidR3_GM.sf2"  # adjust path
+
+mkdir -p "$OUTPUT"/{audio,video,logs}
+
+log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$OUTPUT/logs/process.log"; }
+
+log "Starting batch process on $INPUT"
+
+# 1. Inventory
+find "$INPUT" -type f \( -iname '*.mid' -o -iname '*.kar' -o -iname '*.mp3' -o -iname '*.wav' -o -iname '*.flac' -o -iname '*.m4a' -o -iname '*.cdg' \) | sort > "$OUTPUT/logs/inventory.txt"
+TOTAL=$(wc -l < "$OUTPUT/logs/inventory.txt")
+log "Found $TOTAL files"
+
+# 2. Process each file
+CURRENT=0
+while IFS= read -r file; do
+  CURRENT=$((CURRENT + 1))
+  rel="${file#$INPUT/}"
+  base="${rel%.*}"
+  ext="${file##*.}"
+  out_base="$OUTPUT/audio/$base"
+  
+  log "[$CURRENT/$TOTAL] Processing: $rel"
+  
+  case "${ext,,}" in
+    mid|kar)
+      # MIDI/KAR → MP3 via FluidSynth
+      if [[ -f "$SOUNDFONT" ]]; then
+        fluidsynth -ni "$SOUNDFONT" "$file" -F "$out_base.wav" -r 44100 2>>"$OUTPUT/logs/errors.log"
+        ffmpeg -y -i "$out_base.wav" -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a libmp3lame -b:a 320k -id3v2_version 3 "$out_base.mp3" 2>>"$OUTPUT/logs/errors.log"
+        rm -f "$out_base.wav"
+        log "  ✓ Rendered MIDI → MP3"
+      else
+        log "  ⚠ SoundFont not found, skipping MIDI render"
+      fi
+      ;;
+    mp3|wav|flac|m4a)
+      # Audio: normalize + copy tags
+      ffmpeg -y -i "$file" -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a libmp3lame -b:a 320k -id3v2_version 3 -map_metadata 0 "$out_base.mp3" 2>>"$OUTPUT/logs/errors.log"
+      log "  ✓ Normalized audio"
+      ;;
+    cdg)
+      # CDG: check for matching MP3
+      mp3_file="${file%.cdg}.mp3"
+      if [[ -f "$mp3_file" ]]; then
+        cdg2mp4 "$mp3_file" "$file" -o "$OUTPUT/video/$base.mp4" 2>>"$OUTPUT/logs/errors.log"
+        log "  ✓ CDG+MP3 → MP4"
+      else
+        log "  ⚠ No matching MP3 for CDG"
+      fi
+      ;;
+  esac
+done < "$OUTPUT/logs/inventory.txt"
+
+log "Batch complete. Output in $OUTPUT/audio/ and $OUTPUT/video/"
+log "Errors (if any) in $OUTPUT/logs/errors.log"</code></pre>
+    </section>
+
+    <section id="kanta-import"><h2>Importing into KANTA</h2>
+      <p>After conversion, import your library into KANTA:</p>
+      <ol>
+        <li>Open KANTA → <strong>My Songbook</strong> → <strong>Import</strong></li>
+        <li>Select your processed folder</li>
+        <li>KANTA reads embedded metadata (title, artist, BPM, key, custom KANTA_CODE)</li>
+        <li>Review and confirm matches</li>
+        <li>Your library is now searchable, filterable, and ready for offline use</li>
+      </ol>
+      <p>KANTA's <code>.kanta-book</code> export format preserves all metadata for backup or sharing (see <a href="/blog/karaoke-songbook-export-sharing-privacy">Private Songbook Export</a>).</p>
+    </section>
+
+    <section id="troubleshooting"><h2>Troubleshooting Common Issues</h2>
+      <table>
+        <thead><tr><th>Problem</th><th>Cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>MIDI renders silently</td><td>No SoundFont or wrong bank</td><td>Verify SoundFont path; try GeneralUser GS</td></tr>
+          <tr><td>CDG lyrics out of sync</td><td>Frame rate mismatch</td><td>Use <code>cdg2mp4 --fps 30</code> or re-rip</td></tr>
+          <tr><td>Volume still inconsistent</td><td>Loudnorm measured wrong</td><td>Re-analyze with <code>print_format=json</code>, use measured values</td></tr>
+          <tr><td>Tags not showing in KANTA</td><td>ID3v2.4 vs v2.3</td><td>Always use <code>-id3v2_version 3</code></td></tr>
+          <tr><td>Batch script fails on spaces</td><td>Unquoted variables</td><td>Quote all paths: <code>"$file"</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="summary"><h2>Quick Reference Card</h2>
+      <table>
+        <thead><tr><th>Task</th><th>Command</th></tr></thead>
+        <tbody>
+          <tr><td>MP3+CDG → MP4</td><td><code>cdg2mp4 audio.mp3 lyrics.cdg -o out.mp4</code></td></tr>
+          <tr><td>MIDI → MP3</td><td><code>fluidsynth -ni soundfont.sf2 in.mid -F out.wav && ffmpeg -i out.wav -c:a libmp3lame -b:a 320k out.mp3</code></td></tr>
+          <tr><td>Normalize loudness</td><td><code>ffmpeg -i in.mp3 -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a libmp3lame -b:a 320k out.mp3</code></td></tr>
+          <tr><td>Write metadata</td><td><code>ffmpeg -i in.mp3 -c:a copy -metadata title="X" -metadata artist="Y" -id3v2_version 3 out.mp3</code></td></tr>
+          <tr><td>Trim silence</td><td><code>ffmpeg -i in.mp3 -af silenceremove=1:0:-40dB:0.5,dareverse,silenceremove=1:0:-40dB:0.5,dareverse out.mp3</code></td></tr>
+          <tr><td>Extract audio from video</td><td><code>ffmpeg -i in.mp4 -vn -c:a copy out.m4a</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</article>
+</main>
+</body>
+</html>

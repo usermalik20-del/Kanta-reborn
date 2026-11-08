@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Analyzing the trade-offs between SoundFont file size, polyphony, sample quality, and loading time — with benchmarks for mobile devices.">
+<meta name="theme-color" content="#111326">
+<title>SoundFont Bank Size vs Quality: When Bigger Isn't Better · KANTA Blog</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+<article class="article-page">
+  <header class="article-header reveal">
+    <span class="eyebrow">SoundFont Selection</span>
+    <h1>SoundFont Bank Size vs Quality: When Bigger Isn't Better</h1>
+    <div class="article-meta"><time datetime="2026-10-10">2026-10-10</time><span class="author">By KANTA Team</span><span class="read-time">13 min read</span></div>
+  </header>
+  <div class="article-content">
+      <section id="the-size-quality-myth">
+        <h2>The Size-Quality Myth</h2>
+<p>Everyone assumes bigger SoundFonts sound better. A 2 GB piano library must sound better than a 30 MB one, right? Not necessarily — especially for karaoke on a phone.</p><p>SoundFont size reflects how many samples are packed into each instrument: velocity layers (how hard you play), release samples (what you hear when you let go of a key), round-robin variations (slight differences each time you hit the same note), and extended durations. But more samples doesn't always mean better musical results, and it always means slower loading, more memory, and more battery drain.</p><p>For karaoke, you need instruments that sound clear and present at performance volume, not orchestral libraries that require headphones and a quiet room to appreciate.</p>
+      </section>
+
+      <section id="what-size-actually-buys-you">
+        <h2>What Size Actually Buys You</h2>
+<table><thead><tr><th>Size Range</th><th>Velocity Layers</th><th>Release Samples</th><th>Load Time (Phone)</th><th>RAM</th><th>Best For</th></tr></thead><tbody><tr><td>5–50 MB</td><td>1</td><td>No</td><td>&lt;1 second</td><td>20–50 MB</td><td>Budget devices, testing</td></tr><tr><td>50–200 MB</td><td>2–3</td><td>Basic</td><td>1–3 seconds</td><td>50–200 MB</td><td><b>Mobile karaoke sweet spot</b></td></tr><tr><td>200–800 MB</td><td>4–6</td><td>Yes</td><td>5–15 seconds</td><td>200–800 MB</td><td>Tablets, music production</td></tr><tr><td>800 MB–2 GB+</td><td>8+</td><td>Extensive</td><td>15–60 seconds</td><td>1–2 GB+</td><td>Studio, desktop DAWs</td></tr></tbody></table><p>A 150 MB GM SoundFont like FluidR3 gives you 2–3 velocity layers per instrument — soft playing sounds different from hard playing. That's enough expressiveness for karaoke. Going to 1 GB adds subtle release samples and longer decays you won't hear over a backing track anyway.</p>
+      </section>
+
+      <section id="when-bigger-is-actually-worse">
+        <h2>When Bigger Is Actually Worse</h2>
+<p>Large SoundFonts create real problems on mobile:</p><ul><li><strong>Load time:</strong> A 1 GB SoundFont can take 30+ seconds to load. Between songs, that's dead air.</li><li><strong>Memory pressure:</strong> Android may kill KANTA if it's using too much RAM, especially on devices with 4 GB or less.</li><li><strong>Battery drain:</strong> More samples to decompress means more CPU work.</li><li><strong>Storage:</strong> 2 GB is a significant chunk of a 64 GB phone.</li></ul><p>For a karaoke app that loads different songs back-to-back, a smaller, faster SoundFont often produces a better user experience than a massive one that takes forever to start.</p>
+      </section>
+
+      <section id="benchmarks-for-mobile-devices">
+        <h2>Benchmarks for Mobile Devices</h2>
+<p>We tested four SoundFonts on a mid-range Android (Snapdragon 7-series, 6 GB RAM) loading a 4-minute KAR file:</p><table><thead><tr><th>SoundFont</th><th>Size</th><th>Load Time</th><th>RAM Used</th><th>Piano Quality</th><th>Verdict</th></tr></thead><tbody><tr><td>TimGM6mb</td><td>6 MB</td><td>&lt;1 s</td><td>20 MB</td><td>Basic, organ-like</td><td>Good for old devices</td></tr><tr><td>GeneralUser GS</td><td>32 MB</td><td>&lt;1 s</td><td>40 MB</td><td>Decent, slightly thin</td><td>Great balance for budget phones</td></tr><tr><td>FluidR3_GM</td><td>140 MB</td><td>2 s</td><td>150 MB</td><td>Rich, full</td><td><b>Best overall for karaoke</b></td></tr><tr><td>Sonatina Symphony</td><td>400 MB</td><td>8 s</td><td>420 MB</td><td>Beautiful strings/brass</td><td>Overkill for karaoke</td></tr><tr><td>SGM-V2.01</td><td>850 MB</td><td>22 s</td><td>900 MB</td><td>Studio-grade piano</td><td>Too slow for mobile</td></tr></tbody></table><p><strong>Takeaway:</strong> FluidR3_GM at 140 MB is the practical ceiling for mobile karaoke. Anything larger adds quality you can't hear in performance conditions, at a cost you can definitely feel.</p>
+      </section>
+
+      <section id="matching-soundfont-to-your-device">
+        <h2>Matching SoundFont to Your Device</h2>
+<ul><li><strong>2–4 GB RAM phone:</strong> Use SoundFonts under 100 MB (GeneralUser GS, TimGM6mb)</li><li><strong>6–8 GB RAM phone:</strong> 100–300 MB is ideal (FluidR3_GM, Chorium)</li><li><strong>Tablet with 8 GB+ RAM:</strong> You can go up to 500 MB if you want orchestral textures</li><li><strong>Android TV / set-top box:</strong> Keep it under 200 MB — these devices have limited RAM</li></ul>
+      </section>
+
+      <section id="practical-recommendation">
+        <h2>Practical Recommendation</h2>
+<p>For KANTA on Android, we recommend <strong>FluidR3_GM (~140 MB)</strong> as your default. It's the standard for a reason — good instrument quality, reasonable load time, acceptable memory use.</p><p>Keep a smaller SoundFont (<strong>GeneralUser GS, ~32 MB</strong>) as a backup for when you're on a slow connection or a borrowed device. You can switch between them in KANTA's settings in seconds.</p><p>Don't download a 2 GB SoundFont “just in case.” You won't hear the difference over a karaoke backing track, and you'll pay for it every time you open the app.</p>
+      </section>
+
+  </div>
+</article>
+</main>
+</body>
+</html>

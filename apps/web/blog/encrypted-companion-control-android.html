@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="How KANTA's experimental encrypted Android-to-Android companion protocol works — pairing, encryption, session management, and security considerations.">
+<meta name="theme-color" content="#111326">
+<title>Encrypted Companion Control: Remote Karaoke from a Second Android · KANTA Blog</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+<article class="article-page">
+  <header class="article-header reveal">
+    <span class="eyebrow">Technical Deep Dives</span>
+    <h1>Encrypted Companion Control: Remote Karaoke from a Second Android</h1>
+    <div class="article-meta"><time datetime="2026-09-16">2026-09-16</time><span class="author">By KANTA Team</span><span class="read-time">14 min read</span></div>
+  </header>
+  <div class="article-content">
+      <section id="what-companion-control-is">
+        <h2>What Companion Control Is</h2>
+<p>KANTA's companion feature lets you control one Android device running KANTA from a second Android device. Think of it as a remote control for karaoke — your phone (or tablet) becomes the wireless controller while the host device connects to the TV and speakers.</p><p>This is ideal for karaoke hosts who want to walk around the room, queue songs, and manage the show without touching the device connected to the display.</p>
+      </section>
+
+      <section id="two-paths:-legacy-and-encrypted">
+        <h2>Two Paths: Legacy and Encrypted</h2>
+<table><thead><tr><th></th><th>Legacy Bonjour/PIN</th><th>Encrypted KCP1</th></tr></thead><tbody><tr><td>Platform</td><td>Android only</td><td>Android host + iOS client</td></tr><tr><td>Discovery</td><td>Bonjour (mDNS)</td><td>Local network scan</td></tr><tr><td>Pairing</td><td>PIN code</td><td>Encrypted key exchange</td></tr><tr><td>Data</td><td>Plaintext over network</td><td>End-to-end encrypted</td></tr><tr><td>Security</td><td>Basic</td><td>AES-256 encrypted session</td></tr><tr><td>Devices</td><td>Android ↔ Android</td><td>Android host, iOS/Android client</td></tr></tbody></table><p>The legacy path works but sends data in plaintext over your local network. The encrypted KCP1 path is the modern, secure option.</p>
+      </section>
+
+      <section id="how-kcp1-encryption-works">
+        <h2>How KCP1 Encryption Works</h2>
+<p>KCP1 (KANTA Companion Protocol 1) uses:</p><ul><li><strong>Device-to-device key exchange</strong> — Pairing establishes a shared secret without transmitting it over the network</li><li><strong>AES-256 session encryption</strong> — All commands (song selection, queue, transport) are encrypted for the session</li><li><strong>Per-session keys</strong> — A new key is generated for each connection; compromising one session doesn't expose others</li><li><strong>No cloud involvement</strong> — Everything happens on your local network. No data leaves your devices.</li></ul><p>Even if someone on your Wi-Fi is sniffing packets, they see only encrypted noise.</p>
+      </section>
+
+      <section id="pairing-process">
+        <h2>Pairing Process</h2>
+<ol><li>On the host device: <strong>More → Companion → Enable Companion Mode</strong></li><li>On the client device: <strong>More → Companion → Control an Android Host</strong></li><li>The client scans the local network and discovers the host</li><li>Tap to pair — an encrypted key exchange happens automatically</li><li>Once paired, the client shows a remote control interface: song list, queue, play/pause, next, previous, volume</li></ol><p>Pairing is remembered. Future connections are automatic when both devices are on the same network.</p>
+      </section>
+
+      <section id="session-management">
+        <h2>Session Management</h2>
+<ul><li><strong>One host, multiple clients</strong> — Several controllers can connect to one host (useful for a karaoke host with an assistant)</li><li><strong>Session timeout</strong> — Idle connections disconnect after 10 minutes</li><li><strong>Reconnect</strong> — If the client loses Wi-Fi momentarily, it auto-reconnects and resumes</li><li><strong>Disconnect</strong> — Either side can end the session; the host continues playing uninterrupted</li></ul>
+      </section>
+
+      <section id="security-considerations">
+        <h2>Security Considerations</h2>
+<ul><li><strong>Local network only</strong> — Companion control never uses the internet. It works on airplane mode if both devices are on the same Wi-Fi.</li><li><strong>Trust your network</strong> — Don't use companion control on public Wi-Fi (airports, cafes). Use it on your home or venue network.</li><li><strong>Physical access matters</strong> — Anyone on your network can attempt to pair. Keep your venue Wi-Fi secured with WPA2/WPA3.</li><li><strong>No data is stored</strong> — Session keys are ephemeral. No pairing data is saved to the cloud.</li></ul>
+      </section>
+
+      <section id="use-cases">
+        <h2>Use Cases</h2>
+<ul><li><strong>Karaoke host:</strong> Phone connected to TV, tablet in hand controlling the queue from across the room</li><li><strong>Duet partners:</strong> One person manages songs while the other warms up</li><li><strong>Venue setup:</strong> Host device locked in a equipment rack, controlled from a phone</li><li><strong>Accessibility:</strong> Controller device placed where it's easier to reach than the host</li></ul>
+      </section>
+
+  </div>
+</article>
+</main>
+</body>
+</html>

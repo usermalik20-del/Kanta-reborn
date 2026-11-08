@@ -7,7 +7,7 @@ const blogPosts = [
     category: "File Formats & Compatibility",
     categorySlug: "file-formats",
     date: "2026-11-01",
-    readTime: "12 min read",
+    readTime: "5 min read",
     author: "KANTA Team",
     featured: true
   },
@@ -18,7 +18,7 @@ const blogPosts = [
     category: "SoundFont Selection",
     categorySlug: "soundfonts",
     date: "2026-10-28",
-    readTime: "15 min read",
+    readTime: "4 min read",
     author: "KANTA Team",
     featured: true
   },
@@ -29,7 +29,7 @@ const blogPosts = [
     category: "Library Management",
     categorySlug: "library-management",
     date: "2026-10-25",
-    readTime: "10 min read",
+    readTime: "4 min read",
     author: "KANTA Team",
     featured: true
   },
@@ -40,7 +40,7 @@ const blogPosts = [
     category: "Technical Deep Dives",
     categorySlug: "technical-deep-dives",
     date: "2026-10-22",
-    readTime: "18 min read",
+    readTime: "5 min read",
     author: "KANTA Team",
     featured: true
   },
@@ -51,7 +51,7 @@ const blogPosts = [
     category: "Vocal Practice & Technique",
     categorySlug: "vocal-practice",
     date: "2026-10-16",
-    readTime: "14 min read",
+    readTime: "5 min read",
     author: "KANTA Team",
     featured: true
   },
@@ -62,7 +62,7 @@ const blogPosts = [
     category: "File Formats & Compatibility",
     categorySlug: "file-formats",
     date: "2026-10-13",
-    readTime: "16 min read",
+    readTime: "7 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -73,7 +73,7 @@ const blogPosts = [
     category: "SoundFont Selection",
     categorySlug: "soundfonts",
     date: "2026-10-10",
-    readTime: "13 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -84,7 +84,7 @@ const blogPosts = [
     category: "Library Management",
     categorySlug: "library-management",
     date: "2026-10-07",
-    readTime: "9 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -95,7 +95,7 @@ const blogPosts = [
     category: "Stage & Visuals",
     categorySlug: "stage-setup",
     date: "2026-10-04",
-    readTime: "11 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -106,7 +106,7 @@ const blogPosts = [
     category: "Vocal Practice & Technique",
     categorySlug: "vocal-practice",
     date: "2026-10-01",
-    readTime: "12 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -117,7 +117,7 @@ const blogPosts = [
     category: "Technical Deep Dives",
     categorySlug: "technical-deep-dives",
     date: "2026-09-28",
-    readTime: "17 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -128,7 +128,7 @@ const blogPosts = [
     category: "Stage & Visuals",
     categorySlug: "stage-setup",
     date: "2026-09-25",
-    readTime: "8 min read",
+    readTime: "2 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -139,7 +139,7 @@ const blogPosts = [
     category: "Library Management",
     categorySlug: "library-management",
     date: "2026-09-22",
-    readTime: "10 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -150,7 +150,7 @@ const blogPosts = [
     category: "Vocal Practice & Technique",
     categorySlug: "vocal-practice",
     date: "2026-09-19",
-    readTime: "11 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   },
@@ -161,19 +161,19 @@ const blogPosts = [
     category: "Technical Deep Dives",
     categorySlug: "technical-deep-dives",
     date: "2026-09-16",
-    readTime: "14 min read",
+    readTime: "3 min read",
     author: "KANTA Team",
     featured: false
   }
 ];
 
 const categories = [
-  { slug: "file-formats", name: "File Formats & Compatibility", icon: "📁", count: 8 },
-  { slug: "soundfonts", name: "SoundFont Selection", icon: "🎹", count: 6 },
-  { slug: "stage-setup", name: "Stage & Visuals", icon: "🎭", count: 5 },
-  { slug: "vocal-practice", name: "Vocal Practice & Technique", icon: "🎤", count: 7 },
-  { slug: "library-management", name: "Library Management", icon: "📚", count: 6 },
-  { slug: "technical-deep-dives", name: "Technical Deep Dives", icon: "⚙️", count: 4 }
+  { slug: "file-formats", name: "File Formats & Compatibility", icon: "📁", count: 3 },
+  { slug: "soundfonts", name: "SoundFont Selection", icon: "🎹", count: 2 },
+  { slug: "stage-setup", name: "Stage & Visuals", icon: "🎭", count: 2 },
+  { slug: "vocal-practice", name: "Vocal Practice & Technique", icon: "🎤", count: 3 },
+  { slug: "library-management", name: "Library Management", icon: "📚", count: 3 },
+  { slug: "technical-deep-dives", name: "Technical Deep Dives", icon: "⚙️", count: 3 }
 ];
 
 function formatDate(dateStr) {

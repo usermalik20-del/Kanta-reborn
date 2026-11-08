@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="How KANTA's encrypted .kanta-book format works, generating CSV exports for spreadsheets, and best practices for sharing song lists privately.">
+<meta name="theme-color" content="#111326">
+<title>Private Songbook Export: Sharing Your Catalog Without Sharing Your Music · KANTA Blog</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+<article class="article-page">
+  <header class="article-header reveal">
+    <span class="eyebrow">Library Management</span>
+    <h1>Private Songbook Export: Sharing Your Catalog Without Sharing Your Music</h1>
+    <div class="article-meta"><time datetime="2026-10-07">2026-10-07</time><span class="author">By KANTA Team</span><span class="read-time">9 min read</span></div>
+  </header>
+  <div class="article-content">
+      <section id="what-.kanta-book-is">
+        <h2>What .kanta-book Is</h2>
+<p>A <code>.kanta-book</code> file is KANTA's encrypted container for your song catalog. It doesn't contain audio — it contains <strong>metadata</strong>: your song list, artists, genres, keys, tempos, custom codes, playlists, notes, and performance history.</p><p>Think of it as your library's DNA, not its body. You can export it, back it up, share it with a duet partner, or import it into KANTA on a new device — all without copying a single MP3 or KAR file.</p>
+      </section>
+
+      <section id="why-export-your-catalog?">
+        <h2>Why Export Your Catalog?</h2>
+<ul><li><strong>Disaster recovery</strong> — If your phone breaks or is lost, your catalog survives. You can rebuild your library faster by importing the .kanta-book and re-downloading only the songs you need.</li><li><strong>Device migration</strong> — Moving from an old Android to a new one? Export, transfer one file, import. Your playlists and preferences come with you.</li><li><strong>Sharing without distributing music</strong> — You can share your song list and arrangements with a duet partner without sending them copyrighted audio files.</li><li><strong>Offline reference</strong> — Print or view your catalog without opening the full app.</li></ul>
+      </section>
+
+      <section id="how-to-export">
+        <h2>How to Export</h2>
+<ol><li>Open <strong>KANTA → My Songbook</strong></li><li>Tap <strong>Export → .kanta-book</strong></li><li>Choose what to include: full catalog, current playlist, or selected songs</li><li>Optionally add a password for encryption</li><li>Save to Downloads, Google Drive, or share directly</li></ol><p>The export runs entirely on your device. No data is uploaded to KANTA servers.</p>
+      </section>
+
+      <section id="csv-export-for-spreadsheets">
+        <h2>CSV Export for Spreadsheets</h2>
+<p>Sometimes you want your catalog in a spreadsheet — for planning a gig, tracking a repertoire, or just browsing in Excel.</p><p>KANTA can export CSV with these columns:</p><ul><li>Song Title</li><li>Artist</li><li>Genre</li><li>Language (ENG / TAG / MIX)</li><li>Original Key</li><li>BPM</li><li>KANTA Code</li><li>Format (KAR / MIDI / MP3 / WAV)</li><li>File Path</li><li>Last Played</li><li>Play Count</li><li>Best Score</li><li>Notes</li></ul><p>Open it in Google Sheets, Excel, or Numbers. Filter by language, sort by BPM for setlist planning, or count your OPM vs English repertoire.</p>
+      </section>
+
+      <section id="encryption-and-privacy">
+        <h2>Encryption and Privacy</h2>
+<p>.kanta-book files use AES-256 encryption. When you set a password:</p><ul><li>The file is encrypted on your device before it ever leaves storage</li><li>Without the password, the contents are unreadable — not even KANTA can open it</li><li>The encryption key is derived from your password and is not stored anywhere</li><li>If you forget the password, the file is unrecoverable</li></ul><p>If you don't set a password, the .kanta-book is still packaged (not plain text) but not encrypted. Use a password when sharing with others or storing in cloud services.</p>
+      </section>
+
+      <section id="sharing-your-catalog-(without-sharing-your-music)">
+        <h2>Sharing Your Catalog (Without Sharing Your Music)</h2>
+<p>This is the most common use case:</p><ol><li>You and a duet partner both use KANTA</li><li>You export your catalog as a password-protected .kanta-book</li><li>You send them the file (Signal, WhatsApp, email, Bluetooth)</li><li>They import it into their KANTA</li><li>They see your song list, keys, tempos, and notes — but not your audio files</li><li>They download or locate the songs themselves, using your catalog as a reference</li></ol><p>This respects copyright: you're sharing <em>information about</em> songs, not the songs themselves.</p>
+      </section>
+
+      <section id="importing-into-a-new-device">
+        <h2>Importing into a New Device</h2>
+<ol><li>Install KANTA on the new device</li><li>Transfer the .kanta-book file (USB, cloud, Bluetooth, email)</li><li>Open <strong>KANTA → My Songbook → Import</strong></li><li>Select the .kanta-book file</li><li>Enter the password if it's encrypted</li><li>KANTA rebuilds your catalog — songs, playlists, keys, tempos, all restored</li></ol><p>Note: Importing restores your catalog metadata. The actual audio files (KAR, MP3, etc.) still need to be present on the new device or re-downloaded.</p>
+      </section>
+
+      <section id="backup-best-practices">
+        <h2>Backup Best Practices</h2>
+<ul><li><strong>Export quarterly</strong> — or after every major addition to your library</li><li><strong>Store offsite</strong> — keep a copy in encrypted cloud storage or on a drive at another location</li><li><strong>Test your restore</strong> — occasionally import your backup on a spare device to verify it works</li><li><strong>Keep the password safe</strong> — use a password manager. If you lose it, the backup is gone.</li></ul>
+      </section>
+
+  </div>
+</article>
+</main>
+</body>
+</html>

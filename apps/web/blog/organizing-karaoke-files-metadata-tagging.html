@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Embedding metadata in MIDI/KAR/MP3 files, using KANTA's code system, and building searchable catalogs that work across platforms.">
+<meta name="theme-color" content="#111326">
+<title>Organizing Karaoke Files: Metadata, Tagging, and Search Strategies · KANTA Blog</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+<article class="article-page">
+  <header class="article-header reveal">
+    <span class="eyebrow">Library Management</span>
+    <h1>Organizing Karaoke Files: Metadata, Tagging, and Search Strategies</h1>
+    <div class="article-meta"><time datetime="2026-09-22">2026-09-22</time><span class="author">By KANTA Team</span><span class="read-time">10 min read</span></div>
+  </header>
+  <div class="article-content">
+      <section id="metadata:-the-foundation-of-a-searchable-library">
+        <h2>Metadata: The Foundation of a Searchable Library</h2>
+<p>A file named <code>song01.mp3</code> tells you nothing. Metadata — embedded title, artist, genre, key, BPM, language — is what turns a folder of files into a library you can actually use.</p><p>KANTA reads embedded metadata to power search, filtering, sorting, and display. Without it, every song is “Unknown Artist” and you're scrolling through hundreds of files to find one.</p>
+      </section>
+
+      <section id="essential-karaoke-metadata-fields">
+        <h2>Essential Karaoke Metadata Fields</h2>
+<table><thead><tr><th>Field</th><th>Standard Tag</th><th>Example</th><th>KANTA Use</th></tr></thead><tbody><tr><td>Title</td><td>TIT2</td><td>“Don't Stop Believin'”</td><td>Display in song list</td></tr><tr><td>Artist</td><td>TPE1</td><td>“Journey”</td><td>Filter by artist</td></tr><tr><td>Genre</td><td>TCON</td><td>“OPM / Rock”</td><td>Browse by genre</td></tr><tr><td>Year</td><td>TDRC</td><td>“1981”</td><td>Sort by era</td></tr><tr><td>BPM</td><td>TBPM</td><td>“118”</td><td>Practice tempo, setlist energy</td></tr><tr><td>Key</td><td>TKEY (custom)</td><td>“E major”</td><td>Match to vocal range</td></tr><tr><td>Language</td><td>TLAN</td><td>“eng” / “tgl”</td><td>Filter ENG / TAG / MIX</td></tr><tr><td>KANTA Code</td><td>TXXX:KANTA_CODE</td><td>“JOU-001-ENG-E-118”</td><td>Unique catalog identifier</td></tr><tr><td>Format</td><td>TXXX:FORMAT</td><td>“KAR”</td><td>Group by file type</td></tr></tbody></table>
+      </section>
+
+      <section id="the-kanta-code-system">
+        <h2>The KANTA Code System</h2>
+<p>For large libraries, embed a code directly in each file:</p><pre><code>[ARTIST_INITIALS]-[3-DIGIT_NUM]-[LANGUAGE]-[KEY]-[BPM]</code></pre><p><strong>Example:</strong> <code>JOU-001-ENG-E-118</code> (Journey, song 1, English, E major, 118 BPM)</p><p>Store it in a custom ID3 field (<code>TXXX:KANTA_CODE</code>) and/or the filename. KANTA indexes both, so you can search “JOU” to find all Journey songs, or “118” to find all 118 BPM tracks for a high-energy set.</p>
+      </section>
+
+      <section id="tagging-tools">
+        <h2>Tagging Tools</h2>
+<ul><li><strong>Mp3tag</strong> (Windows/Mac) — The gold standard for batch ID3 editing. Supports custom fields like KANTA_CODE.</li><li><strong>Kid3</strong> (Linux/Windows/Mac) — Free, open-source, excellent batch operations.</li><li><strong>mutagen</strong> (Python) — Script batch tagging from a CSV catalog.</li><li><strong>MusicBrainz Picard</strong> — Auto-tag from online databases (good for MP3, less useful for KAR).</li></ul><p>For KAR/MIDI files, metadata options are more limited. Use the filename and companion files (a .txt or .csv alongside each .kar) to store key, BPM, and language.</p>
+      </section>
+
+      <section id="batch-tagging-from-csv">
+        <h2>Batch Tagging from CSV</h2>
+<p>If you maintain a spreadsheet catalog, you can batch-apply tags:</p><pre><code># Python + mutagen example
+from mutagen import File
+from mutagen.id3 import ID3, TIT2, TPE1, TCON, TDRC
+
+import csv
+
+with open('catalog.csv') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        audio = File(row['filename'])
+        if audio is None:
+            continue
+        audio['TIT2'] = TIT2(encoding=3, text=row['title'])
+        audio['TPE1'] = TPE1(encoding=3, text=row['artist'])
+        audio['TCON'] = TCON(encoding=3, text=row['genre'])
+        audio['TDRC'] = TDRC(encoding=3, text=row['year'])
+        audio.tags.add(TXXX(encoding=3, desc='KANTA_CODE', text=row['kanta_code']))
+        audio.save()</code></pre>
+      </section>
+
+      <section id="folder-structure-vs-metadata">
+        <h2>Folder Structure vs Metadata</h2>
+<p>Don't rely on folders alone. Use both:</p><ul><li><strong>Folders</strong> for broad organization (format, language, genre)</li><li><strong>Metadata</strong> for precise search (artist, BPM, key, code)</li></ul><p>KANTA indexes metadata across all folders simultaneously — you can search “Adele” and find her songs regardless of which folder they're in.</p>
+      </section>
+
+      <section id="naming-conventions">
+        <h2>Naming Conventions</h2>
+<p>Consistent filenames make your library navigable even outside KANTA:</p><pre><code>Artist - Song Title (Key) [BPM].ext</code></pre><p><strong>Examples:</strong></p><ul><li><code>Journey - Don't Stop Believin' (E) [118].kar</code></li><li><code>SB19 - MapA (C#) [128].kar</code></li><li><code>Adele - Hello (G) [76].mid</code></li></ul><p>Avoid special characters (<code>colon slash backslash asterisk question mark less-than greater-than pipe</code>) — they cause problems on some filesystems and apps.</p>
+      </section>
+
+      <section id="search-strategies-in-kanta">
+        <h2>Search Strategies in KANTA</h2>
+<p>Once tagged, you can:</p><ul><li>Search by artist, title, or KANTA code</li><li>Filter by language (ENG, TAG, MIX)</li><li>Sort by BPM for energy-matched setlists</li><li>Group by key to find songs in your vocal range</li><li>Create playlists by genre, era, or event type</li></ul><p>A tagged library of 2,000 songs is faster to navigate than an untagged library of 50.</p>
+      </section>
+
+  </div>
+</article>
+</main>
+</body>
+</html>
