@@ -2209,10 +2209,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           new LinearLayout.LayoutParams(0, -2, 1));
       boolean active = bank.fileName.equals(session.activeSoundFontFileName());
       if (active) item.addView(text("ACTIVE", 12, CYAN));
-    body.addView(button("Download FluidR3 GM (~140 MB)", () -> downloadFluidR3GM()));
       else item.addView(button("Use", () -> session.selectSoundFont(bank.fileName)));
       body.addView(item);
     }
+    body.addView(button("Download FluidR3 GM (~140 MB)", () -> downloadFluidR3GM()));
     body.addView(
         text(
             "Imported MIDI/KAR and audio", 20, ACCENT));
