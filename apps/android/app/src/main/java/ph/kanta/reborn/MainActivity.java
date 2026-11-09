@@ -50,6 +50,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       PANEL = KantaTheme.SURFACE_ELEVATED,
       CYAN = KantaTheme.PRIMARY_CYAN,
       ACCENT = KantaTheme.PRIMARY_CYAN;
+
+  private static final String FLUIDR3_GM_URL = "https://ftp.osuosl.org/pub/freesound/fluidsynth/FluidR3_GM.sf2";
+  private static final String FLUIDR3_GM_NAME = "FluidR3 GM.sf2";
+  private static final String FLUIDR3_GM_LICENSE = "fluidr3gm-license.txt";
+  private static final long FLUIDR3_GM_SIZE = 140L * 1024L * 1024L;
   private SessionController session;
   private LinearLayout root, body, results, stagePane, navigationTabs;
   private View appHeader;
@@ -2203,6 +2208,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           new LinearLayout.LayoutParams(0, -2, 1));
       boolean active = bank.fileName.equals(session.activeSoundFontFileName());
       if (active) item.addView(text("ACTIVE", 12, CYAN));
+    body.addView(button("Download FluidR3 GM (~140 MB)", () -> downloadFluidR3GM()));
       else item.addView(button("Use", () -> session.selectSoundFont(bank.fileName)));
       body.addView(item);
     }
@@ -2268,6 +2274,105 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(button("Music rights", () -> policy("legal.txt", "Music rights")));
   }
 
+
+  private void downloadFluidR3GM() {
+    if (session.importing) return;
+    session.importing = true;
+    session.libraryImporting = true;
+    session.message = "Preparing FluidR3 GM download…";
+    session.publish();
+    io.execute(() -> {
+      File destination = new File(repository.media, FLUIDR3_GM_NAME);
+      if (destination.exists()) {
+        main.post(() -> {
+          session.importing = false;
+          session.libraryImporting = false;
+          session.message = "FluidR3 GM already exists. Use it from SoundFonts list.";
+          session.publish();
+        });
+        return;
+      }
+      File temp = null;
+      try {
+        temp = File.createTempFile("fluidr3gm-", ".tmp", repository.media);
+        long totalBytes = FLUIDR3_GM_SIZE;
+        long downloaded = 0;
+        main.post(() -> {
+          session.message = "Downloading FluidR3 GM… 0%";
+          session.publish();
+        });
+        try (java.io.InputStream in = new java.net.URL(FLUIDR3_GM_URL).openStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
+          byte[] buffer = new byte[65536];
+          int count;
+          while ((count = in.read(buffer)) != -1) {
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException();
+            out.write(buffer, 0, count);
+            downloaded += count;
+            if (downloaded % (1024 * 1024) < count) {
+              long finalDownloaded = downloaded;
+              main.post(() -> {
+                int pct = totalBytes > 0 ? (int) (finalDownloaded * 100 / totalBytes) : 0;
+                session.message = "Downloading FluidR3 GM… " + pct + "% (" + formatBytes(finalDownloaded) + " / " + formatBytes(totalBytes) + ")";
+                session.publish();
+              });
+            }
+          }
+          out.getFD().sync();
+        }
+        main.post(() -> {
+          session.message = "Validating FluidR3 GM…";
+          session.publish();
+        });
+        long test = NativeSoundFont.open(temp.getAbsolutePath());
+        if (test == 0) throw new IOException("Downloaded file is not a valid SoundFont");
+        NativeSoundFont.close(test);
+        if (!temp.renameTo(destination)) throw new IOException("Cannot save SoundFont");
+        final String licenseText = readAssetText(FLUIDR3_GM_LICENSE);
+        final File licenseFile = new File(repository.media, "fluidr3gm-license.txt");
+        try (java.io.FileWriter fw = new java.io.FileWriter(licenseFile)) {
+          fw.write(licenseText);
+        }
+        main.post(() -> {
+          session.importing = false;
+          session.libraryImporting = false;
+          session.message = "FluidR3 GM downloaded successfully! Select it from SoundFonts.";
+          session.publish();
+        });
+      } catch (Exception e) {
+        if (temp != null) temp.delete();
+        main.post(() -> {
+          session.importing = false;
+          session.libraryImporting = false;
+          session.message = "Download failed: " + e.getMessage();
+          session.publish();
+        });
+      }
+    });
+  }
+
+  private String formatBytes(long bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return String.format(Locale.ROOT, "%.1f KB", bytes / 1024.0);
+    if (bytes < 1024 * 1024 * 1024) return String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0));
+    return String.format(Locale.ROOT, "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+  }
+
+  private String readAssetText(String assetName) {
+    try (java.io.InputStream is = getAssets().open(assetName);
+         java.io.InputStreamReader isr = new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8);
+         java.io.BufferedReader br = new java.io.BufferedReader(isr)) {
+      StringBuilder sb = new StringBuilder();
+      String line;
+      while ((line = br.readLine()) != null) {
+        sb.append(line).append("
+");
+      }
+      return sb.toString();
+    } catch (Exception e) {
+      return "License file not found: " + assetName;
+    }
+  }
   private void nameSet(boolean played) {
     ArrayList<Song> songs = new ArrayList<>();
     if (played) songs.addAll(session.played);
