@@ -502,10 +502,10 @@ The redesign is implemented as modular JS files loaded by all pages:
 
 ## Release artifact hardening (BLA)
 
-Shipped web bundles (Vercel) and Android APKs are hardened with **BLA (Blind LLM Agents)** — an adversarial defense shield that protects binaries, JS bundles, WebAssembly, and DEX bytecode against AI reverse-engineering agents (REA, coding agents, autonomous decompilers).
+CI invokes the third-party `bla-agents` CLI at the pinned version `3.1.2` to generate hardening candidates. **Those candidates are not currently integrated into shipped artifacts.**
 
-- **Web**: BLA Vite plugin (`blaVitePlugin`) at build time → honey SourceMaps (VLQ v3), semantic budget exhaustion, WASM export decoys.
-- **Android**: CLI hardening post-build → DEX canaries (SHA-1/Adler32 preserving), budget trips, native lib guards.
-- **Effect**: 300×–2,800× token amplification for REA; 14/14 benchmark targets pass 100% runtime equivalence.
-- **CI integration**: `vercel-deploy.yml` and `android-validation.yml` run `npx --yes bla-agents harden <artifact> --verify` on main-branch releases only.
-- **iOS**: Not covered by BLA (no Mach-O support). Uses Apple native hardening (strip symbols, LLVM optimization).
+- **Web**: `vercel-deploy.yml` runs the CLI against `apps/web` before `vercel build`, but the output is written under `.bla-hardened` and the Vercel route handler continues to serve the original source files. No `blaVitePlugin` is configured. The live website must not be described as BLA-hardened.
+- **Android**: the CLI runs after `:app:assembleRelease` and writes candidate DEX files under `.bla-hardened`; no packaging step consumes those files. The published APK is not BLA-hardened.
+- **Verification**: the CLI's `--verify` checks its candidate output. KANTA does not independently verify final-artifact replacement or the vendor's benchmark/runtime-equivalence claims.
+- **Credential boundary**: BLA runs without Vercel deployment tokens, Android signing secrets, or persisted checkout credentials. Android signing secrets exist only in the release Gradle step, and the temporary keystore is removed when that step exits.
+- **iOS**: Not covered by BLA. Do not claim BLA protection for IPA artifacts.

@@ -1,5 +1,6 @@
 """Regression checks for the non-interactive KANTA Vercel deployment contract."""
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,10 +13,42 @@ class VercelDeployWorkflowTests(unittest.TestCase):
     def setUpClass(cls):
         cls.source = WORKFLOW.read_text(encoding="utf-8")
 
+    def _step_block(self, name):
+        marker = f"      - name: {name}\n"
+        start = self.source.index(marker)
+        end = self.source.find("\n      - ", start + len(marker))
+        return self.source[start:end if end >= 0 else len(self.source)]
+
     def test_targets_the_existing_team_and_project(self):
         self.assertIn("VERCEL_ORG_ID: team_6rrG5QXBI00wEFufnjKSJLWj", self.source)
         self.assertIn("VERCEL_PROJECT_ID: prj_OG4AuuRqXOY9EAPRJuSvnT3UXvA6", self.source)
         self.assertIn("VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}", self.source)
+
+    def test_production_deploy_is_main_branch_only(self):
+        self.assertIn("  deploy:\n    if: github.ref == 'refs/heads/main'\n", self.source)
+
+    def test_bla_candidate_has_no_deployment_or_checkout_credentials(self):
+        checkout_blocks = re.findall(
+            r"(?ms)^      - uses: actions/checkout@[^\n]+\n(.*?)(?=^      - (?:name|uses):|\Z)",
+            self.source,
+        )
+        self.assertGreaterEqual(len(checkout_blocks), 2)
+        for block in checkout_blocks:
+            self.assertIn("persist-credentials: false", block)
+        deploy_job = self.source.split("  deploy:\n", 1)[1]
+        job_environment = deploy_job.split("    steps:\n", 1)[0]
+        self.assertNotIn("VERCEL_TOKEN:", job_environment)
+        bla = self._step_block("Generate web hardening candidate with BLA")
+        self.assertIn("bla-agents@3.1.2", bla)
+        self.assertNotIn("VERCEL_TOKEN", bla)
+        for name in (
+            "Verify existing project target and credentials",
+            "Configure requested Vercel domain",
+            "Pull existing production project settings",
+            "Build production output",
+            "Deploy prebuilt output to production",
+        ):
+            self.assertIn("VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}", self._step_block(name), name)
 
     def test_cli_version_is_pinned(self):
         self.assertIn('VERCEL_CLI_VERSION: "65.2.0"', self.source)
@@ -103,6 +136,7 @@ class VercelDomainConfigurationTests(unittest.TestCase):
 
     def test_only_explicit_dispatch_can_run_it(self):
         self.assertIn("workflow_dispatch:", self.source)
+        self.assertIn("  configure:\n    if: github.ref == 'refs/heads/main'\n", self.source)
         self.assertNotIn("push:", self.source)
         self.assertNotIn("schedule:", self.source)
 

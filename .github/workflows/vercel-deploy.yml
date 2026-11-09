@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Enforce documentation synchronization before production deployment
         if: github.event_name == 'push'
         working-directory: .
@@ -48,19 +49,22 @@ jobs:
           node --check apps/web/analytics.js
 
   deploy:
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.configure_domain != '')
+    if: github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       VERCEL_ORG_ID: team_6rrG5QXBI00wEFufnjKSJLWj
       VERCEL_PROJECT_ID: prj_OG4AuuRqXOY9EAPRJuSvnT3UXvA6
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_CLI_VERSION: "65.2.0"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - name: Verify existing project target and credentials
         shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
           if [[ -z "${VERCEL_TOKEN}" ]]; then
@@ -78,6 +82,7 @@ jobs:
         shell: bash
         env:
           CONFIGURE_DOMAIN: ${{ inputs.configure_domain }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
           test -n "${CONFIGURE_DOMAIN}"
@@ -103,15 +108,22 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
-      - name: Harden web artifacts with BLA (anti-REA)
+      - name: Generate web hardening candidate with BLA
         run: |
-          npx --yes bla-agents harden ./apps/web --verify
+          npx --yes bla-agents@3.1.2 harden ./apps/web --verify
+          echo "Candidate output: ./apps/web/.bla-hardened/; the Vercel route handler still serves the original source files."
       - name: Pull existing production project settings
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.configure_domain == '' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
       - name: Build production output
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.configure_domain == '' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel build --prod --token="$VERCEL_TOKEN"
       - name: Deploy prebuilt output to production
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.configure_domain == '' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"

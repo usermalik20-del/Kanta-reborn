@@ -48,7 +48,24 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
+      - name: Determine trusted main release source
+        id: release-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          checked_out_sha="$(git rev-parse HEAD)"
+          main_sha="$(git rev-parse refs/remotes/origin/main)"
+          trusted_main=false
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]] && git merge-base --is-ancestor "${checked_out_sha}" "${main_sha}"; then
+            trusted_main=true
+          fi
+          if [[ "${GITHUB_REF}" == "refs/heads/main" && "${GITHUB_EVENT_NAME}" != "pull_request" && "${trusted_main}" != "true" ]]; then
+            echo "::error::The selected ref is outside main history. Dispatch from that branch to validate it without release signing."
+            exit 1
+          fi
+          echo "trusted_main=${trusted_main}" >> "${GITHUB_OUTPUT}"
       - name: Enforce documentation synchronization before release
         if: github.event_name == 'push'
         working-directory: .
@@ -75,23 +92,6 @@ jobs:
         run: python3 -m unittest tools.tests.test_companion_security_contract
       - name: Install required Android platform
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"'
-      - name: Prepare owner-controlled Android release signing
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        env:
-          KANTA_SIGNING_KEYSTORE_BASE64: ${{ secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 }}
-          KANTA_SIGNING_PASSWORD: ${{ secrets.KANTA_ANDROID_SIGNING_PASSWORD }}
-        run: |
-          set -euo pipefail
-          if [ -z "${KANTA_SIGNING_KEYSTORE_BASE64}" ] || [ -z "${KANTA_SIGNING_PASSWORD}" ]; then
-            echo "::error::Required Android release signing secrets are not configured. Add KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 and KANTA_ANDROID_SIGNING_PASSWORD before main validation."
-            exit 1
-          fi
-          key_path="${RUNNER_TEMP}/kanta-release-signing.p12"
-          printf '%s' "${KANTA_SIGNING_KEYSTORE_BASE64}" | base64 --decode > "${key_path}"
-          test -s "${key_path}"
-          chmod 600 "${key_path}"
-          echo "KANTA_ANDROID_SIGNING_STORE_FILE=${key_path}" >> "${GITHUB_ENV}"
-          echo "KANTA_ANDROID_SIGNING_PASSWORD=${KANTA_SIGNING_PASSWORD}" >> "${GITHUB_ENV}"
       - name: Native SoundFont sanitizer regression
         run: |
           cc -D_POSIX_C_SOURCE=200809L -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer apps/android/tests/soundfont-test.c -lm -o /tmp/kanta-soundfont-test
@@ -124,25 +124,38 @@ jobs:
         run: node tools/verify-songbook-browser-interop.mjs apps/android/app/build/synthetic-songbook.json docs/evidence/website/2026-10-15/songbook.js
       - name: Verify companion private IPv4 interface selection
         run: python3 tools/verify-android-companion-interface.py
-      - name: Build unsigned release APK (generates DEX intermediates)
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      - name: Build owner-signed release APK
+        if: steps.release-source.outputs.trusted_main == 'true' && github.event_name != 'pull_request'
         working-directory: apps/android
+        env:
+          KANTA_SIGNING_KEYSTORE_BASE64: ${{ secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 }}
+          KANTA_SIGNING_PASSWORD: ${{ secrets.KANTA_ANDROID_SIGNING_PASSWORD }}
         run: |
-          set -o pipefail
+          set -euo pipefail
+          if [ -z "${KANTA_SIGNING_KEYSTORE_BASE64}" ] || [ -z "${KANTA_SIGNING_PASSWORD}" ]; then
+            echo "::error::Required Android release signing secrets are not configured. Add KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 and KANTA_ANDROID_SIGNING_PASSWORD before main validation."
+            exit 1
+          fi
+          key_path="${RUNNER_TEMP}/kanta-release-signing.p12"
+          trap 'rm -f "$key_path"' EXIT
+          printf '%s' "${KANTA_SIGNING_KEYSTORE_BASE64}" | base64 --decode > "${key_path}"
+          test -s "${key_path}"
+          chmod 600 "${key_path}"
+          export KANTA_ANDROID_SIGNING_STORE_FILE="${key_path}"
+          export KANTA_ANDROID_SIGNING_PASSWORD="${KANTA_SIGNING_PASSWORD}"
           ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:assembleRelease 2>&1 | tee -a build.log
-      - name: Harden Android DEX with BLA (anti-REA)
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      - name: Generate Android DEX hardening candidate with BLA
+        if: steps.release-source.outputs.trusted_main == 'true' && github.event_name != 'pull_request'
         continue-on-error: true
         run: |
-          # Harden DEX intermediates (BLA cannot rewrite signed/unsigned APK ZIPs due to baseline profiles, timestamps)
+          # This candidate is generated after APK assembly and is not repackaged into the release APK.
           DEX_DIR="apps/android/app/build/intermediates/dex/release"
           if [ -d "$DEX_DIR" ]; then
-            echo "Hardening DEX files at $DEX_DIR"
-            npx --yes bla-agents harden "$DEX_DIR" --verify
-            echo "Note: Hardened DEX at $DEX_DIR/.bla-hardened/ — not yet integrated into final APK."
-            echo "Full integration requires Gradle plugin to copy hardened DEX before packaging."
+            echo "Generating DEX hardening candidate at $DEX_DIR"
+            npx --yes bla-agents@3.1.2 harden "$DEX_DIR" --verify
+            echo "Candidate output: $DEX_DIR/.bla-hardened/ (not integrated into the final APK)."
           else
-            echo "::warning::DEX directory not found at $DEX_DIR, skipping BLA hardening"
+            echo "::warning::DEX directory not found at $DEX_DIR, skipping candidate generation"
           fi
       - name: Android emulator runtime checks
         timeout-minutes: 15
