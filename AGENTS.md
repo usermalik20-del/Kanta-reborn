@@ -200,16 +200,18 @@ Batch coherent changes and inspect failure evidence before rerunning.
 
 ## Release artifact hardening (BLA)
 
-The `vercel-deploy.yml` and `android-validation.yml` workflows include a BLA hardening step that protects shipped web bundles and Android APKs against AI reverse-engineering agents (REA, morluto/rea, autonomous decompilers, LLM recon pipelines).
+The Android and Vercel workflows invoke the third-party `bla-agents` CLI at the pinned version `3.1.2` to generate candidate output. **Neither candidate is currently integrated into a shipped artifact.** Never claim that the published APK or live web bundle is BLA-hardened.
 
-- **Web**: `npx --yes bla-agents harden ./apps/web --verify` runs after build and before Vercel deploy. Recommended: integrate `blaVitePlugin` into `apps/web/vite.config.ts` for build-time protection (honey SourceMaps, semantic budget exhaustion, WASM export decoys).
-- **Android**: `npx --yes bla-agents harden ./apps/android/app/build/outputs/apk/release --verify` runs after APK assembly and before publish. Protects `classes.dex` (DEX SHA-1/Adler32-preserving canaries, budget trips) and native libraries.
-- **Both**: Runs on main-branch pushes and release dispatches only. Requires Node 24 (pinned via `actions/setup-node`). The `--verify` flag re-runs shield checks to confirm integrity. 100% runtime equivalence (BLA benchmarks: 14/14 targets pass).
-- **iOS**: Not supported by BLA (no Mach-O/ARM64 binary protection). Use Apple native hardening (strip symbols, LLVM optimization, consider third-party iOS obfuscators if IP theft is high threat).
-- **GitHub repo source**: BLA protects built artifacts, not source. Repo security uses branch protection, CODEOWNERS, Dependabot, CodeQL, secret scanning (already configured).
+- **Web**: `vercel-deploy.yml` runs `npx --yes bla-agents@3.1.2 harden ./apps/web --verify` before Vercel build. The CLI writes `.bla-hardened` output, but the Vercel route handler still serves the original source files; no Vite plugin or replacement step consumes the candidate.
+- **Android**: the CLI runs after `:app:assembleRelease` against DEX intermediates and writes `.bla-hardened` candidates. The output is not repackaged into the APK; this step is non-blocking and is not a release security gate.
+- **Credential isolation is mandatory**: third-party BLA code must not receive `VERCEL_TOKEN`, Android signing secrets, or a persisted GitHub checkout credential. Keep `actions/checkout` set to `persist-credentials: false`; scope the Vercel token to only Vercel API/CLI steps; scope signing secrets to the single release Gradle step; delete the temporary keystore with an `EXIT` trap; never write signing secrets to `GITHUB_ENV`.
+- **Manual Android refs**: a main-branch release run may use signing secrets only when the checked-out commit is in `origin/main` history. Reject a non-main ref selected from a main-branch dispatch; feature-branch dispatches remain unsigned.
+- **Production Vercel authority**: `vercel-deploy.yml` production deploy and `configure-is-a-dev-domain.yml` domain mutation jobs run only from `refs/heads/main`. Their validation/dispatch inputs must not grant production secrets to feature-branch runs.
+- **Verification claims**: `--verify` verifies the CLI candidate, not the final deployed artifact. Vendor benchmark numbers and runtime-equivalence claims are not KANTA-verified.
+- **iOS**: BLA is not integrated into iOS/IPA builds.
+- **Repository controls**: do not claim branch protection, CODEOWNERS, CodeQL, Dependabot or secret scanning are enabled without current evidence. As of 2026-11-09, GitHub reports `main` as unprotected and the repository tree contains no CODEOWNERS file or CodeQL workflow; other security settings require a settings-level check.
 
-Documentation sync: any change to the BLA hardening step must update `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` in the same commit (enforced by `tools/check-documentation-sync.py` and the preflight guard).
-
+Documentation sync: any change to BLA invocation, output integration, or release-secret scope must update `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, and `docs/TESTING.md` in the same commit.
 During an active engineering session, completion of one task transitions to the highest-priority unblocked task.
 
 Select work from:

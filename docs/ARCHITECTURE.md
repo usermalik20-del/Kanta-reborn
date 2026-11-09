@@ -1059,47 +1059,18 @@ The redesign is implemented as modular JS files loaded by all pages:
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
 
-## Release artifact hardening (BLA)
+## Release artifact hardening and credential boundary (2026-11-09)
 
-Shipped web bundles (Vercel) and Android APKs are hardened with **BLA (Blind LLM Agents)** — an adversarial defense shield from `qybaihe/bla` (forked at `usermalik20-del/bla`) that protects binaries, JS bundles, WebAssembly, and DEX bytecode against AI reverse-engineering agents (REA, morluto/rea, coding agents, autonomous decompilers, LLM recon pipelines).
+The Android and Vercel workflows invoke `bla-agents@3.1.2` to generate candidate output. The current outputs are not integrated into the release artifacts:
 
-### Web (Vercel)
+- The web CLI writes candidates under `apps/web/.bla-hardened`, but the Vercel route handler and page map still read the original source files. No build or route step consumes the candidates.
+- The Android CLI runs after `:app:assembleRelease`, writes candidates under the DEX intermediate `.bla-hardened` directory, and does not repackage them into the APK.
+- The CLI's `--verify` validates its own candidate output only. It is not proof that the deployed website or published APK contains the hardened bytes, and vendor benchmark claims are not KANTA runtime verification.
 
-- **Mechanism**: BLA Vite plugin (`blaVitePlugin`) in `apps/web/vite.config.ts` runs at build time.
-- **Protections**: Honey SourceMaps (VLQ v3), semantic budget exhaustion (primitive-candidates, alias-selections, getter-expansion), WASM export decoys + Wabt budget trips.
-- **CI**: `vercel-deploy.yml` runs `npx --yes bla-agents harden ./apps/web --verify` after build, before Vercel deploy. Requires Node 24 (pinned via `actions/setup-node`).
+Because BLA is third-party npm code, it runs without deployment or signing credentials. The Vercel token is scoped only to Vercel API/CLI steps. Android signing secrets are scoped only to the release Gradle step; the PKCS#12 file is created under the runner temp directory and removed by an `EXIT` trap. Neither signing secret is written to `GITHUB_ENV`. Both workflows disable checkout credential persistence so the BLA process cannot read a stored GitHub token from `.git/config.
 
-### Android (APK/AAB)
+The Android workflow accepts an optional manual checkout ref. Release signing is allowed only when the checked-out commit is an ancestor of `origin/main`; an unmerged ref selected from a main-branch dispatch fails before any signing secret is exposed. Dispatching the workflow from a feature branch remains an unsigned validation path.
 
-- **Mechanism**: CLI hardening post-assembly in `android-validation.yml`.
-- **Protections**: DEX canaries (SHA-1/Adler32 preserving), budget trips, native library guards (ELF, bplist, ZIP format shields).
-- **CI**: Runs after `assembleRelease`, before `platform-download-publishing.yml` picks up the artifact. Command: `npx --yes bla-agents harden ./apps/android/app/build/outputs/apk/release --verify`.
+The Vercel production deploy and domain-attachment jobs are restricted to `refs/heads/main`. Their production token is step-scoped and never exposed to BLA candidate generation.
 
-### Empirical results (BLA benchmarks)
-
-| Format | Token amplification | Cost amplification | Runtime equivalence |
-|--------|-------------------|-------------------|-------------------|
-| JavaScript / TypeScript | 2,822.7× | 1,064.1× | ✅ 100% |
-| Electron ASAR | 2,532.3× | 953.7× | ✅ 100% |
-| WebAssembly | 381.5× | 151.2× | ✅ 100% |
-| Android DEX | 433.2× (est.) | — | ✅ 100% |
-
-### iOS
-
-Not covered by BLA (no Mach-O/ARM64 binary protection). Uses Apple native hardening:
-- Strip symbols (`STRIP_INSTALLED_PRODUCT = YES`)
-- LLVM optimization (`LLVM_OPTIMIZE`)
-- Consider third-party iOS obfuscators (e.g., Polidea, iXGuard) if IP theft is a high threat.
-
-### GitHub repository source
-
-BLA protects **built artifacts only**, not source code. Repository security uses:
-- Branch protection + CODEOWNERS
-- Dependabot (`.github/dependabot.yml`)
-- CodeQL analysis (recommended)
-- Secret scanning (GitHub Advanced Security)
-- Signed commits (enforced via branch protection)
-
-### Documentation sync
-
-Any change to the BLA hardening step must update `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` in the same commit (enforced by `tools/check-documentation-sync.py` and the preflight guard).
+Repository-level security controls are separate from this workflow boundary. On 2026-11-09 GitHub reported `main` as unprotected, and no CODEOWNERS file or CodeQL workflow was present in the repository tree. Dependabot and secret-scanning settings were not verified by this audit. Enabling branch protection or configuring repository security settings requires repository-admin action.

@@ -22,6 +22,16 @@ def workflow(name: str) -> str:
     return (WORKFLOWS / name).read_text(encoding="utf-8")
 
 
+def step_block(source: str, name: str) -> str:
+    marker = f"      - name: {name}\n"
+    start = source.find(marker)
+    if start < 0:
+        raise AssertionError(f"Missing workflow step: {name}")
+    remainder = source[start + len(marker):]
+    next_step = re.search(r"(?m)^      - (?:name|uses):", remainder)
+    return remainder[:next_step.start()] if next_step else remainder
+
+
 class WorkflowOwnershipTests(unittest.TestCase):
     def test_android_validation_is_limited_to_android_owned_inputs(self):
         source = workflow("android-validation.yml")
@@ -34,6 +44,32 @@ class WorkflowOwnershipTests(unittest.TestCase):
             self.assertNotIn("'tools/tests/test_website_security_contract.py'", section)
             for release_path in ("'tools/prepare-verified-downloads.py'", "'tools/publish-verified-downloads.py'", "'tools/tests/test_verified_downloads.py'", "'tools/tests/test_publish_verified_downloads.py'"):
                 self.assertNotIn(release_path, section)
+
+    def test_android_release_signing_is_limited_to_trusted_main_history(self):
+        source = workflow("android-validation.yml")
+        checkout = source.split("      - uses: actions/checkout@", 1)[1].split("\n      - ", 1)[0]
+        self.assertIn("persist-credentials: false", checkout)
+        trust = step_block(source, "Determine trusted main release source")
+        self.assertIn("id: release-source", trust)
+        self.assertIn("refs/remotes/origin/main", trust)
+        self.assertIn("git merge-base --is-ancestor", trust)
+        self.assertIn("trusted_main=${trusted_main}", trust)
+        self.assertIn("The selected ref is outside main history", trust)
+        self.assertNotIn("Prepare owner-controlled Android release signing", source)
+        self.assertNotIn('>> "${GITHUB_ENV}"', source)
+        release = step_block(source, "Build owner-signed release APK")
+        self.assertIn("steps.release-source.outputs.trusted_main == 'true'", release)
+        self.assertIn("KANTA_SIGNING_KEYSTORE_BASE64: ${{ secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 }}", release)
+        self.assertIn("KANTA_SIGNING_PASSWORD: ${{ secrets.KANTA_ANDROID_SIGNING_PASSWORD }}", release)
+        self.assertIn("trap", release)
+        self.assertIn("rm -f", release)
+        self.assertIn('export KANTA_ANDROID_SIGNING_STORE_FILE="${key_path}"', release)
+        self.assertIn('export KANTA_ANDROID_SIGNING_PASSWORD="${KANTA_SIGNING_PASSWORD}"', release)
+        bla = step_block(source, "Generate Android DEX hardening candidate with BLA")
+        self.assertIn("steps.release-source.outputs.trusted_main == 'true'", bla)
+        self.assertIn("bla-agents@3.1.2", bla)
+        self.assertNotIn("KANTA_SIGNING_", bla)
+        self.assertNotIn("KANTA_ANDROID_SIGNING_", bla)
 
     def test_website_validation_owns_website_contracts(self):
         source = workflow("website-validation.yml")
