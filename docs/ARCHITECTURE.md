@@ -1026,7 +1026,7 @@ Replaces static `device-showcase` with:
 - Single static frame under `prefers-reduced-motion: reduce`
 
 ### Download progress bar (`apps/web/download-progress.js`)
-Sticky top bar on `/android` + `/ios-download` showing artifact verification pipeline. Dismissible, session-scoped.
+Sticky top bar on `/android` + `/ios-download` fetches `/downloads.json` with a no-store request, validates the selected platform record, exact GitHub Actions artifact URL and checksum metadata, and confirms the page's visible download link matches the manifest. It reports publication-record readiness only; it does not fetch or hash the artifact bytes. Dismissible, session-scoped.
 
 ### Stage preview (`apps/web/stage-preview.js`)
 Fixed phone frame on `/features` (`data-stage-preview` on `<html>`) that updates scene per scrolled section. Scene types: queue, lyrics (highlight sweep), stage (bars), pads, meter, score.

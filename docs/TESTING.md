@@ -860,9 +860,11 @@ The website redesign adds new shared assets and page-specific features. Validati
 
 ### Download progress bar (`download-progress.js`)
 - Sticky top bar appears on `/android` + `/ios-download`
-- Shows verification pipeline steps (fetch → verify → ready)
-- Dismissible, session-scoped (sessionStorage)
-- Jump link to `#download` when ready
+- Fetches `/downloads.json` with `cache: "no-store"`; validates repository/platform, packaging run and artifact IDs, exact GitHub Actions artifact URL, source SHA, archive/application digests, retention/byte metadata, and the visible page download link
+- Uses DOM `textContent` for status and digest metadata; it does not inject manifest data as HTML or hard-code run IDs, artifact IDs or digests
+- Reports that the publication record is current; it does **not** download the artifact or hash its bytes
+- Dismissible, session-scoped; the `#download` link appears only after record validation
+- `website-validation.yml` runs the Python security contract and `node --check apps/web/download-progress.js`
 
 ### Stage preview (`stage-preview.js`)
 - Fixed phone frame on `/features` (`data-stage-preview` on `<html>`)

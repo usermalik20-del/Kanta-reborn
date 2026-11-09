@@ -282,3 +282,8 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `stage-preview.js` — fixed phone frame on `/features` mirroring scrolled section
 - `guide-parallax.js` — pinned phone illustration + palette shift per guide step
 - `songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock transitions
+
+
+## Manifest-backed download status — 2026-11-09
+
+The sticky status bar on `/android` and `/ios-download` fetches `/downloads.json` with `cache: "no-store"`, validates the selected platform's published artifact record, checks the exact GitHub Actions artifact URL and digest metadata, and confirms the visible page link matches the manifest. It reads the current run, artifact ID and digests from the manifest rather than hard-coding them in JavaScript. The status means the publication record is current; it does **not** download the artifact or hash its bytes. GitHub sign-in remains required to fetch the artifact itself.

@@ -188,5 +188,34 @@ class WebsiteSecurityContractTests(unittest.TestCase):
             self.assertIn("(?i)", conditions[0]["value"], "User-agent matching must ignore case")
 
 
+
+    def test_download_status_uses_current_manifest_without_claiming_byte_verification(self):
+        source = (WEB / "download-progress.js").read_text(encoding="utf-8")
+        manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
+
+        self.assertIn('fetch("/downloads.json"', source)
+        self.assertIn('cache: "no-store"', source)
+        self.assertIn("manifest.platforms[cfg.platform]", source)
+        self.assertIn("entry.packagingRun", source)
+        self.assertIn("entry.packagingArtifact", source)
+        self.assertIn("entry.sha256", source)
+        self.assertIn("downloadLink.href", source)
+        self.assertIn("text.textContent", source)
+        self.assertNotIn("innerHTML", source)
+        self.assertNotIn("Verifying SHA-256 provenance", source)
+        self.assertNotRegex(source, r"actions/runs/\d+/artifacts/\d+")
+        self.assertNotRegex(source, r"\b[0-9a-f]{64}\b")
+
+        for platform, filename, digest_key in (
+            ("android", "android.html", "apkSha256"),
+            ("ios", "ios-download.html", "ipaSha256"),
+        ):
+            entry = manifest["platforms"][platform]
+            page = (WEB / filename).read_text(encoding="utf-8")
+            self.assertIn(entry["downloadUrl"], page, filename)
+            self.assertIn(entry["sha256"], page, filename)
+            self.assertIn(entry[digest_key], page, filename)
+
+
 if __name__ == "__main__":
     unittest.main()

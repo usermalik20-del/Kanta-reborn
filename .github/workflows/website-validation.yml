@@ -70,3 +70,4 @@ jobs:
       - run: node --check apps/web/site-consent.js
       - run: node --test tools/tests/test_site_page_handler.test.js
       - run: node --check apps/web/analytics.js
+      - run: node --check apps/web/download-progress.js
