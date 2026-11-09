@@ -1,3 +1,15 @@
+## Test Update: test_ota_publication Fix (2026-11-09)
+
+Fixed test_signing_secret_step_is_main_only_and_not_for_pull_requests to match new workflow step name:
+- Updated from "Prepare owner-controlled Android release signing" to "Build owner-signed release APK"
+- Changed step extraction to use proper step block detection (find next step marker)
+- Updated assertions to match new workflow conditions:
+  - steps.release-source.outputs.trusted_main == 'true' (replaces github.ref == 'refs/heads/main')
+  - github.event_name != 'pull_request'
+  - secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64
+  - secrets.KANTA_ANDROID_SIGNING_PASSWORD
+  - RUNNER_TEMP
+- Build gradle assertions unchanged: KANTA_ANDROID_SIGNING_STORE_FILE, KANTA_ANDROID_SIGNING_PASSWORD, keyAlias 'kanta-release'
 ## Android: FluidR3 GM Download Option (2026-11-09)
 
 Added FluidR3 GM SoundFont as downloadable option in My Set → SoundFonts:
