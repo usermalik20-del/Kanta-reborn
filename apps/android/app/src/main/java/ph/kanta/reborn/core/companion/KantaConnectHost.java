@@ -73,8 +73,8 @@ public final class KantaConnectHost {
     registerService();
     worker.execute(this::acceptLoop);
 
-    Log.i(TAG, "Kanta-Connect host started: code=" + pairingCode + " port=" + PORT);
-    notifyStatus("Kanta-Connect hosting · code: " + pairingCode);
+    Log.i(TAG, "Kanta-Connect host started on port " + PORT);
+    notifyStatus("Kanta-Connect hosting");
   }
 
   /** Stops advertising and closes all client connections. */

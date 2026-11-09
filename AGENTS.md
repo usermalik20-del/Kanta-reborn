@@ -179,7 +179,7 @@ No per-run approval, label, actor or run-count gate applies.
 Failure-triage automation opens or updates one investigation issue per failing run. Keep it pipefail-safe: a step that needs a single answer asks the API once rather than piping a list into `head`, so the triage step cannot abort itself with SIGPIPE while a build is red.
 
 The root workflow triggers are intentionally scoped by ownership and source paths:
-- `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
+- `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. The job runs `tools.tests.test_companion_security_contract` to keep Kanta-Connect pairing codes out of Logcat. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
 - `ios-validation.yml`: iOS build inputs, resources and tests on pull requests and main pushes. Exclude documentation-only `PRIVACY.md`, `PublicSite/**`, `Docs/**`, README and AGENTS paths; feature branches use the pull-request event only.
 - `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
 - `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on `apps/ios/**` pull requests and main pushes, with the documentation-only iOS paths excluded; no `apps/android/**` path triggers it, so Android-only pull requests do not allocate an iOS archive. Website-only tools and packaging-tool PRs are excluded.

@@ -401,6 +401,10 @@ Android 0.10 adds foreground-only, explicit private-IPv4 companion hosting/clien
 Candidate core compilation and all 443 domain assertions passed (79 new companion checks); browser interoperability and Swift layout guards pass. Hosted build/lint and actual emulator socket/queue/lifecycle checks remain pending. Physical two-device networking, iOS compatibility and independent security review remain open. Public downloads remain accepted 0.9 until separately verified packaging/publication.
 
 
+### Kanta-Connect pairing-code logging boundary
+
+`KantaConnectHost` creates a single-session 128-bit pairing code and exposes it only through the owner-facing pairing UI/QR route. The code is credential material, not diagnostic data: Logcat and host status callbacks must not receive it. Startup logs may report the listening port and lifecycle state only. The encrypted protocol and pairing lifetime are unchanged.
+
 ## Android OTA self-update (branch feat/android-ota-update)
 
 The Android app includes a framework-free OTA update subsystem with a strict core/app boundary:

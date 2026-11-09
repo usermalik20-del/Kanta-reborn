@@ -582,6 +582,10 @@ length headers make unusable).
 Still outstanding for Milestone 5: the Kanta-Connect phone app itself, and the
 public-review mining pass.
 
+#### Kanta-Connect pairing-code Logcat redaction — 2026-11-09
+
+`KantaConnectHost.start()` previously included the live 128-bit pairing code in its startup log and an unused status-callback argument. Both paths now receive status/port information only. The owner-facing pairing dialog continues to read the code from `pairingCode()` for its QR and typed routes. A dedicated Android validation test guards the boundary; wire protocol and pairing behavior are unchanged.
+
 ### Not part of any milestone yet
 
 - The Meg importer has no UI surface; it is reachable only through the catalog API.

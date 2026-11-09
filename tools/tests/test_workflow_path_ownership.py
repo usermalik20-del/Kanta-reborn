@@ -35,6 +35,15 @@ class WorkflowOwnershipTests(unittest.TestCase):
             for release_path in ("'tools/prepare-verified-downloads.py'", "'tools/publish-verified-downloads.py'", "'tools/tests/test_verified_downloads.py'", "'tools/tests/test_publish_verified_downloads.py'"):
                 self.assertNotIn(release_path, section)
 
+    def test_android_validation_runs_companion_security_contract(self):
+        source = workflow("android-validation.yml")
+        self.assertIn(
+            "python3 -m unittest tools.tests.test_companion_security_contract",
+            source,
+        )
+        for event in ("push", "pull_request"):
+            self.assertIn("'tools/tests/test_companion_*.py'", event_section(source, event))
+
     def test_website_validation_owns_website_contracts(self):
         source = workflow("website-validation.yml")
         push = event_section(source, "push")

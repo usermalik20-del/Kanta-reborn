@@ -265,6 +265,10 @@ See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [docs/TESTING.md](../
 The HTTPS browser host permits up to four active guests. A correct pairing code rejected only because all guest slots are occupied does not consume the three-incorrect-code lockout budget. Once a guest leaves or expires while the five-minute pairing window remains open, another guest can pair. Three incorrect pairing codes still lock pairing until hosting restarts. The real TLS `BrowserRemoteRegressionTests` covers capacity denial, recovery after Leave, and the separate incorrect-code lockout through the existing `coreRegression` JavaExec suite.
 
 
+## Kanta-Connect pairing-code logging boundary — 2026-11-09
+
+Kanta-Connect creates a single-session 128-bit pairing code. It is disclosed through the owner-facing QR/typed pairing UI only; Logcat and host status callbacks receive no pairing secret. The pairing protocol and UI flow are unchanged. `tools.tests.test_companion_security_contract` guards the logging boundary and confirms the UI still reads the code from `KantaConnectHost.pairingCode()`.
+
 ## Reference-led native UI integration — validation candidate
 
 The Home dashboard and dedicated Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing screens are mounted as native Android Views destinations. They delegate playback, FIFO reservations, SoundFont selection, imports, microphone/monitor state and stage changes to the existing `SessionController` and repository owners; they do not introduce a second queue or playback state machine. The supplied artwork and drawable mapping are listed in [KANTA Android adaptive assets](../../docs/KANTA_ANDROID_ADAPTIVE_ASSETS.md).
