@@ -460,8 +460,8 @@ The public website receives a comprehensive redesign adding a design-system them
 - Respects `prefers-reduced-motion` (single static frame)
 
 ### Download progress bar (`apps/web/download-progress.js`)
-- Sticky top bar on `/android` + `/ios-download` showing artifact verification pipeline
-- Dismissible, session-scoped memory
+- Sticky top bar on `/android` + `/ios-download` reads the current platform entry from `/downloads.json` with a no-store request, validates the expected GitHub Actions artifact URL and checksum metadata, and confirms the page link matches the manifest.
+- It reports that the published record is current; it does not download or hash artifact bytes. Dismissible, session-scoped.
 
 ### Stage preview (`apps/web/stage-preview.js`)
 - Fixed phone frame on `/features` that mirrors the scrolled section

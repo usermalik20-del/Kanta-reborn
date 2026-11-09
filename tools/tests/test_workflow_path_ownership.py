@@ -46,6 +46,10 @@ class WorkflowOwnershipTests(unittest.TestCase):
         pull_request = event_section(source, "pull_request")
         self.assertNotIn("paths:", pull_request)
 
+    def test_website_validation_syntax_checks_download_progress_module(self):
+        source = workflow("website-validation.yml")
+        self.assertIn("node --check apps/web/download-progress.js", source)
+
     def test_native_release_gates_ignore_website_only_tooling(self):
         for name in ("ios-runtime-artifacts.yml", "ios-visual-walkthrough.yml"):
             source = workflow(name)
