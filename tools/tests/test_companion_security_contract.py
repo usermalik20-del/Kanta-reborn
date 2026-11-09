@@ -15,12 +15,12 @@ MAIN_SOURCE = (
 class CompanionSecurityContractTests(unittest.TestCase):
     def test_pairing_code_is_never_written_to_logcat(self):
         log_calls = re.findall(
-            r"\\bLog\\.(?:v|d|i|w|e)\\s*\\(.*?;",
+            r"\bLog\.(?:v|d|i|w|e)\s*\(.*?;",
             HOST_SOURCE,
             flags=re.DOTALL,
         )
         self.assertTrue(log_calls, "The host should retain operational lifecycle logging")
-        joined = "\\n".join(log_calls)
+        joined = "\n".join(log_calls)
         self.assertNotIn("pairingCode", joined)
         self.assertNotIn("code=", joined.lower())
         self.assertIn('notifyStatus("Kanta-Connect hosting");', HOST_SOURCE)
