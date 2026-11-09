@@ -1,3 +1,15 @@
+## Android: Fix FluidR3 GM Download Compilation (2026-11-09)
+
+Fixed FluidR3 GM SoundFont download compilation errors:
+- Moved full downloadFluidR3GM() logic from MainActivity to SessionController
+- MainActivity now delegates via session.downloadFluidR3GM()
+- Added formatBytes() and readAssetText() helper methods to SessionController
+- Kept FLUIDR3_GM_NAME constant in MainActivity for UI display
+- Fixes 'cannot find symbol' errors for io, repository, main, FLUIDR3_GM_SIZE, FLUIDR3_GM_URL, FLUIDR3_GM_LICENSE
+- Download logic uses session's io executor, repository, and main handler
+- Progress updates via session.message and publish()
+- Validation with NativeSoundFont.open() before saving
+- License file (fluidr3gm-license.txt) saved alongside SoundFont
 ## Android: Add FluidR3 GM Download to SessionController (2026-11-09)
 
 Added downloadFluidR3GM() method to SessionController:
