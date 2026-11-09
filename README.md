@@ -11,6 +11,7 @@ Moved Kanta-Connect pairing QR code from an AlertDialog to the persistent karaok
 - Fixed StagePresenterImpl frame ticker and adjustment overlay listener for correct build
 - Documentation synchronized with implementation
 
+<!-- Documentation sync: 2026-11-09 -->
 ## Android: Fix FluidR3 GM Download String Literal (2026-11-09)
 
 Fixed unclosed string literal in SessionController.readAssetText():

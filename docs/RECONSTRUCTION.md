@@ -10,6 +10,7 @@ Moved Kanta-Connect pairing QR code from an AlertDialog to the persistent karaok
 - Uses existing `QrEncoder` (byte mode, ECC level M, versions 1-10) and `QrCodeView` (4-module quiet zone, integer module scaling)
 - Enables scan-to-pair workflow with Kanta-Connect phone app — no manual 32-char code entry needed
 
+<!-- Documentation sync: 2026-11-09 -->
 ## Android: Fix FluidR3 GM Download String Literal (2026-11-09)
 
 Fixed unclosed string literal in SessionController.readAssetText():
