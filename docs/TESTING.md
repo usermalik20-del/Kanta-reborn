@@ -1,3 +1,10 @@
+## Android: Fix MainActivity Syntax Errors (2026-11-09)
+
+Fixed two compilation errors in MainActivity.java:
+1. 'else' without 'if' - moved "Download FluidR3 GM" button outside the for loop in mySet()
+2. Unclosed string literal in readAssetText() - fixed newline escaping (\\n)
+
+Both fixes address Android build compilation errors that were causing CI failures.
 ## Test Update: test_ota_publication Fix (2026-11-09)
 
 Fixed test_signing_secret_step_is_main_only_and_not_for_pull_requests to match new workflow step name:

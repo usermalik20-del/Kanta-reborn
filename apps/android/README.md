@@ -1,3 +1,10 @@
+## Android: Fix MainActivity Syntax Errors (2026-11-09)
+
+Fixed two compilation errors in MainActivity.java:
+1. 'else' without 'if' - moved "Download FluidR3 GM" button outside the for loop in mySet()
+2. Unclosed string literal in readAssetText() - fixed newline escaping (\\n)
+
+Both fixes address Android build compilation errors that were causing CI failures.
 ## Android: FluidR3 GM Download Option (2026-11-09)
 
 Added FluidR3 GM SoundFont as downloadable option in My Set → SoundFonts:
