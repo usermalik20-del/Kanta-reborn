@@ -50,6 +50,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch full history for ancestor check
+        run: |
+          git fetch origin main --depth=1
+          git fetch origin main --tags --depth=1
+
       - name: Determine trusted main release source
         id: release-source
         shell: bash
