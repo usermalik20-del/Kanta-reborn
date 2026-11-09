@@ -1,3 +1,13 @@
+## Android: FluidR3 GM Download Option (2026-11-09)
+
+Added FluidR3 GM SoundFont as downloadable option in My Set → SoundFonts:
+- Button "Download FluidR3 GM (~140 MB)" appears after listed SoundFonts
+- Downloads from official fluidsynth mirror (ftp.osuosl.org)
+- Visual progress: percentage + bytes downloaded (updates session.message)
+- Validates with NativeSoundFont.open() before saving
+- Saves license file (fluidr3gm-license.txt) alongside SoundFont
+- Not shipped with app - downloaded on demand to user's local media folder
+- Reuses existing import progress UI (session.message + publish())
 ## Home hero greeting/tagline removed — local candidate
 
 The Home dashboard's hero banner (dynamic greeting + `Music brings people together.` headline) is removed. Its messaging duplicated the KANTA header tagline above it; the dashboard now flows header → search → Continue Singing. Android runtime checks gate Home return on the stable search hint instead of the removed banner text.

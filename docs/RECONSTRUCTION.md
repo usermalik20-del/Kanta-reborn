@@ -1,3 +1,13 @@
+## Android: FluidR3 GM Download Option (2026-11-09)
+
+Added FluidR3 GM SoundFont as downloadable option in My Set → SoundFonts:
+- Button "Download FluidR3 GM (~140 MB)" appears after listed SoundFonts
+- Downloads from official fluidsynth mirror (ftp.osuosl.org)
+- Visual progress: percentage + bytes downloaded (updates session.message)
+- Validates with NativeSoundFont.open() before saving
+- Saves license file (fluidr3gm-license.txt) alongside SoundFont
+- Not shipped with app - downloaded on demand to user's local media folder
+- Reuses existing import progress UI (session.message + publish())
 ## Blog Expansion: 15 Substantial Articles + Fixed 404 (2026-11-08)
 
 Fixed 404 on `/blog/converting-karaoke-files-ffmpeg-tools` — the article was defined in blog.js but the HTML file was never created. Now all 15 blog posts have actual HTML files.
