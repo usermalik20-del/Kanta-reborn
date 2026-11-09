@@ -1641,6 +1641,29 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     });
   }
 
+  private String formatBytes(long bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return String.format(Locale.ROOT, "%.1f KB", bytes / 1024.0);
+    if (bytes < 1024 * 1024 * 1024) return String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0));
+    return String.format(Locale.ROOT, "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+  }
+
+  private String readAssetText(String assetName) {
+    try (java.io.InputStream is = context.getAssets().open(assetName);
+         java.io.InputStreamReader isr = new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8);
+         java.io.BufferedReader br = new java.io.BufferedReader(isr)) {
+      StringBuilder sb = new StringBuilder();
+      String line;
+      while ((line = br.readLine()) != null) {
+        sb.append(line).append("
+");
+      }
+      return sb.toString();
+    } catch (Exception e) {
+      return "License file not found: " + assetName;
+    }
+  }
+
   private void copyLegacyUri(android.net.Uri uri, File target, long maxBytes) throws Exception {
     try (java.io.InputStream in = context.getContentResolver().openInputStream(uri); java.io.FileOutputStream out = new java.io.FileOutputStream(target)) {
       if (in == null) throw new IOException("Cannot open selected legacy file");
