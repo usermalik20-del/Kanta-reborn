@@ -1,3 +1,4 @@
+"""Test that publishing workflows and artifacts follow the expected contract."""
 import importlib.util
 import unittest
 from unittest.mock import patch
@@ -23,7 +24,7 @@ class OtaPublicationTests(unittest.TestCase):
  def test_missing_history_refuses_bootstrap(self):
   with self.assertRaises(ota.OtaError): ota.verify({"signerSha256": "a" * 64}, None, "aapt", "apksigner")
  def test_unapproved_signer_transition_still_refused(self):
-  candidate={"signerSha256":"b"*64}
+  candidate={"signerSha256":ota.APPROVED_RELEASE_SIGNER_SHA256}
   old={"android":{}}
   with patch.object(ota,"previous_signer",return_value="a"*64):
    with self.assertRaises(ota.OtaError): ota.verify(candidate,old,"aapt","apksigner")
@@ -83,12 +84,20 @@ class PublisherToolchainContractTests(unittest.TestCase):
   self.assertIn('version="$(python3 -c',self.workflow)
  def test_signing_secret_step_is_main_only_and_not_for_pull_requests(self):
   android=(ROOT.parent/".github/workflows/android-validation.yml").read_text()
-  step=android[android.index("Prepare owner-controlled Android release signing"):android.index("Native SoundFont sanitizer regression")]
-  self.assertIn("github.ref == 'refs/heads/main'",step)
-  self.assertIn("github.event_name != 'pull_request'",step)
-  self.assertIn("secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64",step)
-  self.assertIn("secrets.KANTA_ANDROID_SIGNING_PASSWORD",step)
-  self.assertIn("RUNNER_TEMP",step)
+  # Find the "Build owner-signed release APK" step block
+  start_marker = "      - name: Build owner-signed release APK"
+  start = android.index(start_marker)
+  # Find next step after this one
+  next_step = android.find("\n      - name: ", start + len(start_marker))
+  if next_step == -1:
+    step = android[start:]
+  else:
+    step = android[start:next_step]
+  self.assertIn("steps.release-source.outputs.trusted_main == 'true'", step)
+  self.assertIn("github.event_name != 'pull_request'", step)
+  self.assertIn("secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64", step)
+  self.assertIn("secrets.KANTA_ANDROID_SIGNING_PASSWORD", step)
+  self.assertIn("RUNNER_TEMP", step)
   build=(ROOT.parent/"apps/android/app/build.gradle").read_text()
   self.assertIn("KANTA_ANDROID_SIGNING_STORE_FILE",build)
   self.assertIn("KANTA_ANDROID_SIGNING_PASSWORD",build)
