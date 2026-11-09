@@ -4,8 +4,11 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import ph.kanta.reborn.SessionController;
 import ph.kanta.reborn.settings.SettingsStore;
@@ -16,6 +19,8 @@ import ph.kanta.reborn.core.RenderedPlaybackClock;
 import ph.kanta.reborn.core.ReservationQueue;
 import ph.kanta.reborn.core.Song;
 import ph.kanta.reborn.core.catalog.SongCatalog;
+import ph.kanta.reborn.core.connect.KantaConnectInfo;
+import ph.kanta.reborn.core.connect.QrEncoder;
 import ph.kanta.reborn.core.score.ScoreCelebrationPlan;
 import ph.kanta.reborn.core.score.ScoreResultTier;
 import ph.kanta.reborn.core.score.ScoreRevealPlan;
@@ -37,6 +42,7 @@ import ph.kanta.reborn.score.ScoreSink;
  *   <li>{@link QueueOverlay} - read-only projection of ReservationQueue</li>
  *   <li>{@link RemoteStatusView} - Kanta-Connect connection indicator</li>
  *   <li>{@link Keypad} - numeric entry for song codes</li>
+ *   <li>{@link QrCodeView} - Kanta-Connect pairing QR code</li>
  * </ul>
  *
  * <p>Implements {@link ScoreSink} to receive completed scores from
@@ -60,6 +66,11 @@ public final class StagePresenterImpl extends FrameLayout
   private final QueueOverlay queueOverlay;
   private final RemoteStatusView remoteStatusView;
   private final Keypad keypad;
+
+  // Kanta-Connect QR code overlay
+  private final QrCodeView kantaConnectQrView;
+  private final FrameLayout qrContainer;
+  private StagePresenter.KantaConnectQRInfo currentQrInfo;
 
   // Pitch training overlays
   private final PitchGameOverlay pitchGameOverlay;
@@ -122,6 +133,12 @@ public final class StagePresenterImpl extends FrameLayout
       @Override public void onDismiss() { keypad.hide(); }
     });
 
+    // Initialize Kanta-Connect QR code overlay
+    kantaConnectQrView = new QrCodeView(context);
+    qrContainer = new FrameLayout(context);
+    qrContainer.setVisibility(View.GONE);
+    qrContainer.setOnClickListener(v -> hideKantaConnectQR());
+
     // Add overlays in z-order (background first, topmost last)
     addView(backgroundStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(lyricStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -134,6 +151,8 @@ public final class StagePresenterImpl extends FrameLayout
     addView(queueOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(remoteStatusView, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
     addView(keypad, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+    // QR container on top for Kanta-Connect pairing
+    addView(qrContainer, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
     // Initialize pitch training overlays
     pitchGameOverlay = new PitchGameOverlay(context);
@@ -165,148 +184,104 @@ public final class StagePresenterImpl extends FrameLayout
 
     // Configure adjustment overlay
     adjustmentOverlay.setListener(new AdjustmentOverlay.AdjustmentListener() {
-      @Override public void onKeyChange(int semitones) {
-        session.setPitch(semitones);
+
+      @Override
+      public void onKeyChange(int semitones) {
+        session.adjustKey(semitones);
       }
-      @Override public void onTempoChange(float factor) {
-        session.setTempo(factor);
+
+      @Override
+      public void onTempoChange(float factor) {
+        session.adjustTempo(factor);
       }
-      @Override public void onMelodyVolumeChange(float volume) {
-        // Melody volume handled via SoundFontPlayback if needed
+
+      @Override
+      public void onMelodyVolumeChange(float volume) {
+        session.adjustMelodyVolume(volume);
       }
-      @Override public void onGuideVolumeChange(float volume) {
-        // Guide volume handled via SoundFontPlayback if needed
+
+      @Override
+      public void onGuideVolumeChange(float volume) {
+        session.adjustGuideVolume(volume);
       }
     });
 
-    // Frame ticker to keep lyrics synced to rendered output frames
+    // Frame ticker for animations
     frameTicker = new Runnable() {
-      @Override public void run() {
-        if (isPlaying) {
-          RenderedPlaybackClock clock = session.getClock();
-          if (clock != null) {
-            // For FileAudioPlayback, we need to update its clock approximation
-            if (session.player instanceof FileAudioPlayback) {
-              ((FileAudioPlayback) session.player).updateClock();
-            }
-            // Supply monotonically increasing rendered frame count to LyricStage
-            // This must come from the same output clock used by RenderedPlaybackClock
-            long frames = session.position() * 44100 / 1000; // 44.1kHz sample rate
-            lyricStage.setPlayedFrames(frames);
-          }
+      @Override
+      public void run() {
+        if (countdownActive) {
+          countdownStage.tick();
+        }
+        if (celebration.isCelebrating()) {
+          celebration.tick();
+        }
+        if (pitchGameOverlay.isGameActive()) {
+          pitchGameOverlay.tick();
+        }
+        if (learningAssistantOverlay.isSessionActive()) {
+          learningAssistantOverlay.tick();
         }
         handler.postDelayed(this, 16); // ~60fps
       }
     };
-
-    // Initially hide all overlays except background and lyrics
-    countdownStage.setVisibility(GONE);
-    scoreOverlay.setVisibility(GONE);
-    celebration.setVisibility(GONE);
-    adjustmentOverlay.setVisibility(GONE);
-    introCard.setVisibility(GONE);
-    searchOverlay.setVisibility(GONE);
-    queueOverlay.setVisibility(GONE);
-    keypad.setVisibility(GONE);
-    remoteStatusView.setVisibility(VISIBLE);
+    handler.post(frameTicker);
   }
 
   @Override
   public void prepare(Song song, ReservationQueue.Entry reservation) {
-    // Set up lyrics and background for the upcoming song
-    if (song != null && session.lyrics != null) {
-      MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);
-      lyricStage.setLyrics(cues, session.getClock());
-    }
-
-    // Show intro card if enabled
-    if (session.options.getBoolean("showIntroCard", true)) {
-      showIntro(new IntroCardData(
-          song != null ? song.title : "Unknown",
-          song != null ? song.artist : "Unknown Artist",
-          song != null ? formatDuration(180000) : "0:00", // default 3 min
-          "C", // default key
-          120, // default tempo
-          "Karaoke" // default genre
-      ));
-    }
-  }
-
-  private String formatDuration(long millis) {
-    long seconds = millis / 1000;
-    long minutes = seconds / 60;
-    seconds = seconds % 60;
-    return String.format("%d:%02d", minutes, seconds);
+    isPlaying = true;
+    lyricStage.setLyrics(new MidiLyrics.Cue[0], null);
+    backgroundStage.setSource(BackgroundStage.Source.SOLID);
+    adjustmentOverlay.hide();
+    introCard.dismiss();
+    cancelPendingReveal();
+    celebration.cancel();
+    hideKantaConnectQR(); // Hide QR when playback prepares
   }
 
   @Override
   public void startCountdown(int countdownSeconds, CountdownListener listener) {
-    this.pendingCountdownListener = listener;
-    this.pendingCountdownSeconds = countdownSeconds;
-    this.countdownActive = true;
-
-    // Hide intro card if showing
-    introCard.dismiss();
-
-    // Start countdown
-    countdownStage.start(countdownSeconds, new CountdownListener() {
-      @Override public void onTick(int remaining) {
-        if (pendingCountdownListener != null) pendingCountdownListener.onTick(remaining);
-      }
-      @Override public void onComplete() {
-        countdownActive = false;
-        if (pendingCountdownListener != null) pendingCountdownListener.onComplete();
-        pendingCountdownListener = null;
-      }
-    });
+    pendingCountdownListener = listener;
+    pendingCountdownSeconds = countdownSeconds;
+    if (introCard.isShowing()) {
+      // Wait for intro to dismiss
+      return;
+    }
+    countdownStage.start(countdownSeconds, listener);
+    countdownActive = true;
   }
 
   @Override
   public void startPlayback(RenderedPlaybackClock clock, MidiLyrics.Cue[] lyrics) {
     isPlaying = true;
     countdownActive = false;
-
-    // Update lyrics with the new clock and cues
-    if (lyrics != null && lyrics.length > 0) {
-      lyricStage.setLyrics(lyrics, clock);
-    }
-
-    // Start frame ticker
-    handler.post(frameTicker);
-
-    // Ensure background is set to BGV if available
-    backgroundStage.setSource(BackgroundStage.Source.BGV);
+    lyricStage.setLyrics(lyrics, clock);
   }
 
   @Override
   public void pausePlayback() {
     isPlaying = false;
-    handler.removeCallbacks(frameTicker);
+    lyricStage.pause();
   }
 
   @Override
   public void resumePlayback() {
     isPlaying = true;
-    handler.post(frameTicker);
+    lyricStage.resume();
   }
 
   @Override
   public void stopPlayback() {
     isPlaying = false;
     countdownActive = false;
-    handler.removeCallbacks(frameTicker);
-
-    // Reset lyrics
     lyricStage.setLyrics(new MidiLyrics.Cue[0], null);
-
-    // Reset background to solid
     backgroundStage.setSource(BackgroundStage.Source.SOLID);
-
-    // Hide any active overlays
     adjustmentOverlay.hide();
     introCard.dismiss();
     cancelPendingReveal();
     celebration.cancel();
+    hideKantaConnectQR(); // Hide QR when playback stops
   }
 
   @Override
@@ -512,6 +487,98 @@ public final class StagePresenterImpl extends FrameLayout
   /** Projects live search results onto the stage search overlay. */
   public void setSearchQuery(String query) {
     if (searchOverlay != null) searchOverlay.setQuery(query);
+  }
+
+  /** Shows the Kanta-Connect pairing QR code on the stage. */
+  @Override
+  public void showKantaConnectQR(StagePresenter.KantaConnectQRInfo info) {
+    this.currentQrInfo = info;
+    try {
+      QrEncoder.Symbol symbol = QrEncoder.encode(info.link);
+      kantaConnectQrView.setSymbol(symbol);
+
+      // Build the QR container with the code and instructions
+      qrContainer.removeAllViews();
+
+      float density = getResources().getDisplayMetrics().density;
+      LinearLayout content = new LinearLayout(getContext());
+      content.setOrientation(LinearLayout.VERTICAL);
+      content.setGravity(Gravity.CENTER);
+      content.setPadding((int)(24 * density), (int)(24 * density), (int)(24 * density), (int)(24 * density));
+
+      // Semi-transparent dark background
+      content.setBackgroundColor(0xCC000000);
+
+      // Title
+      TextView title = new TextView(getContext());
+      title.setText("Kanta-Connect");
+      title.setTextSize(20);
+      title.setTextColor(0xFFFFFFFF);
+      title.setTypeface(null, android.graphics.Typeface.BOLD);
+      title.setGravity(Gravity.CENTER);
+      content.addView(title);
+
+      // Address
+      TextView address = new TextView(getContext());
+      address.setText(info.host + ":" + info.port);
+      address.setTextSize(14);
+      address.setTextColor(0xFFFFFFFF);
+      address.setGravity(Gravity.CENTER);
+      content.addView(address);
+
+      // QR code
+      LinearLayout.LayoutParams qrParams = new LinearLayout.LayoutParams(
+          (int)(232 * density), (int)(232 * density));
+      qrParams.gravity = Gravity.CENTER_HORIZONTAL;
+      qrParams.topMargin = (int)(16 * density);
+      qrParams.bottomMargin = (int)(16 * density);
+      content.addView(kantaConnectQrView, qrParams);
+
+      // Instructions
+      TextView instruction = new TextView(getContext());
+      instruction.setText("Scan with Kanta-Connect app\nor tap to dismiss");
+      instruction.setTextSize(12);
+      instruction.setTextColor(0xFFBBBBBB);
+      instruction.setGravity(Gravity.CENTER);
+      content.addView(instruction);
+
+      // Pairing code (grouped)
+      TextView codeView = new TextView(getContext());
+      codeView.setText(KantaConnectInfo.groupedCode(info.code));
+      codeView.setTextSize(13);
+      codeView.setTextColor(0xFFFFFFFF);
+      codeView.setLetterSpacing(0.05f);
+      codeView.setGravity(Gravity.CENTER);
+      codeView.setPadding(0, (int)(8 * density), 0, 0);
+      content.addView(codeView);
+
+      FrameLayout.LayoutParams containerParams = new FrameLayout.LayoutParams(
+          LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+      containerParams.gravity = Gravity.CENTER;
+      qrContainer.addView(content, containerParams);
+
+      qrContainer.setVisibility(View.VISIBLE);
+      bringChildToFront(qrContainer);
+    } catch (RuntimeException e) {
+      // Encoding failed (payload too long) - silently ignore
+      qrContainer.setVisibility(View.GONE);
+    }
+  }
+
+  /** Hides the Kanta-Connect pairing QR code from the stage. */
+  @Override
+  public void hideKantaConnectQR() {
+    if (qrContainer.getVisibility() == View.VISIBLE) {
+      qrContainer.setVisibility(View.GONE);
+      qrContainer.removeAllViews();
+      kantaConnectQrView.setSymbol(null);
+      currentQrInfo = null;
+    }
+  }
+
+  /** Returns true if the Kanta-Connect QR code is currently visible. */
+  public boolean isKantaConnectQRVisible() {
+    return qrContainer.getVisibility() == View.VISIBLE;
   }
 
   /** Refreshes all stage components. Called periodically from MainActivity. */

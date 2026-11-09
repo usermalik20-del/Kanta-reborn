@@ -1,3 +1,14 @@
+## Android: Kanta-Connect QR Code on Stage (2026-11-09)
+
+Moved Kanta-Connect pairing QR code from an AlertDialog to the persistent karaoke stage overlay:
+- QR code now displays directly on the stage surface when hosting starts
+- Shows host address, scannable QR code, and grouped 32-character pairing code
+- Tap the stage to dismiss the QR overlay; hosting continues in background
+- Auto-hides when playback starts or user stops Kanta-Connect
+- Uses existing QrEncoder and QrCodeView (framework-free, verified by regression tests)
+- RemoteStatusView on stage shows ADVERTISING/CONNECTED/DISCONNECTED state
+- Eliminates manual code entry — scan with Kanta-Connect phone app for auto-pairing
+
 ## Android: Fix FluidR3 GM Download String Literal (2026-11-09)
 
 Fixed unclosed string literal in SessionController.readAssetText():

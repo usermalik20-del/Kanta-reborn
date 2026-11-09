@@ -821,6 +821,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           dismissAccessory();
           if (hosting) {
             session.stopKantaConnectHost();
+            if (stagePresenter != null) {
+              stagePresenter.hideKantaConnectQR();
+              stagePresenter.setRemoteState(ph.kanta.reborn.stage.RemoteStatusView.State.DISCONNECTED);
+            }
             render();
           } else {
             kantaConnect();
@@ -844,12 +848,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   /**
-   * Kanta-Connect pairing: start hosting, then present the scan and type routes together.
+   * Kanta-Connect pairing: start hosting, then display the QR code on the persistent stage.
    *
    * The QR image and the printed address carry the same information, so a user can either
    * scan or type. Only the address and the pairing code are individually copyable, never a
    * combined blob: a single combined string in the clipboard is the easiest way for the
    * single-session code to leak.
+   *
+   * The QR code is shown as an overlay on the karaoke stage. Tap the stage to dismiss.
+   * The hosting continues in the background until explicitly stopped.
    */
   private void kantaConnect() {
     session.startKantaConnectHost();
@@ -866,49 +873,23 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
 
     final KantaConnectInfo info = KantaConnectInfo.of(host, code);
-    LinearLayout content = column();
-    int pad = dp(20);
-    content.setPadding(pad, pad, pad, pad);
 
-    TextView heading = text("Kanta-Connect", 20, ACCENT);
-    heading.setTypeface(null, android.graphics.Typeface.BOLD);
-    content.addView(heading);
-    content.addView(text(info.endpoint(), 15, Color.WHITE));
-
-    QrEncoder.Symbol symbol = null;
-    try {
-      symbol = QrEncoder.encode(info.link());
-    } catch (RuntimeException tooLong) {
-      symbol = null;
-    }
-    if (symbol != null) {
-      QrCodeView qr = new QrCodeView(this);
-      qr.setSymbol(symbol);
-      LinearLayout.LayoutParams qrParams = new LinearLayout.LayoutParams(dp(232), dp(232));
-      qrParams.gravity = Gravity.CENTER_HORIZONTAL;
-      qrParams.topMargin = dp(10);
-      qrParams.bottomMargin = dp(10);
-      content.addView(qr, qrParams);
+    // Show QR code on the stage overlay
+    if (stagePresenter != null) {
+      StagePresenter.KantaConnectQRInfo qrInfo =
+          new StagePresenter.KantaConnectQRInfo(info.host, info.port, info.code, info.link());
+      stagePresenter.showKantaConnectQR(qrInfo);
     }
 
-    for (String step : info.instructions()) {
-      content.addView(text("\u2022 " + step, 13, 0xFFAFB8D0));
+    // Update remote status to show advertising state
+    if (stagePresenter != null) {
+      stagePresenter.setRemoteState(ph.kanta.reborn.stage.RemoteStatusView.State.ADVERTISING);
     }
-    content.addView(
-        text("Scan the code with the Kanta-Connect phone app, or type the address and code.", 12, 0xFFAFB8D0));
 
-    ScrollView scroll = new ScrollView(this);
-    scroll.addView(content);
-    new AlertDialog.Builder(this)
-        .setView(scroll)
-        .setPositiveButton(
-            "Copy code",
-            (dialog, which) -> copyToClipboard("Kanta-Connect code", info.code))
-        .setNeutralButton(
-            "Copy address",
-            (dialog, which) -> copyToClipboard("Kanta-Connect address", info.endpoint()))
-        .setNegativeButton("Done", null)
-        .show();
+    Toast.makeText(this,
+        "Kanta-Connect hosting on " + info.endpoint() + " — QR shown on stage. Tap stage to dismiss.",
+        Toast.LENGTH_LONG).show();
+
     render();
   }
 

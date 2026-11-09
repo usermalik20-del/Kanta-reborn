@@ -52,10 +52,13 @@ if not os.path.exists(WORKSPACE):
     print("  expected: %s" % WORKSPACE)
     sys.exit(1)
 
+STAGE_PRESENTER = os.path.join(ANDROID, "stage", "StagePresenterImpl.java")
+
 workspace = read(WORKSPACE)
 activity = read(ACTIVITY)
 control_deck = read(CONTROL_DECK)
 runtime = read(RUNTIME_CHECKS)
+stage_presenter = read(STAGE_PRESENTER)
 
 # --- Architecture: the persistent stage and transient accessories ------------
 
@@ -118,28 +121,29 @@ check(
 )
 
 # --- Kanta-Connect pairing surface -------------------------------------------------
-# The pairing sheet must offer both routes - a scannable QR and a typed address - and the
-# single-session code must never be written into the shareable diagnostics report.
+# The pairing surface is now the persistent stage overlay (not an AlertDialog).
+# It must offer a scannable QR and the typed address/code, and the single-session
+# code must never be written into the shareable diagnostics report.
 
 check(
-    "QrCodeView" in activity and "QrEncoder.encode(info.link())" in activity,
-    "Android pairing sheet renders a QR of the Kanta-Connect link",
+    "QrCodeView" in stage_presenter and "QrEncoder.encode(info.link)" in stage_presenter,
+    "Android pairing surface renders a QR of the Kanta-Connect link on stage",
 )
 check(
     "KantaConnectInfo.of(" in activity and "chooseHost(localPrivateAddresses())" in activity,
-    "Android pairing sheet picks a reachable local address for the link",
+    "Android pairing surface picks a reachable local address for the link",
 )
 check(
-    "info.endpoint()" in activity and "info.instructions()" in activity,
-    "Android pairing sheet shows the typed address and the connection steps",
+    "info.endpoint()" in activity and "KantaConnectInfo.groupedCode" in stage_presenter,
+    "Android pairing surface shows the typed address and grouped pairing code",
 )
 check(
-    "info.code" in activity and "Copy code" in activity and "Copy address" in activity,
-    "Android pairing sheet copies the code and the address separately",
+    "info.code" in activity and "KantaConnectQRInfo" in stage_presenter,
+    "Android pairing surface includes the pairing code in stage overlay",
 )
 check(
     "KantaConnectInfo.chooseHost(hosts)" not in activity,
-    "Android pairing sheet does not fabricate a host without enumerating interfaces",
+    "Android pairing surface does not fabricate a host without enumerating interfaces",
 )
 
 diagnostics_body = activity[activity.find("private void diagnostics()") :]

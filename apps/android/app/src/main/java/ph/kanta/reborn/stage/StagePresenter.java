@@ -62,6 +62,27 @@ public interface StagePresenter {
   /** Hides the learning assistant overlay. */
   void hideLearningAssistant();
 
+  /** Kanta-Connect pairing info for QR display. */
+  final class KantaConnectQRInfo {
+    public final String host;
+    public final int port;
+    public final String code;
+    public final String link;
+
+    public KantaConnectQRInfo(String host, int port, String code, String link) {
+      this.host = host;
+      this.port = port;
+      this.code = code;
+      this.link = link;
+    }
+  }
+
+  /** Shows the Kanta-Connect pairing QR code on the stage. */
+  void showKantaConnectQR(KantaConnectQRInfo info);
+
+  /** Hides the Kanta-Connect pairing QR code from the stage. */
+  void hideKantaConnectQR();
+
   /** Listener for countdown events. */
   interface CountdownListener {
     void onTick(int remaining);
