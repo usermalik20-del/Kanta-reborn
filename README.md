@@ -1,3 +1,25 @@
+## Android: Add FluidR3 GM Download to SessionController (2026-11-09)
+
+Added downloadFluidR3GM() method to SessionController:
+- Downloads FluidR3 GM SoundFont from official fluidsynth mirror (ftp.osuosl.org)
+- Visual progress: percentage + bytes downloaded (updates session.message)
+- Validates with NativeSoundFont.open() before saving
+- Saves license file (fluidr3gm-license.txt) alongside SoundFont
+- Not shipped with app - downloaded on demand to user's local media folder
+- Reuses existing import progress UI (session.message + publish())
+- Delegated from MainActivity via session.downloadFluidR3GM()
+
+This refactoring fixes 'cannot find symbol' errors by moving download logic to SessionController where io, repository, and main are accessible.
+## Android: Move FluidR3 GM Download to SessionController (2026-11-09)
+
+Refactored FluidR3 GM download logic from MainActivity to SessionController:
+- Fixes 'cannot find symbol' errors for io, repository, main variables
+- MainActivity now delegates to session.downloadFluidR3GM()
+- Keeps FLUIDR3_GM_NAME constant in MainActivity for UI display
+- Download logic uses session's io executor, repository, and main handler
+- Progress updates via session.message and publish()
+- Validation with NativeSoundFont.open() before saving
+- License file (fluidr3gm-license.txt) saved alongside SoundFont
 ## Android: Fix MainActivity Syntax Errors (2026-11-09)
 
 Fixed two compilation errors in MainActivity.java:
