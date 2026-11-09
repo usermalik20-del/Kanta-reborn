@@ -1655,8 +1655,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
       StringBuilder sb = new StringBuilder();
       String line;
       while ((line = br.readLine()) != null) {
-        sb.append(line).append("
-");
+        sb.append(line).append("\\n");
       }
       return sb.toString();
     } catch (Exception e) {
