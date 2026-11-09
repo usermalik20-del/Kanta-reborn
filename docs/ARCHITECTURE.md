@@ -1,3 +1,9 @@
+## CI: Fix Trusted Main Branch Check (2026-11-09)
+
+Fixed Android validation workflow to properly fetch main branch before ancestor check:
+- Added explicit `git fetch origin main --depth=1` and `git fetch origin main --tags --depth=1` before the trusted_main check
+- Fixes "ref outside main history" error on push to main branch
+- Ensures git merge-base --is-ancestor check has access to up-to-date main branch history
 ## Android: Add FluidR3 GM Download to SessionController (2026-11-09)
 
 Added downloadFluidR3GM() method to SessionController:
