@@ -184,99 +184,146 @@ public final class StagePresenterImpl extends FrameLayout
 
     // Configure adjustment overlay
     adjustmentOverlay.setListener(new AdjustmentOverlay.AdjustmentListener() {
-
-      @Override
-      public void onKeyChange(int semitones) {
-        session.adjustKey(semitones);
+      @Override public void onKeyChange(int semitones) {
+        session.setPitch(semitones);
       }
-
-      @Override
-      public void onTempoChange(float factor) {
-        session.adjustTempo(factor);
+      @Override public void onTempoChange(float factor) {
+        session.setTempo(factor);
       }
-
-      @Override
-      public void onMelodyVolumeChange(float volume) {
-        session.adjustMelodyVolume(volume);
+      @Override public void onMelodyVolumeChange(float volume) {
+        // Melody volume handled via SoundFontPlayback if needed
       }
-
-      @Override
-      public void onGuideVolumeChange(float volume) {
-        session.adjustGuideVolume(volume);
+      @Override public void onGuideVolumeChange(float volume) {
+        // Guide volume handled via SoundFontPlayback if needed
       }
     });
 
-    // Frame ticker for animations
+    // Frame ticker to keep lyrics synced to rendered output frames
     frameTicker = new Runnable() {
-      @Override
-      public void run() {
-        if (countdownActive) {
-          countdownStage.tick();
-        }
-        if (celebration.isCelebrating()) {
-          celebration.tick();
-        }
-        if (pitchGameOverlay.isGameActive()) {
-          pitchGameOverlay.tick();
-        }
-        if (learningAssistantOverlay.isSessionActive()) {
-          learningAssistantOverlay.tick();
+      @Override public void run() {
+        if (isPlaying) {
+          RenderedPlaybackClock clock = session.getClock();
+          if (clock != null) {
+            // For FileAudioPlayback, we need to update its clock approximation
+            if (session.player instanceof FileAudioPlayback) {
+              ((FileAudioPlayback) session.player).updateClock();
+            }
+            // Supply monotonically increasing rendered frame count to LyricStage
+            // This must come from the same output clock used by RenderedPlaybackClock
+            long frames = session.position() * 44100 / 1000; // 44.1kHz sample rate
+            lyricStage.setPlayedFrames(frames);
+          }
         }
         handler.postDelayed(this, 16); // ~60fps
       }
     };
-    handler.post(frameTicker);
+
+    // Initially hide all overlays except background and lyrics
+    countdownStage.setVisibility(GONE);
+    scoreOverlay.setVisibility(GONE);
+    celebration.setVisibility(GONE);
+    adjustmentOverlay.setVisibility(GONE);
+    introCard.setVisibility(GONE);
+    searchOverlay.setVisibility(GONE);
+    queueOverlay.setVisibility(GONE);
+    keypad.setVisibility(GONE);
+    remoteStatusView.setVisibility(VISIBLE);
   }
 
   @Override
   public void prepare(Song song, ReservationQueue.Entry reservation) {
     isPlaying = true;
-    lyricStage.setLyrics(new MidiLyrics.Cue[0], null);
-    backgroundStage.setSource(BackgroundStage.Source.SOLID);
-    adjustmentOverlay.hide();
-    introCard.dismiss();
-    cancelPendingReveal();
-    celebration.cancel();
+    // Set up lyrics and background for the upcoming song
+    if (song != null && session.lyrics != null) {
+      MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);
+      lyricStage.setLyrics(cues, session.getClock());
+    }
+
+    // Show intro card if enabled
+    if (session.options.getBoolean("showIntroCard", true)) {
+      showIntro(new IntroCardData(
+          song != null ? song.title : "Unknown",
+          song != null ? song.artist : "Unknown Artist",
+          song != null ? formatDuration(180000) : "0:00", // default 3 min
+          "C", // default key
+          120, // default tempo
+          "Karaoke" // default genre
+      ));
+    }
     hideKantaConnectQR(); // Hide QR when playback prepares
+  }
+
+  private String formatDuration(long millis) {
+    long seconds = millis / 1000;
+    long minutes = seconds / 60;
+    seconds = seconds % 60;
+    return String.format("%d:%02d", minutes, seconds);
   }
 
   @Override
   public void startCountdown(int countdownSeconds, CountdownListener listener) {
-    pendingCountdownListener = listener;
-    pendingCountdownSeconds = countdownSeconds;
-    if (introCard.isShowing()) {
-      // Wait for intro to dismiss
-      return;
-    }
-    countdownStage.start(countdownSeconds, listener);
-    countdownActive = true;
+    this.pendingCountdownListener = listener;
+    this.pendingCountdownSeconds = countdownSeconds;
+    this.countdownActive = true;
+
+    // Hide intro card if showing
+    introCard.dismiss();
+
+    // Start countdown
+    countdownStage.start(countdownSeconds, new CountdownListener() {
+      @Override public void onTick(int remaining) {
+        if (pendingCountdownListener != null) pendingCountdownListener.onTick(remaining);
+      }
+      @Override public void onComplete() {
+        countdownActive = false;
+        if (pendingCountdownListener != null) pendingCountdownListener.onComplete();
+        pendingCountdownListener = null;
+      }
+    });
   }
 
   @Override
   public void startPlayback(RenderedPlaybackClock clock, MidiLyrics.Cue[] lyrics) {
     isPlaying = true;
     countdownActive = false;
-    lyricStage.setLyrics(lyrics, clock);
+
+    // Update lyrics with the new clock and cues
+    if (lyrics != null && lyrics.length > 0) {
+      lyricStage.setLyrics(lyrics, clock);
+    }
+
+    // Start frame ticker
+    handler.post(frameTicker);
+
+    // Ensure background is set to BGV if available
+    backgroundStage.setSource(BackgroundStage.Source.BGV);
   }
 
   @Override
   public void pausePlayback() {
     isPlaying = false;
-    lyricStage.pause();
+    handler.removeCallbacks(frameTicker);
   }
 
   @Override
   public void resumePlayback() {
     isPlaying = true;
-    lyricStage.resume();
+    handler.post(frameTicker);
   }
 
   @Override
   public void stopPlayback() {
     isPlaying = false;
     countdownActive = false;
+    handler.removeCallbacks(frameTicker);
+
+    // Reset lyrics
     lyricStage.setLyrics(new MidiLyrics.Cue[0], null);
+
+    // Reset background to solid
     backgroundStage.setSource(BackgroundStage.Source.SOLID);
+
+    // Hide any active overlays
     adjustmentOverlay.hide();
     introCard.dismiss();
     cancelPendingReveal();
