@@ -51,10 +51,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       CYAN = KantaTheme.PRIMARY_CYAN,
       ACCENT = KantaTheme.PRIMARY_CYAN;
 
-  private static final String FLUIDR3_GM_URL = "https://ftp.osuosl.org/pub/freesound/fluidsynth/FluidR3_GM.sf2";
   private static final String FLUIDR3_GM_NAME = "FluidR3 GM.sf2";
-  private static final String FLUIDR3_GM_LICENSE = "fluidr3gm-license.txt";
-  private static final long FLUIDR3_GM_SIZE = 140L * 1024L * 1024L;
 
   private SessionController session;
   private LinearLayout root, body, results, stagePane, navigationTabs;

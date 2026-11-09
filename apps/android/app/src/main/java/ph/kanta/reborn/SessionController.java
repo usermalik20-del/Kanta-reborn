@@ -1565,6 +1565,82 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     });
   }
 
+  void downloadFluidR3GM() {
+    if (importing) return;
+    importing = true;
+    libraryImporting = true;
+    message = "Preparing FluidR3 GM download...";
+    publish();
+    io.execute(() -> {
+      File destination = new File(repository.media, "FluidR3 GM.sf2");
+      if (destination.exists()) {
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "FluidR3 GM already exists. Use it from SoundFonts list.";
+          publish();
+        });
+        return;
+      }
+      File temp = null;
+      try {
+        temp = File.createTempFile("fluidr3gm-", ".tmp", repository.media);
+        long totalBytes = 140L * 1024L * 1024L;
+        long downloaded = 0;
+        main.post(() -> {
+          message = "Downloading FluidR3 GM... 0%";
+          publish();
+        });
+        try (java.io.InputStream in = new java.net.URL("https://ftp.osuosl.org/pub/freesound/fluidsynth/FluidR3_GM.sf2").openStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
+          byte[] buffer = new byte[65536];
+          int count;
+          while ((count = in.read(buffer)) != -1) {
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException();
+            out.write(buffer, 0, count);
+            downloaded += count;
+            if (downloaded % (1024 * 1024) < count) {
+              long finalDownloaded = downloaded;
+              main.post(() -> {
+                int pct = totalBytes > 0 ? (int) (finalDownloaded * 100 / totalBytes) : 0;
+                message = "Downloading FluidR3 GM... " + pct + "% (" + formatBytes(finalDownloaded) + " / " + formatBytes(totalBytes) + ")";
+                publish();
+              });
+            }
+          }
+          out.getFD().sync();
+        }
+        main.post(() -> {
+          message = "Validating FluidR3 GM...";
+          publish();
+        });
+        long test = NativeSoundFont.open(temp.getAbsolutePath());
+        if (test == 0) throw new IOException("Downloaded file is not a valid SoundFont");
+        NativeSoundFont.close(test);
+        if (!temp.renameTo(destination)) throw new IOException("Cannot save SoundFont");
+        final String licenseText = readAssetText("fluidr3gm-license.txt");
+        final File licenseFile = new File(repository.media, "fluidr3gm-license.txt");
+        try (java.io.FileWriter fw = new java.io.FileWriter(licenseFile)) {
+          fw.write(licenseText);
+        }
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "FluidR3 GM downloaded successfully! Select it from SoundFonts.";
+          publish();
+        });
+      } catch (Exception e) {
+        if (temp != null) temp.delete();
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "Download failed: " + e.getMessage();
+          publish();
+        });
+      }
+    });
+  }
+
   private void copyLegacyUri(android.net.Uri uri, File target, long maxBytes) throws Exception {
     try (java.io.InputStream in = context.getContentResolver().openInputStream(uri); java.io.FileOutputStream out = new java.io.FileOutputStream(target)) {
       if (in == null) throw new IOException("Cannot open selected legacy file");
