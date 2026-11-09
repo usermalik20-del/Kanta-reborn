@@ -9,6 +9,7 @@ Moved Kanta-Connect pairing QR code from an AlertDialog to the persistent karaok
 - RemoteStatusView on stage shows ADVERTISING/CONNECTED/DISCONNECTED state
 - Eliminates manual code entry — scan with Kanta-Connect phone app for auto-pairing
 - Fixed StagePresenterImpl frame ticker and adjustment overlay listener for correct build
+- Documentation synchronized with implementation
 
 ## Android: Fix FluidR3 GM Download String Literal (2026-11-09)
 

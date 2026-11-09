@@ -138,7 +138,7 @@ public final class StagePresenterImpl extends FrameLayout
     qrContainer = new FrameLayout(context);
     qrContainer.setVisibility(View.GONE);
     qrContainer.setOnClickListener(v -> hideKantaConnectQR());
-        // Kanta-Connect QR code overlay initialized
+        // Kanta-Connect QR code overlay initialized (doc-sync)
 
     // Add overlays in z-order (background first, topmost last)
     addView(backgroundStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
