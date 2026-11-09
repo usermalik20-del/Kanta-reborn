@@ -772,6 +772,10 @@ The hosted Android `RuntimeChecks` acceptance verifies that repository progress 
 `BrowserRemoteRegressionTests` runs through `CoreRegressionTests` in the existing `coreRegression` JavaExec task and exercises the real generated TLS identity and socket server. The guest-cap regression fills all four slots, performs three valid-code attempts while capacity is full, leaves one guest, and proves a new guest can pair within the five-minute pairing window. Separate wrong-code cases must still lock pairing after three incorrect codes. Capacity rejection must not weaken the wrong-code lockout or change guest count, token expiry, request authorization, or revocation behavior.
 
 
+## Android Kanta-Connect pairing-secret log-redaction regression — 2026-11-09
+
+`tools.tests.test_companion_security_contract` runs in the Android validation job. It inspects all `Log.v/d/i/w/e` calls in `KantaConnectHost`, rejects the live `pairingCode` and code-like log literals, and confirms `MainActivity` still obtains the code through the owner-facing `pairingCode()` accessor. The separate workflow-ownership contract verifies this test remains wired into Android validation. This is a source-level logging guard; existing companion protocol/runtime tests remain responsible for network behavior.
+
 ## Android paired legacy-container import regression — 2026-11-06
 
 The file-backed Android importer must use the paired index trailing offset table as the authoritative MKMD record address source. The regression contract covers title/offset cardinality, deterministic record ordering, bounded header and payload reads, AES-CBC/raw-deflate decoding, MIDI/WAV/MP3 signature validation, persistence through `LibraryRepository`, and rejection of standalone index/blob selection. The previous 1 KiB-aligned blob scan is only a fallback for indexes without a usable offset table. Framework-free checks cover the index/span and decoder contracts; exact-head Android validation must still exercise the paired-file flow with a bounded synthetic fixture and confirm My Set/Reserve visibility. Physical-device import and playback remain unverified.

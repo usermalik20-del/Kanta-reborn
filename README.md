@@ -383,6 +383,10 @@ Android APK publication follows successful Android validation only. iOS unsigned
 
 The Android My Set surface now lists imported MIDI/KAR/audio items with direct Reserve actions and shows the installed SoundFont inventory with an explicit active-bank indicator and Use action. SoundFont inventory and active selection are persisted together; changing banks affects subsequent playback, not a song already in progress. Paired ShubBlob/kantablob and index-container import is now implemented as a separate My Set flow: choose the index, then the paired blob. The file-backed importer uses the paired index's trailing offset table to address each MKMD record deterministically, decrypts and inflates only validated payloads, and materializes MIDI/WAV/MP3 copies through the existing LibraryRepository. A bounded blob scan remains only as a compatibility fallback when an index has no usable offset table. Single-file selection still rejects container files; physical-device and exact-head Android validation remain required.
 
+## Android Kanta-Connect pairing-code log redaction — 2026-11-09
+
+The one-session 128-bit Kanta-Connect pairing code remains available to the owner-facing QR and typed pairing flow, but is no longer included in Logcat or the host status callback. The encrypted protocol, code lifetime and UI pairing flow are unchanged. The Android validation workflow runs a regression contract that rejects pairing-code references in every `Log.*` call and confirms the UI still obtains the code.
+
 ## Android SoundFont storage safety — 2026-11-02
 
 SF2 import now checks the reported size before copying, periodically rechecks free storage while streaming, and preserves a 64 MiB free-space reserve for unknown or under-reported providers. The old post-copy comparison double-counted the imported file and rejected valid large banks; the corrected policy does not impose a fixed file-size ceiling and retains native structure/sample validation. Core regression coverage and exact-head Android validation are tracked in the dedicated pull request.

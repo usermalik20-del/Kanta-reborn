@@ -179,7 +179,7 @@ No per-run approval, label, actor or run-count gate applies.
 Failure-triage automation opens or updates one investigation issue per failing run. Keep it pipefail-safe: a step that needs a single answer asks the API once rather than piping a list into `head`, so the triage step cannot abort itself with SIGPIPE while a build is red.
 
 The root workflow triggers are intentionally scoped by ownership and source paths:
-- `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
+- `android-validation.yml`: Android source, explicitly listed Android-owned tools/tests, exact-SHA packaging inputs and relevant release-workflow changes. The job runs `tools.tests.test_companion_security_contract` to keep Kanta-Connect pairing codes out of Logcat. Never use a broad `tools/**` filter; website-only verifier and contract-test changes must not start Android CI.
 - `ios-validation.yml`: iOS build inputs, resources and tests on pull requests and main pushes. Exclude documentation-only `PRIVACY.md`, `PublicSite/**`, `Docs/**`, README and AGENTS paths; feature branches use the pull-request event only.
 - `ios-smoke.yml`: focused iOS native/UI smoke on relevant iOS pull requests and manual dispatch.
 - `ios-runtime-artifacts.yml`: unsigned iPhoneOS packaging on `apps/ios/**` pull requests and main pushes, with the documentation-only iOS paths excluded; no `apps/android/**` path triggers it, so Android-only pull requests do not allocate an iOS archive. Website-only tools and packaging-tool PRs are excluded.
@@ -206,7 +206,7 @@ The `vercel-deploy.yml` and `android-validation.yml` workflows include a BLA har
 - **Android**: `npx --yes bla-agents harden ./apps/android/app/build/outputs/apk/release --verify` runs after APK assembly and before publish. Protects `classes.dex` (DEX SHA-1/Adler32-preserving canaries, budget trips) and native libraries.
 - **Both**: Runs on main-branch pushes and release dispatches only. Requires Node 24 (pinned via `actions/setup-node`). The `--verify` flag re-runs shield checks to confirm integrity. 100% runtime equivalence (BLA benchmarks: 14/14 targets pass).
 - **iOS**: Not supported by BLA (no Mach-O/ARM64 binary protection). Use Apple native hardening (strip symbols, LLVM optimization, consider third-party iOS obfuscators if IP theft is high threat).
-- **GitHub repo source**: BLA protects built artifacts, not source. Repo security uses branch protection, CODEOWNERS, Dependabot, CodeQL, secret scanning (already configured).
+- **Repository controls**: do not claim branch protection, CODEOWNERS, CodeQL, Dependabot or secret scanning are enabled without current evidence. As of 2026-11-09, GitHub reports `main` as unprotected and the repository tree contains no CODEOWNERS file or CodeQL workflow; other security settings require a settings-level check.
 
 Documentation sync: any change to the BLA hardening step must update `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` in the same commit (enforced by `tools/check-documentation-sync.py` and the preflight guard).
 
