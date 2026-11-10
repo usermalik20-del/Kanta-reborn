@@ -61,6 +61,17 @@ class AndroidRuntimeRunnerContractTests(unittest.TestCase):
         self.assertIn('"am", "instrument"', source)
         self.assertIn('[str(adb), "shell", "screencap", "-p"]', source)
 
+    def test_bundled_video_names_survive_media_store_reload(self) -> None:
+        base = REPO_ROOT / "apps/android/app/src/main/java/ph/kanta/reborn"
+        store = (base / "StageMediaStore.java").read_text()
+        safe = store.split("private String safe(", 1)[1].split("Selection selection()", 1)[0]
+        self.assertIn('".video".equals(suffix)', safe)
+        self.assertIn("BundledBgvCatalog.BUILT_IN", safe)
+        self.assertIn('(clip.id + ".video").equals(name)', safe)
+        self.assertIn("new File(root, name).isFile()", safe)
+        activity = (base / "MainActivity.java").read_text()
+        self.assertIn('session.scenic == null && "scenic".equals(session.stageKind())', activity)
+
     def test_first_launch_activates_the_newly_created_stage(self) -> None:
         source = (REPO_ROOT / "apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java").read_text()
         start = source.index("protected void onStart()")

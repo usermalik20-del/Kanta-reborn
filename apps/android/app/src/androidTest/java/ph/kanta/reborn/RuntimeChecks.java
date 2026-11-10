@@ -1289,6 +1289,13 @@ public final class RuntimeChecks extends Instrumentation {
           "Standby stage does not show the 00000 karaoke code prompt: "
               + (((android.widget.TextView) code).getText()));
     });
+    try {
+      StageMediaStore.Selection restored = new StageMediaStore(activity).load();
+      check("video".equals(restored.kind) && restored.video != null && restored.video.isFile(),
+          "Bundled standby video did not survive media-store reload");
+    } catch (Exception failure) {
+      throw new AssertionError("Could not reload standby media selection", failure);
+    }
     // The standby layer must sit above the background renderer and below functional overlays.
     runOnMainSync(() -> {
       View stage = persistentPrimaryStage;
@@ -1302,12 +1309,6 @@ public final class RuntimeChecks extends Instrumentation {
       check(group.indexOfChild(presence) > group.indexOfChild(background),
           "Standby presence is not drawn above the background video layer");
     });
-    // Evidence of live video: the counter only advances while the BGV texture is producing frames.
-    final long[] first = new long[1];
-    runOnMainSync(() -> first[0] = standbyLiveFrame());
-    check(first[0] >= 0, "Standby stage did not expose a live video frame counter");
-    await(() -> standbyLiveFrame() > first[0] + 5,
-        "Karaoke standby stage showed a frozen background instead of live BGV video");
     runOnMainSync(() -> {
       View stage = persistentPrimaryStage;
       Object background = field(stage, "backgroundStage");
@@ -1320,6 +1321,12 @@ public final class RuntimeChecks extends Instrumentation {
       check(((android.view.TextureView) texture).isAvailable(),
           "Standby BGV video texture is not producing frames");
     });
+    // Evidence of live video: the counter only advances while the BGV texture is producing frames.
+    final long[] first = new long[1];
+    runOnMainSync(() -> first[0] = standbyLiveFrame());
+    check(first[0] >= 0, "Standby stage did not expose a live video frame counter");
+    await(() -> standbyLiveFrame() > first[0] + 5,
+        "Karaoke standby stage showed a frozen background instead of live BGV video");
     check(state(() -> session.current == null && !session.playing),
         "Standby stage was only asserted while nothing is playing");
   }

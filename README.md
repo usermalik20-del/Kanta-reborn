@@ -1,3 +1,19 @@
+## Bundled standby selection reload repair (2026-11-10)
+
+Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed
+runtime acceptance. Further tracing found that `restoreStage()` wrote
+`bgv_default.video`, then `StageMediaStore.load()` rejected it because its validation
+accepted only SHA-256-named imports. The store now also accepts exact bundled catalog
+IDs with the `.video` suffix and requires the file to exist; arbitrary filenames,
+unknown IDs and path traversal remain rejected. Startup scenic initialization no longer
+replaces an already-restored non-scenic selection.
+
+Runtime checks now explicitly reload the persisted video selection and check the BGV
+source/texture before waiting for actual frame updates, giving actionable failures.
+The new source-contract regression fails against the old filename validator and passes
+with this repair. Exact-head emulator acceptance is still required; no release or merge
+has been performed.
+
 ## Android standby video lifecycle and truthful runtime evidence (2026-11-10)
 
 Follow-up to the ordering repair in PR #192: `MainActivity.onStart()` now registers

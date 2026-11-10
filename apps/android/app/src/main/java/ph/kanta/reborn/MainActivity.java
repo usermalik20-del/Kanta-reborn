@@ -164,7 +164,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     displays = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-    if (session.scenic == null) session.scene(session.scenicName);
+    if (session.scenic == null && "scenic".equals(session.stageKind()))
+      session.scene(session.scenicName);
   }
 
   @Override
