@@ -1296,8 +1296,10 @@ public final class RuntimeChecks extends Instrumentation {
       View presence = stage.findViewWithTag("kanta.stage.presence");
       check(stage instanceof android.view.ViewGroup, "Persistent stage is not a view container");
       android.view.ViewGroup group = (android.view.ViewGroup) stage;
-      check(group.indexOfChild(presence) == group.indexOfChild(background) + 1,
-          "Standby presence is not directly above the background video layer");
+      // Above the video layer, but not strictly adjacent: the camera preview is inserted at
+      // index 1 when it exists, which is a legitimate sibling underneath the standby layer.
+      check(group.indexOfChild(presence) > group.indexOfChild(background),
+          "Standby presence is not drawn above the background video layer");
     });
     // Evidence of live video: the counter only advances while the BGV texture is producing frames.
     final long[] first = new long[1];

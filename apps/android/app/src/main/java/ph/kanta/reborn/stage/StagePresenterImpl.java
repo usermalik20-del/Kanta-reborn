@@ -666,8 +666,9 @@ public final class StagePresenterImpl extends FrameLayout
     }
     // Standby presence: shown only when no song is on the stage. A reserved song keeps
     // the lyric stage, so the prompt never covers a real performance.
-    boolean standby = session.current == null && !session.isPlaying();
-    presenceOverlay.bind(standby ? null : session.current);
+    Song current = session.currentSong();
+    boolean standby = current == null && !session.isPlaying();
+    presenceOverlay.bind(standby ? null : current);
     lyricStage.setStandby(standby);
     // Update lyrics if playing
     if (session.isPlaying() && session.lyrics != null && !session.lyrics.isEmpty()) {
