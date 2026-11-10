@@ -85,13 +85,6 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
       prepare(wanted);
     lyrics.mediaVisible(mediaLive || cameraLive);
     lyrics.refresh();
-    // Evidence: only count a frame while the video texture is really being produced, so a
-    // frozen wallpaper can never satisfy the standby video check.
-    if (presence != null && presence.getVisibility() == VISIBLE && video.isAvailable()
-        && (mediaLive || prepared)) {
-      presence.recordLiveFrame();
-      presence.invalidate();
-    }
   }
 
   void mountCamera(android.view.View preview) {
@@ -237,5 +230,11 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
   }
 
   @Override
-  public void onSurfaceTextureUpdated(SurfaceTexture texture) {}
+  public void onSurfaceTextureUpdated(SurfaceTexture texture) {
+    if (active && session.foreground && prepared && player != null
+        && presence.getVisibility() == VISIBLE) {
+      presence.recordLiveFrame();
+      presence.invalidate();
+    }
+  }
 }

@@ -164,7 +164,6 @@ jobs:
           fi
       - name: Android emulator runtime checks
         timeout-minutes: 15
-        continue-on-error: true
         run: python3 tools/run-android-runtime.py
       - name: Preserve Android runtime diagnostics
         if: always()

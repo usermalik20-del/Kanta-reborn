@@ -1,3 +1,27 @@
+## Android standby video lifecycle and truthful runtime evidence (2026-11-10)
+
+Follow-up to the ordering repair in PR #192: `MainActivity.onStart()` now registers
+its session listener (which synchronously creates the primary stage) before activating
+visuals. Previously the first-launch activation saw a null presenter and left the newly
+created `BackgroundStage` inactive, so it never prepared standby video. Existing
+stop/start and fullscreen visibility ownership remain unchanged.
+
+Standby live-frame evidence now advances only from `TextureView.onSurfaceTextureUpdated`
+in the embedded and fullscreen renderers, not from playback or UI refresh timers.
+The embedded renderer gates notification on active BGV media; the fullscreen renderer
+requires an active foreground prepared player. Frozen/absent video cannot pass merely
+because a timer runs. Playback, queue and media selection stay controller-owned.
+
+The Android emulator runtime step is now blocking: instrumentation failure fails the
+job. Diagnostic collection and artifact upload retain `if: always()` so failures still
+preserve logs and available artifacts. This supersedes the historical non-blocking
+runtime-step description below; no signing, merge or publication authority is changed.
+
+Three source-contract regression guards failed before this repair and pass afterward:
+first-launch activation order, actual-texture frame evidence, and CI failure propagation.
+Local static/Python checks are not emulator acceptance; exact-head CI must prove the
+standby assertion and all nineteen UI captures before claiming runtime verification.
+
 ## Runtime evidence regression: standby checks ran before the stage was resolved (2026-11-10) — fixed
 
 The Android emulator run attached to merge commit `818a73f` produced **one screenshot**

@@ -126,6 +126,12 @@ public final class StagePresenterImpl extends FrameLayout
     presenceOverlay = new StagePresenceOverlay(context);
     presenceOverlay.setTag("kanta.stage.presence");
     presenceOverlay.setInteractive(false);
+    backgroundStage.setVideoFrameListener(() -> {
+      if (presenceOverlay.getVisibility() == View.VISIBLE) {
+        presenceOverlay.recordLiveFrame();
+        presenceOverlay.invalidate();
+      }
+    });
     adjustmentOverlay = new AdjustmentOverlay(context);
     introCard = new IntroCard(context);
     searchOverlay = new SearchOverlay(context);
@@ -221,17 +227,6 @@ public final class StagePresenterImpl extends FrameLayout
             // This must come from the same output clock used by RenderedPlaybackClock
             long frames = session.position() * 44100 / 1000; // 44.1kHz sample rate
             lyricStage.setPlayedFrames(frames);
-          }
-        }
-        if (presenceOverlay.getVisibility() == View.VISIBLE) {
-          // Evidence that the standby stage is showing moving video, not a frozen still:
-          // the counter only advances while a BGV TextureView is attached and the visual
-          // layer is active, and every advance forces the equaliser to redraw.
-          if (backgroundStage.getSource() == BackgroundStage.Source.BGV
-              && backgroundStage.getVideoSurface() != null
-              && backgroundStage.getVideoSurface().isAvailable()) {
-            presenceOverlay.recordLiveFrame();
-            presenceOverlay.invalidate();
           }
         }
         handler.postDelayed(this, 16); // ~60fps

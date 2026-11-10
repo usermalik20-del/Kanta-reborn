@@ -61,6 +61,39 @@ class AndroidRuntimeRunnerContractTests(unittest.TestCase):
         self.assertIn('"am", "instrument"', source)
         self.assertIn('[str(adb), "shell", "screencap", "-p"]', source)
 
+    def test_first_launch_activates_the_newly_created_stage(self) -> None:
+        source = (REPO_ROOT / "apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java").read_text()
+        start = source.index("protected void onStart()")
+        body = source[start:source.index("protected void onPause()", start)]
+        self.assertLess(body.index("session.listen(this::render);"),
+                        body.index("stagePresenter.setVisualActive("))
+
+    def test_live_video_evidence_comes_from_texture_updates(self) -> None:
+        base = REPO_ROOT / "apps/android/app/src/main/java/ph/kanta/reborn"
+        background = (base / "stage/BackgroundStage.java").read_text()
+        callback = background.split("void onSurfaceTextureUpdated(", 1)[1].split("});", 1)[0]
+        self.assertIn("videoFrameListener.run();", callback)
+        self.assertIn("visualActive", callback)
+        self.assertIn("currentSource == Source.BGV", callback)
+        presenter = (base / "stage/StagePresenterImpl.java").read_text()
+        self.assertIn("backgroundStage.setVideoFrameListener(", presenter)
+        ticker = presenter.split("frameTicker = new Runnable()", 1)[1].split("// Initially hide", 1)[0]
+        self.assertNotIn("recordLiveFrame", ticker)
+        fullscreen = (base / "StageSurface.java").read_text()
+        refresh = fullscreen.split("void refresh()", 1)[1].split("void mountCamera", 1)[0]
+        self.assertNotIn("recordLiveFrame", refresh)
+        callback = fullscreen.split("void onSurfaceTextureUpdated(", 1)[1]
+        self.assertIn("presence.recordLiveFrame();", callback)
+        self.assertIn("active", callback)
+
+    def test_runtime_failure_fails_ci_but_diagnostics_are_preserved(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/android-validation.yml").read_text()
+        runtime = workflow.split("- name: Android emulator runtime checks", 1)[1].split("- name:", 1)[0]
+        self.assertNotIn("continue-on-error: true", runtime)
+        diagnostics = workflow.split("- name: Preserve Android runtime diagnostics", 1)[1]
+        self.assertIn("if: always()", diagnostics)
+        self.assertIn("name: android-reconstruction-checks", diagnostics)
+
     def test_standby_checks_run_after_the_stage_view_is_resolved(self) -> None:
         """The standby checks read persistentPrimaryStage, so it must already be assigned.
 
