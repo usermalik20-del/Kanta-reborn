@@ -107,6 +107,10 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> session.ready, "Library did not open");
       await(() -> session.stageReady, "Stage media store did not become ready");
       capture("library_ready.png");
+      // The empty stage must read as a karaoke machine waiting for a song code, and its
+      // background must be the moving BGV video rather than a frozen wallpaper.
+      await(() -> session.stageReady, "Stage media store did not become ready for standby");
+      stageStandbyChecks();
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code")),
           "Reference-led Home dashboard was not mounted at launch");
@@ -1263,6 +1267,68 @@ public final class RuntimeChecks extends Instrumentation {
       result.putString("stream", android.util.Log.getStackTraceString(failure));
       finish(Activity.RESULT_CANCELED, result);
     }
+  }
+
+  /**
+   * Proves the empty stage is a karaoke standby surface running live background video, not a
+   * static wallpaper: the 00000 code prompt is on screen, the presence overlay is the visible
+   * child above the video, and its frame counter keeps advancing while the BGV renders.
+   */
+  private void stageStandbyChecks() {
+    runOnMainSync(() -> {
+      View stage = persistentPrimaryStage;
+      check(stage != null, "Standby check needs the persistent stage");
+      View presence = stage.findViewWithTag("kanta.stage.presence");
+      check(presence != null, "Standby presence overlay missing from the karaoke stage");
+      check(presence.getVisibility() == View.VISIBLE,
+          "Standby presence was not shown while nothing is playing");
+      View code = stage.findViewWithTag("kanta.stage.presence.code");
+      check(code instanceof android.widget.TextView, "Standby code prompt is not readable text");
+      check("00000".equals(((android.widget.TextView) code).getText().toString()),
+          "Standby stage does not show the 00000 karaoke code prompt: "
+              + (((android.widget.TextView) code).getText()));
+    });
+    // The standby layer must sit above the background renderer and below functional overlays.
+    runOnMainSync(() -> {
+      View stage = persistentPrimaryStage;
+      Object presenterBackground = field(stage, "backgroundStage");
+      View background = (View) presenterBackground;
+      View presence = stage.findViewWithTag("kanta.stage.presence");
+      check(stage instanceof android.view.ViewGroup, "Persistent stage is not a view container");
+      android.view.ViewGroup group = (android.view.ViewGroup) stage;
+      // Above the video layer, but not strictly adjacent: the camera preview is inserted at
+      // index 1 when it exists, which is a legitimate sibling underneath the standby layer.
+      check(group.indexOfChild(presence) > group.indexOfChild(background),
+          "Standby presence is not drawn above the background video layer");
+    });
+    // Evidence of live video: the counter only advances while the BGV texture is producing frames.
+    final long[] first = new long[1];
+    runOnMainSync(() -> first[0] = standbyLiveFrame());
+    check(first[0] >= 0, "Standby stage did not expose a live video frame counter");
+    await(() -> standbyLiveFrame() > first[0] + 5,
+        "Karaoke standby stage showed a frozen background instead of live BGV video");
+    runOnMainSync(() -> {
+      View stage = persistentPrimaryStage;
+      Object background = field(stage, "backgroundStage");
+      Object source = field(background, "currentSource");
+      check("BGV".equals(String.valueOf(source)),
+          "Standby stage background is not the bundled BGV video: " + source);
+      Object texture = field(background, "videoView");
+      check(texture instanceof android.view.TextureView,
+          "Standby BGV is not rendering through a video texture");
+      check(((android.view.TextureView) texture).isAvailable(),
+          "Standby BGV video texture is not producing frames");
+    });
+    check(state(() -> session.current == null && !session.playing),
+        "Standby stage was only asserted while nothing is playing");
+  }
+
+  /** Reads the standby overlay's own monotonic video-frame counter on the main thread. */
+  private long standbyLiveFrame() {
+    View stage = persistentPrimaryStage;
+    View presence = stage == null ? null : stage.findViewWithTag("kanta.stage.presence");
+    if (presence == null) return -1L;
+    return ((ph.kanta.reborn.stage.StagePresenceOverlay) presence).liveFrame();
   }
 
   private void persistentStagePlaybackChecks() {

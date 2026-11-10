@@ -66,7 +66,7 @@ public class KantaSearchScreen extends LinearLayout {
     inputRow.setPadding((int)(16*density), (int)(12*density), (int)(16*density), (int)(4*density));
     inputRow.addView(searchBar, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     keyboardToggle = new Button(context);
-    keyboardToggle.setText("ABC");
+    keyboardToggle.setText("Letters");
     keyboardToggle.setAllCaps(false);
     keyboardToggle.setTag("kanta.search.keyboard-toggle");
     keyboardToggle.setTextSize(12);
@@ -75,7 +75,7 @@ public class KantaSearchScreen extends LinearLayout {
     keyboardToggle.setOnClickListener(v -> {
       keyboard.toggle();
       boolean letters = keyboard.isLetters();
-      keyboardToggle.setText(letters ? "123" : "ABC");
+      keyboardToggle.setText(letters ? "Numbers" : "Letters");
       keyboardToggle.setContentDescription(letters
           ? "Switch KANTA keypad to numbers"
           : "Switch KANTA keypad to letters");

@@ -58,14 +58,14 @@ public class KantaPitchTempoScreen extends LinearLayout {
           }
         });
     addView(keyCard);
-    TextView divider = new TextView(context);
-    divider.setText("\u266D\u266D   \u266D   0   \u266F   \u266F\u266F");
-    divider.setTextSize(13);
-    divider.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-    divider.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL);
-    divider.setGravity(Gravity.CENTER);
-    divider.setPadding(0, (int)(4*density), 0, (int)(16*density));
-    addView(divider);
+    // A readable semitone legend. It is a reference, not a control, and says so.
+    TextView legend = new TextView(context);
+    legend.setText("Semitone scale · \u266D\u266D lower  ·  0 original  ·  \u266F\u266F higher");
+    legend.setTextSize(12);
+    legend.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
+    legend.setGravity(Gravity.CENTER);
+    legend.setPadding((int)(8*density), (int)(4*density), (int)(8*density), (int)(16*density));
+    addView(legend);
     LinearLayout tempoCard = card("Tempo", String.format(java.util.Locale.ROOT, "%.0f%%", tempo * 100f), "Original Tempo",
         new KantaStepper.OnChangeListener() {
           @Override public void onDecrement() {

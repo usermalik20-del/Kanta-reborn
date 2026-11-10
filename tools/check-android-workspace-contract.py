@@ -260,6 +260,26 @@ check(
     "Android stage persistent layer is owned by StagePresenterImpl",
 )
 check(
+    "StagePresenceOverlay" in stage_presenter
+    and "kanta.stage.presence" in stage_presenter
+    and "presenceOverlay.bind(" in stage_presenter,
+    "Android standby stage shows a karaoke presence overlay bound to the empty playback state",
+)
+check(
+    'CODE_PROMPT = "00000"' in read(os.path.join(ANDROID, "stage", "StagePresenceOverlay.java")),
+    "Android standby stage shows the 00000 karaoke song-code prompt",
+)
+check(
+    "stageStandbyChecks();" in runtime
+    and "liveFrame()" in runtime
+    and "frozen background instead of live BGV video" in runtime,
+    "Android runtime checks prove the standby stage renders live BGV video, not wallpaper",
+)
+check(
+    "setStandby(" in read(os.path.join(ANDROID, "stage", "LyricStage.java")),
+    "Android lyric stage defers to the standby presence instead of painting over it",
+)
+check(
     "findViewWithTag(\"kanta.stage.primary\")" in runtime,
     "Android instrumentation still guards the persistent stage subtree",
 )

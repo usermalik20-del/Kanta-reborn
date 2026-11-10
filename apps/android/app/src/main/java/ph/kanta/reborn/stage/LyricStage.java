@@ -109,6 +109,16 @@ public final class LyricStage extends View {
     sparkPaint.setStyle(Paint.Style.FILL);
   }
 
+  /** True while the presence overlay owns the empty stage. */
+  private boolean standby;
+
+  /** Standby means the presence overlay owns the empty stage, so draw nothing here. */
+  public void setStandby(boolean standby) {
+    if (this.standby == standby) return;
+    this.standby = standby;
+    invalidate();
+  }
+
   /** Sets the lyrics cues and clock. */
   public void setLyrics(MidiLyrics.Cue[] cues, RenderedPlaybackClock clock) {
     this.cues = cues != null ? cues : new MidiLyrics.Cue[0];
@@ -178,6 +188,7 @@ public final class LyricStage extends View {
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
 
+    if (standby) return;
     if (cues.length == 0 || layouts.isEmpty()) {
       drawPlaceholder(canvas);
       return;
@@ -361,7 +372,7 @@ public final class LyricStage extends View {
   }
 
   private void drawPlaceholder(Canvas canvas) {
-    String text = "No lyrics loaded";
+    String text = "No timed lyrics for this song";
     TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     paint.setTextSize(16 * getResources().getDisplayMetrics().density);
     paint.setColor(0xFF999999);

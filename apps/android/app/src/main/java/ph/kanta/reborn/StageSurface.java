@@ -18,6 +18,8 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
   private File attempted;
   private long generation = -1;
   private boolean active = true, prepared, mediaLive, cameraLive;
+  private final ph.kanta.reborn.stage.StagePresenceOverlay presence;
+  private android.widget.TextView standbyPrompt;
 
   StageSurface(Context context, SessionController session) {
     super(context);
@@ -29,6 +31,22 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     addView(video, new FrameLayout.LayoutParams(-1, -1));
     lyrics = new StageView(context, session);
     addView(lyrics, new FrameLayout.LayoutParams(-1, -1));
+    // Fullscreen karaoke standby: the same code prompt the main stage shows when no song
+    // is up, plus a live frame counter that proves the background video is really playing.
+    presence = new ph.kanta.reborn.stage.StagePresenceOverlay(context);
+    presence.setTag("kanta.fullscreen.presence");
+    presence.setInteractive(false);
+    addView(presence, new FrameLayout.LayoutParams(-1, -1));
+    standbyPrompt = new android.widget.TextView(context);
+    standbyPrompt.setTag("kanta.fullscreen.standby");
+    standbyPrompt.setText("Reserve a song to begin");
+    standbyPrompt.setTextColor(0xFFB9D8E8);
+    standbyPrompt.setTextSize(12);
+    FrameLayout.LayoutParams promptParams = new FrameLayout.LayoutParams(-2, -2);
+    promptParams.gravity = Gravity.BOTTOM | Gravity.START;
+    promptParams.leftMargin = (int) (16 * getResources().getDisplayMetrics().density);
+    promptParams.bottomMargin = (int) (16 * getResources().getDisplayMetrics().density);
+    addView(standbyPrompt, promptParams);
     setMinimumHeight((int) (220 * getResources().getDisplayMetrics().density));
   }
 
@@ -45,6 +63,15 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
   }
 
   void refresh() {
+    // Fullscreen standby: shown while no song is on the stage. It sits above the rendered
+    // video, so the moving background stays the evidence of a live stage.
+    boolean standby = session.current == null && !session.isPlaying();
+    if (presence != null) {
+      presence.setVisibility(standby ? VISIBLE : GONE);
+      if (standby) presence.bind(null);
+    }
+    if (standbyPrompt != null) standbyPrompt.setVisibility(standby ? VISIBLE : GONE);
+    lyrics.setStandbyMode(standby);
     File wanted =
         active && session.foreground && !session.cameraPreviewEnabled ? session.stageVideo : null;
     if (generation != session.visualGeneration
@@ -58,6 +85,13 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
       prepare(wanted);
     lyrics.mediaVisible(mediaLive || cameraLive);
     lyrics.refresh();
+    // Evidence: only count a frame while the video texture is really being produced, so a
+    // frozen wallpaper can never satisfy the standby video check.
+    if (presence != null && presence.getVisibility() == VISIBLE && video.isAvailable()
+        && (mediaLive || prepared)) {
+      presence.recordLiveFrame();
+      presence.invalidate();
+    }
   }
 
   void mountCamera(android.view.View preview) {

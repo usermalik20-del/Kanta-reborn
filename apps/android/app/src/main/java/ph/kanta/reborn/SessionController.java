@@ -109,6 +109,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   public synchronized android.graphics.Bitmap scenicBitmap() { return scenic; }
   public synchronized File stageVideo() { return stageVideo; }
   public synchronized boolean isPlaying() { return playing; }
+  /** Current song, or null when nothing is loaded. Read-only, for the stage subpackage. */
+  public synchronized Song currentSong() { return current; }
 
   boolean libraryImporting = false;
   private Listener listener;
