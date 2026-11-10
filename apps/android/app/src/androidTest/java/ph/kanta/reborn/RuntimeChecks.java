@@ -107,16 +107,17 @@ public final class RuntimeChecks extends Instrumentation {
       await(() -> session.ready, "Library did not open");
       await(() -> session.stageReady, "Stage media store did not become ready");
       capture("library_ready.png");
-      // The empty stage must read as a karaoke machine waiting for a song code, and its
-      // background must be the moving BGV video rather than a frozen wallpaper.
-      await(() -> session.stageReady, "Stage media store did not become ready for standby");
-      stageStandbyChecks();
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code")),
           "Reference-led Home dashboard was not mounted at launch");
       runOnMainSync(() -> persistentPrimaryStage = activity.getWindow().getDecorView()
           .findViewWithTag("kanta.stage.primary"));
       assertPersistentStage(null);
+      // The empty stage must read as a karaoke machine waiting for a song code, and its
+      // background must be the moving BGV video rather than a frozen wallpaper. Runs only
+      // after persistentPrimaryStage is resolved above, because the standby checks inspect
+      // that view rather than looking the stage up themselves.
+      stageStandbyChecks();
       capture("home_dashboard.png");
       runOnMainSync(() -> {
         View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");

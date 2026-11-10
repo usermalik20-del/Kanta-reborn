@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = ROOT.parent
 
 
 class AndroidRuntimeRunnerContractTests(unittest.TestCase):
@@ -58,6 +60,43 @@ class AndroidRuntimeRunnerContractTests(unittest.TestCase):
         self.assertNotIn("if screenshot_path.exists()", source)
         self.assertIn('"am", "instrument"', source)
         self.assertIn('[str(adb), "shell", "screencap", "-p"]', source)
+
+    def test_standby_checks_run_after_the_stage_view_is_resolved(self) -> None:
+        """The standby checks read persistentPrimaryStage, so it must already be assigned.
+
+        Regression: stageStandbyChecks() was once called above the assignment, so its first
+        assertion failed, the instrumentation process crashed before any capture() ran, and
+        the emulator step still reported success because it is continue-on-error.
+        """
+        source_path = (
+            REPO_ROOT / "apps/android/app/src/androidTest/java/ph/kanta/reborn/RuntimeChecks.java"
+        )
+        source = source_path.read_text(encoding="utf-8")
+        start = source.index("public void onStart()")
+        # onStart() is bounded by the javadoc of the first helper it calls.
+        body = source[start:source.index("Proves the empty stage", start)]
+
+        assignment = body.index("persistentPrimaryStage = activity.getWindow()")
+        standby = body.index("stageStandbyChecks();")
+        self.assertLess(
+            assignment,
+            standby,
+            "stageStandbyChecks() runs before persistentPrimaryStage is assigned, so its "
+            "first check throws before any screenshot is captured",
+        )
+
+        # The helpers behind the standby assertions must not silently tolerate a null stage.
+        for helper in ("stageStandbyChecks", "standbyLiveFrame"):
+            match = re.search(
+                r"private [\w<>.\[\]]+ " + helper + r"\([^)]*\)\s*\{",
+                source,
+            )
+            self.assertIsNotNone(match, helper + " helper disappeared; update this guard")
+            self.assertIn(
+                "persistentPrimaryStage",
+                source[match.end():match.end() + 700],
+                helper + " no longer reads persistentPrimaryStage; update this guard",
+            )
 
 
 if __name__ == "__main__":
