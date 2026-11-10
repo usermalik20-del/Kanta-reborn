@@ -27,7 +27,7 @@ public class KantaSearchBar extends LinearLayout {
     setGravity(Gravity.CENTER_VERTICAL);
     ImageView iconView = new ImageView(context);
     iconView.setImageResource(R.drawable.kanta_search_color);
-    iconView.setContentDescription(null);
+    iconView.setContentDescription("Search");
     LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams((int)(24*density), (int)(24*density));
     iconParams.gravity = Gravity.CENTER_VERTICAL;
     addView(iconView, iconParams);

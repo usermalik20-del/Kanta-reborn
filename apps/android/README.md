@@ -1,3 +1,71 @@
+## Android: karaoke-rooted UI, stage standby, and incremental versions (2026-11-09) — local candidate
+
+Fixes real-world UI ambiguity across the Android app, keeps the product unmistakably a karaoke
+app, makes the empty stage look like a karaoke machine waiting for a selection, and stops every
+preview release from sharing one version.
+
+### Stage standby is karaoke, not wallpaper
+- New `stage/StagePresenceOverlay.java`: when no song is on the stage it draws a hardware-remote
+  style `00000` song-code prompt, a pulsing `KARAOKE READY` badge, an animated equaliser, and the
+  single instruction "Enter a song code to sing / or find a song in Sing".
+- `StagePresenterImpl` adds it directly above `BackgroundStage` and below every functional overlay,
+  and binds it from the truthful empty-playback state (`session.current == null && !isPlaying`), so
+  live lyrics, countdown, score and search always win.
+- The background is the bundled BGV video, so the standby stage is moving video rather than a
+  frozen still. `StagePresenceOverlay.liveFrame()` publishes a monotonic counter that only advances
+  while a BGV `TextureView` is attached, available and the visual layer is active — the runtime
+  check proves the standby stage is showing captured video, not a wallpaper.
+- `stage/LyricStage.java` gained `setStandby(boolean)` and no longer paints a placeholder over the
+  standby card. Its own placeholder is now the truthful "No timed lyrics for this song" (only
+  reached when a song IS loaded but has no timed cues).
+- `StageSurface` (fullscreen/external stage) shows the same standby card and reports live frames.
+  `StageView` gained `setStandbyMode(boolean)` so the legacy "Your music. Your stage." /
+  "Reserve your next song in CONTROL" copy cannot stack over the standby card.
+
+### The app says karaoke
+- Top app header now carries the brand block that used to sit on the dashboard: the KANTA wordmark
+  with the `SING MORE. TOGETHER.` tagline, plus Help. The baybayin subtitle (`KANTA · ᜃᜈ᜔ᜆ`) and the
+  second in-dashboard logo/tagline were removed, so there is exactly one brand lockup on screen.
+- The header logo (`kanta.header.logo`) still toggles the control deck.
+
+### Ambiguity and consistency fixes
+- `InlineKeyboard`: `CLR`/`RES` became the standard ⌫ (backspace) and `OK`, on both the numeric and
+  letter layouts.
+- Search/keyboard toggles read `Letters` / `Numbers` instead of the cryptic `ABC` / `123`
+  (Home and the Search destination). The decorative magnifier no longer advertises itself as an
+  unlabelled image; it is described as "Search".
+- Home typing now opens the real Search destination with the term applied (`pendingSearchQuery`)
+  instead of silently driving a stage overlay. Search is a proper destination with back navigation,
+  and nothing is layered over the karaoke standby stage.
+- Mic & Voice: status and action can no longer contradict. A requested-but-unconfirmed capture
+  reads "Starting microphone…" with a "Starting…" button, not "Microphone off" above "Turn on
+  microphone".
+- Queue: the empty state reads "Queue is empty. Add a song to start your karaoke set." and the
+  action is "+ Add Songs to Queue".
+- Now Playing: one truthful empty state — the `Nothing playing` headline plus `Reserve a song to
+  begin`, with the lyric area showing "KANTA Karaoke · your stage is ready" instead of a competing
+  "No timed lyrics loaded".
+- Pitch & Tempo: the non-interactive monospace `♭♭ ♭ 0 ♯ ♯♯` row became a readable semitone legend
+  ("Semitone scale · ♭♭ lower · 0 original · ♯♯ higher") so it no longer reads as tiny controls.
+
+### Incremental versions
+- `apps/android/app/build.gradle` no longer freezes `versionName` at `0.10.0-reconstruction`.
+  `versionCode` keeps the CI allocation (bounded `kantaVersionCode`, workflow run number) and
+  `versionName` is now derived from the same allocation:
+  `<kantaVersionBase>.<versionCode>-preview` (base stays on the current line, default `0.10.0`), with
+  `-PkantaVersionName` available to pin an exact name. Shape stays inside the published
+  `[A-Za-z0-9.+-]{1,64}` rule enforced by `UpdateManifest` and `tools/prepare-update-feed.py`.
+- Result: every published preview now has a distinct `versionName` and therefore a distinct
+  durable release tag (`v<version>-preview-<sha8>`), instead of all sharing `v0.10.0-preview-*`.
+- `tools/verify-ota-publication.py` is unchanged: it still pins `versionCode` to the CI allocation
+  and requires strictly increasing versions and descendant source history.
+
+### Validation
+- Local guards: java-structure (146 files), android workspace contract 55/55, product branding 4/4,
+  companion interface, ios presentation contract, verify-website, verify-test-layout, and the
+  161-test Python suite — all PASS.
+- Not run here: Android compile/lint, emulator `RuntimeChecks`, iOS build, signing, deployment.
+
 ## Android: Kanta-Connect QR Code on Stage (2026-11-09) — local candidate
 
 Moved Kanta-Connect pairing QR code from an AlertDialog to the persistent karaoke stage overlay:

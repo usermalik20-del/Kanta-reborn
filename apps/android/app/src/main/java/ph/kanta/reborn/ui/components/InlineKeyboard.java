@@ -16,11 +16,13 @@ public final class InlineKeyboard extends LinearLayout {
   private final GridLayout grid;
   private boolean letters;
   private final float density;
-  private static final String[] NUMBERS = {"1","2","3","4","5","6","7","8","9","CLR","0","RES"};
+  /** Rendered backspace glyph; the action is matched on this constant. */
+  private static final String BACKSPACE = "\u232b";
+  private static final String[] NUMBERS = {"1","2","3","4","5","6","7","8","9",BACKSPACE,"0","OK"};
   private static final String[] LETTERS = {
       "q","w","e","r","t","y","u","i","o","p",
-      "a","s","d","f","g","h","j","k","l","CLR",
-      "z","x","c","v","b","n","m","'","-","RES",
+      "a","s","d","f","g","h","j","k","l",BACKSPACE,
+      "z","x","c","v","b","n","m","'","-","OK",
       "123","space",".","/"};
 
   public InlineKeyboard(Context context, Listener listener) {
@@ -46,8 +48,10 @@ public final class InlineKeyboard extends LinearLayout {
     }
   }
   private void click(String value) {
-    if ("CLR".equals(value)) listener.onBackspace();
-    else if ("RES".equals(value)) listener.onSubmit();
+    // The backspace key renders a glyph but is identified by a stable, readable token so
+    // the label can change without silently breaking the action.
+    if (BACKSPACE.equals(value)) listener.onBackspace();
+    else if ("OK".equals(value)) listener.onSubmit();
     else if ("123".equals(value)) { letters = false; refresh(); }
     else if ("space".equals(value)) listener.onText(" ");
     else listener.onText(value);

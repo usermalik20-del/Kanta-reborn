@@ -7,7 +7,6 @@ import android.content.Context;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -22,7 +21,9 @@ public class HomeScreen extends LinearLayout {
     void onExperience();
     void onSettings();
     void onSearch();
+    /** Retained for listener compatibility; Home no longer navigates while typing. */
     void onSearchQueryChanged(String query);
+    void onSearchSubmitted(String query);
     void onQueue();
     void onYouTube();
     void onVisuals();
@@ -55,31 +56,8 @@ public class HomeScreen extends LinearLayout {
   }
 
   private void build() {
-    LinearLayout header = new LinearLayout(context);
-    header.setOrientation(HORIZONTAL);
-    header.setGravity(Gravity.CENTER_VERTICAL);
-    header.setPadding(dp(18), dp(12), dp(18), dp(10));
-
-    ImageView mark = new ImageView(context);
-    mark.setImageResource(R.drawable.kanta_mark);
-    mark.setContentDescription("KANTA");
-    header.addView(mark, new LayoutParams(dp(42), dp(42)));
-
-    LinearLayout brandBlock = new LinearLayout(context);
-    brandBlock.setOrientation(VERTICAL);
-    brandBlock.setPadding(dp(9), 0, 0, 0);
-    TextView brand = KantaTheme.titleText(context, "KANTA", 25);
-    brand.setTextColor(KantaTheme.TEXT_PRIMARY);
-    TextView tagline = KantaTheme.bodyText(context, "SING MORE. TOGETHER.", 9);
-    tagline.setLetterSpacing(0.16f);
-    brandBlock.addView(brand);
-    brandBlock.addView(tagline);
-    header.addView(brandBlock);
-
-    View spacer = new View(context);
-    header.addView(spacer, new LayoutParams(0, 1, 1));
-
-    addView(header);
+    // The KANTA brand block lives in the app header (MainActivity) so the dashboard
+    // does not stack a second logo and tagline above the search bar.
 
     // Persistent search with inline keyboard
     LinearLayout searchRow = new LinearLayout(context);
@@ -109,7 +87,7 @@ public class HomeScreen extends LinearLayout {
     // Keyboard toggle (ABC/123)
     Button keyboardToggle = new Button(context);
     keyboardToggle.setAllCaps(false);
-    keyboardToggle.setText("ABC");
+    keyboardToggle.setText("Letters");
     keyboardToggle.setTextSize(11);
     keyboardToggle.setTypeface(null, Typeface.BOLD);
     keyboardToggle.setTextColor(KantaTheme.TEXT_PRIMARY);
@@ -125,7 +103,7 @@ public class HomeScreen extends LinearLayout {
     // Code entry shortcut
     ImageView code = new ImageView(context);
     code.setImageResource(R.drawable.kanta_code_color);
-    code.setContentDescription("Enter song code");
+    code.setContentDescription("Keyboard: tap a key to type a song code or title");
     code.setPadding(dp(10), dp(10), dp(10), dp(10));
     LayoutParams codeParams = new LayoutParams(dp(48), dp(48));
     codeParams.leftMargin = dp(6);
@@ -149,7 +127,12 @@ public class HomeScreen extends LinearLayout {
         else if (start > 0) searchInput.getText().delete(start - 1, start);
         searchInput.requestFocus();
       }
-      @Override public void onSubmit() { searchInput.requestFocus(); }
+      @Override public void onSubmit() {
+        // OK is the karaoke "enter code" action: commit the whole entry at once instead of
+        // navigating on the first digit.
+        searchInput.requestFocus();
+        if (listener != null) listener.onSearchSubmitted(searchInput.getText().toString());
+      }
     });
     keyboard.setTag("kanta.home.keyboard");
     addView(keyboard, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
@@ -158,20 +141,23 @@ public class HomeScreen extends LinearLayout {
     keyboardToggle.setOnClickListener(v -> {
       keyboard.toggle();
       boolean letters = keyboard.isLetters();
-      keyboardToggle.setText(letters ? "123" : "ABC");
+      keyboardToggle.setText(letters ? "Numbers" : "Letters");
       keyboardToggle.setContentDescription(letters
           ? "Switch keyboard to numbers"
           : "Switch keyboard to letters");
       searchInput.requestFocus();
     });
 
-    // Live search as you type
+    // Typing stays on Home. The entry is committed by OK (or by tapping a result), so a
+    // five-digit karaoke code can be typed without being navigated away mid-code.
     searchInput.addTextChangedListener(new android.text.TextWatcher() {
       public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
-      public void onTextChanged(CharSequence s, int a, int b, int c) {
-        if (listener != null) listener.onSearchQueryChanged(s.toString());
-      }
+      public void onTextChanged(CharSequence s, int a, int b, int c) {}
       public void afterTextChanged(android.text.Editable e) {}
+    });
+    searchInput.setOnEditorActionListener((v, actionId, event) -> {
+      if (listener != null) listener.onSearchSubmitted(searchInput.getText().toString());
+      return true;
     });
     searchInput.requestFocus();
   }

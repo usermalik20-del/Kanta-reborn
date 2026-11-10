@@ -89,7 +89,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     lyrics.setGravity(Gravity.CENTER);
     lyrics.setPadding((int)(32*density), 0, (int)(32*density), 0);
     lyricLine1 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
-    lyricLine2 = lyric("No timed lyrics loaded", ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY, 23);
+    lyricLine2 = lyric("KANTA Karaoke · your stage is ready", ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY, 23);
     lyricLine3 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
     lyricLine4 = lyric("", ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED, 17);
     lyrics.addView(lyricLine1); lyrics.addView(lyricLine2);

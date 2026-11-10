@@ -52,7 +52,7 @@ public class KantaQueueScreen extends LinearLayout {
     itemsContainer.removeAllViews();
     if (items == null || items.length == 0) {
       TextView empty = new TextView(context);
-      empty.setText("Queue is empty. Reserve a song to begin.");
+      empty.setText("Queue is empty.\nAdd a song to start your karaoke set.");
       empty.setTextSize(15);
       empty.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
       empty.setGravity(Gravity.CENTER);
@@ -130,7 +130,7 @@ public class KantaQueueScreen extends LinearLayout {
   }
   public void showAddSongsCTA() {
     Button add = new Button(context);
-    add.setText("+ Add Songs");
+    add.setText("+ Add Songs to Queue");
     add.setTextSize(16);
     add.setTypeface(null, Typeface.BOLD);
     add.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);

@@ -245,7 +245,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     if (micStatus != null) {
       micStatus.setText(!micEnabled ? "Microphone off"
           : micCapturing ? "Microphone input active" : "Starting microphone…");
-      micToggle.setText(micEnabled ? "Turn off" : "Turn on");
+      micToggle.setText(micEnabled ? "Turn off" : micCapturing ? "Starting…" : "Turn on");
       micToggle.setEnabled(!micEnabled || micCapturing);
     }
     setMonitorState(monitorEnabled, monitorAudible, gain, mode);

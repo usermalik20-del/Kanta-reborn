@@ -57,6 +57,8 @@ public final class StagePresenterImpl extends FrameLayout
   private final ScoreOverlay scoreOverlay;
   private final ScoreCelebrationView celebration;
   private final BackgroundStage backgroundStage;
+  /** Karaoke standby presence (code prompt, live badge, equaliser) shown when no song is up. */
+  private final StagePresenceOverlay presenceOverlay;
   private BackgroundStage.Source cameraFallbackSource = BackgroundStage.Source.SOLID;
   private boolean cameraStreaming;
   private androidx.camera.view.PreviewView cameraPreview;
@@ -121,6 +123,9 @@ public final class StagePresenterImpl extends FrameLayout
     scoreOverlay = new ScoreOverlay(context);
     celebration = new ScoreCelebrationView(context);
     backgroundStage = new BackgroundStage(context);
+    presenceOverlay = new StagePresenceOverlay(context);
+    presenceOverlay.setTag("kanta.stage.presence");
+    presenceOverlay.setInteractive(false);
     adjustmentOverlay = new AdjustmentOverlay(context);
     introCard = new IntroCard(context);
     searchOverlay = new SearchOverlay(context);
@@ -142,6 +147,9 @@ public final class StagePresenterImpl extends FrameLayout
 
     // Add overlays in z-order (background first, topmost last)
     addView(backgroundStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+    // The standby presence sits above the background video and below every functional
+    // overlay, so live lyrics, countdown, score and search always win.
+    addView(presenceOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(lyricStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(countdownStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(scoreOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -213,6 +221,17 @@ public final class StagePresenterImpl extends FrameLayout
             // This must come from the same output clock used by RenderedPlaybackClock
             long frames = session.position() * 44100 / 1000; // 44.1kHz sample rate
             lyricStage.setPlayedFrames(frames);
+          }
+        }
+        if (presenceOverlay.getVisibility() == View.VISIBLE) {
+          // Evidence that the standby stage is showing moving video, not a frozen still:
+          // the counter only advances while a BGV TextureView is attached and the visual
+          // layer is active, and every advance forces the equaliser to redraw.
+          if (backgroundStage.getSource() == BackgroundStage.Source.BGV
+              && backgroundStage.getVideoSurface() != null
+              && backgroundStage.getVideoSurface().isAvailable()) {
+            presenceOverlay.recordLiveFrame();
+            presenceOverlay.invalidate();
           }
         }
         handler.postDelayed(this, 16); // ~60fps
@@ -645,6 +664,11 @@ public final class StagePresenterImpl extends FrameLayout
     } else {
       backgroundStage.setSource(BackgroundStage.Source.SOLID);
     }
+    // Standby presence: shown only when no song is on the stage. A reserved song keeps
+    // the lyric stage, so the prompt never covers a real performance.
+    boolean standby = session.current == null && !session.isPlaying();
+    presenceOverlay.bind(standby ? null : session.current);
+    lyricStage.setStandby(standby);
     // Update lyrics if playing
     if (session.isPlaying() && session.lyrics != null && !session.lyrics.isEmpty()) {
       MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);
@@ -689,6 +713,9 @@ public final class StagePresenterImpl extends FrameLayout
       lastBgvShuffleTime = now;
     }
   }
+
+  /** Standby presence view; the runtime check proves it is above live video. */
+  public StagePresenceOverlay presenceOverlay() { return presenceOverlay; }
 
   /** Sets whether the visual layer is active. */
   public void setVisualActive(boolean active) {

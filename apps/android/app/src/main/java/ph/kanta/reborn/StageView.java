@@ -109,7 +109,9 @@ final class StageView extends View {
         index >= 0 && index < session.lyrics.size() ? session.lyrics.get(index) : null;
     float font = Math.min(dp(48), Math.max(dp(20), w / 18)) * session.lyricScale;
     String current =
-        session.current == null
+        standbyMode
+            ? ""
+            : session.current == null
             ? "Your music. Your stage."
             : cue == null
                 ? (session.lyrics.isEmpty() ? session.current.title : "Get ready to sing\u2026")
@@ -143,7 +145,7 @@ final class StageView extends View {
       drawPitchWave(canvas, currentLayout, w / 2, currentLyricY, cue, session.position());
     }
     if (!next.isEmpty()) drawLayout(canvas, nextLayout, w / 2, nextLyricY);
-    if (session.current == null)
+    if (session.current == null && !standbyMode)
       line(
           canvas,
           "Reserve your next song in CONTROL",
@@ -277,6 +279,11 @@ final class StageView extends View {
       if (x >= 0 && y >= 0 && x <= width && y <= height) canvas.drawCircle(x, y, radius, paint);
     }
   }
+
+  private boolean standbyMode;
+
+  /** Standby means the presence card owns the empty stage, so draw no placeholder text. */
+  void setStandbyMode(boolean standby) { standbyMode = standby; }
 
   private void line(
       Canvas canvas, String text, float x, float y, float maxWidth, float size, int color) {

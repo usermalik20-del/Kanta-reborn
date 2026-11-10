@@ -397,17 +397,25 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     root.requestApplyInsets();
     LinearLayout header = row();
     appHeader = header;
+    header.setGravity(Gravity.CENTER_VERTICAL);
     ImageView mark = new ImageView(this);
-    mark.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
+    mark.setImageResource(ph.kanta.reborn.R.drawable.kanta_mark);
+    mark.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
     mark.setContentDescription("Open KANTA control deck");
     mark.setTag("kanta.header.logo");
     mark.setClickable(true);
     mark.setFocusable(true);
     mark.setOnClickListener(v -> toggleControlDeck());
-    header.addView(mark, new LinearLayout.LayoutParams(dp(48), dp(48)));
-    TextView brand = text("KANTA · ᜃᜈ᜔ᜆ", 22, ph.kanta.reborn.ui.KantaTheme.PRIMARY_CYAN);
+    header.addView(mark, new LinearLayout.LayoutParams(dp(40), dp(40)));
+    LinearLayout brandBlock = column();
+    brandBlock.setPadding(dp(10), 0, 0, 0);
+    TextView brand = text("KANTA", 24, ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
     brand.setTypeface(null, android.graphics.Typeface.BOLD);
-    header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
+    brandBlock.addView(brand);
+    TextView brandTagline = text("SING MORE. TOGETHER.", 9, ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
+    brandTagline.setLetterSpacing(0.16f);
+    brandBlock.addView(brandTagline);
+    header.addView(brandBlock, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(button("Help", this::help));
     root.addView(header);
     LinearLayout main = new LinearLayout(this);
@@ -1244,6 +1252,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void refreshNowPlayingScreen() {
     if(nowPlayingScreen==null||!"Now Playing".equals(tab))return;
     Song current=session.current;
+    // Truthful empty state: the headline stays the exact phrase the runtime check asserts,
+    // and the only empty-state instruction is repeated once, under it.
     nowPlayingScreen.setSongInfo(current==null?"Nothing playing":current.title,
         current==null?"Reserve a song to begin":(session.singer.isEmpty()?current.artist:session.singer));
     long position=Math.max(0,session.position()),duration=Math.max(0,session.duration());
@@ -1453,7 +1463,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     screenRef[0] = screen;
     screen.setTag("kanta.screen.search");
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
-    screen.setQuery(query);
+    // Prefill only for a committed Home entry; a bare tap on Search opens the full library.
+    if (!query.isEmpty()) {
+      screen.setQuery(query);
+      query = "";
+    }
     renderSearchResults(screen, visibleSongs);
   }
 
@@ -1622,10 +1636,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onExperience() { tab = "Experience"; render(); }
               @Override public void onSettings() { tab = "More"; render(); }
               @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
-              @Override public void onSearchQueryChanged(String query) {
-                if (stagePresenter != null) {
-                  stagePresenter.setSearchQuery(query);
-                }
+              @Override public void onSearchQueryChanged(String typed) {
+                // Home typing stays local, so a five-digit karaoke code is never split by a
+                // navigation. The committed term is carried by onSearchSubmitted.
+                if (typed == null) return;
+                query = typed;
+              }
+              @Override public void onSearchSubmitted(String typed) {
+                // OK on the Home keypad is the karaoke "enter code" action: open the real
+                // Search destination with the term applied. Nothing is layered over the
+                // standby stage, so the karaoke presence stays visible.
+                query = typed == null ? "" : typed;
+                searchSource = "All";
+                tab = "Search";
+                render();
               }
               @Override public void onQueue() { tab = "Queue"; render(); }
               @Override public void onYouTube() { openYouTubeVideo(); }
@@ -1855,7 +1879,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void voiceControls() {
     body.addView(
         button(
-            session.microphone.enabled() ? "Turn off microphone" : "Turn on microphone",
+            session.microphone.enabled()
+                ? "Turn off microphone"
+                : session.microphone.capturing()
+                    ? "Starting microphone…"
+                    : "Turn on microphone",
             this::toggleMicrophone));
     microphoneReading = text("", 14, CYAN);
     microphoneReading.setTag("kanta.microphone.reading");
