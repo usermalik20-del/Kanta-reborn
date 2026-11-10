@@ -164,7 +164,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     displays = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-    if (session.scenic == null) session.scene(session.scenicName);
+    if (session.scenic == null && "scenic".equals(session.stageKind()))
+      session.scene(session.scenicName);
   }
 
   @Override
@@ -172,10 +173,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     super.onStart();
     youtubeForeground = true;
     session.hostVisible(true);
+    // listen() renders synchronously and creates the primary stage on first launch.
+    session.listen(this::render);
     if (stagePresenter != null)
       stagePresenter.setVisualActive(fullscreen == null || !fullscreen.isShowing());
     if (fullscreenStage != null) fullscreenStage.setVisualActive(true);
-    session.listen(this::render);
     handler.post(tick);
     displays.registerDisplayListener(displayListener, handler);
     refreshDisplay();

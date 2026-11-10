@@ -62,7 +62,19 @@ final class StageMediaStore {
   }
 
   private String safe(String name, String suffix) {
-    return name.matches("[a-f0-9]{64}\\" + suffix) && new File(root, name).isFile() ? name : "";
+    boolean imported = name.matches("[a-f0-9]{64}\\" + suffix);
+    // Bundled copies use catalog IDs, not imported-media content hashes. Only exact
+    // catalog names are allowed; arbitrary paths and unknown IDs remain invalid.
+    boolean bundled = false;
+    if (".video".equals(suffix)) {
+      for (BundledBgvCatalog.Clip clip : BundledBgvCatalog.BUILT_IN) {
+        if ((clip.id + ".video").equals(name)) {
+          bundled = true;
+          break;
+        }
+      }
+    }
+    return (imported || bundled) && new File(root, name).isFile() ? name : "";
   }
 
   Selection selection() {

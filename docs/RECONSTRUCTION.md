@@ -1,3 +1,106 @@
+## Bundled standby selection reload repair (2026-11-10)
+
+Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed
+runtime acceptance. Further tracing found that `restoreStage()` wrote
+`bgv_default.video`, then `StageMediaStore.load()` rejected it because its validation
+accepted only SHA-256-named imports. The store now also accepts exact bundled catalog
+IDs with the `.video` suffix and requires the file to exist; arbitrary filenames,
+unknown IDs and path traversal remain rejected. Startup scenic initialization no longer
+replaces an already-restored non-scenic selection.
+
+Runtime checks now explicitly reload the persisted video selection and check the BGV
+source/texture before waiting for actual frame updates, giving actionable failures.
+The new source-contract regression fails against the old filename validator and passes
+with this repair. Exact-head emulator acceptance is still required; no release or merge
+has been performed.
+
+## Android standby video lifecycle and truthful runtime evidence (2026-11-10)
+
+Follow-up to the ordering repair in PR #192: `MainActivity.onStart()` now registers
+its session listener (which synchronously creates the primary stage) before activating
+visuals. Previously the first-launch activation saw a null presenter and left the newly
+created `BackgroundStage` inactive, so it never prepared standby video. Existing
+stop/start and fullscreen visibility ownership remain unchanged.
+
+Standby live-frame evidence now advances only from `TextureView.onSurfaceTextureUpdated`
+in the embedded and fullscreen renderers, not from playback or UI refresh timers.
+The embedded renderer gates notification on active BGV media; the fullscreen renderer
+requires an active foreground prepared player. Frozen/absent video cannot pass merely
+because a timer runs. Playback, queue and media selection stay controller-owned.
+
+The Android emulator runtime step is now blocking: instrumentation failure fails the
+job. Diagnostic collection and artifact upload retain `if: always()` so failures still
+preserve logs and available artifacts. This supersedes the historical non-blocking
+runtime-step description below; no signing, merge or publication authority is changed.
+
+Three source-contract regression guards failed before this repair and pass afterward:
+first-launch activation order, actual-texture frame evidence, and CI failure propagation.
+Local static/Python checks are not emulator acceptance; exact-head CI must prove the
+standby assertion and all nineteen UI captures before claiming runtime verification.
+
+## Runtime evidence regression: standby checks ran before the stage was resolved (2026-11-10) — fixed
+
+The Android emulator run attached to merge commit `818a73f` produced **one screenshot**
+(`browser-remote.png`) instead of the nineteen UI captures the artifact list declares. It
+happened because a check introduced in that same commit ran before the view it inspects was
+assigned, so the instrumentation process crashed on its first assertion — before the first
+`capture()` call — and every acceptance step downstream was skipped.
+
+### Root cause
+
+`RuntimeChecks.onStart()` called `stageStandbyChecks()` three lines **above** the statement
+that assigns `persistentPrimaryStage`. That helper reads the field directly:
+
+    View stage = persistentPrimaryStage;
+    check(stage != null, "Standby check needs the persistent stage");
+
+so it threw `AssertionError: Standby check needs the persistent stage` on the main thread.
+Logcat confirms the failure and the stack:
+
+    E AndroidRuntime: FATAL EXCEPTION: main
+    E AndroidRuntime: Process: ph.kanta.reborn, PID: 3001
+    E AndroidRuntime: java.lang.AssertionError: Standby check needs the persistent stage
+    E AndroidRuntime:   at ph.kanta.reborn.RuntimeChecks.check(RuntimeChecks.java:34)
+    E AndroidRuntime:   at ph.kanta.reborn.RuntimeChecks.lambda$stageStandbyChecks$252(RuntimeChecks.java:1280)
+
+`adb shell am instrument` then reported `INSTRUMENTATION_RESULT: shortMsg=Process crashed.`,
+`tools/run-android-runtime.py` raised *"Runtime instrumentation did not report acceptance"*,
+and the screenshot loop after it never ran.
+
+### Why CI still showed green
+
+The step *"Android emulator runtime checks"* carries `continue-on-error: true`
+(`.github/workflows/android-validation.yml:167`), so the job and the run still concluded
+`success`, and the artifact step uses `if: always()`. The evidence directory therefore
+uploaded with the log, the two APKs, lint reports and `browser-remote.png` while silently
+missing every UI screenshot. For comparison, run `798` on `6fd4b0a8` (before this work)
+logged `KANTA runtime: 416 checks passed` and read all nineteen captures.
+
+### Fix
+
+`RuntimeChecks.onStart()` now resolves `persistentPrimaryStage` and calls
+`assertPersistentStage(null)` **first**, then runs `stageStandbyChecks()`, then
+`capture("home_dashboard.png")`. Order matters because the standby assertions inspect the
+resolved view rather than looking the stage up themselves. The redundant
+`await(() -> session.stageReady, ...)` that preceded the call was removed; `stageReady` is
+already awaited at line 108.
+
+### Regression guard
+
+`tools/tests/test_android_runtime_runner.py` gains
+`test_standby_checks_run_after_the_stage_view_is_resolved`, which asserts that the
+`persistentPrimaryStage` assignment appears before `stageStandbyChecks();` inside `onStart()`,
+and that both standby helpers still read the field. Verified by reintroducing the original
+ordering: the test fails, and passes again once the fix is restored.
+
+### Consequence for the release page
+
+The `00000` standby stage, the live-BGV frame counter and the control deck are still only
+*statically* verified on this source. The emulator evidence for them must be re-collected from
+a green run after this fix; until then the website must not present those captures as
+existing. The site copy already states that the standby stage and control deck are asserted by
+emulator checks without claiming screenshots, which remains accurate.
+
 ## Website: feature copy resynced with the current preview (2026-11-10) — local candidate
 
 The public site's feature pages had drifted from the app. They described the build at

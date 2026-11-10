@@ -48,6 +48,7 @@ public final class BackgroundStage extends FrameLayout {
   private File failedVideoFile;
   private int videoGeneration;
   private boolean visualActive;
+  private Runnable videoFrameListener;
   private android.graphics.Bitmap photoBitmap;
 
   public BackgroundStage(Context context) {
@@ -111,7 +112,10 @@ public final class BackgroundStage extends FrameLayout {
               stopVideo();
               return true;
             }
-            @Override public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture texture) {}
+            @Override public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture texture) {
+              if (visualActive && currentSource == Source.BGV && videoPlayer != null
+                  && videoFrameListener != null) videoFrameListener.run();
+            }
           });
         }
         addView(videoView, 0);
@@ -230,6 +234,11 @@ public final class BackgroundStage extends FrameLayout {
       videoSurface.release();
       videoSurface = null;
     }
+  }
+
+  /** Observes actual rendered video frames on the UI thread, never refresh/timer ticks. */
+  public void setVideoFrameListener(Runnable listener) {
+    videoFrameListener = listener;
   }
 
   /** Sets the BGV video surface. */
