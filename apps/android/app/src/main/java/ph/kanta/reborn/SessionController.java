@@ -1574,7 +1574,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     message = "Preparing FluidR3 GM download...";
     publish();
     io.execute(() -> {
-      File destination = new File(repository.media, "FluidR3 GM.sf2");
+      File destination = new File(repository.media, "FluidR3_GM.sf2");
       if (destination.exists()) {
         main.post(() -> {
           importing = false;
@@ -1584,17 +1584,17 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
         return;
       }
-      File temp = null;
+      File tempZip = null;
       try {
-        temp = File.createTempFile("fluidr3gm-", ".tmp", repository.media);
-        long totalBytes = 140L * 1024L * 1024L;
+        tempZip = File.createTempFile("fluidr3gm-", ".zip", repository.media);
+        long totalBytes = 148L * 1024L * 1024L;
         long downloaded = 0;
         main.post(() -> {
           message = "Downloading FluidR3 GM... 0%";
           publish();
         });
-        try (java.io.InputStream in = new java.net.URL("https://ftp.osuosl.org/pub/freesound/fluidsynth/FluidR3_GM.sf2").openStream();
-             java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
+        try (java.io.InputStream in = new java.net.URL("https://ftp.osuosl.org/pub/musescore/soundfont/fluid-soundfont.zip").openStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(tempZip)) {
           byte[] buffer = new byte[65536];
           int count;
           while ((count = in.read(buffer)) != -1) {
@@ -1613,13 +1613,35 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           out.getFD().sync();
         }
         main.post(() -> {
+          message = "Extracting FluidR3 GM...";
+          publish();
+        });
+        // Extract the .SF2 file from ZIP
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(tempZip)) {
+          java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
+          while (entries.hasMoreElements()) {
+            java.util.zip.ZipEntry entry = entries.nextElement();
+            if (entry.getName().toLowerCase().endsWith(".sf2")) {
+              try (java.io.InputStream zipIn = zip.getInputStream(entry);
+                   java.io.FileOutputStream out = new java.io.FileOutputStream(destination)) {
+                byte[] buffer = new byte[65536];
+                int count;
+                while ((count = zipIn.read(buffer)) != -1) {
+                  out.write(buffer, 0, count);
+                }
+              }
+              break;
+            }
+          }
+        }
+        if (!destination.exists()) throw new IOException("No .sf2 file found in ZIP");
+        main.post(() -> {
           message = "Validating FluidR3 GM...";
           publish();
         });
-        long test = NativeSoundFont.open(temp.getAbsolutePath());
+        long test = NativeSoundFont.open(destination.getAbsolutePath());
         if (test == 0) throw new IOException("Downloaded file is not a valid SoundFont");
         NativeSoundFont.close(test);
-        if (!temp.renameTo(destination)) throw new IOException("Cannot save SoundFont");
         final String licenseText = readAssetText("fluidr3gm-license.txt");
         final File licenseFile = new File(repository.media, "fluidr3gm-license.txt");
         try (java.io.FileWriter fw = new java.io.FileWriter(licenseFile)) {
@@ -1629,6 +1651,84 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           importing = false;
           libraryImporting = false;
           message = "FluidR3 GM downloaded successfully! Select it from SoundFonts.";
+          publish();
+        });
+      } catch (Exception e) {
+        if (tempZip != null) tempZip.delete();
+        if (destination.exists()) destination.delete();
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "Download failed: " + e.getMessage();
+          publish();
+        });
+      }
+    });
+  }
+
+
+  void downloadMuseScoreGeneral() {
+    if (importing) return;
+    importing = true;
+    libraryImporting = true;
+    message = "Preparing MuseScore General download...";
+    publish();
+    io.execute(() -> {
+      File destination = new File(repository.media, "MuseScore_General.sf2");
+      if (destination.exists()) {
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "MuseScore General already exists. Use it from SoundFonts list.";
+          publish();
+        });
+        return;
+      }
+      File temp = null;
+      try {
+        temp = File.createTempFile("musescore-", ".tmp", repository.media);
+        long totalBytes = 216L * 1024L * 1024L;
+        long downloaded = 0;
+        main.post(() -> {
+          message = "Downloading MuseScore General... 0%";
+          publish();
+        });
+        try (java.io.InputStream in = new java.net.URL("https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2").openStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
+          byte[] buffer = new byte[65536];
+          int count;
+          while ((count = in.read(buffer)) != -1) {
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException();
+            out.write(buffer, 0, count);
+            downloaded += count;
+            if (downloaded % (1024 * 1024) < count) {
+              long finalDownloaded = downloaded;
+              main.post(() -> {
+                int pct = totalBytes > 0 ? (int) (finalDownloaded * 100 / totalBytes) : 0;
+                message = "Downloading MuseScore General... " + pct + "% (" + formatBytes(finalDownloaded) + " / " + formatBytes(totalBytes) + ")";
+                publish();
+              });
+            }
+          }
+          out.getFD().sync();
+        }
+        main.post(() -> {
+          message = "Validating MuseScore General...";
+          publish();
+        });
+        long test = NativeSoundFont.open(temp.getAbsolutePath());
+        if (test == 0) throw new IOException("Downloaded file is not a valid SoundFont");
+        NativeSoundFont.close(test);
+        if (!temp.renameTo(destination)) throw new IOException("Cannot save SoundFont");
+        final String licenseText = readAssetText("musescore-license.txt");
+        final File licenseFile = new File(repository.media, "musescore-license.txt");
+        try (java.io.FileWriter fw = new java.io.FileWriter(licenseFile)) {
+          fw.write(licenseText);
+        }
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "MuseScore General downloaded successfully! Select it from SoundFonts.";
           publish();
         });
       } catch (Exception e) {
@@ -1642,6 +1742,83 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
       }
     });
   }
+
+  void downloadSGMv201() {
+    if (importing) return;
+    importing = true;
+    libraryImporting = true;
+    message = "Preparing SGM-v2.01 download...";
+    publish();
+    io.execute(() -> {
+      File destination = new File(repository.media, "SGM-v2.01-YamahaGrand-Guit-Bass-v2.7.sf2");
+      if (destination.exists()) {
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "SGM-v2.01 already exists. Use it from SoundFonts list.";
+          publish();
+        });
+        return;
+      }
+      File temp = null;
+      try {
+        temp = File.createTempFile("sgm-", ".tmp", repository.media);
+        long totalBytes = 528L * 1024L * 1024L;
+        long downloaded = 0;
+        main.post(() -> {
+          message = "Downloading SGM-v2.01... 0%";
+          publish();
+        });
+        try (java.io.InputStream in = new java.net.URL("https://huggingface.co/spaces/projectlosangeles/Orpheus-Mono-Melodies-Mixer/resolve/main/SGM-v2.01-YamahaGrand-Guit-Bass-v2.7.sf2").openStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
+          byte[] buffer = new byte[65536];
+          int count;
+          while ((count = in.read(buffer)) != -1) {
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException();
+            out.write(buffer, 0, count);
+            downloaded += count;
+            if (downloaded % (1024 * 1024) < count) {
+              long finalDownloaded = downloaded;
+              main.post(() -> {
+                int pct = totalBytes > 0 ? (int) (finalDownloaded * 100 / totalBytes) : 0;
+                message = "Downloading SGM-v2.01... " + pct + "% (" + formatBytes(finalDownloaded) + " / " + formatBytes(totalBytes) + ")";
+                publish();
+              });
+            }
+          }
+          out.getFD().sync();
+        }
+        main.post(() -> {
+          message = "Validating SGM-v2.01...";
+          publish();
+        });
+        long test = NativeSoundFont.open(temp.getAbsolutePath());
+        if (test == 0) throw new IOException("Downloaded file is not a valid SoundFont");
+        NativeSoundFont.close(test);
+        if (!temp.renameTo(destination)) throw new IOException("Cannot save SoundFont");
+        final String licenseText = readAssetText("sgm-license.txt");
+        final File licenseFile = new File(repository.media, "sgm-license.txt");
+        try (java.io.FileWriter fw = new java.io.FileWriter(licenseFile)) {
+          fw.write(licenseText);
+        }
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "SGM-v2.01 downloaded successfully! Select it from SoundFonts.";
+          publish();
+        });
+      } catch (Exception e) {
+        if (temp != null) temp.delete();
+        main.post(() -> {
+          importing = false;
+          libraryImporting = false;
+          message = "Download failed: " + e.getMessage();
+          publish();
+        });
+      }
+    });
+  }
+
 
   private String formatBytes(long bytes) {
     if (bytes < 1024) return bytes + " B";
