@@ -1277,3 +1277,16 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `vercel-deploy.yml` must keep checkout credentials unpersisted, restrict production deployment to `refs/heads/main`, and scope `VERCEL_TOKEN` only to the verification, domain API, pull, build, and deploy steps. `configure-is-a-dev-domain.yml` is also main-only. BLA candidate steps must not receive the token.
 - `tools/tests/test_workflow_path_ownership.py` guards the Android main-history check, step-scoped signing, keystore cleanup, checkout credential policy, and pinned BLA CLI. `tools/tests/test_vercel_deploy_workflow.py` guards Vercel token scope and main-only production domain/deploy jobs.
 - Repository branch protection and security settings are not controlled by these workflow tests. On 2026-11-09 the GitHub API reported `main` as unprotected; repository-admin action is required to enable protection and restrict production secrets to a protected environment.
+## Android runtime-only legacy import key — local candidate
+
+`LegacyFileContainerImporterRegressionTests` now uses unrelated synthetic key/IV
+fixtures, without reflecting application constants. Coverage adds strict hex/length
+validation, defensive ownership, idempotent clearing, missing-file cleanup, correct
+and wrong supplied keys, and refusal to reuse cleared keys. Run
+`cd apps/android && ./gradlew --no-daemon :app:coreRegression` on Java 17.
+`python3 -m unittest tools.tests.test_runtime_import_key` covers four source contracts
+for no embedded default and UI/controller cleanup. Full local Python suite: 170 tests
+pass; preflight passes, including 149-file structure and 59 workspace checks.
+Java tests/build/lint, emulator prompt/picker/cancel/background/busy/error acceptance
+and real-device playback are NOT verified: local JVM fails on `getcpu(2)`.
+See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).

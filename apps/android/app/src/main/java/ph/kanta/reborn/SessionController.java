@@ -1544,27 +1544,43 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
-  void importLegacyPair(android.net.Uri indexUri, android.net.Uri blobUri) {
-    if (!ready || importing || indexUri == null || blobUri == null) return;
+  // Takes ownership of credentials, including rejected/busy requests.
+  boolean importLegacyPair(android.net.Uri indexUri, android.net.Uri blobUri,
+      ph.kanta.reborn.core.legacy.LegacyImportKey credentials) {
+    if (credentials == null) return false;
+    if (!ready || importing || indexUri == null || blobUri == null) {
+      credentials.close();
+      return false;
+    }
     importCancelled.set(false); importing = true; libraryImporting = true; message = "Importing legacy song library…"; publish();
-    io.execute(() -> {
-      File index = null, blob = null; int good = 0; String resultMessage;
-      try {
-        index = File.createTempFile("legacy-index-", ".idx", context.getCacheDir());
-        blob = File.createTempFile("legacy-blob-", ".blob", context.getCacheDir());
-        copyLegacyUri(indexUri, index, 16L * 1024 * 1024);
-        copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024);
-        ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
-            ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
-                index, blob, new File(repository.media, "legacy-import"));
-        good = repository.importLegacyResult(result);
-        resultMessage = "Imported " + good + " legacy song(s); " + result.skippedCount + " record(s) skipped.";
-      } catch (Exception failure) {
-        resultMessage = "Legacy import failed: " + (failure.getMessage() == null ? "unsupported container" : failure.getMessage());
-      } finally { if (index != null) index.delete(); if (blob != null) blob.delete(); }
-      final int imported = good; final String messageValue = resultMessage;
-      main.post(() -> { songs = repository.songs(); importing = false; libraryImporting = false; message = messageValue; completeImportProgress(imported > 0, messageValue); publish(); });
-    });
+    try {
+      io.execute(() -> {
+        File index = null, blob = null; int good = 0; String resultMessage;
+        try (ph.kanta.reborn.core.legacy.LegacyImportKey owned = credentials) {
+          index = File.createTempFile("legacy-index-", ".idx", context.getCacheDir());
+          blob = File.createTempFile("legacy-blob-", ".blob", context.getCacheDir());
+          copyLegacyUri(indexUri, index, 16L * 1024 * 1024);
+          copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024);
+          ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
+              ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
+                  index, blob, new File(repository.media, "legacy-import"), owned);
+          good = repository.importLegacyResult(result);
+          resultMessage = "Imported " + good + " legacy song(s); " + result.skippedCount + " record(s) skipped.";
+        } catch (Exception failure) {
+          resultMessage = "Legacy import failed: " + (failure.getMessage() == null ? "unsupported container" : failure.getMessage());
+        } finally { if (index != null) index.delete(); if (blob != null) blob.delete(); }
+        final int imported = good; final String messageValue = resultMessage;
+        main.post(() -> { songs = repository.songs(); importing = false; libraryImporting = false; message = messageValue; completeImportProgress(imported > 0, messageValue); publish(); });
+      });
+      return true;
+    } catch (java.util.concurrent.RejectedExecutionException rejected) {
+      credentials.close();
+      importing = false;
+      libraryImporting = false;
+      message = "Import could not start. Please try again.";
+      publish();
+      return false;
+    }
   }
 
   void downloadFluidR3GM() {

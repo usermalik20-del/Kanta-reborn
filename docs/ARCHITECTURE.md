@@ -1408,3 +1408,30 @@ The Android workflow accepts an optional manual checkout ref. Release signing is
 The Vercel production deploy and domain-attachment jobs are restricted to `refs/heads/main`. Their production token is step-scoped and never exposed to BLA candidate generation.
 
 Repository-level security controls are separate from this workflow boundary. On 2026-11-09 GitHub reported `main` as unprotected, and no CODEOWNERS file or CodeQL workflow was present in the repository tree. Dependabot and secret-scanning settings were not verified by this audit. Enabling branch protection or configuring repository security settings requires repository-admin action.
+
+## Android runtime-only legacy import key — local candidate
+
+The My Set paired-file flow asks for a 64-hex-digit AES-256 key and a
+32-hex-digit IV after both files are selected. There is no bundled default or
+automatic extraction. Users must have authorization for their files and obtain
+the material independently. Other imports are unchanged.
+
+`LegacyImportKey` owns defensive copies and supports idempotent clearing. The
+controller takes ownership even for busy/invalid requests and executor rejection;
+the worker closes it on copy/decode/install failure. The synchronous paired importer
+also consumes it with try-with-resources, including mapping failures and success.
+The entry dialog is masked, excluded from saved state and autofill, requests no
+personalized keyboard learning or extract UI, and uses a secure window. Dismissal,
+cancel and backgrounding clear its fields. Nothing writes keys to files, settings,
+logs, intents or saved instance state. Byte/field clearing is best effort: Java,
+cryptographic providers and third-party keyboards can retain internal copies.
+
+The existing synthetic importer suite now supplies unrelated fixture material and
+tests valid/wrong keys, strict hex/length validation, defensive copying, idempotent
+clearing, closed-key reuse and cleanup after failed input validation. Python source
+contracts guard the UI/controller wiring. These source checks do not execute Android.
+Run `cd apps/android && ./gradlew --no-daemon :app:coreRegression`, build/lint and
+emulator UI acceptance on a working toolchain. Local JVM startup fails on unsupported
+`getcpu(2)`, so no local Java execution, APK build or device acceptance is claimed.
+D2/D4 remain open for real paired import/playback, semantic title verification and
+storage/cancellation. iOS behavior is unchanged; this candidate is not a release.

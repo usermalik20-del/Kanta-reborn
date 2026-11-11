@@ -9,6 +9,9 @@ import java.util.Arrays;
 /** Synthetic address tests; no user media or key material is included. */
 public final class LegacyFileContainerImporterRegressionTests {
   private static int checks;
+  // Deliberately synthetic material, unrelated to any real container.
+  private static final byte[] TEST_KEY = new byte[32];
+  private static final byte[] TEST_IV = new byte[16];
 
   private static void check(boolean yes, String message) {
     checks++;
@@ -63,8 +66,20 @@ public final class LegacyFileContainerImporterRegressionTests {
         }
         u32(out, 17); u32(out, 513); // Correct count, not record byte addresses.
       }
+      LegacyImportKey credentials = new LegacyImportKey(TEST_KEY, TEST_IV);
+      byte[] ownedKey = credentials.key(), ownedIv = credentials.iv();
       LegacyFileContainerImporter.ImportResult result = LegacyFileContainerImporter.importPair(
-          index, blob, dir.resolve("output").toFile());
+          index, blob, dir.resolve("output").toFile(), credentials);
+      checkCleared(credentials, ownedKey, ownedIv);
+      byte[] wrong = TEST_KEY.clone();
+      wrong[0] = 1;
+      LegacyImportKey wrongCredentials = new LegacyImportKey(wrong, TEST_IV);
+      byte[] wrongOwnedKey = wrongCredentials.key(), wrongOwnedIv = wrongCredentials.iv();
+      LegacyFileContainerImporter.ImportResult refused = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("wrong-key").toFile(), wrongCredentials);
+      check(refused.decodedCount == 0 && refused.skippedCount == 2,
+          "Wrong runtime key never silently falls back to bundled material");
+      checkCleared(wrongCredentials, wrongOwnedKey, wrongOwnedIv);
       check(result.decodedCount == 2 && result.skippedCount == 0 && result.errors.isEmpty(),
           "Paired import counts only index-referenced songs");
       check(result.songs.get(0).title.equals("Synthetic B")
@@ -91,17 +106,71 @@ public final class LegacyFileContainerImporterRegressionTests {
       length = compressor.deflate(packed);
       check(compressor.finished(), "Synthetic fixture compression complete");
     } finally { compressor.end(); }
-    // Exercise the existing compatibility decoder without duplicating its key in tests.
-    java.lang.reflect.Field key = LegacyFileContainerImporter.class.getDeclaredField("KEY");
-    java.lang.reflect.Field iv = LegacyFileContainerImporter.class.getDeclaredField("IV");
-    key.setAccessible(true); iv.setAccessible(true);
     javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
     cipher.init(javax.crypto.Cipher.ENCRYPT_MODE,
-        new javax.crypto.spec.SecretKeySpec((byte[]) key.get(null), "AES"),
-        new javax.crypto.spec.IvParameterSpec((byte[]) iv.get(null)));
+        new javax.crypto.spec.SecretKeySpec(TEST_KEY, "AES"),
+        new javax.crypto.spec.IvParameterSpec(TEST_IV));
     byte[] encrypted = cipher.doFinal(Arrays.copyOf(packed, ((length + 15) / 16) * 16));
     out.seek(offset); out.write(new byte[] {'M', 'K', 'M', 'D', 1});
     u32(out, payload.length); u32(out, length); out.write(encrypted);
+  }
+
+  private static void checkCleared(LegacyImportKey credentials, byte[] key, byte[] iv) {
+    check(Arrays.equals(key, new byte[32]) && Arrays.equals(iv, new byte[16]),
+        "Owned key and IV are zeroed");
+    boolean refused = false;
+    try { credentials.key(); } catch (IllegalStateException expected) { refused = true; }
+    check(refused, "Closed material cannot be reused");
+    credentials.close(); // Idempotent cleanup at controller and importer boundaries.
+  }
+
+  private static void runtimeKeyLifecycle() throws Exception {
+    byte[] sourceKey = new byte[32], sourceIv = new byte[16];
+    Arrays.fill(sourceKey, (byte) 17); Arrays.fill(sourceIv, (byte) 34);
+    LegacyImportKey credentials = new LegacyImportKey(sourceKey, sourceIv);
+    byte[] key = credentials.key(), iv = credentials.iv();
+    sourceKey[0] = 99; sourceIv[0] = 99;
+    check(key[0] == 17 && iv[0] == 34, "Runtime key owns defensive copies");
+    credentials.close();
+    checkCleared(credentials, key, iv);
+    check(sourceKey[0] == 99 && sourceIv[0] == 99, "Cleanup does not mutate caller arrays");
+
+    String keyHex = "11".repeat(32), ivHex = "aB".repeat(16);
+    try (LegacyImportKey parsed = LegacyImportKey.fromHex(keyHex, ivHex)) {
+      check(parsed.key()[0] == 17 && parsed.iv()[0] == (byte) 0xab,
+          "Runtime hexadecimal parser accepts both cases");
+    }
+    for (String invalid : new String[] {"", "0".repeat(63), "0".repeat(65),
+        "0".repeat(63) + "g", "0".repeat(63) + "\uff10"}) {
+      boolean refused = false;
+      try { LegacyImportKey.fromHex(invalid, ivHex); }
+      catch (IllegalArgumentException expected) { refused = true; }
+      check(refused, "Malformed key rejected without including input in errors");
+    }
+    boolean refused = false;
+    try { LegacyImportKey.fromHex(keyHex, "0".repeat(31)); }
+    catch (IllegalArgumentException expected) { refused = true; }
+    check(refused, "Malformed IV rejected");
+    for (int size : new int[] {0, 16, 24, 31, 33}) {
+      refused = false;
+      try { new LegacyImportKey(new byte[size], new byte[16]); }
+      catch (IllegalArgumentException expected) { refused = true; }
+      check(refused, "Unsupported key size rejected before import");
+    }
+    refused = false;
+    try { new LegacyImportKey(new byte[32], null); }
+    catch (IllegalArgumentException expected) { refused = true; }
+    check(refused, "Missing material rejected");
+
+    credentials = new LegacyImportKey(sourceKey, sourceIv);
+    key = credentials.key(); iv = credentials.iv();
+    refused = false;
+    try {
+      LegacyFileContainerImporter.importPair(new File("missing-index"),
+          new File("missing-blob"), new File("unused-output"), credentials);
+    } catch (IOException expected) { refused = true; }
+    check(refused, "Invalid pair rejected");
+    checkCleared(credentials, key, iv);
   }
 
   public static int run() throws Exception {
@@ -143,6 +212,7 @@ public final class LegacyFileContainerImporterRegressionTests {
     } finally {
       Files.deleteIfExists(blob.toPath());
     }
+    runtimeKeyLifecycle();
     namedImport();
     return checks;
   }

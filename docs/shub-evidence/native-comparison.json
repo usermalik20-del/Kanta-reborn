@@ -1,0 +1,18 @@
+{
+  "apk_sha256": "5512f94650bc7cdb4268066f9ec2d6e2db08c95cdf09fa247ab9c706723b9320",
+  "native_sha256": "db9d2fbe0b0260486b66aec60853794147eb3959af6f843e32f3eee404024495",
+  "abi": "arm64-v8a",
+  "decoder_va": "0x2ef8",
+  "aes_init_call_va": "0x3070",
+  "key_source_vas": [
+    "0x1200",
+    "0x1220"
+  ],
+  "iv_source_va": "0x11e0",
+  "compared_key_bytes": 32,
+  "key_matches_existing_importer": true,
+  "iv_matches_existing_importer": true,
+  "method": "static ARM64 argument tracing and ELF virtual-address reads",
+  "runtime_tested": false,
+  "source_ref": "ffc780fe297f100cf351ef25e9402e650cf2f25b"
+}

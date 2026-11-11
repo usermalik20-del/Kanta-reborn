@@ -78,6 +78,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private DisplayManager displays;
   private String tab = "Home", query = "", singer = "";
   private Uri pendingLegacyIndex;
+  private AlertDialog legacyKeyDialog;
   private EditText queryInput;
   private int resultLimit = 50;
   private int queueLimit = 20;
@@ -218,6 +219,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   @Override
   protected void onStop() {
+    if (legacyKeyDialog != null) legacyKeyDialog.dismiss();
     handler.removeCallbacksAndMessages(null);
     closeYouTubeVideo();
     if (companionDialog != null) companionDialog.dismiss();
@@ -2660,7 +2662,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         "Party sound volume",
         session.party.sfxVolume,
         value -> session.partyVolumes(value, session.party.loopVolume));
-    body.addView(text("Original synthesized party sounds", 18, ACCENT));
+    body.addView(text("Built-in party sounds", 18, ACCENT));
     body.addView(button("Stop all party audio", session::stopParty));
     for (int i = 0; i < PartySounds.TITLES.size(); i++) {
       final int slot = i;
@@ -2686,6 +2688,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void pickLegacyIndex() {
+    pendingLegacyIndex = null;
     Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
     startActivityForResult(intent, LEGACY_INDEX);
   }
@@ -2693,6 +2696,77 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void pickLegacyBlob() {
     Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
     startActivityForResult(intent, LEGACY_BLOB);
+  }
+
+  private EditText legacyKeyInput(String hint, int digits) {
+    EditText input = new EditText(this);
+    input.setHint(hint);
+    input.setContentDescription(hint);
+    input.setSingleLine(true);
+    input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+    input.setFilters(new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(digits)});
+    input.setSaveEnabled(false);
+    input.setSaveFromParentEnabled(false);
+    input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
+    input.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+        | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+    return input;
+  }
+
+  private static void clearLegacyKeyInput(EditText input) {
+    android.text.Editable text = input.getText();
+    text.replace(0, text.length(), new String(new char[text.length()]));
+    text.clear();
+  }
+
+  private void requestLegacyKey(Uri index, Uri blob) {
+    if (legacyKeyDialog != null) legacyKeyDialog.dismiss();
+    EditText keyInput = legacyKeyInput("Key: 64 hexadecimal digits", 64);
+    EditText ivInput = legacyKeyInput("IV: 32 hexadecimal digits", 32);
+    LinearLayout panel = column();
+    panel.setPadding(dp(20), dp(8), dp(20), dp(8));
+    panel.setSaveEnabled(false);
+    panel.addView(text("Use only files you have permission to import. Enter the key and IV supplied "
+        + "for your files. They are used for this import only and are not saved. "
+        + "You will need to enter them again for another import.", 14, Color.WHITE));
+    panel.addView(keyInput);
+    panel.addView(ivInput);
+    AlertDialog dialog = new AlertDialog.Builder(this)
+        .setTitle("Unlock legacy files")
+        .setView(panel)
+        .setNegativeButton("Cancel", null)
+        .setPositiveButton("Import", null)
+        .create();
+    legacyKeyDialog = dialog;
+    dialog.setOnDismissListener(ignored -> {
+      clearLegacyKeyInput(keyInput);
+      clearLegacyKeyInput(ivInput);
+      if (legacyKeyDialog == dialog) legacyKeyDialog = null;
+    });
+    if (dialog.getWindow() != null) {
+      dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+    }
+    dialog.show();
+    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(ignored -> {
+      ph.kanta.reborn.core.legacy.LegacyImportKey credentials;
+      try {
+        credentials = ph.kanta.reborn.core.legacy.LegacyImportKey.fromHex(
+            keyInput.getText(), ivInput.getText());
+      } catch (IllegalArgumentException invalid) {
+        ivInput.setError("Enter a 64-digit key and a 32-digit IV using 0-9 and A-F.");
+        return;
+      }
+      clearLegacyKeyInput(keyInput);
+      clearLegacyKeyInput(ivInput);
+      dialog.dismiss();
+      if (session.importLegacyPair(index, blob, credentials)) {
+        showImportProgress();
+        attachImportProgressListener();
+      } else {
+        Toast.makeText(this, "Import could not start. Please try again.", Toast.LENGTH_LONG).show();
+      }
+    });
   }
 
   private void chooseAudio(String title, java.util.function.Consumer<Song> selected) {
@@ -3002,6 +3076,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   protected void onActivityResult(int request, int result, Intent data) {
     super.onActivityResult(request, result, data);
     if (result != RESULT_OK || data == null) {
+      if (request == LEGACY_INDEX || request == LEGACY_BLOB) pendingLegacyIndex = null;
       if (request == EXPORT) {
         exportBytes = null;
         exportCode = null;
@@ -3019,10 +3094,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     if (request == LEGACY_BLOB && data.getData() != null) {
       if (pendingLegacyIndex == null) { Toast.makeText(this, "Choose the index file first.", Toast.LENGTH_LONG).show(); return; }
-      showImportProgress();
-      attachImportProgressListener();
-      session.importLegacyPair(pendingLegacyIndex, data.getData());
+      Uri index = pendingLegacyIndex;
       pendingLegacyIndex = null;
+      requestLegacyKey(index, data.getData());
       return;
     }
     if (request == MUSIC) {
