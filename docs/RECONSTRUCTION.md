@@ -1094,6 +1094,7 @@ The redesign is implemented as modular JS files loaded by all pages:
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
 
+<!-- party-sounds-assets-committed -->
 ## Android runtime-only legacy import key — local candidate
 
 Android paired import no longer embeds key/IV constants: the caller supplies them

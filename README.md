@@ -24,6 +24,7 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
 
+<!-- party-sounds-assets-committed -->
 ## Before you install
 
 - **Back up your music and saved work.** Switching Android test versions may require uninstalling the old app, which can erase its saved data.

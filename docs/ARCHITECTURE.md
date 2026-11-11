@@ -1105,6 +1105,7 @@ A workspace redesign must be implemented at the real composition boundary before
 
 A pull request is not eligible for acceptance while GitHub reports a dirty/unmergeable state or its latest head has no validation runs. First reconcile the branch with current main while preserving candidate-only implementation and documentation. Then require reconstruction, focused iOS smoke, unsigned archive, and independent iPhone/iPad walkthrough results for the same resulting code SHA. A prior green run on an older head is historical evidence only; never infer validation from a commit that has no attached run or from a branch that cannot merge cleanly.
 
+<!-- party-sounds-assets-committed -->
 ## Android legacy songbook interoperability
 
 The Android app now carries the read-only counterpart of the iOS `LegacyCompatibility`

@@ -515,6 +515,7 @@ The online preview uses a distinct transient UUID per selection and idempotent t
 
 Opening an online video requires paused local karaoke and disabled microphone/monitoring. It stops effects and between-song music. Starting local audio, an effect, microphone input or between-song music closes the online video; closing it does not restart those sounds automatically. The local song and queue are preserved. This PR #51 candidate requires fresh Android build/runtime validation and physical-device interruption/YouTube acceptance; see ../../docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md.
 
+<!-- party-sounds-assets-committed -->
 ## KANTA Karaoke candidate — legacy songbook interoperability
 
 KANTA Karaoke is the working name for bringing the karaoke loop the owner built as a

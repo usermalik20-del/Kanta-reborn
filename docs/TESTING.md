@@ -1293,5 +1293,5 @@ See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-leg
 <<<<<<< Updated upstream
 =======
 
-Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path. Physical listening, device decoding and SoundPool playback remain separate acceptance.
+Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path (tools/tests/test_party_assets.py). Physical listening, device decoding and SoundPool playback remain separate acceptance.
 >>>>>>> Stashed changes
