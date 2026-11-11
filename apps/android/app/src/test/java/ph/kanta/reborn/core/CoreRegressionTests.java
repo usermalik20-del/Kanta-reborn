@@ -218,12 +218,15 @@ public final class CoreRegressionTests {
     }
     check(invalid, "Invalid dry block accepted");
 
-    for (VocalMonitorEffects.Mode mode : VocalMonitorEffects.Mode.values()) {
+    VocalMonitorEffects.Mode[] modes = VocalMonitorEffects.Mode.values();
+    float[][] responses = new float[modes.length][];
+    for (VocalMonitorEffects.Mode mode : modes) {
       VocalMonitorEffects effects = new VocalMonitorEffects();
       effects.mode(mode);
       float[] impulse = new float[48000];
       impulse[0] = .5f;
       effects.process(impulse);
+      responses[mode.ordinal()] = impulse.clone();
       double tail = 0;
       for (int i = 1; i < impulse.length; i++) tail += impulse[i] * impulse[i];
       check(
@@ -242,6 +245,19 @@ public final class CoreRegressionTests {
       boolean bounded = true;
       for (float value : impulse) bounded &= Float.isFinite(value) && Math.abs(value) <= .9f;
       check(bounded, "Monitor effect limiter/nonfinite contract: " + mode);
+    }
+    // Compare the complete one-second responses, not names or enum identities.
+    // This catches identical settings even when the picker uses different labels.
+    for (int left = 0; left < modes.length; left++) {
+      for (int right = left + 1; right < modes.length; right++) {
+        double difference = 0;
+        for (int sample = 0; sample < responses[left].length; sample++) {
+          double delta = responses[left][sample] - responses[right][sample];
+          difference += delta * delta;
+        }
+        check(difference > .000001,
+            "Monitor presets have duplicate responses: " + modes[left] + " / " + modes[right]);
+      }
     }
   }
 

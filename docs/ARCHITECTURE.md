@@ -1,3 +1,13 @@
+## Monitor preset distinction (K1)
+
+`VocalMonitorEffects` retains its existing single monitor processor and ten enum values.
+Room and Hall keep their previous tuning. Small Room uses feedback/damping/wet mix
+`0.62/0.62/0.16` with no predelay; Concert Hall uses `0.89/0.28/0.33` with 1,440 frames
+(30 ms at 48 kHz) of predelay. These replace duplicate settings without changing state
+ownership, capture, scoring input, allocations in `process()`, dependencies or permissions.
+The framework-free regression compares rendered impulse responses for all 45 preset
+pairs rather than relying on different labels to imply different processing.
+
 ## Bundled standby selection reload repair (2026-11-10)
 
 Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed

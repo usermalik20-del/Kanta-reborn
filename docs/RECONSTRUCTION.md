@@ -1,3 +1,10 @@
+## K1 closed — distinct monitor effects (2026-11-11)
+
+Small Room and Concert Hall have distinct tuning; legacy Room and Hall values remain
+unchanged. Added all-pairs impulse-response regression coverage in the existing
+framework-free core runner, preserving its reset and bounded-output checks. This is a
+verified code/test repair on `dead199a1c31839fe955c5b6445a8e3a2c72a854`: [Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/42994654674) passed build/lint, 55,262 core regression checks and 430 emulator checks. No physical listening, signing, publication or device acceptance is implied.
+
 ## Bundled standby selection reload repair (2026-11-10)
 
 Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed

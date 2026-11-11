@@ -1,3 +1,11 @@
+## Distinct monitor-effect presets (K1)
+
+Small Room and Concert Hall now have their own tuning rather than duplicating Room and
+Hall. The existing Room/Hall tuning, enum identities, picker order and saved selections
+are unchanged. Effects remain monitor-only: pitch detection and scoring receive dry
+microphone audio. Automated response tests do not establish perceived sound quality or
+hardware monitoring latency; those still require listening on a physical device.
+
 ## Bundled standby selection reload repair (2026-11-10)
 
 Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed

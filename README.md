@@ -20,7 +20,7 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 - **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains.
 - **Plan your session:** search your library, line up songs and keep saved song sets.
 - **Personalize the screen:** choose backgrounds or use your own photos and videos.
-- **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform.
+- **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
 
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
 

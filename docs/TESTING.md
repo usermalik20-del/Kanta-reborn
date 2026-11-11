@@ -1,3 +1,14 @@
+## Distinct monitor presets regression (K1)
+
+`CoreRegressionTests.monitorChecks()` retains one-second impulse, reset-to-silence and
+limiter/nonfinite checks for every preset. It additionally compares all 45 pairs of
+rendered impulse responses, requiring squared difference greater than `0.000001`.
+The old Small Room/Room and Concert Hall/Hall aliases produce identical responses and
+fail that assertion. Run `:app:coreRegression` on a working Java 17 toolchain; Android
+validation already runs this task. Local Python/source guards are not Java execution.
+Physical-device listening, sound preference and route latency are not acceptance claims
+for this change. K1 is verified on `dead199a1c31839fe955c5b6445a8e3a2c72a854`: [Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/42994654674) passed build/lint, 55,262 core regression checks (including all 45 preset pairs), and 430 emulator runtime checks. This is automated acceptance, not physical listening evidence.
+
 ## Bundled standby selection reload repair (2026-11-10)
 
 Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed
