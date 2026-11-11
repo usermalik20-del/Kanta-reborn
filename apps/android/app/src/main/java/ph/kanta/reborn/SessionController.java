@@ -426,7 +426,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
               android.util.AtomicFile output = new android.util.AtomicFile(file);
               FileOutputStream stream = output.startWrite();
               try {
-                stream.write(PartySounds.wave(i));
+                try (InputStream input = context.getAssets().open("party/pad-" + i + ".wav")) {
+                  byte[] buffer = new byte[8192];
+                  int count;
+                  while ((count = input.read(buffer)) != -1) stream.write(buffer, 0, count);
+                }
                 output.finishWrite(stream);
               } catch (Exception failure) {
                 output.failWrite(stream);

@@ -1,0 +1,19 @@
+Party sound sources — all source pages identify CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Pads 0 and 1: ShangusBurger, crowd applause / cheering
+https://freesound.org/people/ShangusBurger/sounds/763816/
+Pad 2: bigjoedrummer, buzz roll
+https://freesound.org/people/bigjoedrummer/sounds/77305/
+Pad 3: jacksonacademyashmore, Airhorn
+https://freesound.org/people/jacksonacademyashmore/sounds/414208/
+Pad 4: Soundeffects4You, audience laughing
+https://freesound.org/people/Soundeffects4You/sounds/231258/
+Pad 5: plasterbrain, Tada Fanfare F
+https://freesound.org/people/plasterbrain/sounds/397354/
+Pad 6: 5ro4, bell ding 2
+https://freesound.org/people/5ro4/sounds/611112/
+Pad 7: SpliceSound, trumpet sad chromatic wah wah
+https://freesound.org/people/SpliceSound/sounds/369873/
+
+Edited for length, faded, peak-normalized to -3 dBFS, resampled to 22.05 kHz mono 16-bit PCM.

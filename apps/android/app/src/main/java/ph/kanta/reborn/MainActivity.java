@@ -2660,7 +2660,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         "Party sound volume",
         session.party.sfxVolume,
         value -> session.partyVolumes(value, session.party.loopVolume));
-    body.addView(text("Original synthesized party sounds", 18, ACCENT));
+    body.addView(text("Built-in party sounds", 18, ACCENT));
     body.addView(button("Stop all party audio", session::stopParty));
     for (int i = 0; i < PartySounds.TITLES.size(); i++) {
       final int slot = i;

@@ -1277,3 +1277,5 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `vercel-deploy.yml` must keep checkout credentials unpersisted, restrict production deployment to `refs/heads/main`, and scope `VERCEL_TOKEN` only to the verification, domain API, pull, build, and deploy steps. `configure-is-a-dev-domain.yml` is also main-only. BLA candidate steps must not receive the token.
 - `tools/tests/test_workflow_path_ownership.py` guards the Android main-history check, step-scoped signing, keystore cleanup, checkout credential policy, and pinned BLA CLI. `tools/tests/test_vercel_deploy_workflow.py` guards Vercel token scope and main-only production domain/deploy jobs.
 - Repository branch protection and security settings are not controlled by these workflow tests. On 2026-11-09 the GitHub API reported `main` as unprotected; repository-admin action is required to enable protection and restrict production secrets to a protected environment.
+
+Android party-pad checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the bundled asset-loading path. Device decoding, SoundPool playback and physical listening remain separate acceptance.

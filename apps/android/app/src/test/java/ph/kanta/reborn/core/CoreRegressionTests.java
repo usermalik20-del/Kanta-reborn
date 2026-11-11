@@ -1284,19 +1284,19 @@ public final class CoreRegressionTests {
       0
     };
     check(midiTrack(unmarked).cues.size() == 2, "Unmarked lyrics collapsed into one line");
+    check(PartySounds.TITLES.size() == 8, "Party sound slot count changed");
     for (int sound = 0; sound < PartySounds.TITLES.size(); sound++) {
-      byte[] wave = PartySounds.wave(sound);
-      check(Arrays.equals(wave, PartySounds.wave(sound)), "Nondeterministic first-party sound");
+      byte[] wave = Files.readAllBytes(Paths.get(args[0], "..", "party", "pad-" + sound + ".wav"));
       try (javax.sound.sampled.AudioInputStream audio =
           javax.sound.sampled.AudioSystem.getAudioInputStream(new ByteArrayInputStream(wave))) {
-        check(
-            audio.getFormat().getSampleRate() == 22050 && audio.getFrameLength() == 44100,
-            "Invalid party WAV format/duration");
+        check(audio.getFormat().getSampleRate() == 22050 && audio.getFormat().getChannels() == 1
+            && audio.getFormat().getSampleSizeInBits() == 16 && audio.getFrameLength() > 0
+            && audio.getFrameLength() <= 22050 * 3, "Invalid party WAV format/duration");
         byte[] pcm = audio.readAllBytes();
         int peak = 0;
         for (int offset = 0; offset < pcm.length; offset += 2)
           peak = Math.max(peak, Math.abs((short) ((pcm[offset] & 255) | (pcm[offset + 1] << 8))));
-        check(peak > 100 && peak <= 24000, "Silent or clipped party sound");
+        check(peak >= 22500 && peak <= 23500, "Silent, unnormalized or clipped party sound");
       }
     }
     check(ShortClipBounds.accepts(2000, 44100, 2), "Small stereo clip rejected");
@@ -1305,13 +1305,6 @@ public final class CoreRegressionTests {
     check(
         !ShortClipBounds.accepts(1000, -1, 2) && !ShortClipBounds.accepts(1000, 44100, 8),
         "Invalid clip format accepted");
-    boolean invalidPad = false;
-    try {
-      PartySounds.wave(8);
-    } catch (IllegalArgumentException e) {
-      invalidPad = true;
-    }
-    check(invalidPad, "Unknown pad accepted");
     Song dangerous = new Song("x", "=SUM(1,2)", "A\"B", "7", "x.wav", false);
     String csv = PrivateSongbook.csv(Arrays.asList(dangerous));
     check(csv.contains("\"'=SUM(1,2)\""), "Formula not neutralized");
