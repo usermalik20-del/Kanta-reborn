@@ -116,6 +116,8 @@ from every page. This pass re-anchors the copy to the current source without ove
 - The Home page, the features table and the how-to guide did not mention the standby stage,
   the bundled background video, the control deck, on-stage QR pairing or the one-tap
   FluidR3 GM download.
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 
 ### Features now documented (each verified against source first)
 - **Standby stage** — `stage/StagePresenceOverlay.java`: the `00000` prompt, `KARAOKE READY`
@@ -127,6 +129,8 @@ from every page. This pass re-anchors the copy to the current source without ove
 - **On-stage QR pairing** — `MainActivity.kantaConnect()` renders the Kanta-Connect QR on the
   persistent stage; address and code stay separately copyable.
 - **FluidR3 GM download** — `SessionController.downloadFluidR3GM()`, ~140 MB with progress and
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
   a skip when the bank already exists.
 
 ### Claims checked and left unchanged
@@ -224,14 +228,20 @@ Moved Kanta-Connect pairing QR code from an AlertDialog to the persistent karaok
 
 <!-- Documentation sync: 2026-11-09 -->
 ## Android: Fix FluidR3 GM Download String Literal (2026-11-09)
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 
 Fixed unclosed string literal in SessionController.readAssetText():
 - Fixed '\\n' escape sequence for newline in StringBuilder
 - Required by Java compiler for proper string literal escaping
 - SessionController now compiles correctly with downloadFluidR3GM()
 ## Android: Fix FluidR3 GM Download Compilation (2026-11-09)
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 
 Fixed FluidR3 GM SoundFont download compilation errors:
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 - Moved full downloadFluidR3GM() logic from MainActivity to SessionController
 - MainActivity now delegates via session.downloadFluidR3GM()
 - Added formatBytes() and readAssetText() helper methods to SessionController
@@ -254,9 +264,13 @@ Fixed Android validation workflow to properly fetch main branch before ancestor 
 - Fixes "ref outside main history" error on push to main branch
 - Ensures git merge-base --is-ancestor check has access to up-to-date main branch history
 ## Android: Add FluidR3 GM Download to SessionController (2026-11-09)
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 
 Added downloadFluidR3GM() method to SessionController:
 - Downloads FluidR3 GM SoundFont from official fluidsynth mirror (ftp.osuosl.org)
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 - Visual progress: percentage + bytes downloaded (updates session.message)
 - Validates with NativeSoundFont.open() before saving
 - Saves license file (fluidr3gm-license.txt) alongside SoundFont
@@ -266,8 +280,12 @@ Added downloadFluidR3GM() method to SessionController:
 
 This refactoring fixes 'cannot find symbol' errors by moving download logic to SessionController where io, repository, and main are accessible.
 ## Android: Move FluidR3 GM Download to SessionController (2026-11-09)
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 
 Refactored FluidR3 GM download logic from MainActivity to SessionController:
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 - Fixes 'cannot find symbol' errors for io, repository, main variables
 - MainActivity now delegates to session.downloadFluidR3GM()
 - Keeps FLUIDR3_GM_NAME constant in MainActivity for UI display
@@ -279,13 +297,21 @@ Refactored FluidR3 GM download logic from MainActivity to SessionController:
 
 Fixed two compilation errors in MainActivity.java:
 1. 'else' without 'if' - moved "Download FluidR3 GM" button outside the for loop in mySet()
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 2. Unclosed string literal in readAssetText() - fixed newline escaping (\\n)
 
 Both fixes address Android build compilation errors that were causing CI failures.
 ## Android: FluidR3 GM Download Option (2026-11-09)
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 
 Added FluidR3 GM SoundFont as downloadable option in My Set → SoundFonts:
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 - Button "Download FluidR3 GM (~140 MB)" appears after listed SoundFonts
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 - Downloads from official fluidsynth mirror (ftp.osuosl.org)
 - Visual progress: percentage + bytes downloaded (updates session.message)
 - Validates with NativeSoundFont.open() before saving

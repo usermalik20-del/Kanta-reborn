@@ -13,6 +13,8 @@ from every page. This pass re-anchors the copy to the current source without ove
 - The Home page, the features table and the how-to guide did not mention the standby stage,
   the bundled background video, the control deck, on-stage QR pairing or the one-tap
   FluidR3 GM download.
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
 
 ### Features now documented (each verified against source first)
 - **Standby stage** — `stage/StagePresenceOverlay.java`: the `00000` prompt, `KARAOKE READY`
@@ -24,6 +26,8 @@ from every page. This pass re-anchors the copy to the current source without ove
 - **On-stage QR pairing** — `MainActivity.kantaConnect()` renders the Kanta-Connect QR on the
   persistent stage; address and code stay separately copyable.
 - **FluidR3 GM download** — `SessionController.downloadFluidR3GM()`, ~140 MB with progress and
+  * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
+  * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar
   a skip when the bank already exists.
 
 ### Claims checked and left unchanged
