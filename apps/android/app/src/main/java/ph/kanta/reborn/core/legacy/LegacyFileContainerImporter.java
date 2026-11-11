@@ -25,16 +25,11 @@ public final class LegacyFileContainerImporter {
     byte[] indexBytes = readBounded(index, 16 * 1024 * 1024);
     List<ShubIndexProbe.TitleRecord> titles = ShubIndexProbe.decodeTitleRecords(indexBytes);
     if (titles.isEmpty()) throw new IOException("The Shub index has no title records");
-    if (!outputDir.isDirectory() && !outputDir.mkdirs()) throw new IOException("Cannot create legacy import directory");
     long[] offsets = ShubIndexProbe.trailingUInt32Values(indexBytes);
-    ArrayList<Long> records;
-    if (offsets.length == titles.size() && offsets.length > 0) {
-      records = new ArrayList<>(offsets.length);
-      for (long offset : offsets) records.add(offset);
-    } else {
-      records = scanRecords(blob);
-      if (records.size() < titles.size()) throw new IOException("The blob has fewer MKMD records than the index");
-    }
+    long[] titleBlocks = new long[titles.size()];
+    for (int i = 0; i < titles.size(); i++) titleBlocks[i] = titles.get(i).opaqueB;
+    ArrayList<Long> records = locateRecordStarts(blob, titleBlocks, offsets);
+    if (!outputDir.isDirectory() && !outputDir.mkdirs()) throw new IOException("Cannot create legacy import directory");
     ArrayList<DecodedSong> songs = new ArrayList<>();
     ArrayList<ImportError> errors = new ArrayList<>();
     int limit = titles.size();
@@ -57,27 +52,49 @@ public final class LegacyFileContainerImporter {
     return new ImportResult(records.size(), songs.size(), skipped, songs, errors);
   }
 
-  private static ArrayList<Long> scanRecords(File blob) throws IOException {
-    ArrayList<Long> starts = new ArrayList<>();
+  static ArrayList<Long> locateRecordStarts(File blob, long[] titleBlocks, long[] offsets)
+      throws IOException {
+    // This index variant stores a 2 KiB block address at title-record byte 8.
+    // Validate both known layouts; never substitute physical scan order for titles.
+    long[] blockOffsets = new long[titleBlocks.length];
+    for (int i = 0; i < titleBlocks.length; i++) blockOffsets[i] = titleBlocks[i] * 2048L;
+    boolean blocksValid = blockOffsets.length > 0
+        && indexedOffsetsPointToRecords(blob, blockOffsets);
+    boolean bytesValid = offsets.length == titleBlocks.length && offsets.length > 0
+        && indexedOffsetsPointToRecords(blob, offsets);
+    if (blocksValid && bytesValid && !Arrays.equals(blockOffsets, offsets)) {
+      throw new IOException("The index contains conflicting song record addresses");
+    }
+    if (!blocksValid && !bytesValid) {
+      throw new IOException("The index does not identify valid song records in this blob");
+    }
+    long[] selected = blocksValid ? blockOffsets : offsets;
+    ArrayList<Long> records = new ArrayList<>(selected.length);
+    for (long offset : selected) records.add(offset);
+    return records;
+  }
+
+  private static boolean indexedOffsetsPointToRecords(File blob, long[] offsets)
+      throws IOException {
+    long length = blob.length();
+    HashSet<Long> seen = new HashSet<>();
     try (RandomAccessFile in = new RandomAccessFile(blob, "r")) {
-      byte[] block = new byte[1024 * 1024]; long base = 0; int carry = 3; byte[] tail = new byte[3];
-      while (base < in.length()) {
-        int count = in.read(block, 0, (int)Math.min(block.length, in.length() - base));
-        if (count <= 0) break;
-        for (int i = 0; i < count; i++) {
-          long absolute = base + i;
-          if ((absolute & 1023L) != 0) continue;
-          if (block[i] != 'M' || i + 3 >= count) {
-            if (i + 3 >= count) { in.seek(absolute); byte[] h = new byte[4]; if (in.read(h) == 4 && h[0]=='M'&&h[1]=='K'&&h[2]=='M'&&h[3]=='D') starts.add(absolute); in.seek(base + count); }
-            continue;
-          }
-          if (block[i+1]=='K' && block[i+2]=='M' && block[i+3]=='D') starts.add(absolute);
-        }
-        base += count;
+      for (long offset : offsets) {
+        if (offset < 0 || offset > length - 13 || !seen.add(offset)) return false;
+        in.seek(offset);
+        byte[] header = new byte[13];
+        in.readFully(header);
+        if (header[0] != 'M' || header[1] != 'K' || header[2] != 'M'
+            || header[3] != 'D' || header[4] != 1) return false;
+        long decoded = u32(header, 5);
+        long compressed = u32(header, 9);
+        if (decoded <= 0 || decoded > MAX_PAYLOAD_BYTES
+            || compressed <= 0 || compressed > MAX_PAYLOAD_BYTES) return false;
+        long encryptedBytes = ((compressed + 15) / 16) * 16;
+        if (offset + 13 + encryptedBytes > length) return false;
       }
     }
-    if (starts.isEmpty()) throw new IOException("No MKMD records found in ShubBlob");
-    return starts;
+    return true;
   }
 
   private static byte[] decodeRecord(File blob, long start) throws IOException, GeneralSecurityException {
