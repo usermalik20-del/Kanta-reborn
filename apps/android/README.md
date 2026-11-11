@@ -184,13 +184,46 @@ Moved Kanta-Connect pairing QR code from an AlertDialog to the persistent karaok
 <!-- Documentation sync: 2026-11-09 -->
 ## Android: Fix FluidR3 GM Download String Literal (2026-11-09)
 
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
+
 Fixed unclosed string literal in SessionController.readAssetText():
 - Fixed '\\n' escape sequence for newline in StringBuilder
 - Required by Java compiler for proper string literal escaping
 - SessionController now compiles correctly with downloadFluidR3GM()
 ## Android: Fix FluidR3 GM Download Compilation (2026-11-09)
 
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
+
 Fixed FluidR3 GM SoundFont download compilation errors:
+
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
 - Moved full downloadFluidR3GM() logic from MainActivity to SessionController
 - MainActivity now delegates via session.downloadFluidR3GM()
 - Added formatBytes() and readAssetText() helper methods to SessionController
@@ -202,8 +235,30 @@ Fixed FluidR3 GM SoundFont download compilation errors:
 - License file (fluidr3gm-license.txt) saved alongside SoundFont
 ## Android: Add FluidR3 GM Download to SessionController (2026-11-09)
 
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
+
 Added downloadFluidR3GM() method to SessionController:
 - Downloads FluidR3 GM SoundFont from official fluidsynth mirror (ftp.osuosl.org)
+
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
 - Visual progress: percentage + bytes downloaded (updates session.message)
 - Validates with NativeSoundFont.open() before saving
 - Saves license file (fluidr3gm-license.txt) alongside SoundFont
@@ -214,7 +269,29 @@ Added downloadFluidR3GM() method to SessionController:
 This refactoring fixes 'cannot find symbol' errors by moving download logic to SessionController where io, repository, and main are accessible.
 ## Android: Move FluidR3 GM Download to SessionController (2026-11-09)
 
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
+
 Refactored FluidR3 GM download logic from MainActivity to SessionController:
+
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
 - Fixes 'cannot find symbol' errors for io, repository, main variables
 - MainActivity now delegates to session.downloadFluidR3GM()
 - Keeps FLUIDR3_GM_NAME constant in MainActivity for UI display
@@ -226,13 +303,57 @@ Refactored FluidR3 GM download logic from MainActivity to SessionController:
 
 Fixed two compilation errors in MainActivity.java:
 1. 'else' without 'if' - moved "Download FluidR3 GM" button outside the for loop in mySet()
+
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
 2. Unclosed string literal in readAssetText() - fixed newline escaping (\\n)
 
 Both fixes address Android build compilation errors that were causing CI failures.
 ## Android: FluidR3 GM Download Option (2026-11-09)
 
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
+
 Added FluidR3 GM SoundFont as downloadable option in My Set → SoundFonts:
+
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
 - Button "Download FluidR3 GM (~140 MB)" appears after listed SoundFonts
+
+### Additional SoundFont Downloads (2026-11-11)
+
+Two new one-tap soundfont downloads have been added to the My Set → SoundFonts screen:
+
+| SoundFont | Size | Description | Source |
+|-----------|------|-------------|--------|
+| **MuseScore General** | ~216 MB | Richer orchestral tones, direct .sf2 download | OSU OSL mirror |
+| **SGM-v2.01 Yamaha Grand** | ~528 MB | Studio-grade piano, bass, guitar | Hugging Face |
+
+Both include license files (musescore-license.txt, sgm-license.txt) and are validated via NativeSoundFont.open() before activation.
 - Downloads from official fluidsynth mirror (ftp.osuosl.org)
 - Visual progress: percentage + bytes downloaded (updates session.message)
 - Validates with NativeSoundFont.open() before saving
