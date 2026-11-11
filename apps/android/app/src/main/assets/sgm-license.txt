@@ -1,0 +1,41 @@
+SGM-v2.01 (SalCGM) SoundFont
+
+Copyright (c) 2017-2020 Salamander / Christian Collins
+
+SGM-v2.01 is an enhanced version of the GeneralUser GS SoundFont,
+with additional samples and improvements for karaoke and general MIDI use.
+
+License: MIT License (for the compilation and enhancements)
+
+The individual samples have various licenses:
+- Many samples are from the GeneralUser GS SoundFont (CC-BY 3.0 / MIT)
+- Additional samples from various CC0 / public domain sources
+- Original recordings and edits by the SGM project
+
+MIT License for the SGM-v2.01 compilation:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Source: https://github.com/salamander777/SGM-v2.01
+Download: https://github.com/salamander777/SGM-v2.01/releases/download/v2.01/SGM-v2.01.zip
+Size: ~240 MB (SF2 file inside ZIP)
+
+Note: This is a large SoundFont (~240 MB). Download on Wi-Fi recommended.

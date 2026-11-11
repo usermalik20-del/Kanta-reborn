@@ -2220,7 +2220,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       else item.addView(button("Use", () -> session.selectSoundFont(bank.fileName)));
       body.addView(item);
     }
-    body.addView(button("Download FluidR3 GM (~140 MB)", () -> downloadFluidR3GM()));
+    body.addView(button("Download FluidR3 GM (~148 MB)", () -> downloadFluidR3GM()));
+    body.addView(button("Download MuseScore General (~216 MB)", () -> downloadMuseScoreGeneral()));
+    body.addView(button("Download SGM-v2.01 Yamaha Grand (~528 MB)", () -> downloadSGMv201()));
     body.addView(
         text(
             "Imported MIDI/KAR and audio", 20, ACCENT));
@@ -2286,6 +2288,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void downloadFluidR3GM() {
     session.downloadFluidR3GM();
+  }
+
+  private void downloadMuseScoreGeneral() {
+    session.downloadMuseScoreGeneral();
+  }
+
+  private void downloadSGMv201() {
+    session.downloadSGMv201();
   }
 
   private String formatBytes(long bytes) {
