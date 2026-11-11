@@ -1,3 +1,14 @@
+## User-facing wording and README scope
+
+Follow [the plain-language writing guide](docs/USER_FACING_LANGUAGE.md) for app labels,
+messages, public website copy, download descriptions and the root README. Keep jargon,
+implementation notes, commit/run IDs and detailed test evidence in developer docs or
+diagnostics. Never hide installation, data-loss, privacy or unverified-device limitations.
+Keep the root README a short user introduction (aim for at most 100 lines); do not prepend
+engineering updates. Required README sync should change the affected user explanation or
+contributor link, with technical evidence in the other required owner docs. The previous
+README is preserved in `docs/README_HISTORY.md` as historical, not current, guidance.
+
 ## Android standby video lifecycle and truthful runtime evidence (2026-11-10)
 
 Follow-up to the ordering repair in PR #192: `MainActivity.onStart()` now registers
