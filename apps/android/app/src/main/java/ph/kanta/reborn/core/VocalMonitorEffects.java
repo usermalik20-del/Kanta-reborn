@@ -21,8 +21,9 @@ public final class VocalMonitorEffects {
    * The selectable monitor presets, in on-screen order.
    *
    * <p>{@code ROOM} and {@code HALL} are kept because existing monitor controls already select
-   * them by enum constant; they share their delay settings with {@code SMALL_ROOM} and
-   * {@code CONCERT_HALL} but keep their own names, so no two presets present the same label.
+   * them by enum constant. Their original tuning is preserved; {@code SMALL_ROOM} has a
+   * shorter, softer tail and {@code CONCERT_HALL} has a longer predelay and decay than
+   * {@code HALL}. Every selectable preset has a distinct response.
    *
    * <p>This constant {@code label()} is the only user-facing name. Callers must not render
    * {@code name()}: underscores are an implementation detail.
@@ -120,6 +121,8 @@ public final class VocalMonitorEffects {
     mode = value;
     switch (value) {
       case SMALL_ROOM:
+        feedback = 0.62f; damping = 0.62f; wetMix = 0.16f; echoMix = 0.0f; preDelayFrames = 0; drive = 1.0f;
+        break;
       case ROOM:
         feedback = 0.70f; damping = 0.55f; wetMix = 0.20f; echoMix = 0.0f; preDelayFrames = 0; drive = 1.0f;
         break;
@@ -127,6 +130,8 @@ public final class VocalMonitorEffects {
         feedback = 0.78f; damping = 0.40f; wetMix = 0.24f; echoMix = 0.0f; preDelayFrames = 288; drive = 1.0f;
         break;
       case CONCERT_HALL:
+        feedback = 0.89f; damping = 0.28f; wetMix = 0.33f; echoMix = 0.0f; preDelayFrames = 1440; drive = 1.0f;
+        break;
       case HALL:
         feedback = 0.86f; damping = 0.32f; wetMix = 0.30f; echoMix = 0.0f; preDelayFrames = 960; drive = 1.0f;
         break;

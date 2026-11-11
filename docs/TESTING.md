@@ -1,3 +1,14 @@
+## Distinct monitor presets regression (K1)
+
+`CoreRegressionTests.monitorChecks()` retains one-second impulse, reset-to-silence and
+limiter/nonfinite checks for every preset. It additionally compares all 45 pairs of
+rendered impulse responses, requiring squared difference greater than `0.000001`.
+The old Small Room/Room and Concert Hall/Hall aliases produce identical responses and
+fail that assertion. Run `:app:coreRegression` on a working Java 17 toolchain; Android
+validation already runs this task. Local Python/source guards are not Java execution.
+Physical-device listening, sound preference and route latency are not acceptance claims
+for this change. Exact-commit automated validation must be recorded before closing K1.
+
 ## Bundled standby selection reload repair (2026-11-10)
 
 Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed

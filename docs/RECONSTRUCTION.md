@@ -1,3 +1,11 @@
+## K1 implementation candidate — distinct monitor effects
+
+Small Room and Concert Hall have distinct tuning; legacy Room and Hall values remain
+unchanged. Added all-pairs impulse-response regression coverage in the existing
+framework-free core runner, preserving its reset and bounded-output checks. This is a
+code/test candidate until exact-head Java validation is recorded. No physical listening,
+signing, publication or device acceptance is implied.
+
 ## Bundled standby selection reload repair (2026-11-10)
 
 Run `42797615517` compiled the lifecycle/frame-callback repair but correctly failed
