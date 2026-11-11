@@ -27,14 +27,7 @@ public final class LegacyFileContainerImporter {
     if (titles.isEmpty()) throw new IOException("The Shub index has no title records");
     if (!outputDir.isDirectory() && !outputDir.mkdirs()) throw new IOException("Cannot create legacy import directory");
     long[] offsets = ShubIndexProbe.trailingUInt32Values(indexBytes);
-    ArrayList<Long> records;
-    if (offsets.length == titles.size() && offsets.length > 0) {
-      records = new ArrayList<>(offsets.length);
-      for (long offset : offsets) records.add(offset);
-    } else {
-      records = scanRecords(blob);
-      if (records.size() < titles.size()) throw new IOException("The blob has fewer MKMD records than the index");
-    }
+    ArrayList<Long> records = locateRecordStarts(blob, titles.size(), offsets);
     ArrayList<DecodedSong> songs = new ArrayList<>();
     ArrayList<ImportError> errors = new ArrayList<>();
     int limit = titles.size();
@@ -55,6 +48,44 @@ public final class LegacyFileContainerImporter {
     }
     int skipped = records.size() - songs.size();
     return new ImportResult(records.size(), songs.size(), skipped, songs, errors);
+  }
+
+  static ArrayList<Long> locateRecordStarts(File blob, int titleCount, long[] offsets)
+      throws IOException {
+    // Cardinality alone does not establish that these values are blob byte offsets.
+    if (offsets.length == titleCount && offsets.length > 0
+        && indexedOffsetsPointToRecords(blob, offsets)) {
+      ArrayList<Long> indexed = new ArrayList<>(offsets.length);
+      for (long offset : offsets) indexed.add(offset);
+      return indexed;
+    }
+    ArrayList<Long> scanned = scanRecords(blob);
+    if (scanned.size() < titleCount) {
+      throw new IOException("The blob has fewer MKMD records than the index");
+    }
+    return scanned;
+  }
+
+  private static boolean indexedOffsetsPointToRecords(File blob, long[] offsets)
+      throws IOException {
+    long length = blob.length();
+    try (RandomAccessFile in = new RandomAccessFile(blob, "r")) {
+      for (long offset : offsets) {
+        if (offset < 0 || offset > length - 13) return false;
+        in.seek(offset);
+        byte[] header = new byte[13];
+        in.readFully(header);
+        if (header[0] != 'M' || header[1] != 'K' || header[2] != 'M'
+            || header[3] != 'D' || header[4] != 1) return false;
+        long decoded = u32(header, 5);
+        long compressed = u32(header, 9);
+        if (decoded <= 0 || decoded > MAX_PAYLOAD_BYTES
+            || compressed <= 0 || compressed > MAX_PAYLOAD_BYTES) return false;
+        long encryptedBytes = ((compressed + 15) / 16) * 16;
+        if (offset + 13 + encryptedBytes > length) return false;
+      }
+    }
+    return true;
   }
 
   private static ArrayList<Long> scanRecords(File blob) throws IOException {

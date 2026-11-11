@@ -1000,7 +1000,7 @@ The supplied UI upgrade archive contributes multicolor Android VectorDrawables a
 
 ## Legacy ShubBlob paired import candidate — 2026-11-03
 
-The supplied real pair (`shubidx` plus `shubblob`) established that the earlier rejection was not licensing-related. The blob contains encrypted MKMD records; the Android candidate now has a bounded file-backed importer using the compatibility AES-256-CBC/raw-deflate contract, title records from the paired index, and LibraryRepository persistence. Record addresses come from the index trailing offset table rather than assuming 1 KiB blob alignment; a bounded scan is retained only as a fallback for indexes without a usable table. The legacy path is selected only through the paired-file My Set flow; standalone `.idx`/`.blob` selection remains rejected. Exact-head Android compilation, a retained synthetic regression fixture, emulator acceptance and physical-device import/playback remain required.
+A supplied real `shubidx`/`shubblob` pair contains encrypted MKMD records. An independent local reference confirmed that real payloads can be decoded, but not through the Android app or with playback. A follow-up exposed that count-matched trailing index values need not be MKMD byte offsets. The importer now validates each candidate record header and falls back to a bounded 1 KiB-aligned scan when the values do not point to records. The existing My Set paired-file flow remains the only UI entry point; standalone `.idx`/`.blob` selection is rejected. Exact-head Android compilation, synthetic regression, app-path title association, runtime-only key handling, emulator acceptance and physical-device import/playback remain required.
 
 ## 2026-11-04 — Android MIDI/KAR import rework (local, unmerged)
 
