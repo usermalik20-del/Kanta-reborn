@@ -1290,3 +1290,8 @@ pass; preflight passes, including 149-file structure and 59 workspace checks.
 Java tests/build/lint, emulator prompt/picker/cancel/background/busy/error acceptance
 and real-device playback are NOT verified: local JVM fails on `getcpu(2)`.
 See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
+<<<<<<< Updated upstream
+=======
+
+Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path. Physical listening, device decoding and SoundPool playback remain separate acceptance.
+>>>>>>> Stashed changes
