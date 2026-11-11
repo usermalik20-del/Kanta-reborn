@@ -666,7 +666,7 @@ The UI upgrade pack's multicolor VectorDrawables are used directly by Home and V
 
 ## Paired ShubBlob import candidate
 
-My Set exposes `Import legacy idx + blob`: select the paired index first, then the payload blob. The file-backed importer accepts trailing index values only when each points to a bounded MKMD record; otherwise it falls back to the bounded 1 KiB-aligned record scan. It decrypts and inflates supported records, maps them to index titles, and persists materialized MIDI/WAV/MP3 files through `LibraryRepository`. Standalone `.idx` or `.blob` selection remains rejected. This path is experimental: exact-head Android build/runtime, cancellation/storage tests, runtime-only key handling and physical playback remain unverified.
+My Set exposes `Import legacy idx + blob`: select the paired index first, then the payload blob. The file-backed importer accepts trailing index values only when each points to a bounded MKMD record; otherwise it falls back to the bounded 1 KiB-aligned record scan. It decrypts and inflates supported records, maps them to index titles, and persists materialized MIDI/WAV/MP3 files through `LibraryRepository`. Standalone `.idx` or `.blob` selection remains rejected. This path is experimental. [Exact-head Android CI](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43004369296) passed the build, core locator regression, and generic emulator checks; those emulator checks do not import paired legacy files. Paired-file runtime, cancellation/storage tests, runtime-only key handling, and physical playback remain unverified.
 
 ## Android OTA self-update (branch feat/android-ota-update)
 
