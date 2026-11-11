@@ -17,7 +17,7 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 
 ## What you can do
 
-- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. This is experimental and may not work with every library or play every song.
+- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Party sounds are now bundled recordings. This is experimental and may not work with every library or play every song.
 - **Plan your session:** search your library, line up songs and keep saved song sets.
 - **Personalize the screen:** choose backgrounds or use your own photos and videos.
 - **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
