@@ -163,6 +163,11 @@ public final class RuntimeChecks extends Instrumentation {
         check(key != null && tempo != null, "Key/tempo layout identities missing");
         check(tempo.getTop() > key.getBottom() || tempo.getLeft() > key.getRight(),
             "Key and tempo controls are not separated at " + width);
+        View adjustments = (View) key.getParent();
+        check(key.getRight() <= adjustments.getWidth() && tempo.getRight() <= adjustments.getWidth(),
+            "Key or tempo overflows horizontally at " + width);
+        if (width == 411) check(tempo.getTop() == key.getTop(),
+            "Normal phone unnecessarily stacks fitting key/tempo controls");
       }
     });
   }
@@ -173,6 +178,7 @@ public final class RuntimeChecks extends Instrumentation {
           .findViewWithTag("kanta.home.search");
       check(search != null && search.getText().length() == 0,
           "Home search placeholder became editable query text");
+      check(!search.getShowSoftInputOnFocus(), "Home field must use the inline keyboard only");
       float density = activity.getResources().getDisplayMetrics().density;
       for (int width : new int[] {320, 411, 720}) {
         for (int height : new int[] {320, 620}) {
@@ -243,6 +249,12 @@ public final class RuntimeChecks extends Instrumentation {
       homeLayoutChecks();
       playerLayoutChecks();
       upNextTickerChecks();
+      waitForIdleSync();
+      await(() -> {
+        android.view.WindowInsets insets = activity.getWindow().getDecorView().getRootWindowInsets();
+        return android.os.Build.VERSION.SDK_INT < 30 || insets == null
+            || !insets.isVisible(android.view.WindowInsets.Type.ime());
+      }, "Home inline keyboard unexpectedly opened the system IME");
       capture("home_dashboard.png");
       runOnMainSync(() -> {
         View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");

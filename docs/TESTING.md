@@ -1389,3 +1389,15 @@ not executed locally. Independent QA/review workers returned no usable review, s
 are not an acceptance gate. Owner has now authorized PR validation, merge on green,
 and the existing main signing/publication/deployment pipelines. Hosted evidence and
 remaining device gates are tracked in [ANDROID_HOME_LAYOUT.md](ANDROID_HOME_LAYOUT.md).
+
+
+### Screenshot review correction before merge
+
+The first PR run [43324277350](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43324277350)
+passed build/lint, 55,735 core checks and 548 emulator checks. Screenshot review still
+found unnecessary phone key/tempo stacking and default full-width adjustment columns.
+Columns now use intrinsic widths and sit side by side when they actually fit, otherwise
+stacking. Stronger instrumentation checks their horizontal bounds and normal-phone fit.
+Home explicitly disables system IME after configuring input type; instrumentation also
+checks that the system keyboard remains hidden after inline-keyboard interaction.
+This correction requires a new exact-head CI run; the first run is not its acceptance.

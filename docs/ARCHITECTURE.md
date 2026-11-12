@@ -1498,3 +1498,15 @@ navigation, foreground loss and library replacement. Leading zeros remain signif
 The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
 added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
 remain unexecuted locally because the iSH JVM cannot start.
+
+
+### Screenshot review correction before merge
+
+The first PR run [43324277350](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43324277350)
+passed build/lint, 55,735 core checks and 548 emulator checks. Screenshot review still
+found unnecessary phone key/tempo stacking and default full-width adjustment columns.
+Columns now use intrinsic widths and sit side by side when they actually fit, otherwise
+stacking. Stronger instrumentation checks their horizontal bounds and normal-phone fit.
+Home explicitly disables system IME after configuring input type; instrumentation also
+checks that the system keyboard remains hidden after inline-keyboard interaction.
+This correction requires a new exact-head CI run; the first run is not its acceptance.

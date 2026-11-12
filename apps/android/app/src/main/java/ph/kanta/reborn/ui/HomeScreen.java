@@ -72,9 +72,9 @@ public class HomeScreen extends LinearLayout {
     searchInput = new EditText(context);
     searchInput.setTag("kanta.home.search");
     searchInput.setSingleLine(true);
-    searchInput.setShowSoftInputOnFocus(false);
     searchInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
         | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    searchInput.setShowSoftInputOnFocus(false);
     searchInput.setTextColor(KantaTheme.TEXT_PRIMARY);
     searchInput.setHintTextColor(KantaTheme.TEXT_MUTED);
     searchInput.setHint("Search songs, artists, or enter code");

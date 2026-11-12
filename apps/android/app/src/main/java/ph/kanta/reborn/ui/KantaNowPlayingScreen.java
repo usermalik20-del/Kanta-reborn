@@ -236,7 +236,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
       private int lastOrientation = -1;
       @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int availableWidth = MeasureSpec.getSize(widthMeasureSpec);
-        int minHorizontalWidth = (int) (480 * density); // horizontal only on >=480dp
+        int minHorizontalWidth = (int) (360 * density); // use intrinsic widths, not a tablet-only breakpoint
         int unconstrained = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
         keyCol.measure(unconstrained, unconstrained);
         tempoCol.measure(unconstrained, unconstrained);
@@ -265,9 +265,9 @@ public class KantaNowPlayingScreen extends LinearLayout {
     perfContainer.setGravity(Gravity.CENTER);
     perfContainer.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
 
-    perfContainer.addView(keyCol);
+    perfContainer.addView(keyCol, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
     perfContainer.addView(divider);
-    perfContainer.addView(tempoCol);
+    perfContainer.addView(tempoCol, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
     addView(perfContainer);
 
