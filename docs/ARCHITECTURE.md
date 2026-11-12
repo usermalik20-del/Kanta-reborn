@@ -1510,3 +1510,15 @@ stacking. Stronger instrumentation checks their horizontal bounds and normal-pho
 Home explicitly disables system IME after configuring input type; instrumentation also
 checks that the system keyboard remains hidden after inline-keyboard interaction.
 This correction requires a new exact-head CI run; the first run is not its acceptance.
+
+
+### Window auto-IME regression
+
+Run [43327147562](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43327147562)
+passed build/lint/core and the stronger geometry assertions but failed the new system-IME
+visibility assertion. Logcat records `SHOW_AUTO_EDITOR_FORWARD_NAV` from the server on
+initial activity focus: field-level `setShowSoftInputOnFocus(false)` alone does not govern
+that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, preventing
+window auto-show while preserving explicit editor/dialog requests. The failing emulator
+assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
+required before merge, not a blind rerun of the failing commit.

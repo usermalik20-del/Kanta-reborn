@@ -69,6 +69,13 @@ class HomeLayoutTests(unittest.TestCase):
         self.assertIn('code.equals(song.code)', song)
         self.assertIn('!found.id.equals(song.id)', song)
 
+    def test_home_window_cannot_auto_show_system_keyboard_on_launch(self):
+        manifest = (ROOT / 'apps/android/app/src/main/AndroidManifest.xml').read_text()
+        self.assertIn('android:windowSoftInputMode="stateAlwaysHidden|adjustResize"', manifest)
+        runtime = (ROOT / 'apps/android/app/src/androidTest/java/ph/kanta/reborn/RuntimeChecks.java').read_text()
+        self.assertIn('Home inline keyboard unexpectedly opened the system IME', runtime)
+        self.assertIn('!insets.isVisible(android.view.WindowInsets.Type.ime())', runtime)
+
     def test_search_prefill_is_not_cleared_after_text_watcher(self):
         source = (JAVA / 'MainActivity.java').read_text()
         start = source.index('    String committedQuery = query;')
