@@ -15,6 +15,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import ph.kanta.reborn.lyrics.LyricCache;
 
 /** Explicit-use LRCLIB adapter. No uploads, background scans, credentials or automatic retries. */
 public final class LrclibClient {
@@ -22,13 +23,14 @@ public final class LrclibClient {
   public static final String APPLICATION_ID = "fXIQgJ6_D0XJj4mKNCsBRQ5yBvnM5L-z85P8AOt009g";
   private static final int MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
   private final String userAgent;
+  private final LyricCache lyricsCache;
 
   public LrclibClient(Context context) {
     String version = "unknown";
     try { version = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName; }
     catch (PackageManager.NameNotFoundException unavailable) { /* Own package normally exists. */ }
     userAgent = "KANTA-Reborn/" + version + " (https://github.com/usermalik20-del/Kanta-reborn)";
-    lyricsCache = new LyricCache(context);
+    this.lyricsCache = new LyricCache(context);
   }
 
   public static final class Result {

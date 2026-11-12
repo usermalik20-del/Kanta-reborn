@@ -137,9 +137,9 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private final ExecutorService lyricWorker = Executors.newSingleThreadExecutor();
   private boolean lyricSearchBusy;
   private boolean autoLyricSearchBusy;
-  long lyricLookupGeneration;
+  
   private long autoLyricSearchAt;
-  long lyricLookupGeneration;
+  
   private long nextLyricSearchAt;
 
   private final AudioManager audio;
