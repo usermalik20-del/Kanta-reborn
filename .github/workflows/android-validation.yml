@@ -54,6 +54,8 @@ jobs:
         run: |
           git fetch origin main
           git fetch origin main --tags
+          # Update local tracking branch so ancestor check works for push events
+          git update-ref refs/remotes/origin/main $(git rev-parse FETCH_HEAD)
 
       - name: Determine trusted main release source
         id: release-source
