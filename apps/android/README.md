@@ -736,3 +736,7 @@ timing is distinct from word sync; untimed text is previewed, not falsely timed.
 Host signal/LRC and device font/JSON checks are registered but not executed locally.
 Python/source checks are not a Java build or Android acceptance. No push, merge,
 signing or deployment is authorized.
+
+## Lyric-font persisted permission lint repair
+
+The lyric-font folder result validates the returned read grant before persisting only `Intent.FLAG_GRANT_READ_URI_PERMISSION`. Passing that explicit allowed constant satisfies Android lint without broadening folder access or suppressing the check.

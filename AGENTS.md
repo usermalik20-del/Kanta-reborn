@@ -84,3 +84,7 @@ During an active engineering session, completion of one task transitions to the 
 ## CI fix (2026-11-12)
 
 Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.
+
+## Android CI remote-main trust check
+
+The ancestor check fetches `refs/heads/main` explicitly into `refs/remotes/origin/main` and checks the selected commit against that remote-tracking ref. It does not force-update a checked-out local branch. Non-main history remains ineligible for release signing; existing release and runtime gates remain blocking.

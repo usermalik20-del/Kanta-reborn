@@ -1131,3 +1131,7 @@ signing or deployment is authorized.
 ## Website validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog routes. No reconstruction impact.
+
+## Lyric-font persisted permission lint repair
+
+Android validation run 43211938789 failed `lintDebug` with `WrongConstant` at the lyric-font persisted grant call. The candidate passes the explicit read constant after the existing nonzero read-bit check; it does not disable lint or change release gates. Exact-head hosted validation remains required.

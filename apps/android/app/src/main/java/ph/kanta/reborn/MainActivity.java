@@ -3220,7 +3220,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       try {
         int grants = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
         if (grants == 0) throw new SecurityException();
-        getContentResolver().takePersistableUriPermission(root, grants);
+        getContentResolver().takePersistableUriPermission(root, Intent.FLAG_GRANT_READ_URI_PERMISSION);
         new ContentRoot(this).setContentRootUri(root);
         chooseLyricFont();
       } catch (SecurityException | IllegalArgumentException unavailable) {

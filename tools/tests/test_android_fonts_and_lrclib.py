@@ -35,7 +35,12 @@ class FontContractTests(unittest.TestCase):
         self.assertIn('DocumentsContract.getDocumentId(parentUri)', scanner)
         self.assertIn('DocumentsContract.getDocumentId(dirUri)', scanner)
         activity = (JAVA / 'MainActivity.java').read_text()
-        self.assertIn('takePersistableUriPermission(root, grants)', activity)
+        permission = activity.split('else if (request == LYRIC_FONT_FOLDER', 1)[1].split('else if (request == VOICE)', 1)[0]
+        self.assertIn('data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION', permission)
+        self.assertIn('if (grants == 0) throw new SecurityException()', permission)
+        self.assertIn('takePersistableUriPermission(root, Intent.FLAG_GRANT_READ_URI_PERMISSION)', permission)
+        self.assertLess(permission.index('if (grants == 0)'), permission.index('takePersistableUriPermission'))
+        self.assertNotIn('FLAG_GRANT_WRITE_URI_PERMISSION', permission)
         self.assertIn('fonts.discover(root, entries ->', activity)
         self.assertIn('button("Lyric font", this::chooseLyricFont)', activity)
 

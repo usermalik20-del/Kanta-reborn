@@ -61,6 +61,8 @@ class WorkflowOwnershipTests(unittest.TestCase):
         trust = step_block(source, "Determine trusted main release source")
         self.assertIn("id: release-source", trust)
         self.assertIn("refs/remotes/origin/main", trust)
+        self.assertIn("git fetch origin +refs/heads/main:refs/remotes/origin/main --tags", source)
+        self.assertNotIn("git branch -f main", source)
         self.assertIn("git merge-base --is-ancestor", trust)
         self.assertIn("trusted_main=${trusted_main}", trust)
         self.assertIn("The selected ref is outside main history", trust)
