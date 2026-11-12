@@ -17,17 +17,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import ph.kanta.reborn.core.DryPitchDetector;
+import ph.kanta.reborn.core.SpectrumAnalyzer;
 
 /** Ephemeral dry capture; the independent optional output receives a copy of each PCM block. */
 final class MicrophoneInput {
   static final class Reading {
     final double rms;
     final DryPitchDetector.Pitch pitch;
+    final SpectrumAnalyzer.Spectrum spectrum; // Immutable band power; never raw PCM
     final long measuredAt;
 
-    Reading(double rms, DryPitchDetector.Pitch pitch, long measuredAt) {
+    Reading(double rms, DryPitchDetector.Pitch pitch, SpectrumAnalyzer.Spectrum spectrum, long measuredAt) {
       this.rms = rms;
       this.pitch = pitch;
+      this.spectrum = spectrum;
       this.measuredAt = measuredAt;
     }
   }
@@ -55,6 +58,7 @@ final class MicrophoneInput {
   private volatile Run active, captureOwner;
   private final AtomicBoolean analysisBusy = new AtomicBoolean();
   private final DryPitchDetector detector = new DryPitchDetector();
+  private final SpectrumAnalyzer spectrumAnalyzer = new SpectrumAnalyzer();
 
   private static final class Run {
     volatile boolean cancelled;
@@ -242,8 +246,9 @@ final class MicrophoneInput {
             SpicePitchEstimator estimator = run.spice;
             if (estimator != null) estimator.poll();
             DryPitchDetector.Pitch pitch = detector.detect(run.analysisFrame, RATE);
+            SpectrumAnalyzer.Spectrum spectrum = spectrumAnalyzer.analyze(run.analysisFrame);
             Reading value =
-                new Reading(Math.sqrt(energy / run.analysisFrame.length), pitch, measuredAt);
+                new Reading(Math.sqrt(energy / run.analysisFrame.length), pitch, spectrum, measuredAt);
             if (current(run)) run.reading = value;
           } finally {
             java.util.Arrays.fill(run.analysisFrame, 0);

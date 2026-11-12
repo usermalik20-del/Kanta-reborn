@@ -129,3 +129,16 @@ leaving the stage stops capture. Revoking permission is supported through iOS
 Settings. Extended TV output retains its selected scenic background; ordinary
 system screen mirroring may display the camera preview. Camera rotation,
 interruptions and resource use require physical-device acceptance before release.
+
+## Optional LRCLIB lyric search — local Android candidate
+
+This unreleased Android candidate can fetch lyrics only after you choose Find lyrics
+on LRCLIB, review the song title and optional artist, and press Search. Those two
+fields, your IP address and ordinary app/client identification are sent over HTTPS
+to lrclib.net, a third-party service. No audio, microphone recording, singer name,
+queue or library file is sent. The app uses a public application ID, not a secret.
+There is no automatic library scan or background lookup. Returned lyrics stay in
+memory for the selected playback or an untimed preview; embedded timed lyrics are
+not replaced. LRCLIB may retain request information under its own policies. This
+is not an iOS feature or a claim that the currently published Android build includes
+it. Network, matching and lyric-timing accuracy still require Android acceptance.

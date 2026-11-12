@@ -1436,3 +1436,25 @@ emulator UI acceptance on a working toolchain. Local JVM startup fails on unsupp
 `getcpu(2)`, so no local Java execution, APK build or device acceptance is claimed.
 D2/D4 remain open for real paired import/playback, semantic title verification and
 storage/cancellation. iOS behavior is unchanged; this candidate is not a release.
+
+## Local Android B1/B2/D5/D8 boundaries
+
+See [local candidate scope](ANDROID_LOCAL_B1_B2_D5_D8.md). B1 must consume only a
+copy of existing opt-in dry microphone PCM on the analysis worker, without a
+second capture or output owner. B2 changes lyric presentation and persisted font
+choice, not playback or lyric timing. D5 retains platform `MediaPlayer` background
+adapters per the [owner decision](D5-video-backend.md); the Media3 plan is
+superseded. D8 removes unsupported per-part controls and their listener contract,
+while preserving controller-owned key/tempo and master-volume behavior.
+
+## Local optional LRCLIB lyric lookup and font integration
+
+See [LRCLIB behavior/privacy/test limits](LRCLIB_LYRICS.md),
+[B1 spectrum design](B1-spectrum.md) and
+[B2 font integration](B2-custom-fonts.md).
+The lookup is explicit, identified HTTPS on a worker, with user version selection,
+existing-lyric preservation and playback/foreground generation fences. LRC line
+timing is distinct from word sync; untimed text is previewed, not falsely timed.
+Host signal/LRC and device font/JSON checks are registered but not executed locally.
+Python/source checks are not a Java build or Android acceptance. No push, merge,
+signing or deployment is authorized.

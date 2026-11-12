@@ -1295,3 +1295,41 @@ See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-leg
 
 Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path (tools/tests/test_party_assets.py). Physical listening, device decoding and SoundPool playback remain separate acceptance.
 >>>>>>> Stashed changes
+
+## Local Android B1/B2/D5/D8 validation
+
+See [candidate scope and environment limits](ANDROID_LOCAL_B1_B2_D5_D8.md).
+`tools/tests/test_android_audio_controls.py` rejects the original no-op sliders
+and callbacks, preserves key/tempo callbacks and guards master-volume persistence.
+It passes on the local removal candidate and fails against base `00d97f0`.
+This is source-contract regression evidence, not Android UI execution or listening.
+B1 Java signal regressions and B2 malformed-font/rendering tests must run later
+on a working Java/Android toolchain; local VM startup fails on `getcpu(2)`.
+No CI workflow was dispatched and no APK/device acceptance is claimed.
+
+## Local optional LRCLIB lyric lookup and font integration
+
+See [LRCLIB behavior/privacy/test limits](LRCLIB_LYRICS.md),
+[B1 spectrum design](B1-spectrum.md) and
+[B2 font integration](B2-custom-fonts.md).
+The lookup is explicit, identified HTTPS on a worker, with user version selection,
+existing-lyric preservation and playback/foreground generation fences. LRC line
+timing is distinct from word sync; untimed text is previewed, not falsely timed.
+Host signal/LRC and device font/JSON checks are registered but not executed locally.
+Python/source checks are not a Java build or Android acceptance. No push, merge,
+signing or deployment is authorized.
+
+### Final local source checks (uncommitted candidate)
+
+The full Python suite passes **184 tests**, including 12 new source-contract checks.
+Java structure (155 production files), Android workspace (59 checks), companion
+interface, branding and uncommitted owner-document presence guards pass. Twenty
+changed/new Java files also pass a Java syntax-parser check; its unsupported
+pre-existing `String[]::new` syntax was normalized only in memory for that parse.
+This is not Java type checking, Gradle compilation or Android runtime execution.
+
+The direct `tools/verify-website.py` command exits zero without validating pages:
+its checked-in source defines `main()` but has no top-level entry call, and its
+last `main()` call is indented inside that function. This pre-existing unrelated
+verifier defect is not changed here. Do not count that exit status as website
+acceptance; the new privacy markup/links have separate local structural checks.

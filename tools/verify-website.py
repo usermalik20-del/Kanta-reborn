@@ -421,4 +421,6 @@ def main():
 
     manifest = json.loads((WEB / "downloads.json").read_text(encoding="utf-8"))
 
+
+if __name__ == "__main__":
     main()

@@ -125,35 +125,30 @@ public final class ContentScanner {
    * Finds the effective root folder (KANTA/ or legacy SongHub/) under the SAF tree.
    */
   private Uri findEffectiveRoot(Uri rootUri, BooleanSupplier cancelled) {
-    try (Cursor cursor = resolver.query(
-        DocumentsContract.buildChildDocumentsUriUsingTree(rootUri, DocumentsContract.getTreeDocumentId(rootUri)),
-        new String[]{
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_MIME_TYPE
-        },
-        null, null, null)) {
-
-      if (cursor == null) return null;
-
-      while (cursor.moveToNext()) {
-        if (cancelled != null && cancelled.getAsBoolean()) return null;
-        String id = cursor.getString(0);
-        String name = cursor.getString(1);
-        String mime = cursor.getString(2);
-
-        if (id == null || name == null) continue;
-
-        if (ContentRoot.ROOT_FOLDER.equalsIgnoreCase(name) || ContentRoot.LEGACY_ROOT_FOLDER.equalsIgnoreCase(name)) {
-          if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mime)) {
-            return DocumentsContract.buildDocumentUriUsingTree(rootUri, id);
-          }
-        }
+    if (rootUri == null) return null;
+    Uri selected = DocumentsContract.buildDocumentUriUsingTree(rootUri,
+        DocumentsContract.getTreeDocumentId(rootUri));
+    try (Cursor cursor = resolver.query(selected,
+        new String[] {DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
+      if (cursor != null && cursor.moveToFirst()) {
+        String name = cursor.getString(0);
+        if (ContentRoot.ROOT_FOLDER.equalsIgnoreCase(name)
+            || ContentRoot.LEGACY_ROOT_FOLDER.equalsIgnoreCase(name)) return selected;
       }
-    } catch (Exception e) {
-      Log.w(TAG, "Failed to find effective root", e);
-    }
-    return null;
+    } catch (RuntimeException unavailable) { return null; }
+    if (cancelled != null && cancelled.getAsBoolean()) return null;
+    // Always prefer KANTA over the read-only legacy fallback, regardless of listing order.
+    Uri kanta = findChildDirectory(selected, ContentRoot.ROOT_FOLDER);
+    return kanta != null ? kanta : findChildDirectory(selected, ContentRoot.LEGACY_ROOT_FOLDER);
+  }
+
+  /** Font-only discovery for the lyric picker; no song/media indexing or UI-thread I/O. */
+  public List<Uri> scanFonts(Uri rootUri, BooleanSupplier cancelled) {
+    List<Uri> fonts = new ArrayList<>();
+    Uri effectiveRoot = findEffectiveRoot(rootUri, cancelled);
+    if (effectiveRoot != null)
+      scanDirectory(effectiveRoot, ContentRoot.FONT_DIR, cancelled, fonts, this::isFontFile);
+    return Collections.unmodifiableList(fonts);
   }
 
   private boolean isLegacyRoot(Uri rootUri) {
@@ -184,7 +179,7 @@ public final class ContentScanner {
 
   private Uri findChildDirectory(Uri parentUri, String dirName) {
     try (Cursor cursor = resolver.query(
-        DocumentsContract.buildChildDocumentsUriUsingTree(parentUri, DocumentsContract.getTreeDocumentId(parentUri)),
+        DocumentsContract.buildChildDocumentsUriUsingTree(parentUri, DocumentsContract.getDocumentId(parentUri)),
         new String[]{
             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
             DocumentsContract.Document.COLUMN_DISPLAY_NAME,
@@ -220,7 +215,7 @@ public final class ContentScanner {
 
     String dirId;
     try {
-      dirId = DocumentsContract.getTreeDocumentId(dirUri);
+      dirId = DocumentsContract.getDocumentId(dirUri);
     } catch (Exception e) {
       return;
     }

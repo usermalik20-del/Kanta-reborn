@@ -122,8 +122,6 @@ public interface StagePresenter {
   interface AdjustmentListener {
     void onKeyChange(int semitones);
     void onTempoChange(float factor);
-    void onMelodyVolumeChange(float volume);
-    void onGuideVolumeChange(float volume);
   }
 
   /** Intro card data. */

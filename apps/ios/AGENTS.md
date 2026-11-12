@@ -236,3 +236,10 @@ The LocalKaraokeController remains the sole playback and FIFO owner. User-initia
 ## PR #134 merge reconciliation — 2026-11-02
 
 The companion-resource changes in PR #134 are shared-contract work only. iOS resources and host code remain under the iOS validation boundary; no Android validation result is evidence of iOS acceptance.
+
+## Android-only LRCLIB candidate disclosure
+
+The mirrored privacy copies disclose optional Android LRCLIB metadata requests.
+This does not implement iOS lyric fetching or change iOS runtime/permissions. See
+[LRCLIB candidate boundaries](../../docs/LRCLIB_LYRICS.md). Do not advertise it as
+an iOS feature.

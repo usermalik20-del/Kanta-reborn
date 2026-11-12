@@ -2,6 +2,8 @@ package ph.kanta.reborn.stage;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Typeface;
+import ph.kanta.reborn.font.FontStore;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.os.SystemClock;
@@ -50,6 +52,9 @@ public final class LyricStage extends View {
   private final int paddingHorizontalPx;
   private final int paddingVerticalPx;
 
+  private final FontStore fontStore;
+  private Typeface appliedTypeface;
+
   private MidiLyrics.Cue[] cues = new MidiLyrics.Cue[0];
   private RenderedPlaybackClock clock;
   private PitchSource pitchSource;
@@ -68,6 +73,7 @@ public final class LyricStage extends View {
 
   public LyricStage(Context context, AttributeSet attrs) {
     super(context, attrs);
+    fontStore = FontStore.getInstance(context);
     setWillNotDraw(false);
 
     float density = context.getResources().getDisplayMetrics().density;
@@ -187,6 +193,17 @@ public final class LyricStage extends View {
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
+    Typeface selected = fontStore.typeface();
+    if (selected != appliedTypeface) {
+      appliedTypeface = selected;
+      activePaint.setTypeface(selected);
+      highlightPaint.setTypeface(selected);
+      inactivePaint.setTypeface(selected);
+      upcomingPaint.setTypeface(selected);
+      echoPaint.setTypeface(selected);
+      pitchWavePaint.setTypeface(selected);
+      rebuildLayouts();
+    }
 
     if (standby) return;
     if (cues.length == 0 || layouts.isEmpty()) {

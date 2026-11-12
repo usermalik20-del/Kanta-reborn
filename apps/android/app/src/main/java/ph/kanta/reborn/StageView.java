@@ -7,10 +7,14 @@ import android.text.*;
 import android.view.*;
 import java.util.*;
 import ph.kanta.reborn.core.*;
+import ph.kanta.reborn.font.FontStore;
 
 /** Renders controller state without owning transport or timing. */
 final class StageView extends View {
   private final SessionController session;
+  private final FontStore fontStore;
+  private Typeface appliedTypeface;
+  private final Typeface builtInTypeface = Typeface.create("sans-serif", Typeface.BOLD);
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private String lastDescription = "";
   private final Rect source = new Rect();
@@ -30,6 +34,7 @@ final class StageView extends View {
   StageView(Context context, SessionController session) {
     super(context);
     this.session = session;
+    fontStore = FontStore.getInstance(context);
     BitmapFactory.Options artworkOptions = new BitmapFactory.Options();
     artworkOptions.inSampleSize = 2;
     artworkOptions.inPreferredConfig = Bitmap.Config.RGB_565;
@@ -77,6 +82,14 @@ final class StageView extends View {
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
+    Typeface selected = fontStore.typeface();
+    if (selected != appliedTypeface) {
+      appliedTypeface = selected;
+      Typeface face = selected != null ? selected : builtInTypeface;
+      lyricPaint.setTypeface(face);
+      wavePaint.setTypeface(face);
+      cachedWidth = -1;
+    }
     float w = getWidth(), h = getHeight();
     if (!externalMedia) canvas.drawColor(Color.rgb(13, 18, 42));
     Bitmap selectedScene = session.scenic;

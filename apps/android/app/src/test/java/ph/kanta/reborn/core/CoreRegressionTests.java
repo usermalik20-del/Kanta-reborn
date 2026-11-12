@@ -1000,6 +1000,8 @@ public final class CoreRegressionTests {
   public static void main(String[] args) throws Exception {
     youtubeLifecycleChecks();
     microphonePitchChecks();
+    checks += SpectrumRegressionTests.run();
+    checks += LrcLyricsRegressionTests.run();
     monitorChecks();
     soundFontStorageChecks();
     midiUnboundedChecks();
