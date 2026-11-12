@@ -30,7 +30,6 @@ public final class SettingsStore {
   // Group: lyric
   public static final String KEY_LYRIC_FONT = "lyric.font";
   public static final String KEY_AUTO_LYRICS = "lyric.autoFetch";
-  public static final String KEY_AUTO_LYRICS = "lyric.autoFetch";
   public static final String KEY_LYRIC_FONT_SIZE = "lyric.fontSize";
   public static final String KEY_LYRIC_LINE_SPACING = "lyric.lineSpacing";
   public static final String KEY_LYRIC_ACTIVE_COLOR = "lyric.activeColor";
