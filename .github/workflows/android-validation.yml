@@ -53,8 +53,8 @@ jobs:
       - name: Fetch full history for ancestor check
         run: |
           git fetch origin main --tags
-          # Update local tracking branch so ancestor check works for push events
-          git fetch origin main:main
+          # Force update local main tracking branch to match remote
+          git branch -f main origin/main
 
       - name: Determine trusted main release source
         id: release-source
@@ -62,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           checked_out_sha="$(git rev-parse HEAD)"
-          main_sha="$(git rev-parse refs/remotes/origin/main)"
+          main_sha="$(git rev-parse main)"
           trusted_main=false
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]] && git merge-base --is-ancestor "${checked_out_sha}" "${main_sha}"; then
             trusted_main=true
