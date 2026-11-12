@@ -7,6 +7,7 @@ import android.os.SystemClock;
 import android.view.*;
 import android.widget.FrameLayout;
 import java.io.File;
+import ph.kanta.reborn.ui.components.UpNextTicker;
 
 /** Lifecycle-bound visual output. Karaoke state and its clock stay in SessionController. */
 final class StageSurface extends FrameLayout implements TextureView.SurfaceTextureListener {
@@ -20,6 +21,7 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
   private boolean active = true, prepared, mediaLive, cameraLive;
   private final ph.kanta.reborn.stage.StagePresenceOverlay presence;
   private android.widget.TextView standbyPrompt;
+  private final UpNextTicker upNextTicker;
 
   StageSurface(Context context, SessionController session) {
     super(context);
@@ -47,6 +49,15 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     promptParams.leftMargin = (int) (16 * getResources().getDisplayMetrics().density);
     promptParams.bottomMargin = (int) (16 * getResources().getDisplayMetrics().density);
     addView(standbyPrompt, promptParams);
+
+    // Up next ticker for fullscreen stage
+    upNextTicker = new UpNextTicker(context);
+    FrameLayout.LayoutParams tickerParams = new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+    tickerParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+    addView(upNextTicker, tickerParams);
+    upNextTicker.addOnLayoutChangeListener((v, l, t, right, bottom, oldL, oldT, oldR, oldB) -> updateTickerInsets());
+
     setMinimumHeight((int) (220 * getResources().getDisplayMetrics().density));
   }
 
@@ -56,6 +67,7 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
 
   void setVisualActive(boolean value) {
     active = value;
+    upNextTicker.setVisualActive(value && session.foreground);
     if (!value) {
       closeVideo();
       attempted = null;
@@ -70,7 +82,6 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
       presence.setVisibility(standby ? VISIBLE : GONE);
       if (standby) presence.bind(null);
     }
-    if (standbyPrompt != null) standbyPrompt.setVisibility(standby ? VISIBLE : GONE);
     lyrics.setStandbyMode(standby);
     File wanted =
         active && session.foreground && !session.cameraPreviewEnabled ? session.stageVideo : null;
@@ -85,6 +96,20 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
       prepare(wanted);
     lyrics.mediaVisible(mediaLive || cameraLive);
     lyrics.refresh();
+
+    upNextTicker.updateFromSnapshot(session.queue.snapshot());
+    upNextTicker.setVisualActive(active && session.foreground);
+    standbyPrompt.setVisibility(standby && upNextTicker.getVisibility() != VISIBLE ? VISIBLE : GONE);
+    updateTickerInsets();
+  }
+
+  private void updateTickerInsets() {
+    int inset = upNextTicker.getVisibility() == VISIBLE ? upNextTicker.getMeasuredHeight() : 0;
+    FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) lyrics.getLayoutParams();
+    if (params.bottomMargin != inset) {
+      params.bottomMargin = inset;
+      lyrics.setLayoutParams(params);
+    }
   }
 
   void mountCamera(android.view.View preview) {

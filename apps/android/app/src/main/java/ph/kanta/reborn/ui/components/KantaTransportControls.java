@@ -3,6 +3,7 @@ package ph.kanta.reborn.ui.components;
 import android.content.Context;
 import android.view.Gravity;
 import android.widget.LinearLayout;
+import android.view.View;
 
 import ph.kanta.reborn.R;
 
@@ -51,16 +52,33 @@ public class KantaTransportControls extends LinearLayout {
     previousButton.setEnabled(previousEnabled);
     nextButton.setEnabled(nextEnabled);
     repeatButton.setEnabled(repeatEnabled);
-    addView(shuffleButton, buttonParams(48));
-    addView(previousButton, buttonParams(48));
-    addView(playButton, buttonParams(72));
-    addView(nextButton, buttonParams(48));
-    addView(repeatButton, buttonParams(48));
+
+    // Fixed button widths: 48+48+72+48+48 = 264dp. Use weighted SPACE views between for responsive gaps.
+    // Total min gap budget = 4dp * 4 spacers = 16dp. 264 + 16 = 280dp fits 320dp screens.
+    int minGapDp = 4;
+    int minGap = (int) (minGapDp * density);
+
+    addView(shuffleButton, fixedParams(48));
+    addView(space(minGap));
+    addView(previousButton, fixedParams(48));
+    addView(space(minGap));
+    addView(playButton, fixedParams(72));
+    addView(space(minGap));
+    addView(nextButton, fixedParams(48));
+    addView(space(minGap));
+    addView(repeatButton, fixedParams(48));
   }
 
-  private LayoutParams buttonParams(int sizeDp) {
+  private LayoutParams fixedParams(int sizeDp) {
     int size = (int) (sizeDp * density);
     return new LayoutParams(size, size);
+  }
+
+  private View space(int minGap) {
+    View spacer = new View(getContext());
+    LayoutParams lp = new LayoutParams(minGap, 0, 1f);
+    spacer.setLayoutParams(lp);
+    return spacer;
   }
 
   public void setPlaying(boolean playing) {

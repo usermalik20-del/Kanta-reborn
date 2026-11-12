@@ -742,3 +742,23 @@ signing or deployment is authorized.
 The lyric-font folder result validates the returned read grant before persisting only `Intent.FLAG_GRANT_READ_URI_PERMISSION`. Passing that explicit allowed constant satisfies Android lint without broadening folder access or suppressing the check.
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
+
+## Android layout improvements — local candidate
+
+Home shows up to three reserved songs and the total queue count between search and the
+lower keypad, with a View all action to the existing Queue screen. Empty queues show a
+short explanation. Regular session updates preserve an in-progress code/title entry.
+Now Playing separates transport and key/tempo controls to reduce crowding, adapting to
+available width. Stages show a scrolling Up next strip from the existing reservation
+queue, hidden when empty. No playback or queue ownership changes are intended.
+These edits are local and not included in the published APK; device acceptance is pending.
+
+Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
+keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
+unambiguous numeric codes reserve through the existing controller without starting
+playback. Blank input is ignored; titles, unknown codes and duplicate codes open Search
+for selection. Numeric lookup runs on the existing worker and is fenced against edits,
+navigation, foreground loss and library replacement. Leading zeros remain significant.
+The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
+added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
+remain unexecuted locally because the iSH JVM cannot start.

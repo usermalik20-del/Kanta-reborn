@@ -1350,3 +1350,42 @@ Fixed trusted_main check in Android validation workflow by updating tracking bra
 The ancestor check fetches `refs/heads/main` explicitly into `refs/remotes/origin/main` and checks the selected commit against that remote-tracking ref. It does not force-update a checked-out local branch. Non-main history remains ineligible for release signing; existing release and runtime gates remain blocking.
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
+
+## Android Home, playback spacing and next-song strip — local candidate
+
+Source guards cover bounded FIFO projection, the queue-before-keypad layout, empty state,
+Home input retention across session publications, and the real search placeholder.
+`RuntimeChecks.homeLayoutChecks()` measures Home at 320/411/720dp widths and 320/620dp
+utility heights, checks preview order/count and queue/keypad bounds, and verifies that a
+render preserves typed input. Existing Home navigation assertions now use the search
+field tag instead of relying on editable placeholder text. Extend runtime acceptance to
+check transport gaps, key/tempo separation and on-stage Up next updates, including empty,
+long/duplicate titles, removal/reordering, rotation, large text, fullscreen/external and
+background/foreground. The ticker must not obscure active lyric lines or capture taps.
+
+Local Python/source checks do not establish compilation, emulator or physical-device
+acceptance. The current iSH JVM fails with unsupported `getcpu(2)`; Android platform and
+AAPT2/D8 are missing and ADB lists no device. No APK build, signing or publication is
+implied by this local candidate.
+
+Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
+keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
+unambiguous numeric codes reserve through the existing controller without starting
+playback. Blank input is ignored; titles, unknown codes and duplicate codes open Search
+for selection. Numeric lookup runs on the existing worker and is fenced against edits,
+navigation, foreground loss and library replacement. Leading zeros remain significant.
+The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
+added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
+remain unexecuted locally because the iSH JVM cannot start.
+
+
+### Layout candidate pre-push validation record
+
+On the local candidate: 196 Python tests pass, `git diff --check` passes, Java structure
+covers 157 production files and the Android workspace contract passes all 59 checks.
+Seven initial Home source guards reject the prior main source. Eleven exact-code Java
+core assertions and Android Home/player/ticker instrumentation are registered but have
+not executed locally. Independent QA/review workers returned no usable review, so they
+are not an acceptance gate. Owner has now authorized PR validation, merge on green,
+and the existing main signing/publication/deployment pipelines. Hosted evidence and
+remaining device gates are tracked in [ANDROID_HOME_LAYOUT.md](ANDROID_HOME_LAYOUT.md).

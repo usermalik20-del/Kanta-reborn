@@ -88,3 +88,16 @@ Fixed trusted_main check in Android validation workflow by updating tracking bra
 ## Android CI remote-main trust check
 
 The ancestor check fetches `refs/heads/main` explicitly into `refs/remotes/origin/main` and checks the selected commit against that remote-tracking ref. It does not force-update a checked-out local branch. Non-main history remains ineligible for release signing; existing release and runtime gates remain blocking.
+
+## Android Home queue and stage hint invariants
+
+Home and the on-stage Up next strip project `SessionController.queue.snapshot()`; they
+never own or mutate a second queue. Playback consumes its reservation before assigning
+`current`, so do not filter the queue by current song identity: intentional repeats are
+valid upcoming reservations. Ordinary session publications must preserve the Home search
+view and typed entry. RES reserves only an exact, unique numeric code through the
+controller, fenced against stale edits/navigation/foreground/library state; ambiguous
+codes and titles require Search selection. DEL remains one-character deletion.
+Native marquee must stop with host visibility and detach, remain noninteractive, and
+reserve measured lyric space rather than covering lyrics. See
+[Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for pending runtime/device gates.

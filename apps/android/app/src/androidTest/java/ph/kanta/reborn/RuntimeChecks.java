@@ -95,6 +95,126 @@ public final class RuntimeChecks extends Instrumentation {
     return false;
   }
 
+  private void upNextTickerChecks() {
+    runOnMainSync(() -> {
+      ph.kanta.reborn.ui.components.UpNextTicker ticker = persistentPrimaryStage.findViewWithTag("kanta.stage.up-next");
+      check(ticker != null, "Primary stage next-song strip missing");
+      ReservationQueue fixture = new ReservationQueue();
+      Song repeated = new Song("ticker-fixture", "A repeated song", "Artist", "007", "fixture.mid", false);
+      for (int i = 0; i < 10; i++) fixture.reserve(java.util.UUID.randomUUID(), repeated, "Singer " + (i + 1));
+      try {
+        ticker.updateFromSnapshot(fixture.snapshot());
+        TextView label = ticker.findViewWithTag("kanta.stage.up-next.text");
+        check(ticker.getVisibility() == View.VISIBLE, "Reserved songs did not reveal stage hint");
+        check(label.getText().toString().contains("1. A repeated song — Singer 1")
+            && label.getText().toString().contains("2. A repeated song — Singer 2"),
+            "Intentional repeated song disappeared");
+        check(label.getText().toString().contains("+2 more"), "Ticker overflow count is incorrect");
+        CharSequence before = label.getText();
+        ticker.updateFromSnapshot(fixture.snapshot());
+        check(before == label.getText(), "Unchanged snapshot reset the marquee text");
+        ticker.setVisualActive(false);
+        check(!label.isSelected(), "Ticker did not stop for inactive host");
+        ticker.setVisualActive(true);
+        fixture.move(fixture.snapshot().get(1).id, 0);
+        ticker.updateFromSnapshot(fixture.snapshot());
+        check(label.getText().toString().startsWith("Up next · 1. A repeated song — Singer 2"),
+            "Ticker did not follow reservation reorder");
+        fixture.clear();
+        ticker.updateFromSnapshot(fixture.snapshot());
+        check(ticker.getVisibility() == View.GONE, "Ticker empty queue is still visible");
+      } finally {
+        ticker.updateFromSnapshot(session.queue.snapshot());
+        ticker.setVisualActive(true);
+      }
+    });
+  }
+
+  private boolean homeKeyboardLabel(String tag, String label) {
+    View key = activity.getWindow().getDecorView().findViewWithTag(tag);
+    return key instanceof TextView && label.contentEquals(((TextView) key).getText());
+  }
+
+  private void playerLayoutChecks() {
+    runOnMainSync(() -> {
+      float density = activity.getResources().getDisplayMetrics().density;
+      for (int width : new int[] {288, 320, 411, 720}) {
+        ph.kanta.reborn.ui.KantaNowPlayingScreen screen = new ph.kanta.reborn.ui.KantaNowPlayingScreen(activity, null);
+        screen.setSongInfo("A long song title that should leave room for the actions", "Artist");
+        screen.setTempo(2f);
+        int w = Math.round(width * density);
+        screen.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        screen.layout(0, 0, w, screen.getMeasuredHeight());
+        View previous = null;
+        for (String tag : new String[] {"kanta.transport.shuffle", "kanta.transport.previous",
+            "kanta.transport.play-pause", "kanta.transport.next", "kanta.transport.repeat"}) {
+          View button = screen.findViewWithTag(tag);
+          check(button != null && button.getWidth() >= Math.round(48 * density),
+              "Transport touch target too small at " + width);
+          if (previous != null) check(button.getLeft() > previous.getRight(),
+              "Transport controls touch or overlap at " + width);
+          check(button.getLeft() >= 0 && button.getRight() <= ((View) button.getParent()).getWidth(),
+              "Transport control overflows at " + width);
+          previous = button;
+        }
+        View key = screen.findViewWithTag("kanta.now-playing.key");
+        View tempo = screen.findViewWithTag("kanta.now-playing.tempo");
+        check(key != null && tempo != null, "Key/tempo layout identities missing");
+        check(tempo.getTop() > key.getBottom() || tempo.getLeft() > key.getRight(),
+            "Key and tempo controls are not separated at " + width);
+      }
+    });
+  }
+
+  private void homeLayoutChecks() {
+    runOnMainSync(() -> {
+      android.widget.EditText search = activity.getWindow().getDecorView()
+          .findViewWithTag("kanta.home.search");
+      check(search != null && search.getText().length() == 0,
+          "Home search placeholder became editable query text");
+      float density = activity.getResources().getDisplayMetrics().density;
+      for (int width : new int[] {320, 411, 720}) {
+        for (int height : new int[] {320, 620}) {
+          // Exercise the same fill-viewport arrangement without touching the live controller queue.
+          android.widget.ScrollView scroll = new android.widget.ScrollView(activity);
+          scroll.setFillViewport(true);
+          ph.kanta.reborn.ui.HomeScreen sample = new ph.kanta.reborn.ui.HomeScreen(activity, null);
+          scroll.addView(sample);
+          sample.setReservedSongs(java.util.Arrays.asList("First song", "Second song", "Third song"), 5);
+          int w = Math.round(width * density), h = Math.round(height * density);
+          scroll.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+              View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY));
+          scroll.layout(0, 0, w, h);
+          View queue = sample.findViewWithTag("kanta.home.reservations");
+          View keyboard = sample.findViewWithTag("kanta.home.keyboard");
+          check(queue.getBottom() <= keyboard.getTop(), "Home queue overlaps keypad");
+          check(keyboard.getBottom() <= sample.getHeight(), "Home keypad clipped by content height");
+          check(sample.getHeight() >= h, "Home does not fill the available utility height");
+          check(contains(sample, "1. First song") && contains(sample, "3. Third song")
+              && contains(sample, "Reserved songs · 5"), "Home queue preview lost FIFO order or total");
+          sample.setReservedSongs(java.util.Collections.emptyList(), 0);
+          check(sample.findViewWithTag("kanta.home.queue.empty") != null, "Home queue empty state missing");
+        }
+      }
+      check(homeKeyboardLabel("kanta.keyboard.submit", "RES"), "Home submit key is not RES");
+      check(homeKeyboardLabel("kanta.keyboard.delete", "DEL"), "Home delete key is not DEL");
+      search.setText("1234");
+      search.setSelection(4);
+      activity.getWindow().getDecorView().findViewWithTag("kanta.keyboard.delete").performClick();
+      check("123".contentEquals(search.getText()), "DEL did not remove exactly one character");
+
+      try {
+        java.lang.reflect.Method render = MainActivity.class.getDeclaredMethod("render");
+        render.setAccessible(true);
+        render.invoke(activity);
+      } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+      check(activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") == search
+          && "123".contentEquals(search.getText()), "Queue refresh discarded in-progress Home entry");
+      search.setText("");
+    });
+  }
+
   @Override
   public void onStart() {
     Bundle result = new Bundle();
@@ -110,7 +230,7 @@ public final class RuntimeChecks extends Instrumentation {
       checks += ph.kanta.reborn.lyrics.LrclibClientChecks.run();
       capture("library_ready.png");
       check(
-          state(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code")),
+          state(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null),
           "Reference-led Home dashboard was not mounted at launch");
       runOnMainSync(() -> persistentPrimaryStage = activity.getWindow().getDecorView()
           .findViewWithTag("kanta.stage.primary"));
@@ -120,6 +240,9 @@ public final class RuntimeChecks extends Instrumentation {
       // after persistentPrimaryStage is resolved above, because the standby checks inspect
       // that view rather than looking the stage up themselves.
       stageStandbyChecks();
+      homeLayoutChecks();
+      playerLayoutChecks();
+      upNextTickerChecks();
       capture("home_dashboard.png");
       runOnMainSync(() -> {
         View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");
@@ -159,7 +282,7 @@ public final class RuntimeChecks extends Instrumentation {
         back.performClick();
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
           "Search did not return to Home");
       capture("home_dashboard_restored.png");
       runOnMainSync(() -> {
@@ -187,7 +310,7 @@ public final class RuntimeChecks extends Instrumentation {
         back.performClick();
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
           "Queue did not return to Home");
       runOnMainSync(() -> {
         View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Performance");
@@ -227,7 +350,7 @@ public final class RuntimeChecks extends Instrumentation {
         back.performClick();
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
           "Pitch & Tempo did not return to Home");
       runOnMainSync(() -> {
         View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Experience");
@@ -267,7 +390,7 @@ public final class RuntimeChecks extends Instrumentation {
       assertPersistentStage("kanta.screen.visuals");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
           "Visuals did not return to Home");
       runOnMainSync(() -> {
         View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Performance");
@@ -311,7 +434,7 @@ public final class RuntimeChecks extends Instrumentation {
         }
       });
       await(
-          () -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
           "Mic & Voice did not return to Home");
       runOnMainSync(() -> {
         View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");
@@ -374,7 +497,7 @@ public final class RuntimeChecks extends Instrumentation {
         checkIconBack(back, "Now Playing");
         back.performClick();
       });
-      await(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code"),
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
           "Now Playing did not return to Home");
       runOnMainSync(() -> {
         View more = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");

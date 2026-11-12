@@ -36,6 +36,20 @@ public final class Song {
     return true;
   }
 
+  /** Exact numeric codes only; ambiguous codes must be resolved by the singer in Search. */
+  public static Song uniqueCodeMatch(java.util.List<Song> songs, String entry) {
+    String code = entry == null ? "" : entry.trim();
+    if (!code.matches("[0-9]+")) return null;
+    Song found = null;
+    for (Song song : songs) {
+      if (Thread.currentThread().isInterrupted()) return null;
+      if (!code.equals(song.code)) continue;
+      if (found != null && !found.id.equals(song.id)) return null;
+      found = song;
+    }
+    return found;
+  }
+
   public boolean matches(String query) {
     return matchesTerms(searchTerms(query));
   }

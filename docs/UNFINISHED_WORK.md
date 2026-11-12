@@ -1,9 +1,19 @@
 # Unfinished work
 
-**Last updated:** 2026-11-12 · **main reviewed:** `95fff903` · **Android public release source:** `eed8020e`
+**Last updated:** 2026-11-13 · **main reviewed:** `22b8e375` · **Android public release source:** `eed8020e`
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
+
+## Android layout candidate — validation pending
+
+The screenshot-driven Home/Now Playing/keypad/stage improvements are implemented on
+`work/android-home-player-spacing`, not yet in the public APK. See the
+[scope and validation record](ANDROID_HOME_LAYOUT.md). Local preflight and 196 Python
+tests pass; exact-commit Android compilation, core regressions and emulator checks are
+required before merge. A green workflow is not physical-device acceptance. Keep rotation,
+large-text, long-queue/long-title readability and fullscreen/external-display acceptance
+open until demonstrated; no hardware testing is claimed.
 
 ## How to use this file
 

@@ -9,7 +9,6 @@ import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -21,7 +20,7 @@ public class HomeScreen extends LinearLayout {
     void onExperience();
     void onSettings();
     void onSearch();
-    /** Retained for listener compatibility; Home no longer navigates while typing. */
+    /** Editing invalidates a pending submission without navigating away from Home. */
     void onSearchQueryChanged(String query);
     void onSearchSubmitted(String query);
     void onQueue();
@@ -40,6 +39,11 @@ public class HomeScreen extends LinearLayout {
   private final Context context;
   private final float density;
   private final Listener listener;
+  private LinearLayout reservedSongs;
+  private TextView queueHeading;
+  private EditText searchInput;
+  private java.util.List<String> visibleReservations = java.util.Collections.emptyList();
+  private int reservationCount = -1;
 
   public HomeScreen(Context context, Listener listener) {
     super(context);
@@ -65,14 +69,15 @@ public class HomeScreen extends LinearLayout {
     searchRow.setGravity(Gravity.CENTER_VERTICAL);
     searchRow.setPadding(dp(16), 0, dp(16), 0);
 
-    EditText searchInput = new EditText(context);
+    searchInput = new EditText(context);
+    searchInput.setTag("kanta.home.search");
     searchInput.setSingleLine(true);
     searchInput.setShowSoftInputOnFocus(false);
     searchInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
         | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
     searchInput.setTextColor(KantaTheme.TEXT_PRIMARY);
     searchInput.setHintTextColor(KantaTheme.TEXT_MUTED);
-    searchInput.setText("Search songs, artists, or enter code");
+    searchInput.setHint("Search songs, artists, or enter code");
     searchInput.setTextSize(14);
     searchInput.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
     searchInput.setPadding(dp(14), 0, dp(10), 0);
@@ -86,6 +91,8 @@ public class HomeScreen extends LinearLayout {
 
     // Keyboard toggle (ABC/123)
     Button keyboardToggle = new Button(context);
+    keyboardToggle.setTag("kanta.home.keyboard-toggle");
+    keyboardToggle.setContentDescription("Switch keyboard to letters");
     keyboardToggle.setAllCaps(false);
     keyboardToggle.setText("Letters");
     keyboardToggle.setTextSize(11);
@@ -100,16 +107,42 @@ public class HomeScreen extends LinearLayout {
     toggleParams.leftMargin = dp(6);
     searchRow.addView(keyboardToggle, toggleParams);
 
-    // Code entry shortcut
-    ImageView code = new ImageView(context);
-    code.setImageResource(R.drawable.kanta_code_color);
-    code.setContentDescription("Keyboard: tap a key to type a song code or title");
-    code.setPadding(dp(10), dp(10), dp(10), dp(10));
-    LayoutParams codeParams = new LayoutParams(dp(48), dp(48));
-    codeParams.leftMargin = dp(6);
-    searchRow.addView(code, codeParams);
-
     addView(searchRow);
+
+    // Use spare height for the queue, leaving the keypad at the bottom. WRAP_CONTENT
+    // preserves the queue's minimum content height when the outer ScrollView is short.
+    LinearLayout queuePanel = new LinearLayout(context);
+    queuePanel.setOrientation(VERTICAL);
+    queuePanel.setMinimumHeight(dp(112));
+    queuePanel.setPadding(dp(14), dp(6), dp(14), dp(10));
+    queuePanel.setTag("kanta.home.reservations");
+    queuePanel.setBackground(KantaTheme.backgroundDrawable(
+        KantaTheme.SURFACE, 14, KantaTheme.BORDER, 1, density));
+    LinearLayout queueHeader = new LinearLayout(context);
+    queueHeader.setGravity(Gravity.CENTER_VERTICAL);
+    queueHeading = new TextView(context);
+    queueHeading.setTextSize(15);
+    queueHeading.setTypeface(null, Typeface.BOLD);
+    queueHeading.setTextColor(KantaTheme.TEXT_PRIMARY);
+    queueHeader.addView(queueHeading, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
+    Button viewQueue = new Button(context);
+    viewQueue.setText("View all");
+    viewQueue.setAllCaps(false);
+    viewQueue.setTextSize(12);
+    viewQueue.setTextColor(KantaTheme.PRIMARY_CYAN);
+    viewQueue.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+    viewQueue.setContentDescription("View all reserved songs");
+    viewQueue.setTag("kanta.home.queue");
+    viewQueue.setOnClickListener(v -> { if (listener != null) listener.onQueue(); });
+    queueHeader.addView(viewQueue, new LayoutParams(dp(88), dp(48)));
+    queuePanel.addView(queueHeader);
+    reservedSongs = new LinearLayout(context);
+    reservedSongs.setOrientation(VERTICAL);
+    queuePanel.addView(reservedSongs);
+    LayoutParams queueParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, 1);
+    queueParams.setMargins(dp(16), dp(10), dp(16), dp(10));
+    addView(queuePanel, queueParams);
+    setReservedSongs(java.util.Collections.emptyList(), 0);
 
     // Inline keyboard
     InlineKeyboard keyboard = new InlineKeyboard(context, new InlineKeyboard.Listener() {
@@ -128,12 +161,13 @@ public class HomeScreen extends LinearLayout {
         searchInput.requestFocus();
       }
       @Override public void onSubmit() {
-        // OK is the karaoke "enter code" action: commit the whole entry at once instead of
+        // RES commits the whole entry at once instead of
         // navigating on the first digit.
         searchInput.requestFocus();
         if (listener != null) listener.onSearchSubmitted(searchInput.getText().toString());
       }
     });
+    keyboard.setSubmitLabel("RES");
     keyboard.setTag("kanta.home.keyboard");
     addView(keyboard, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
@@ -153,13 +187,48 @@ public class HomeScreen extends LinearLayout {
     searchInput.addTextChangedListener(new android.text.TextWatcher() {
       public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
       public void onTextChanged(CharSequence s, int a, int b, int c) {}
-      public void afterTextChanged(android.text.Editable e) {}
+      public void afterTextChanged(android.text.Editable e) {
+        if (listener != null) listener.onSearchQueryChanged(e.toString());
+      }
     });
     searchInput.setOnEditorActionListener((v, actionId, event) -> {
       if (listener != null) listener.onSearchSubmitted(searchInput.getText().toString());
       return true;
     });
     searchInput.requestFocus();
+  }
+
+  public String getSearchText() { return searchInput.getText().toString(); }
+  public void clearSearchText() { searchInput.setText(""); }
+
+  /** Read-only, bounded projection; reservation identities and ordering remain controller-owned. */
+  public void setReservedSongs(java.util.List<String> songs, int total) {
+    if (reservationCount == total && visibleReservations.equals(songs)) return;
+    visibleReservations = new java.util.ArrayList<>(songs);
+    reservationCount = total;
+    queueHeading.setText("Reserved songs · " + total);
+    reservedSongs.removeAllViews();
+    if (songs.isEmpty()) {
+      TextView empty = reservationText("No songs reserved yet. Find a song to add it here.");
+      empty.setTag("kanta.home.queue.empty");
+      reservedSongs.addView(empty);
+    } else {
+      for (int i = 0; i < Math.min(3, songs.size()); i++) {
+        TextView row = reservationText((i + 1) + ". " + songs.get(i));
+        row.setSingleLine(true);
+        row.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        reservedSongs.addView(row);
+      }
+    }
+  }
+
+  private TextView reservationText(String value) {
+    TextView row = new TextView(context);
+    row.setText(value);
+    row.setTextSize(13);
+    row.setTextColor(KantaTheme.TEXT_SECONDARY);
+    row.setPadding(0, dp(3), 0, dp(3));
+    return row;
   }
 
   private Button groupCard(String title, String detail, String icon, int action) {

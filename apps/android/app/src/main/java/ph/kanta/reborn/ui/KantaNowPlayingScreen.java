@@ -5,6 +5,7 @@ import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.View.MeasureSpec;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
@@ -107,29 +108,39 @@ public class KantaNowPlayingScreen extends LinearLayout {
     if (stageView != null) addView(stage);
     LinearLayout info = new LinearLayout(context);
     info.setOrientation(HORIZONTAL);
-    info.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);
+    info.setGravity(Gravity.CENTER_VERTICAL);
     info.setPadding((int)(16*density),(int)(8*density),(int)(16*density),(int)(4*density));
     titleView = new TextView(context);
     titleView.setText(songTitle);
     titleView.setTextSize(20);
     titleView.setTypeface(null, Typeface.BOLD);
     titleView.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
+    titleView.setMaxLines(1);
+    titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
     artistView = new TextView(context);
     artistView.setText(songArtist);
     artistView.setTextSize(14);
     artistView.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
+    artistView.setMaxLines(1);
+    artistView.setEllipsize(android.text.TextUtils.TruncateAt.END);
     LinearLayout infoCol = new LinearLayout(context);
     infoCol.setOrientation(VERTICAL);
-    infoCol.setGravity(Gravity.CENTER);
+    infoCol.setGravity(Gravity.START);
+    LinearLayout.LayoutParams colParams = new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f);
+    infoCol.setLayoutParams(colParams);
     infoCol.addView(titleView); infoCol.addView(artistView);
     info.addView(infoCol);
+
+    // Fixed 48dp action buttons with 8dp gap
+    int actionSize = (int)(48 * density);
+    int actionGap = (int)(8 * density);
     ph.kanta.reborn.ui.components.KantaImageButton favorite =
         new ph.kanta.reborn.ui.components.KantaImageButton(
             context, ph.kanta.reborn.R.drawable.kanta_favorite_color, "Favorite song", false);
     favorite.setEnabled(false);
     favorite.setOnClickListener(v -> { if (listener != null) listener.onFavorite(); });
-    LinearLayout.LayoutParams favParams = new LinearLayout.LayoutParams((int)(48*density), (int)(48*density));
-    favParams.weight = 1; favParams.gravity = Gravity.END;
+    LinearLayout.LayoutParams favParams = new LinearLayout.LayoutParams(actionSize, actionSize);
+    favParams.leftMargin = actionGap;
     favorite.setLayoutParams(favParams);
     info.addView(favorite);
     ph.kanta.reborn.ui.components.KantaImageButton overflow =
@@ -137,6 +148,9 @@ public class KantaNowPlayingScreen extends LinearLayout {
             context, ph.kanta.reborn.R.drawable.kanta_more_color, "More playback options", false);
     overflow.setEnabled(false);
     overflow.setOnClickListener(v -> { if (listener != null) listener.onOverflow(); });
+    LinearLayout.LayoutParams ovParams = new LinearLayout.LayoutParams(actionSize, actionSize);
+    ovParams.leftMargin = actionGap;
+    overflow.setLayoutParams(ovParams);
     info.addView(overflow);
     addView(info);
     LinearLayout progressRow = new LinearLayout(context);
@@ -170,15 +184,15 @@ public class KantaNowPlayingScreen extends LinearLayout {
     });
     transport.setPlaying(playing);
     LinearLayout.LayoutParams tParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-    tParams.topMargin = (int)(8*density); tParams.bottomMargin = (int)(4*density);
+    tParams.topMargin = (int)(24*density); tParams.bottomMargin = (int)(20*density);
     addView(transport, tParams);
-    LinearLayout perfRow = new LinearLayout(context);
-    perfRow.setOrientation(HORIZONTAL);
-    perfRow.setGravity(Gravity.CENTER);
-    perfRow.setPadding((int)(16*density), 0, (int)(16*density), 0);
+
+    // Performance controls (Key / Tempo) - responsive container using onMeasure
+    // Declare children first so anonymous class can reference them
     LinearLayout keyCol = new LinearLayout(context);
     keyCol.setOrientation(VERTICAL);
     keyCol.setGravity(Gravity.CENTER);
+    keyCol.setTag("kanta.now-playing.key");
     TextView keyLabel = new TextView(context);
     keyLabel.setText("Key");
     keyLabel.setTextSize(12);
@@ -190,30 +204,72 @@ public class KantaNowPlayingScreen extends LinearLayout {
       @Override public void onIncrement() { if (listener != null) listener.onKeyUp(); }
     });
     keyCol.addView(keyLabel); keyCol.addView(keyStepper);
+
     TextView divider = new TextView(context);
     divider.setText("|");
     divider.setTextSize(14);
     divider.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
     divider.setGravity(Gravity.CENTER);
-    LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    final LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    dp.topMargin = (int)(16*density); dp.bottomMargin = (int)(16*density);
     dp.leftMargin = (int)(16*density); dp.rightMargin = (int)(16*density);
     divider.setLayoutParams(dp);
+
     LinearLayout tempoCol = new LinearLayout(context);
     tempoCol.setOrientation(VERTICAL);
     tempoCol.setGravity(Gravity.CENTER);
+    tempoCol.setTag("kanta.now-playing.tempo");
     TextView tempoLabel = new TextView(context);
     tempoLabel.setText("Tempo");
     tempoLabel.setTextSize(12);
     tempoLabel.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
     tempoStepper = new KantaStepper(context);
-    tempoStepper.setValue(String.format("%.0f%%", tempo * 100f));
+    tempoStepper.setValue(String.format(java.util.Locale.ROOT, "%.0f%%", tempo * 100f));
     tempoStepper.setOnChangeListener(new KantaStepper.OnChangeListener() {
       @Override public void onDecrement() { if (listener != null) listener.onTempoDown(); }
       @Override public void onIncrement() { if (listener != null) listener.onTempoUp(); }
     });
     tempoCol.addView(tempoLabel); tempoCol.addView(tempoStepper);
-    perfRow.addView(keyCol); perfRow.addView(divider); perfRow.addView(tempoCol);
-    addView(perfRow);
+
+    // Now create container with onMeasure that references above final variables
+    LinearLayout perfContainer = new LinearLayout(context) {
+      private int lastOrientation = -1;
+      @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int availableWidth = MeasureSpec.getSize(widthMeasureSpec);
+        int minHorizontalWidth = (int) (480 * density); // horizontal only on >=480dp
+        int unconstrained = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+        keyCol.measure(unconstrained, unconstrained);
+        tempoCol.measure(unconstrained, unconstrained);
+        int requiredWidth = keyCol.getMeasuredWidth() + tempoCol.getMeasuredWidth()
+            + getPaddingLeft() + getPaddingRight() + (int)(48 * density);
+        boolean useHorizontal = availableWidth >= Math.max(minHorizontalWidth, requiredWidth);
+        int newOrientation = useHorizontal ? HORIZONTAL : VERTICAL;
+        if (newOrientation != lastOrientation) {
+          lastOrientation = newOrientation;
+          setOrientation(newOrientation);
+          setGravity(Gravity.CENTER);
+          divider.setText(useHorizontal ? "|" : "");
+          if (useHorizontal) {
+            keyCol.setGravity(Gravity.CENTER);
+            tempoCol.setGravity(Gravity.CENTER);
+            dp.topMargin = 0; dp.bottomMargin = 0;
+          } else {
+            dp.topMargin = (int)(16*density); dp.bottomMargin = (int)(16*density);
+          }
+          divider.setLayoutParams(dp);
+        }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+      }
+    };
+    perfContainer.setOrientation(VERTICAL);
+    perfContainer.setGravity(Gravity.CENTER);
+    perfContainer.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
+
+    perfContainer.addView(keyCol);
+    perfContainer.addView(divider);
+    perfContainer.addView(tempoCol);
+
+    addView(perfContainer);
 
   }
   private TextView lyric(String text, int color, float sizeSp) {

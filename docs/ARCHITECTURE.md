@@ -1475,3 +1475,26 @@ The lyric-font SAF result remains owned by `MainActivity`: validate the returned
 The ancestor check fetches `refs/heads/main` explicitly into `refs/remotes/origin/main` and checks the selected commit against that remote-tracking ref. It does not force-update a checked-out local branch. Non-main history remains ineligible for release signing; existing release and runtime gates remain blocking.
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
+
+## Android Home, playback spacing and stage queue hint — local candidate
+
+Home projects a bounded three-row preview from `SessionController.queue.snapshot()`;
+its weighted, minimum-content-height panel sits above the inline keypad in the existing
+fill-viewport ScrollView. Queue actions route to the existing Queue destination. Home
+retains its view tree across ordinary session publications so queue updates do not
+replace an in-progress search entry or its focus. Search instructions are a hint, not
+editable query content. Now Playing adds responsive separation between controls, without
+changing transport intents. A shared Up next strip projects the same FIFO on stage and
+hides for an empty queue; it is not a second queue or playback owner. The persistent
+primary stage, explicit fullscreen and external-display ownership remain unchanged.
+Runtime geometry, font scaling and ticker lifecycle still require Android acceptance.
+
+Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
+keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
+unambiguous numeric codes reserve through the existing controller without starting
+playback. Blank input is ignored; titles, unknown codes and duplicate codes open Search
+for selection. Numeric lookup runs on the existing worker and is fenced against edits,
+navigation, foreground loss and library replacement. Leading zeros remain significant.
+The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
+added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
+remain unexecuted locally because the iSH JVM cannot start.

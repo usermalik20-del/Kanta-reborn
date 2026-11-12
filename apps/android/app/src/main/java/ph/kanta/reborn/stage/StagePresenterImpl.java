@@ -25,6 +25,7 @@ import ph.kanta.reborn.core.score.ScoreCelebrationPlan;
 import ph.kanta.reborn.core.score.ScoreResultTier;
 import ph.kanta.reborn.core.score.ScoreRevealPlan;
 import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.ui.components.UpNextTicker;
 
 /**
  * Implementation of {@link StagePresenter} that binds the karaoke stage overlays
@@ -66,6 +67,7 @@ public final class StagePresenterImpl extends FrameLayout
   private final IntroCard introCard;
   private final SearchOverlay searchOverlay;
   private final QueueOverlay queueOverlay;
+  private final UpNextTicker upNextTicker;
   private final RemoteStatusView remoteStatusView;
   private final Keypad keypad;
 
@@ -136,6 +138,7 @@ public final class StagePresenterImpl extends FrameLayout
     introCard = new IntroCard(context);
     searchOverlay = new SearchOverlay(context);
     queueOverlay = new QueueOverlay(context);
+    upNextTicker = new UpNextTicker(context);
     remoteStatusView = new RemoteStatusView(context);
     keypad = new Keypad(context, null, new Keypad.KeypadListener() {
       @Override public void onKey(String digit) { /* handled by SearchOverlay */ }
@@ -157,6 +160,11 @@ public final class StagePresenterImpl extends FrameLayout
     // overlay, so live lyrics, countdown, score and search always win.
     addView(presenceOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(lyricStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+    // Up next ticker: sits above lyrics, below countdown/score/search/controls
+    LayoutParams tickerParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+    tickerParams.gravity = android.view.Gravity.BOTTOM;
+    addView(upNextTicker, tickerParams);
+    upNextTicker.addOnLayoutChangeListener((v, l, t, right, bottom, oldL, oldT, oldR, oldB) -> updateTickerInsets());
     addView(countdownStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(scoreOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(celebration, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -661,8 +669,21 @@ public final class StagePresenterImpl extends FrameLayout
     // Update remote status
     // This would be updated from CompanionControl
 
+    // Playback already consumes its reservation. Preserve intentional repeated songs in FIFO.
+    upNextTicker.updateFromSnapshot(queue.snapshot());
+    updateTickerInsets();
+
     // BGV auto-shuffle: periodically switch to a random bundled BGV
     maybeShuffleBgv();
+  }
+
+  private void updateTickerInsets() {
+    int inset = upNextTicker.getVisibility() == VISIBLE ? upNextTicker.getMeasuredHeight() : 0;
+    LayoutParams params = (LayoutParams) lyricStage.getLayoutParams();
+    if (params.bottomMargin != inset) {
+      params.bottomMargin = inset;
+      lyricStage.setLayoutParams(params);
+    }
   }
 
   /** Periodically shuffles to a random bundled BGV when auto-shuffle is enabled. */
@@ -704,6 +725,7 @@ public final class StagePresenterImpl extends FrameLayout
   /** Sets whether the visual layer is active. */
   public void setVisualActive(boolean active) {
     backgroundStage.setVisualActive(active);
+    upNextTicker.setVisualActive(active);
   }
 
   /** Starts microphone-backed pitch practice only after explicit user action. */
