@@ -37,6 +37,7 @@ import ph.kanta.reborn.ui.components.InlineKeyboard;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MUSIC = 10,
+      LYRIC_FONT_FOLDER = 20,
       VOICE = 11,
       EXPORT = 12,
       FOLDER = 13,
@@ -99,6 +100,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int referenceSearchGeneration = 0;
   private ph.kanta.reborn.ui.KantaNowPlayingScreen nowPlayingScreen;
   private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
+  private Button onlineLyricsButton;
+  private int lyricDialogGeneration;
+  private int fontPickerGeneration;
   private int visualsSelectedTab;
   private String searchSource = "All";
   private String lowerUtilityAccessory;
@@ -1246,16 +1250,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onTempoDown(){session.controls(session.volume,Math.max(.5f,session.tempo-.05f),session.pitch);}
       @Override public void onTempoUp(){session.controls(session.volume,Math.min(2f,session.tempo+.05f),session.pitch);}
       @Override public void onFavorite(){}
-      @Override public void onOverflow(){}
+      @Override public void onOverflow(){findOnlineLyrics();}
     });
 
     nowPlayingScreen.setTag("kanta.screen.now-playing");
     body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-2));
+    onlineLyricsButton = button("Find lyrics on LRCLIB", this::findOnlineLyrics);
+    body.addView(onlineLyricsButton);
     refreshNowPlayingScreen();
   }
   private void refreshNowPlayingScreen() {
     if(nowPlayingScreen==null||!"Now Playing".equals(tab))return;
     Song current=session.current;
+    if (onlineLyricsButton != null) onlineLyricsButton.setEnabled(current != null && session.lyrics.isEmpty());
     // Truthful empty state: the headline stays the exact phrase the runtime check asserts,
     // and the only empty-state instruction is repeated once, under it.
     nowPlayingScreen.setSongInfo(current==null?"Nothing playing":current.title,
@@ -1287,6 +1294,63 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       }
     }
   }
+  private void findOnlineLyrics() {
+    Song song = session.current;
+    if (song == null || session.playbackIdentity == null) {
+      Toast.makeText(this, "Play a song before finding lyrics.", Toast.LENGTH_LONG).show(); return;
+    }
+    if (!session.lyrics.isEmpty()) {
+      Toast.makeText(this, "This song already has timed lyrics. They will not be replaced.", Toast.LENGTH_LONG).show(); return;
+    }
+    UUID identity = session.playbackIdentity;
+    int dialogRequest = ++lyricDialogGeneration;
+    LinearLayout fields = column();
+    fields.setPadding(dp(20), dp(8), dp(20), dp(8));
+    fields.addView(text("Search sends the title and artist below, plus your IP address and app identification, "
+        + "to lrclib.net. No audio, singer names or library files are sent. Choose a matching version yourself. "
+        + "Lyrics stay in memory for this playback; embedded lyrics are kept.", 14, Color.WHITE));
+    EditText title = new EditText(this); title.setHint("Song title"); title.setText(song.title);
+    title.setContentDescription("Song title for LRCLIB search"); fields.addView(title);
+    EditText artist = new EditText(this); artist.setHint("Artist (optional)"); artist.setText(song.artist);
+    artist.setContentDescription("Artist for LRCLIB search"); fields.addView(artist);
+    new AlertDialog.Builder(this).setTitle("Find lyrics on LRCLIB")
+        .setView(fields).setNegativeButton("Cancel", null)
+        .setPositiveButton("Search", (dialog, which) ->
+          session.searchOnlineLyrics(identity, title.getText().toString(), artist.getText().toString(), results -> {
+            if (isFinishing() || isDestroyed() || dialogRequest != lyricDialogGeneration
+                || !getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) return;
+            if (results.isEmpty()) {
+              Toast.makeText(this, session.message, Toast.LENGTH_LONG).show(); return;
+            }
+            long request = session.lyricLookupGeneration;
+            String[] choices = new String[results.size()];
+            for (int i = 0; i < results.size(); i++) {
+              ph.kanta.reborn.lyrics.LrclibClient.Result match = results.get(i);
+              choices[i] = match.title + " · " + match.artist + " · " + match.album
+                  + " · " + formatPlaybackTime((long) (match.duration * 1000))
+                  + (match.instrumental ? " · Instrumental" : match.timedCues.isEmpty()
+                      ? " · Untimed" : " · Line-timed");
+            }
+            new AlertDialog.Builder(this).setTitle("Choose the matching version · LRCLIB")
+                .setItems(choices, (matches, index) -> {
+                  if (!identity.equals(session.playbackIdentity) || request != session.lyricLookupGeneration) return;
+                  ph.kanta.reborn.lyrics.LrclibClient.Result match = results.get(index);
+                  if (session.applyOnlineLyrics(identity, request, match)) return;
+                  if (!match.plainLyrics.isEmpty() && !match.instrumental) {
+                    String plain = match.plainLyrics.length() > 65536
+                        ? match.plainLyrics.substring(0, 65536) + "\n[Preview truncated]" : match.plainLyrics;
+                    TextView lyrics = text(plain, 18, Color.WHITE);
+                    lyrics.setTextIsSelectable(true);
+                    ScrollView scroll = new ScrollView(this); scroll.setPadding(dp(20), dp(12), dp(20), dp(12));
+                    scroll.addView(lyrics);
+                    new AlertDialog.Builder(this).setTitle("Untimed lyrics · LRCLIB")
+                        .setView(scroll).setPositiveButton("Done", null).show();
+                  } else Toast.makeText(this, "No usable lyrics in this version. Your song is unchanged.", Toast.LENGTH_LONG).show();
+                }).setNegativeButton("Cancel", null).show();
+          }))
+        .show();
+  }
+
   private String formatPlaybackTime(long ms){long seconds=Math.max(0,ms/1000);return String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60);}
 
   /** Full-screen visual picker backed by the existing scenic, camera and import owners. */
@@ -2209,6 +2273,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             () -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), FOLDER));
     folder.setEnabled(session.ready && !session.importing);
     body.addView(folder);
+    body.addView(button("Lyric font", this::chooseLyricFont));
     if (session.importing) body.addView(button("Cancel import", session::cancelImports));
     body.addView(text("Active SoundFont · " + session.soundFontName, 14, CYAN));
     body.addView(text("SoundFonts", 20, ACCENT));
@@ -2687,6 +2752,42 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     queue();
   }
 
+  private void chooseFontFolder() {
+    startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+            | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION), LYRIC_FONT_FOLDER);
+  }
+
+  private void chooseLyricFont() {
+    int pickerRequest = ++fontPickerGeneration;
+    Uri root = new ContentRoot(this).getContentRootUri();
+    if (root == null) { chooseFontFolder(); return; }
+    Toast.makeText(this, "Looking for fonts…", Toast.LENGTH_SHORT).show();
+    ph.kanta.reborn.font.FontStore fonts = ph.kanta.reborn.font.FontStore.getInstance(this);
+    fonts.discover(root, entries -> {
+      if (pickerRequest != fontPickerGeneration || isFinishing() || isDestroyed()
+          || !getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) return;
+      String[] labels = new String[entries.size() + 2];
+      String saved = new SettingsStore(this).getLyricFont();
+      labels[0] = (saved.isEmpty() ? "✓ " : "") + "Built-in font";
+      for (int i = 0; i < entries.size(); i++) labels[i + 1] =
+          (entries.get(i).uri.toString().equals(saved) ? "✓ " : "") + entries.get(i).name;
+      labels[labels.length - 1] = "Choose another content folder…";
+      new AlertDialog.Builder(this).setTitle(entries.isEmpty() ? "Lyric font · no fonts found" : "Lyric font")
+          .setItems(labels, (dialog, index) -> {
+            if (index == labels.length - 1) { chooseFontFolder(); return; }
+            Uri selected = index == 0 ? null : entries.get(index - 1).uri;
+            fonts.select(selected, success -> {
+              if (isFinishing() || isDestroyed()) return;
+              Toast.makeText(this, success ? "Lyric font updated."
+                  : "This font could not be loaded. Using the built-in font.", Toast.LENGTH_LONG).show();
+              if (stagePresenter != null) stagePresenter.invalidate();
+              if (fullscreenStage != null) fullscreenStage.invalidate();
+            });
+          }).setNegativeButton("Cancel", null).show();
+    });
+  }
+
   private void pickLegacyIndex() {
     pendingLegacyIndex = null;
     Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
@@ -3113,6 +3214,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       showImportProgress();
       attachImportProgressListener();
       session.importFolder(data.getData());
+    }
+    else if (request == LYRIC_FONT_FOLDER && data.getData() != null) {
+      Uri root = data.getData();
+      try {
+        int grants = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+        if (grants == 0) throw new SecurityException();
+        getContentResolver().takePersistableUriPermission(root, grants);
+        new ContentRoot(this).setContentRootUri(root);
+        chooseLyricFont();
+      } catch (SecurityException | IllegalArgumentException unavailable) {
+        Toast.makeText(this, "This folder could not be kept. Choose a folder with read access.",
+            Toast.LENGTH_LONG).show();
+      }
     }
     else if (request == VOICE) {
       ArrayList<String> values = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);

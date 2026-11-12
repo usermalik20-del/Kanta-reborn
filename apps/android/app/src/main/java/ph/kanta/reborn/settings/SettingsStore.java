@@ -28,6 +28,9 @@ public final class SettingsStore {
   public static final String KEY_SOUNDFONT = "audio.soundfont";
 
   // Group: lyric
+  public static final String KEY_LYRIC_FONT = "lyric.font";
+  public static final String KEY_AUTO_LYRICS = "lyric.autoFetch";
+  public static final String KEY_AUTO_LYRICS = "lyric.autoFetch";
   public static final String KEY_LYRIC_FONT_SIZE = "lyric.fontSize";
   public static final String KEY_LYRIC_LINE_SPACING = "lyric.lineSpacing";
   public static final String KEY_LYRIC_ACTIVE_COLOR = "lyric.activeColor";
@@ -126,6 +129,12 @@ public final class SettingsStore {
   public void setSoundFont(String v) { prefs.edit().putString(KEY_SOUNDFONT, v).apply(); }
 
   // Lyric
+  public boolean getAutoLyrics() { return prefs.getBoolean(KEY_AUTO_LYRICS, false); }
+  public void setAutoLyrics(boolean v) { prefs.edit().putBoolean(KEY_AUTO_LYRICS, v).apply(); }
+
+  public String getLyricFont() { return prefs.getString(KEY_LYRIC_FONT, ""); }
+  public void setLyricFont(String uri) { prefs.edit().putString(KEY_LYRIC_FONT, uri == null ? "" : uri).apply(); }
+
   public float getLyricFontSize() { return prefs.getFloat(KEY_LYRIC_FONT_SIZE, 1.0f); }
   public void setLyricFontSize(float v) { prefs.edit().putFloat(KEY_LYRIC_FONT_SIZE, v).apply(); }
 

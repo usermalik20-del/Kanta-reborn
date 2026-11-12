@@ -106,6 +106,8 @@ public final class RuntimeChecks extends Instrumentation {
       session = ((KantaApplication) activity.getApplication()).session;
       await(() -> session.ready, "Library did not open");
       await(() -> session.stageReady, "Stage media store did not become ready");
+      checks += ph.kanta.reborn.font.FontStoreChecks.run(getTargetContext());
+      checks += ph.kanta.reborn.lyrics.LrclibClientChecks.run();
       capture("library_ready.png");
       check(
           state(() -> contains(activity.getWindow().getDecorView(), "Search songs, artists, or enter code")),

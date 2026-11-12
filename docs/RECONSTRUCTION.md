@@ -1105,3 +1105,26 @@ and real-device playback remain pending because the local JVM cannot start.
 D2/D4 remain open; iOS is unchanged.
 See [ownership contract](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate)
 and [validation scope](TESTING.md#android-runtime-only-legacy-import-key--local-candidate).
+
+## Local Android B1/B2/D5/D8 candidate
+
+Work is based on `00d97f0` and remains local and uncommitted; see
+[candidate notes](ANDROID_LOCAL_B1_B2_D5_D8.md). The owner explicitly retained
+the existing background-video backend (D5) and chose removal of unsupported
+melody/guide volume controls (D8). The architecture/component plans now reflect
+those decisions. Neither change claims per-part mixing or device soak acceptance.
+B1/B2 implementation and validation remain subject to the same named-commit
+evidence requirements as the other unfinished work. No push/merge/release is
+authorized; host-only checks do not close real-device gates.
+
+## Local optional LRCLIB lyric lookup and font integration
+
+See [LRCLIB behavior/privacy/test limits](LRCLIB_LYRICS.md),
+[B1 spectrum design](B1-spectrum.md) and
+[B2 font integration](B2-custom-fonts.md).
+The lookup is explicit, identified HTTPS on a worker, with user version selection,
+existing-lyric preservation and playback/foreground generation fences. LRC line
+timing is distinct from word sync; untimed text is previewed, not falsely timed.
+Host signal/LRC and device font/JSON checks are registered but not executed locally.
+Python/source checks are not a Java build or Android acceptance. No push, merge,
+signing or deployment is authorized.

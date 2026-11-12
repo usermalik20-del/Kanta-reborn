@@ -46,6 +46,6 @@ Build instructions, test results and engineering details live in the developer d
 - [Android development](apps/android/README.md) · [iOS development](apps/ios/AGENTS.md) · [Website development](apps/web/README.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Engineering rules](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md)
 - [Testing and release requirements](docs/TESTING.md) · [Download verification](docs/VERIFIED_DOWNLOADS.md)
-- [Outstanding work](docs/UNFINISHED_WORK.md)
+- [Outstanding work](docs/UNFINISHED_WORK.md) · [Local Android work and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.

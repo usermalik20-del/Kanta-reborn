@@ -134,6 +134,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private final long[] padGeneration = new long[8];
   String soundFontName = "KANTA original tone";
   private long generation = 0;
+  private final ExecutorService lyricWorker = Executors.newSingleThreadExecutor();
+  private boolean lyricSearchBusy;
+  long lyricLookupGeneration;
+  private long nextLyricSearchAt;
+
   private final AudioManager audio;
   private final AudioFocusRequest focus;
   private UUID onlineAudioOwner;
@@ -713,6 +718,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     scoreFrameFloor = SystemClock.elapsedRealtime();
     foreground = visible;
     if (!visible) {
+      ++lyricLookupGeneration;
       revokeOnlineAudio();
       companion.stop();
       browserCompanion.stop();
@@ -1077,6 +1083,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                           playing = true;
                           loading = false;
                           message = entry.song.title;
+                          maybeAutoSearchLyrics();
                           saveQueue();
                           publish();
                         }
@@ -1276,7 +1283,107 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     }
   }
 
+  private void maybeAutoSearchLyrics() {
+    if (!settings.getAutoLyrics() || !foreground || current == null || playbackIdentity == null
+        || lyrics.isEmpty() || currentDuration <= 0) return;
+    long now = SystemClock.elapsedRealtime();
+    if (autoLyricSearchBusy || now < autoLyricSearchAt) return;
+    autoLyricSearchBusy = true;
+    autoLyricSearchAt = now + 8000;
+    long request = ++lyricLookupGeneration;
+    String title = current.title;
+    String artist = current.artist;
+    if (title.isEmpty()) { autoLyricSearchBusy = false; return; }
+    ph.kanta.reborn.lyrics.LrclibClient client = new ph.kanta.reborn.lyrics.LrclibClient(context);
+    java.util.List<MidiLyrics.Cue> cached = client.getCached(title, artist, currentDuration);
+    if (cached != null && !cached.isEmpty()) {
+      autoLyricSearchBusy = false;
+      lyrics = cached;
+      message = "Loaded lyrics from local cache."; publish();
+      return;
+    }
+    message = "Searching LRCLIB…"; publish();
+    lyricWorker.execute(() -> {
+      java.util.List<ph.kanta.reborn.lyrics.LrclibClient.Result> results = Collections.emptyList();
+      String error = null;
+      try { results = new ph.kanta.reborn.lyrics.LrclibClient(context).search(title, artist); }
+      catch (IOException | RuntimeException unavailable) { error = "LRCLIB unavailable"; }
+      final java.util.List<ph.kanta.reborn.lyrics.LrclibClient.Result> found = results;
+      final String failure = error;
+      main.post(() -> {
+        autoLyricSearchBusy = false;
+        if (!foreground || request != lyricLookupGeneration || current == null
+            || !playbackIdentity.equals(request) || !lyrics.isEmpty()) return;
+        if (failure != null || found.isEmpty()) { message = "No lyrics found on LRCLIB."; publish(); return; }
+        ph.kanta.reborn.lyrics.LrclibClient.Result best = null;
+        for (ph.kanta.reborn.lyrics.LrclibClient.Result r : found) {
+          if (r.instrumental || r.timedCues.isEmpty()) continue;
+          if (r.duration > 0 && Math.abs(r.duration * 1000 - currentDuration) > 8000) continue;
+          if (r.artist.length() > 0 && !r.artist.toLowerCase().contains(current.artist.toLowerCase())
+              && !current.artist.toLowerCase().contains(r.artist.toLowerCase())) continue;
+          best = r; break;
+        }
+        if (best == null) { message = "No confident LRCLIB match."; publish(); return; }
+        java.util.List<MidiLyrics.Cue> timed = best.timedCues;
+        if (timed.isEmpty()) { message = "No usable lyrics in this version."; publish(); return; }
+        lyrics = timed;
+        client.cacheIfConfident(best, currentDuration);
+        message = "Auto-selected line-timed lyrics from LRCLIB."; publish();
+      });
+    });
+  }
+
+  /** Explicit search only. Does not scan/upload a library or replace embedded lyrics. */
+  void searchOnlineLyrics(UUID identity, String title, String artist,
+      java.util.function.Consumer<java.util.List<ph.kanta.reborn.lyrics.LrclibClient.Result>> completed) {
+    if (!foreground || current == null || identity == null || !identity.equals(playbackIdentity)
+        || !lyrics.isEmpty()) return;
+    long now = SystemClock.elapsedRealtime();
+    if (lyricSearchBusy || now < nextLyricSearchAt) {
+      message = "A lyric search is already running, or was just sent. Please wait.";
+      publish();
+      return;
+    }
+    lyricSearchBusy = true;
+    nextLyricSearchAt = now + 1000;
+    long request = ++lyricLookupGeneration;
+    message = "Searching LRCLIB…";
+    publish();
+    lyricWorker.execute(() -> {
+      java.util.List<ph.kanta.reborn.lyrics.LrclibClient.Result> results = Collections.emptyList();
+      String error = null;
+      try { results = new ph.kanta.reborn.lyrics.LrclibClient(context).search(title, artist); }
+      catch (IOException | RuntimeException unavailable) {
+        error = "Could not fetch lyrics from LRCLIB. Check your connection and try again later.";
+      }
+      final java.util.List<ph.kanta.reborn.lyrics.LrclibClient.Result> found = results;
+      final String failure = error;
+      main.post(() -> {
+        lyricSearchBusy = false;
+        if (!foreground || request != lyricLookupGeneration || !identity.equals(playbackIdentity)) return;
+        message = failure != null ? failure : found.isEmpty()
+            ? "No matching lyrics found on LRCLIB." : "Choose the correct LRCLIB version.";
+        publish();
+        completed.accept(failure == null ? found : Collections.emptyList());
+      });
+    });
+  }
+
+  boolean applyOnlineLyrics(UUID identity, long request,
+      ph.kanta.reborn.lyrics.LrclibClient.Result result) {
+    if (!foreground || request != lyricLookupGeneration || identity == null
+        || !identity.equals(playbackIdentity) || !lyrics.isEmpty() || result.instrumental) return false;
+    java.util.List<MidiLyrics.Cue> timed = result.timedCues;
+    if (timed.isEmpty()) return false;
+    lyrics = timed;
+    new ph.kanta.reborn.lyrics.LrclibClient(context).cacheIfConfident(result, currentDuration);
+    message = "Line-timed lyrics from LRCLIB · cached locally.";
+    publish();
+    return true;
+  }
+
   void stop() {
+    ++lyricLookupGeneration;
     ++generation;
     if (pending != null) {
       pending.release();

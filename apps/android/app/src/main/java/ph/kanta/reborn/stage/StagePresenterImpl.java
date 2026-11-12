@@ -205,12 +205,6 @@ public final class StagePresenterImpl extends FrameLayout
       @Override public void onTempoChange(float factor) {
         session.setTempo(factor);
       }
-      @Override public void onMelodyVolumeChange(float volume) {
-        // Melody volume handled via SoundFontPlayback if needed
-      }
-      @Override public void onGuideVolumeChange(float volume) {
-        // Guide volume handled via SoundFontPlayback if needed
-      }
     });
 
     // Frame ticker to keep lyrics synced to rendered output frames
@@ -410,12 +404,6 @@ public final class StagePresenterImpl extends FrameLayout
       }
       @Override public void onTempoChange(float factor) {
         listener.onTempoChange(factor);
-      }
-      @Override public void onMelodyVolumeChange(float volume) {
-        listener.onMelodyVolumeChange(volume);
-      }
-      @Override public void onGuideVolumeChange(float volume) {
-        listener.onGuideVolumeChange(volume);
       }
     });
     adjustmentOverlay.show();

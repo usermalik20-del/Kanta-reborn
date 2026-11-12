@@ -122,7 +122,7 @@ Designed in **KANTA's existing visual language** (KantaColors, KantaTypography, 
 - `solid` — `canvas` gradient (canvasTop → canvasBottom)
 - `photo` — user image, `ImageView.ScaleType.CENTER_CROP`
 - `camera` — `CameraStage` preview (existing)
-- `bgv` — Media3 `ExoPlayer` on `TextureView`, muted, looping
+- `bgv` — platform `MediaPlayer` on `TextureView`, muted, looping (D5 owner decision, 2026-11-12)
 - `transitioning` — cross-fade 400ms `easeInOut` between sources
 
 **Tokens**:
@@ -143,7 +143,7 @@ Designed in **KANTA's existing visual language** (KantaColors, KantaTypography, 
 
 ## 5. AdjustmentOverlay
 
-**Purpose**: Real-time key/melody/tempo/volume adjustment during playback.
+**Purpose**: Real-time key/tempo/master-volume adjustment during playback. Separate melody/guide mixing is unsupported; do not show placeholder sliders (D8).
 
 **Variants**: handset (bottom sheet, 40% height), TV (side panel, 30% width)
 
@@ -163,7 +163,7 @@ Designed in **KANTA's existing visual language** (KantaColors, KantaTypography, 
 - Labels: `adjustmentLabel` / `typography.adjustmentLabel` (12sp medium)
 - Values: `adjustmentValue` / `typography.adjustmentValue` (18sp bold)
 - Reset button: `textSecondary`, `typography.caption`, tap resets to 0
-- Sections: key | melody | tempo | volume (equal width)
+- Sections: key | tempo; master volume stays in the control deck (no melody/guide placeholders)
 - Padding: `spacing.scale[5]` (20dp) horizontal, `spacing.scale[4]` (16dp) vertical
 - Gap: `spacing.scale[6]` (24dp) between sections
 
@@ -358,7 +358,7 @@ Designed in **KANTA's existing visual language** (KantaColors, KantaTypography, 
 
 **Groups added**:
 - `lyric` — font size, line spacing, active color, upcoming opacity
-- `audio` — key range, tempo range, melody volume, guide volume
+- `audio` — key range, tempo range, master volume; separate melody/guide mixing is unsupported (D8)
 - `mic` — monitor level, gate threshold, effects (reverb/compressor)
 - `score` — difficulty, mode (strict/lenient), show breakdown
 - `behavior` — auto-reserve, countdown length, intro card, queue visibility

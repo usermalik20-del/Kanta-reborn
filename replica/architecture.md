@@ -41,7 +41,7 @@ The skill's default stack (Next.js + Postgres + Supabase) does **not** apply: th
 | content index | **SQLite** (`android.database.sqlite`, no ORM) for the songbook index cache | the Meg index is 600 MB of binary data; SQLite gives random-access lookups, FTS4 search and crash-safe writes with zero new dependencies |
 | app state | `AtomicFile` JSON (`library-v1.json`) for library metadata, queue snapshot, saved sets | already the repo's persistence contract; atomic commit, bounded size |
 | settings | `SharedPreferences` file `kanta_settings`, grouped keys | SongHub used `songhub_settings`; same mechanism, renamed |
-| video | Media3/ExoPlayer (**new dependency**) | needed for BGV backgrounds and the media player; SongHub already used ExoPlayer |
+| video | Existing platform `MediaPlayer` / `TextureView` background renderers | Owner decision D5 (2026-11-12): retain `BackgroundStage` and fullscreen `StageSurface`; no Media3 dependency or migration |
 | camera | CameraX 1.5.3 (already a dependency) | live camera background; `CameraStage` exists |
 | companion (browser) | existing `core/CompanionProtocol` + `core/BrowserRemoteServer` + `PinnedBrowserTransport` | encrypted, paired, already covered by repo contracts |
 | companion (phone) | new `remote/smartlink/` — NSD `_kanta._tcp` + UDP beacon + WebSocket server, **ported binary protocol** | owner wants both; must be paired and authorized like the browser companion |
@@ -85,7 +85,7 @@ ph.kanta.reborn
 │   │   ├── SmartLinkProtocol.java  # port of RemoteProtocol.pack*/unpack*
 │   │   └── SmartLinkPairing.java   # explicit pairing + authorization + revocation
 │   └── (existing CompanionControl / core.BrowserRemoteServer stay)
-├── media/                          # NEW — Beta 2 media library (Media3)
+├── media/                          # planned — Beta 2 media library; no Media3 commitment
 └── tv/                             # NEW — Beta 2 D-pad/ATV focus handling
 ```
 
@@ -284,8 +284,8 @@ Client→host actions (SongHub remote `sendAction`): `search`, `reserve`, `play_
 - **Audio thread priority.** TinySoundFont rendering plus `AudioTrack` must run on a dedicated high-priority thread with a bounded buffer; a UI jank must never drop the audible clock (`RenderedPlaybackClock`).
 - **Scoring honesty.** SongHub's `libMewtwo` is unavailable; KANTA's own `MelodyScoreSession`/`DryPitchDetector` is the scorer. Mic monitoring stays **opt-in** and off by default (repo rule). Do not present Mewtwo-grade accuracy.
 - **Reservation idempotency.** Every reserve request carries a UUID request id; `ReservationQueue.reserve(requestId, …)` is the only mutation path. Duplicate callbacks, retries and lifecycle restoration must not create a second reservation or a second completion credit (repo rule §4).
-- **One playback clock.** Background video, lyrics, countdown and score all read the same audible clock; the BGV player never becomes a second timeline.
-- **Background media decode.** Media3 must decode on its own surface/thread, be muted by default (it is decoration, not audio), and release the decoder when the background changes.
+- **One playback clock.** Lyrics, countdown and score read the same audible song clock. Decorative background video loops independently and never becomes an authoritative song timeline.
+- **Background media decode.** Retain the platform `MediaPlayer` / `TextureView` path (`BackgroundStage` embedded, `StageSurface` fullscreen). Prepare asynchronously, keep background video muted and looping, and release the decoder/surface on replacement or foreground loss. It never owns song audio, scoring or queue progression. Physical-device soak acceptance remains open.
 - **TV / D-pad focus.** SongHub's focus handling (`setupFocusAnimation`, `dispatchKeyEvent`) is the defect-prone part of the original; KANTA already had a dead-tap class of bug on iPad. Beta 1 focuses handset; ATV work is Beta 2 with explicit focus tests.
 - **Offline-first.** No runtime network dependency. Every feature except optional prebuilt downloads must work in airplane mode (SongHub's headline property).
 - **Content licensing.** The bundled soundbanks (Yamaha/Korg/Ketron/Dream, "custom made by jc") and the BGV clips are third-party. They must be verified as distributable before any public KANTA release; the app ships with an in-app licence notice like SongHub's `prebuilt_option_songs_note`. KANTA's own `kanta-tone.sf2` remains the default bank.
@@ -312,15 +312,15 @@ Client→host actions (SongHub remote `sendAction`): `search`, `reserve`, `play_
 - **Exit:** on a device with the owner's content pack, a song can be searched, reserved, played with lyrics, counted in, scored and queued — with the queue visible in KANTA's existing UI.
 
 ### Milestone 2 — Must-haves, Beta 1 remainder
-- BGV video backgrounds (Media3), background photos, camera background via existing `CameraStage`.
-- Adjustment overlay: key / melody / tempo / volume, applied as intents to `SessionController`, with clock re-anchoring.
+- BGV video backgrounds (existing platform renderer; D5 owner decision), background photos, camera background via existing `CameraStage`.
+- Adjustment overlay: key / tempo / master volume (D8: no unsupported melody/guide controls), applied as intents to `SessionController`, with clock re-anchoring.
 - Settings groups: lyric, audio, mic, score, behavior, bgv (`kanta_settings`).
 - Score result overlay + score settings (difficulty/mode from SongHub's `ScoreSettings`).
 - Smart Link **host** side (NSD + beacon + WebSocket) with explicit pairing, replay protection and revocation.
 - Screens: **S05 (artists), S12, S15, S16, S17**. Tables: unchanged. Contracts: `SettingsStore`, `ScoreSink`, Smart Link frames.
 
 ### Milestone 3 — Should-haves (Beta 2)
-- Media library and players (S09–S11) with Media3; new songs (S04); rankings (S06); ATV player + focus handling (S08); prebuilt content downloader against the KANTA manifest (F08); intro card, interlude, wavy time bar.
+- Media library and players (S09–S11) using existing platform playback adapters; new songs (S04); rankings (S06); ATV player + focus handling (S08); prebuilt content downloader against the KANTA manifest (F08); intro card, interlude, wavy time bar.
 - **Exit:** full screen parity for S04–S11 except diagnostics.
 
 ### Milestone 4 — Could-haves (Beta 3)
@@ -344,7 +344,7 @@ Client→host actions (SongHub remote `sendAction`): `search`, `reserve`, `play_
 | 1 | Legacy container payloads stay protected | a legacy songbook can be listed but not played from the bundled container | metadata-only interoperability (mirrors iOS); playback uses the user's own plain MIDI/KAR/MP3/WAV files; the proprietary native engine is out of bounds |
 | 2 | Scoring quality drops vs Mewtwo | users see worse scores | label the scorer honestly; tune `DryPitchDetector`; keep difficulty settings |
 | 3 | Two companion transports double the attack surface | security/QA cost | one shared pairing/token module; shared command allow-list; unpaired frames rejected |
-| 4 | BGV video decode stalls the UI | jank during singing | dedicated Media3 instance, muted, released on change, no surface thrash |
+| 4 | BGV video decode stalls the UI | jank during singing | existing platform background player, muted, released on change/foreground loss, no surface thrash; real-device soak still required |
 | 5 | Third-party soundbank/clip licences block release | public release blocked | KANTA ships none of the legacy media by default; any owner-authorised set is licence-checked and recorded in `apps/android/THIRD_PARTY_NOTICES.md`; KANTA's own bank stays the default |
 | 6 | Rebrand drift (a stray "SongHub") | inconsistent branding | CI naming sweep check |
 | 7 | 4.16.67 feature drift unnoticed | parity claim wrong | re-recon the delta before Beta 2 parity claims |
@@ -353,7 +353,7 @@ Client→host actions (SongHub remote `sendAction`): `search`, `reserve`, `play_
 
 ## 8. Summary
 
-- **Stack in one line:** existing native Android app (`ph.kanta.reborn`, Java 17 + Views + NDK TinySoundFont) + SQLite songbook index + AtomicFile app state + Media3 backgrounds + two companions (existing encrypted browser companion, new ported Smart Link host/phone app) — **no backend, no accounts, offline-first**.
+- **Stack in one line:** existing native Android app (`ph.kanta.reborn`, Java 17 + Views + NDK TinySoundFont) + SQLite songbook index + AtomicFile app state + platform MediaPlayer backgrounds + two companions (existing encrypted browser companion, new ported Smart Link host/phone app) — **no backend, no accounts, offline-first**.
 - **Tables:** 5 SQLite tables (+1 FTS4 shadow) + the existing `library-v1.json` state file.
 - **Routes:** 17 screens / 12 flows mapped onto KANTA's existing owners; 4 new internal contracts; 2 companion protocols; 1 optional content manifest endpoint.
 - **Three riskiest parts:** (1) the undocumented Meg content format, (2) the scoring engine replacement (no Mewtwo), (3) running two companion transports safely.

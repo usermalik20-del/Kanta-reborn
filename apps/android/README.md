@@ -715,3 +715,24 @@ save these details; each import asks again. Cancel or background the entry dialo
 to clear it. Only import content you are authorized to use. This local candidate
 still needs Android build/emulator and real-device import/playback checks.
 See [runtime ownership details](../../docs/ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
+
+## Local B1/B2/D5/D8 work (not the published build)
+
+The [local candidate notes](../../docs/ANDROID_LOCAL_B1_B2_D5_D8.md) track PCM
+spectrum analysis, custom lyric fonts and remaining validation. The owner chose
+to retain platform background-video playback (D5) and remove the nonfunctional
+melody/guide sliders (D8), not implement separate mixing. Key, tempo and the
+control deck's master volume remain supported. Nothing in this local candidate
+has been pushed or accepted on a device.
+
+## Local optional LRCLIB lyric lookup and font integration
+
+See [LRCLIB behavior/privacy/test limits](../../docs/LRCLIB_LYRICS.md),
+[B1 spectrum design](../../docs/B1-spectrum.md) and
+[B2 font integration](../../docs/B2-custom-fonts.md).
+The lookup is explicit, identified HTTPS on a worker, with user version selection,
+existing-lyric preservation and playback/foreground generation fences. LRC line
+timing is distinct from word sync; untimed text is previewed, not falsely timed.
+Host signal/LRC and device font/JSON checks are registered but not executed locally.
+Python/source checks are not a Java build or Android acceptance. No push, merge,
+signing or deployment is authorized.

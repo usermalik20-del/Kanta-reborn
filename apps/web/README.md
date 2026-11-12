@@ -332,3 +332,10 @@ The redesign is implemented as modular JS files loaded by all pages:
 ## Manifest-backed download status — 2026-11-09
 
 The sticky status bar on `/android` and `/ios-download` fetches `/downloads.json` with `cache: "no-store"`, validates the selected platform's published artifact record, checks the exact GitHub Actions artifact URL and digest metadata, and confirms the visible page link matches the manifest. It reads the current run, artifact ID and digests from the manifest rather than hard-coding them in JavaScript. The status means the publication record is current; it does **not** download the artifact or hash its bytes. GitHub sign-in remains required to fetch the artifact itself.
+
+## Local Android lyric-search disclosure
+
+The privacy page describes the optional LRCLIB lookup as an **unreleased Android
+candidate**, not a current download or an iOS capability. See
+[implementation/privacy boundaries](../../docs/LRCLIB_LYRICS.md). No website feature
+or download manifest changes are part of this local work.

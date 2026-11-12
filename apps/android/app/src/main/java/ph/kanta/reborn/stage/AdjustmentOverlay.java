@@ -10,7 +10,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 /**
- * Real-time key/melody/tempo/volume adjustment overlay.
+ * Real-time key and tempo adjustment overlay. Master volume stays in the control deck.
  *
  * <p>Per {@link replica/design/components.md} AdjustmentOverlay spec.
  * Bottom sheet on handset, side panel on TV.
@@ -26,8 +26,6 @@ public final class AdjustmentOverlay extends FrameLayout {
 
   private SeekBar keySeek;
   private SeekBar tempoSeek;
-  private SeekBar melodySeek;
-  private SeekBar volumeSeek;
   private AdjustmentListener listener;
 
   public AdjustmentOverlay(Context context) {
@@ -72,16 +70,6 @@ public final class AdjustmentOverlay extends FrameLayout {
           @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-    // Melody volume
-    addAdjustmentRow(container, "Melody", "volume", 0, 100, 80,
-        new SeekBar.OnSeekBarChangeListener() {
-          @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            if (fromUser && listener != null) listener.onMelodyVolumeChange(progress / 100f);
-          }
-          @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-          @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
     // Tempo
     addAdjustmentRow(container, "Tempo", "factor", 50, 150, 100,
         new SeekBar.OnSeekBarChangeListener() {
@@ -92,15 +80,6 @@ public final class AdjustmentOverlay extends FrameLayout {
           @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-    // Guide volume
-    addAdjustmentRow(container, "Guide", "volume", 0, 100, 60,
-        new SeekBar.OnSeekBarChangeListener() {
-          @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            if (fromUser && listener != null) listener.onGuideVolumeChange(progress / 100f);
-          }
-          @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-          @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
   }
 
   private void addAdjustmentRow(LinearLayout container, String label, String unit,
@@ -164,8 +143,6 @@ public final class AdjustmentOverlay extends FrameLayout {
     switch (label) {
       case "Key": keySeek = seekBar; break;
       case "Tempo": tempoSeek = seekBar; break;
-      case "Melody": melodySeek = seekBar; break;
-      case "Guide": volumeSeek = seekBar; break;
     }
 
     row.addView(seekBar);
@@ -197,16 +174,6 @@ public final class AdjustmentOverlay extends FrameLayout {
     if (tempoSeek != null) tempoSeek.setProgress((int)(factor * 100) - 50);
   }
 
-  /** Updates the melody volume. */
-  public void setMelodyVolume(float volume) {
-    if (melodySeek != null) melodySeek.setProgress((int)(volume * 100));
-  }
-
-  /** Updates the guide volume. */
-  public void setGuideVolume(float volume) {
-    if (volumeSeek != null) volumeSeek.setProgress((int)(volume * 100));
-  }
-
   /** Shows the overlay with slide-up animation. */
   public void show() {
     setTranslationY(getHeight());
@@ -225,7 +192,5 @@ public final class AdjustmentOverlay extends FrameLayout {
   public interface AdjustmentListener {
     void onKeyChange(int semitones);
     void onTempoChange(float factor);
-    void onMelodyVolumeChange(float volume);
-    void onGuideVolumeChange(float volume);
   }
 }
