@@ -223,6 +223,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   @Override
   protected void onStop() {
+    homeSubmitGeneration++;
     if (legacyKeyDialog != null) legacyKeyDialog.dismiss();
     handler.removeCallbacksAndMessages(null);
     closeYouTubeVideo();
@@ -337,6 +338,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         });
   }
 
+  private ph.kanta.reborn.ui.HomeScreen homeScreen;
+  private int homeSubmitGeneration;
+
   private void render() {
     if (isFinishing() || isDestroyed()) return;
     reconcileOnlinePreviewWithLocalPlayback();
@@ -366,6 +370,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       android.graphics.drawable.Drawable[] dr = nav.getCompoundDrawables();
       if (dr[1] != null) dr[1].setAlpha(active ? 255 : 96);
     }
+    // Refresh the Home queue without losing the user's in-progress keypad entry.
+    if ("Home".equals(tab) && lowerUtilityAccessory == null && !controlDeckVisible
+        && homeScreen != null && homeScreen.getParent() == body) {
+      refreshHomeReservations();
+      if (stagePresenter != null) stagePresenter.refresh();
+      return;
+    }
     // Now Playing is a live projection. Keep its view tree stable while the
     // clock/session publishes; rebuilding it every 100ms drops focus and is
     // needlessly expensive. Navigation into it still builds once below.
@@ -376,6 +387,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       return;
     }
     body.removeAllViews();
+    homeScreen = null;
     nowPlayingScreen = null;
     if (controlDeckVisible) {
       renderControlDeck();
@@ -1256,7 +1268,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     nowPlayingScreen.setTag("kanta.screen.now-playing");
     body.addView(nowPlayingScreen,new LinearLayout.LayoutParams(-1,-2));
     onlineLyricsButton = button("Find lyrics on LRCLIB", this::findOnlineLyrics);
-    body.addView(onlineLyricsButton);
+    LinearLayout.LayoutParams lyricsActionParams = new LinearLayout.LayoutParams(-1, -2);
+    lyricsActionParams.setMargins(0, dp(16), 0, dp(8));
+    body.addView(onlineLyricsButton, lyricsActionParams);
     refreshNowPlayingScreen();
   }
   private void refreshNowPlayingScreen() {
@@ -1532,10 +1546,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     screen.setTag("kanta.screen.search");
     body.addView(screen, new LinearLayout.LayoutParams(-1, -1));
     // Prefill only for a committed Home entry; a bare tap on Search opens the full library.
-    if (!query.isEmpty()) {
-      screen.setQuery(query);
-      query = "";
-    }
+    String committedQuery = query;
+    query = "";
+    if (!committedQuery.isEmpty()) screen.setQuery(committedQuery);
     renderSearchResults(screen, visibleSongs);
   }
 
@@ -1691,8 +1704,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   /** Reference-led home dashboard. Existing playback and workspace owners remain authoritative. */
   private void homeDashboard() {
-    body.addView(
-        new ph.kanta.reborn.ui.HomeScreen(
+    homeScreen = new ph.kanta.reborn.ui.HomeScreen(
             this,
             new ph.kanta.reborn.ui.HomeScreen.Listener() {
               @Override public void onHome() {
@@ -1705,20 +1717,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onSettings() { tab = "More"; render(); }
               @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
               @Override public void onSearchQueryChanged(String typed) {
-                // Home typing stays local, so a five-digit karaoke code is never split by a
-                // navigation. The committed term is carried by onSearchSubmitted.
-                if (typed == null) return;
-                query = typed;
+                // Cancel pending RES work even if the user edits back to the same text.
+                homeSubmitGeneration++;
               }
-              @Override public void onSearchSubmitted(String typed) {
-                // OK on the Home keypad is the karaoke "enter code" action: open the real
-                // Search destination with the term applied. Nothing is layered over the
-                // standby stage, so the karaoke presence stays visible.
-                query = typed == null ? "" : typed;
-                searchSource = "All";
-                tab = "Search";
-                render();
-              }
+              @Override public void onSearchSubmitted(String typed) { submitHomeEntry(typed); }
               @Override public void onQueue() { tab = "Queue"; render(); }
               @Override public void onYouTube() { openYouTubeVideo(); }
               @Override public void onVisuals() { tab = "Visuals"; render(); }
@@ -1730,7 +1732,51 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onMore() { tab = "More"; render(); }
               @Override public void onScenic() { tab = "Scenic"; render(); }
               @Override public void onRealm() { tab = "Realm"; render(); }
-            }), new LinearLayout.LayoutParams(-1, -1));
+            });
+    refreshHomeReservations();
+    body.addView(homeScreen, new LinearLayout.LayoutParams(-1, -1));
+  }
+
+  private void submitHomeEntry(String typed) {
+    final String requested = typed == null ? "" : typed.trim();
+    if (requested.isEmpty() || homeScreen == null) return;
+    if (!session.ready) {
+      Toast.makeText(this, "Your library is still loading. Try again shortly.", Toast.LENGTH_SHORT).show();
+      return;
+    }
+    final int token = ++homeSubmitGeneration;
+    final ph.kanta.reborn.ui.HomeScreen source = homeScreen;
+    final String entered = source.getSearchText();
+    final List<Song> library = session.songs;
+    searchWorker.execute(() -> {
+      final Song match = Song.uniqueCodeMatch(library, requested);
+      handler.post(() -> {
+        if (token != homeSubmitGeneration || source != homeScreen || !"Home".equals(tab)
+            || !session.foreground || isFinishing() || isDestroyed()
+            || !entered.equals(source.getSearchText())) return;
+        if (match != null && library == session.songs) {
+          int previousCount = session.queue.snapshot().size();
+          session.reserve(match, singer);
+          Toast.makeText(this, session.message, Toast.LENGTH_SHORT).show();
+          if (session.queue.snapshot().size() > previousCount) source.clearSearchText();
+        } else {
+          query = requested;
+          searchSource = "All";
+          tab = "Search";
+          render();
+        }
+      });
+    });
+  }
+
+  private void refreshHomeReservations() {
+    List<ReservationQueue.Entry> entries = session.queue.snapshot();
+    List<String> songs = new java.util.ArrayList<>();
+    for (int i = 0; i < Math.min(3, entries.size()); i++) {
+      ReservationQueue.Entry entry = entries.get(i);
+      songs.add(entry.song.title + (entry.singer.isEmpty() ? "" : " · " + entry.singer));
+    }
+    homeScreen.setReservedSongs(songs, entries.size());
   }
 
 

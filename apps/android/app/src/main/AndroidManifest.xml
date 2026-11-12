@@ -9,7 +9,10 @@
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
     <application android:name=".KantaApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:theme="@style/KantaTheme"
         android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:resizeableActivity="true">
+        <!-- Home owns an inline keypad. Prevent window-forward-navigation auto-show;
+             explicit text-field taps and dialog IME requests remain available. -->
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:resizeableActivity="true"
+            android:windowSoftInputMode="stateAlwaysHidden|adjustResize">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>
         <provider

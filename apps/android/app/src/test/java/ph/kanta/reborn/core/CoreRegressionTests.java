@@ -973,6 +973,26 @@ public final class CoreRegressionTests {
     }
   }
 
+  private static void uniqueCodeChecks() {
+    Song first = new Song("code-a", "Code A", "Singer", "001", "a.mid", false);
+    Song second = new Song("code-b", "Code B", "Singer", "002", "b.mid", false);
+    Song ambiguous = new Song("code-c", "Code C", "Singer", "001", "c.mid", false);
+    List<Song> library = Arrays.asList(first, second);
+    check(Song.uniqueCodeMatch(library, "001") == first, "Exact code reserves matching song");
+    check(Song.uniqueCodeMatch(library, " 002 ") == second, "Whitespace around code is allowed");
+    check(Song.uniqueCodeMatch(library, "1") == null, "Leading zeros are not discarded");
+    check(Song.uniqueCodeMatch(library, "00") == null, "Partial code is not auto-reserved");
+    check(Song.uniqueCodeMatch(library, "Code A") == null, "Titles require search selection");
+    check(Song.uniqueCodeMatch(library, "999") == null, "Unknown code requires search");
+    check(Song.uniqueCodeMatch(library, "") == null, "Empty entry is not a code");
+    check(Song.uniqueCodeMatch(library, null) == null, "Null entry is not a code");
+    check(Song.uniqueCodeMatch(Arrays.asList(first, ambiguous), "001") == null,
+        "Ambiguous code must not pick a song arbitrarily");
+    check(Song.uniqueCodeMatch(Arrays.asList(first, first), "001") == first,
+        "Repeated stable identity is not ambiguous");
+    check(Song.uniqueCodeMatch(Collections.emptyList(), "001") == null, "Empty library");
+  }
+
   private static void catalogMergeChecks() {
     Song libraryA = new Song("a1", "Hello", "Ana", "001", "a1.mid", false);
     Song libraryB = new Song("b1", "World", "Bob", "002", "b1.mid", false);
@@ -1007,6 +1027,7 @@ public final class CoreRegressionTests {
     midiUnboundedChecks();
     karaokeMetaAndCharsetChecks();
     catalogMergeChecks();
+    uniqueCodeChecks();
     scoringChecks(args[0]);
     pitchCorrectionChecks();
     ReservationQueue queue = new ReservationQueue();

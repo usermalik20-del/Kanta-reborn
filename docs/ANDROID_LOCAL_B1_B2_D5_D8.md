@@ -1,4 +1,14 @@
-# Android local candidate — B1, B2, D5 and D8
+# Android B1/B2/D5/D8 — historical local-candidate record
+
+
+**Superseded status:** the local-only/no-release statements below describe the original
+candidate, not current authorization or shipping state. Those source changes are in
+public preview `eed8020e`; Android validation
+[43260500332](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43260500332)
+passed build/lint/core/emulator and owner-signed APK creation. See
+[unfinished work](UNFINISHED_WORK.md) for still-open physical-device font and legacy-import
+acceptance. The later screenshot-driven UI work has its own
+[layout validation record](ANDROID_HOME_LAYOUT.md).
 
 Base: `00d97f0` on local branch `work/android-b1-b2-d5-d8-local`.
 This is uncommitted engineering work, not the published Android build. No push,

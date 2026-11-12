@@ -1137,3 +1137,47 @@ Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog rou
 Android validation run 43211938789 failed `lintDebug` with `WrongConstant` at the lyric-font persisted grant call. The candidate passes the explicit read constant after the existing nonzero read-bit check; it does not disable lint or change release gates. Exact-head hosted validation remains required.
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
+
+## Android layout and singer queue hints — local candidate
+
+User screenshot feedback identified unused Home height and touching/cramped playback
+controls. The local branch adds a bounded reserved-song preview above the lower keypad,
+preserves typed input during queue refresh, separates Now Playing controls and adds a
+scrolling next-song hint to the existing stage projections. Playback/FIFO remain owned
+by `SessionController`; no iOS/web behavior, persistence, signing or release changes.
+Not in the public APK. Source guards and added instrumentation are separate from actual
+Android runtime/device acceptance, which remains pending.
+
+Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
+keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
+unambiguous numeric codes reserve through the existing controller without starting
+playback. Blank input is ignored; titles, unknown codes and duplicate codes open Search
+for selection. Numeric lookup runs on the existing worker and is fenced against edits,
+navigation, foreground loss and library replacement. Leading zeros remain significant.
+The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
+added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
+remain unexecuted locally because the iSH JVM cannot start.
+
+
+### Screenshot review correction before merge
+
+The first PR run [43324277350](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43324277350)
+passed build/lint, 55,735 core checks and 548 emulator checks. Screenshot review still
+found unnecessary phone key/tempo stacking and default full-width adjustment columns.
+Columns now use intrinsic widths and sit side by side when they actually fit, otherwise
+stacking. Stronger instrumentation checks their horizontal bounds and normal-phone fit.
+Home explicitly disables system IME after configuring input type; instrumentation also
+checks that the system keyboard remains hidden after inline-keyboard interaction.
+This correction requires a new exact-head CI run; the first run is not its acceptance.
+
+
+### Window auto-IME regression
+
+Run [43327147562](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43327147562)
+passed build/lint/core and the stronger geometry assertions but failed the new system-IME
+visibility assertion. Logcat records `SHOW_AUTO_EDITOR_FORWARD_NAV` from the server on
+initial activity focus: field-level `setShowSoftInputOnFocus(false)` alone does not govern
+that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, preventing
+window auto-show while preserving explicit editor/dialog requests. The failing emulator
+assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
+required before merge, not a blind rerun of the failing commit.
