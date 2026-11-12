@@ -15,6 +15,8 @@ class FontContractTests(unittest.TestCase):
         self.assertIn('if (temporary != null) temporary.delete()', source)
         self.assertIn('generation != selectionGeneration', source)
         self.assertIn('String saved = settings.getLyricFont()', source)
+        self.assertIn('new Typeface.Builder(temporary).build()', source)
+        self.assertNotIn('Typeface.createFromFile(', source)
         self.assertIn('settings.setLyricFont(', source)
 
     def test_both_lyric_renderers_consume_cached_face(self):

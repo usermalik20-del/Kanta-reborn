@@ -1348,3 +1348,5 @@ Fixed trusted_main check in Android validation workflow by updating tracking bra
 ## Android CI remote-main trust check
 
 The ancestor check fetches `refs/heads/main` explicitly into `refs/remotes/origin/main` and checks the selected commit against that remote-tracking ref. It does not force-update a checked-out local branch. Non-main history remains ineligible for release signing; existing release and runtime gates remain blocking.
+
+The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.

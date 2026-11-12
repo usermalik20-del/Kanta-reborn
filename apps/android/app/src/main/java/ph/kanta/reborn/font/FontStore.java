@@ -120,7 +120,8 @@ public final class FontStore {
         }
       }
       if (copied == 0) return null;
-      return Typeface.createFromFile(temporary);
+      // Unlike createFromFile, Builder reports invalid font data as null.
+      return new Typeface.Builder(temporary).build();
     } catch (java.io.IOException | RuntimeException malformedOrUnavailable) {
       return null;
     } finally {

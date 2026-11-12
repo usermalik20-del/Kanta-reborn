@@ -740,3 +740,5 @@ signing or deployment is authorized.
 ## Lyric-font persisted permission lint repair
 
 The lyric-font folder result validates the returned read grant before persisting only `Intent.FLAG_GRANT_READ_URI_PERMISSION`. Passing that explicit allowed constant satisfies Android lint without broadening folder access or suppressing the check.
+
+The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
