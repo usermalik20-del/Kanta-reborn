@@ -1336,3 +1336,7 @@ acceptance; the new privacy markup/links have separate local structural checks.
 ## Website validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point guard and link/sitemap/CSP validation for blog routes. Added blog/all.html and blog.css. Local verify-website.py now passes.
+
+## CI fix (2026-11-12)
+
+Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.

@@ -80,3 +80,7 @@ Fixed Android validation workflow to properly fetch main branch before ancestor 
 
 Documentation sync: any change to BLA invocation, output integration, or release-secret scope must update `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, and `docs/TESTING.md` in the same commit.
 During an active engineering session, completion of one task transitions to the highest-priority unblocked task.
+
+## CI fix (2026-11-12)
+
+Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.

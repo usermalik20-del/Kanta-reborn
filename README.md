@@ -52,3 +52,7 @@ Build instructions, test results and engineering details live in the developer d
 ## Website validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog routes. No user-facing changes.
+
+## CI fix (2026-11-12)
+
+Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.

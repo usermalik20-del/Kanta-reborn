@@ -1461,3 +1461,7 @@ signing or deployment is authorized.
 ## Website validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point guard and link/sitemap/CSP validation for blog routes. No architecture changes.
+
+## CI fix (2026-11-12)
+
+Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.
