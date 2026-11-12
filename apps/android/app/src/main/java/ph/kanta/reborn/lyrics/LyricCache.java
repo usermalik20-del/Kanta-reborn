@@ -114,8 +114,8 @@ public final class LyricCache {
   }
 
   private static String hashKey(String track, String artist, long duration) {
+    String raw = track.trim().toLowerCase() + "|" + artist.trim().toLowerCase() + "|" + (duration / 1000);
     try {
-      String raw = track.trim().toLowerCase() + "|" + artist.trim().toLowerCase() + "|" + (duration / 1000);
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       byte[] hash = md.digest(raw.getBytes(StandardCharsets.UTF_8));
       StringBuilder sb = new StringBuilder(32);
