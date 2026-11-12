@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="KANTA Karaoke Blog - Expert guides, tips, and tutorials for karaoke enthusiasts. Learn about MIDI/KAR file formats, SoundFont selection, stage setup, vocal techniques, and building your personal karaoke library.">
+<meta name="theme-color" content="#111326">
+<title>KANTA Karaoke Blog · Guides, Tips & Tutorials</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/blog.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "KANTA Karaoke Blog",
+  "description": "Expert guides, tips, and tutorials for karaoke enthusiasts. Learn about MIDI/KAR file formats, SoundFont selection, stage setup, vocal techniques, and building your personal karaoke library.",
+  "url": "https://kanta-public.vercel.app/blog/",
+  "publisher": {
+    "@type": "Organization",
+    "name": "KANTA Karaoke"
+  }
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="KANTA home"><span class="brand-mark" aria-hidden="true">✦</span>KANTA</a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a href="/ios-download">iPhone / iPad</a><a href="/android">Android</a><a href="/guide">How to Use</a>
+    <a href="/features">Features</a><a href="/songbook">My Songbook</a><a href="/support">Help</a>
+    <a href="/blog" aria-current="page">Blog</a>
+  </nav>
+  <div class="header-actions">
+    <button class="button" data-theme-toggle="light" aria-pressed="false" aria-label="Light theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">☀️</button>
+    <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
+    <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
+    <a class="button primary header-cta" href="/android">Download App</a>
+  </div>
+</header>
+<main id="content">
+<nav class="device-tabs" aria-label="Choose your device"><span class="device-tabs-label">Choose your device</span><div class="device-tabs-options"><a href="/ios-download">iPhone / iPad</a><a href="/android">Android phone / tablet</a></div></nav>
+
+<section class="hero blog-hero reveal">
+  <p class="eyebrow">KANTA KARAOKE BLOG</p>
+  <h1>Karaoke expertise,<br><span class="gradient-text">shared openly.</span></h1>
+  <p class="lead">Deep-dive guides on karaoke file formats, SoundFont curation, stage design, vocal practice, and building a personal song library that lasts. Written by the KANTA team for performers who care about quality.</p>
+</section>
+
+<section class="section blog-categories reveal">
+  <div class="section-head">
+    <h2>Explore by Topic</h2>
+  </div>
+  <div class="category-grid">
+    <a class="category-card" href="/blog/category/file-formats">
+      <div class="category-icon">📁</div>
+      <h3>File Formats & Compatibility</h3>
+      <p>MIDI, KAR, MP3, WAV, SF2 — what works, what doesn't, and how to convert.</p>
+      <span class="post-count">3 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/soundfonts">
+      <div class="category-icon">🎹</div>
+      <h3>SoundFont Selection</h3>
+      <p>Finding, evaluating, and optimizing SoundFont banks for realistic karaoke playback.</p>
+      <span class="post-count">2 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/stage-setup">
+      <div class="category-icon">🎭</div>
+      <h3>Stage & Visuals</h3>
+      <p>Scenic backgrounds, camera integration, external displays, and party effects.</p>
+      <span class="post-count">2 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/vocal-practice">
+      <div class="category-icon">🎤</div>
+      <h3>Vocal Practice & Technique</h3>
+      <p>Pitch training, scoring, microphone technique, and improving your performance.</p>
+      <span class="post-count">3 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/library-management">
+      <div class="category-icon">📚</div>
+      <h3>Library Management</h3>
+      <p>Organizing, tagging, backing up, and sharing your personal karaoke collection.</p>
+      <span class="post-count">3 articles</span>
+    </a>
+    <a class="category-card" href="/blog/category/technical-deep-dives">
+      <div class="category-icon">⚙️</div>
+      <h3>Technical Deep Dives</h3>
+      <p>How KANTA works under the hood: TinySoundFont, SPICE pitch estimation, encryption, and more.</p>
+      <span class="post-count">3 articles</span>
+    </a>
+  </div>
+</section>
+
+<section class="section latest-posts reveal">
+  <div class="section-head">
+    <h2>Latest Articles</h2>
+    <a class="view-all" href="/blog/all">View all posts →</a>
+  </div>
+  <div class="posts-grid" id="posts-grid">
+    <!-- Posts rendered by blog.js -->
+  </div>
+</section>
+
+<section class="section newsletter-section reveal">
+  <div class="newsletter-card">
+    <h3>Stay Updated</h3>
+    <p>Get new karaoke guides and tips delivered to your inbox.</p>
+    <form class="newsletter-form" id="newsletter-form">
+      <input type="email" name="email" placeholder="you@example.com" required aria-label="Email address">
+      <button type="submit" class="button primary">Subscribe</button>
+    </form>
+    <p class="newsletter-note">No spam. Unsubscribe anytime.</p>
+  </div>
+</section>
+
+</main>
+<script src="/blog.js"></script>
+</body>
+</html>

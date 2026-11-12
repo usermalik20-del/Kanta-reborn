@@ -25,6 +25,28 @@ PUBLIC_ROUTES = {
     "/support": "support.html",
     "/songbook": "songbook.html",
     "/blog": "blog/index.html",
+    "/blog/all": "blog/all.html",
+    "/blog/category/file-formats": "blog/category/file-formats/index.html",
+    "/blog/category/soundfonts": "blog/category/soundfonts/index.html",
+    "/blog/category/stage-setup": "blog/category/stage-setup/index.html",
+    "/blog/category/vocal-practice": "blog/category/vocal-practice/index.html",
+    "/blog/category/library-management": "blog/category/library-management/index.html",
+    "/blog/category/technical-deep-dives": "blog/category/technical-deep-dives/index.html",
+    "/blog/midi-kar-mp3-wav-karaoke-file-formats-explained": "blog/midi-kar-mp3-wav-karaoke-file-formats-explained.html",
+    "/blog/choosing-the-right-soundfont-for-karaoke": "blog/choosing-the-right-soundfont-for-karaoke.html",
+    "/blog/building-your-personal-karaoke-library": "blog/building-your-personal-karaoke-library.html",
+    "/blog/spice-pitch-estimation-how-it-works": "blog/spice-pitch-estimation-how-it-works.html",
+    "/blog/vocal-practice-techniques-pitch-training": "blog/vocal-practice-techniques-pitch-training.html",
+    "/blog/converting-karaoke-files-ffmpeg-tools": "blog/converting-karaoke-files-ffmpeg-tools.html",
+    "/blog/soundfont-bank-size-vs-quality": "blog/soundfont-bank-size-vs-quality.html",
+    "/blog/karaoke-songbook-export-sharing-privacy": "blog/karaoke-songbook-export-sharing-privacy.html",
+    "/blog/external-display-hdmi-airplay-karaoke": "blog/external-display-hdmi-airplay-karaoke.html",
+    "/blog/microphone-selection-karaoke-recording": "blog/microphone-selection-karaoke-recording.html",
+    "/blog/tinysoundfont-android-midi-engine": "blog/tinysoundfont-android-midi-engine.html",
+    "/blog/karaoke-party-effects-intermission-music": "blog/karaoke-party-effects-intermission-music.html",
+    "/blog/organizing-karaoke-files-metadata-tagging": "blog/organizing-karaoke-files-metadata-tagging.html",
+    "/blog/pitch-correction-vs-pitch-training": "blog/pitch-correction-vs-pitch-training.html",
+    "/blog/encrypted-companion-control-android": "blog/encrypted-companion-control-android.html",
 }
 SITEMAP_CHANGEFREQS = {"always", "hourly", "daily", "weekly", "monthly", "yearly", "never"}
 
@@ -34,7 +56,19 @@ def validate_csp_config(config):
     for route in PUBLIC_ROUTES:
         if route == "/":
             continue
-        assert routes.get("^" + route + "$") == "/api/page?route=%2F" + route.lstrip("/")
+        if route == "/licenses":
+            # /licenses maps to /legal in vercel.json
+            expected = "/api/page?route=%2Flegal"
+        elif route == "/blog":
+            # /blog uses rewrites, not routes
+            continue
+        else:
+            # URL-encode forward slashes in route parameter
+            encoded_route = route.lstrip("/").replace("/", "%2F")
+            expected = "/api/page?route=%2F" + encoded_route
+        key = "^" + route + "$"
+        actual = routes.get(key)
+        assert actual == expected, (f"CSP route mismatch for {route}: expected {expected}, got {actual}")
     assert config.get("functions", {}).get("api/page.js", {}).get("includeFiles") == "*.html"
     assert not any(
         header.get("key", "").lower() == "content-security-policy"
@@ -129,7 +163,7 @@ def validate_public_resources():
     expected_locations = {PUBLIC_BASE_URL + route for route in PUBLIC_ROUTES}
     assert len(locations) == len(set(locations)), "sitemap.xml contains duplicate URLs"
     assert set(locations) == expected_locations, (
-        "sitemap.xml must contain exactly the ten canonical public routes",
+        "sitemap.xml routes must match PUBLIC_ROUTES",
         sorted(expected_locations - set(locations)),
         sorted(set(locations) - expected_locations),
     )
@@ -388,6 +422,9 @@ def main():
         rel = str(blog_path.relative_to(WEB))
         known_pages.add(rel)
 
+    DIR_INDEX = {"blog", "blog/category"}
+
+    # Resolve internal links to actual files, supporting static assets, HTML pages, and directory indexes
     for name, page in pages.items():
         for link in page.links:
             url = urlsplit(link)
@@ -395,13 +432,23 @@ def main():
                 assert url.scheme in ("https", "mailto"), (name, link)
                 continue
             destination = url.path.lstrip("/") if url.path else name
-            if destination and not destination.endswith(".html"):
-                destination += ".html"
+            STATIC_ASSET_SUFFIXES = {".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".woff", ".woff2", ".ttf", ".eot", ".map", ".txt", ".xml", ".json"}
+            if any(destination.endswith(suffix) for suffix in STATIC_ASSET_SUFFIXES):
+                assert (WEB / destination).is_file(), (name, link)
+                continue
             if not destination:
                 destination = "index.html"
-            elif not Path(destination).suffix:
-                destination += ".html"
-            assert (WEB / destination).is_file(), (name, link)
+            # Try exact file match first
+            if (WEB / destination).is_file():
+                pass
+            # Try directory index
+            elif (WEB / destination / "index.html").is_file():
+                destination = destination + "/index.html"
+            # Try adding .html suffix
+            elif not destination.endswith(".html") and (WEB / (destination + ".html")).is_file():
+                destination = destination + ".html"
+            else:
+                assert (WEB / destination).is_file(), (name, link)
             if url.fragment:
                 assert destination in known_pages and url.fragment in (pages.get(destination, Page()).ids), (name, link)
 

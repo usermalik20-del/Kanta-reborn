@@ -31,6 +31,94 @@
   ],
   "routes": [
     {
+      "src": "^/blog/all$",
+      "dest": "/api/page?route=%2Fblog%2Fall"
+    },
+    {
+      "src": "^/blog/category/file-formats$",
+      "dest": "/api/page?route=%2Fblog%2Fcategory%2Ffile-formats"
+    },
+    {
+      "src": "^/blog/category/soundfonts$",
+      "dest": "/api/page?route=%2Fblog%2Fcategory%2Fsoundfonts"
+    },
+    {
+      "src": "^/blog/category/stage-setup$",
+      "dest": "/api/page?route=%2Fblog%2Fcategory%2Fstage-setup"
+    },
+    {
+      "src": "^/blog/category/vocal-practice$",
+      "dest": "/api/page?route=%2Fblog%2Fcategory%2Fvocal-practice"
+    },
+    {
+      "src": "^/blog/category/library-management$",
+      "dest": "/api/page?route=%2Fblog%2Fcategory%2Flibrary-management"
+    },
+    {
+      "src": "^/blog/category/technical-deep-dives$",
+      "dest": "/api/page?route=%2Fblog%2Fcategory%2Ftechnical-deep-dives"
+    },
+    {
+      "src": "^/blog/midi-kar-mp3-wav-karaoke-file-formats-explained$",
+      "dest": "/api/page?route=%2Fblog%2Fmidi-kar-mp3-wav-karaoke-file-formats-explained"
+    },
+    {
+      "src": "^/blog/choosing-the-right-soundfont-for-karaoke$",
+      "dest": "/api/page?route=%2Fblog%2Fchoosing-the-right-soundfont-for-karaoke"
+    },
+    {
+      "src": "^/blog/building-your-personal-karaoke-library$",
+      "dest": "/api/page?route=%2Fblog%2Fbuilding-your-personal-karaoke-library"
+    },
+    {
+      "src": "^/blog/spice-pitch-estimation-how-it-works$",
+      "dest": "/api/page?route=%2Fblog%2Fspice-pitch-estimation-how-it-works"
+    },
+    {
+      "src": "^/blog/vocal-practice-techniques-pitch-training$",
+      "dest": "/api/page?route=%2Fblog%2Fvocal-practice-techniques-pitch-training"
+    },
+    {
+      "src": "^/blog/converting-karaoke-files-ffmpeg-tools$",
+      "dest": "/api/page?route=%2Fblog%2Fconverting-karaoke-files-ffmpeg-tools"
+    },
+    {
+      "src": "^/blog/soundfont-bank-size-vs-quality$",
+      "dest": "/api/page?route=%2Fblog%2Fsoundfont-bank-size-vs-quality"
+    },
+    {
+      "src": "^/blog/karaoke-songbook-export-sharing-privacy$",
+      "dest": "/api/page?route=%2Fblog%2Fkaraoke-songbook-export-sharing-privacy"
+    },
+    {
+      "src": "^/blog/external-display-hdmi-airplay-karaoke$",
+      "dest": "/api/page?route=%2Fblog%2Fexternal-display-hdmi-airplay-karaoke"
+    },
+    {
+      "src": "^/blog/microphone-selection-karaoke-recording$",
+      "dest": "/api/page?route=%2Fblog%2Fmicrophone-selection-karaoke-recording"
+    },
+    {
+      "src": "^/blog/tinysoundfont-android-midi-engine$",
+      "dest": "/api/page?route=%2Fblog%2Ftinysoundfont-android-midi-engine"
+    },
+    {
+      "src": "^/blog/karaoke-party-effects-intermission-music$",
+      "dest": "/api/page?route=%2Fblog%2Fkaraoke-party-effects-intermission-music"
+    },
+    {
+      "src": "^/blog/organizing-karaoke-files-metadata-tagging$",
+      "dest": "/api/page?route=%2Fblog%2Forganizing-karaoke-files-metadata-tagging"
+    },
+    {
+      "src": "^/blog/pitch-correction-vs-pitch-training$",
+      "dest": "/api/page?route=%2Fblog%2Fpitch-correction-vs-pitch-training"
+    },
+    {
+      "src": "^/blog/encrypted-companion-control-android$",
+      "dest": "/api/page?route=%2Fblog%2Fencrypted-companion-control-android"
+    },
+    {
       "src": "/(.*)",
       "has": [
         {
