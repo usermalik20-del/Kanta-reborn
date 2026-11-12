@@ -339,3 +339,6 @@ The privacy page describes the optional LRCLIB lookup as an **unreleased Android
 candidate**, not a current download or an iOS capability. See
 [implementation/privacy boundaries](../../docs/LRCLIB_LYRICS.md). No website feature
 or download manifest changes are part of this local work.
+## Validation fixes (2026-11-12)
+
+Fixed verify-website.py entry-point, link validator (static assets, directory indexes), sitemap/CSP validation for blog routes. Added blog/all.html and blog.css to resolve missing assets.

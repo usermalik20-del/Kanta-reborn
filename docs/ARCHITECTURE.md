@@ -1458,3 +1458,6 @@ timing is distinct from word sync; untimed text is previewed, not falsely timed.
 Host signal/LRC and device font/JSON checks are registered but not executed locally.
 Python/source checks are not a Java build or Android acceptance. No push, merge,
 signing or deployment is authorized.
+## Website validation fixes (2026-11-12)
+
+Fixed verify-website.py entry-point guard and link/sitemap/CSP validation for blog routes. No architecture changes.

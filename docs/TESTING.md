@@ -1333,3 +1333,6 @@ its checked-in source defines `main()` but has no top-level entry call, and its
 last `main()` call is indented inside that function. This pre-existing unrelated
 verifier defect is not changed here. Do not count that exit status as website
 acceptance; the new privacy markup/links have separate local structural checks.
+## Website validation fixes (2026-11-12)
+
+Fixed verify-website.py entry-point guard and link/sitemap/CSP validation for blog routes. Added blog/all.html and blog.css. Local verify-website.py now passes.

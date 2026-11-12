@@ -49,3 +49,6 @@ Build instructions, test results and engineering details live in the developer d
 - [Outstanding work](docs/UNFINISHED_WORK.md) · [Local Android work and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.
+## Website validation fixes (2026-11-12)
+
+Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog routes. No user-facing changes.
