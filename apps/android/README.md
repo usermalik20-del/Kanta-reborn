@@ -1,19 +1,3 @@
-## Current Android layout status — published preview
-
-PR [#202](https://github.com/usermalik20-del/Kanta-reborn/pull/202) merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92`. Exact-head
-[PR validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43328747178) and post-merge
-[Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43331249690) passed build/lint, 55,735 core checks
-and 555 emulator checks. Home and playback screenshots were reviewed after the fixes.
-The code-introduction/first-publication evidence below is immutable; later docs-only
-rebuilds may have a newer packaging source. Use the [download page](https://kanta-public.vercel.app/android)
-for the latest package rather than treating this evidence tag as a moving latest link.
-The [publisher](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332183448) verified the signed APK and published
-[`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a);
-[website deployment](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332262432) succeeded.
-This supersedes the local/pending status in the dated candidate notes below.
-Physical-device, large-text/rotation, long-session and actual external-display acceptance
-remain open; independent review workers did not return a usable review.
-
 ## Distinct monitor-effect presets (K1)
 
 Small Room and Concert Hall now have their own tuning rather than duplicating Room and
@@ -441,7 +425,7 @@ Build: AGP 8.13.2, verified Gradle 8.13 wrapper, Java 17, minSdk 26, targetSdk 3
 
 See ../../docs/ARCHITECTURE.md and ../../docs/CODEBASE_CONTEXT_PACKET.md.
 
-Import bounds: MIDI/KAR files have no fixed file-size, event-count or duration caps (structural SMF 0/1 rules still apply; individual text events are capped at 16 MiB and files above 2 GB are not mapped); SF2 has no fixed file-size cap, but import preflights reported size, rechecks available storage while streaming, and preserves a 64 MiB free-space reserve before strict native structure/sample validation; folder scan 10,000 entries, 1,024 directories and depth 16. Negative coarse sample offsets (unsupported safely by the pinned loader) and unsupported/oversized banks are rejected; SF3/Ogg banks are supported through the pinned stb_vorbis decoder with post-decode sample accounting (`synth->sampleTotal`), a synthetic SF3 fixture in the native regression, and a render-tail guard that rejects banks whose region windows come within one float of the decoded buffer end (the Catmull-Rom interpolator reads two floats ahead). The pinned engine implements SF2 modulators and chorus/reverb stages (release `kanta-vendor-a272fe30`; `PROVENANCE.json` pins the revision and file hashes), but KANTA has not wired those engine paths to app controls yet and MIDI poly (key) pressure remains untracked by the engine wrapper. Engine-level validation lives in the fork's own CI; KANTA's native regression compiles the pinned header with `-Wall -Wextra -Werror`. Folder selection makes private copies; it does not watch or edit the source. Bank changes apply to subsequent playback. KAR lyric text encoding is detected (UTF-8, Shift_JIS, GBK, Big5, CP949 with windows-1252 fallback); @T/@A/@C metadata feeds title/artist/copyright, @P pause codes shift lyric cues and \ echo lines are dimmed on the stage. Imported songs and SoundFont banks can be removed from My Set, missing private copies are repaired on load or re-import, and stage search includes the active library. The transport Previous button restarts the current song: seek-to-top is supported for MIDI/KAR synthesis and MP3/WAV playback. Key/tempo adjustments made while a song is playing are remembered for that song and re-applied the next time it plays; Reset in the Pitch & Tempo screen clears the per-song memory (or the app-wide default when the song has no override). My Set lists imported songs and offers Reserve, lists every retained SoundFont with an Active indicator and Use action, and persists bank selection across restart. Paired ShubBlob/kantablob and index-container import is available from My Set by selecting the index and then its paired blob. Single-file container selection remains rejected so a blob is never mistaken for a standalone song; the file-backed MKMD path validates per-title record addresses and rejects ambiguous or invalid layouts rather than guessing physical order; exact-head runtime validation remains required.
+Import bounds: MIDI/KAR files have no fixed file-size, event-count or duration caps (structural SMF 0/1 rules still apply; individual text events are capped at 16 MiB and files above 2 GB are not mapped); SF2 has no fixed file-size cap, but import preflights reported size, rechecks available storage while streaming, and preserves a 64 MiB free-space reserve before strict native structure/sample validation; folder scan 10,000 entries, 1,024 directories and depth 16. Negative coarse sample offsets (unsupported safely by the pinned loader) and unsupported/oversized banks are rejected; SF3/Ogg banks are supported through the pinned stb_vorbis decoder with post-decode sample accounting (`synth->sampleTotal`), a synthetic SF3 fixture in the native regression, and a render-tail guard that rejects banks whose region windows come within one float of the decoded buffer end (the Catmull-Rom interpolator reads two floats ahead). The pinned engine implements SF2 modulators and chorus/reverb stages (release `kanta-vendor-a272fe30`; `PROVENANCE.json` pins the revision and file hashes), but KANTA has not wired those engine paths to app controls yet and MIDI poly (key) pressure remains untracked by the engine wrapper. Engine-level validation lives in the fork's own CI; KANTA's native regression compiles the pinned header with `-Wall -Wextra -Werror`. Folder selection makes private copies; it does not watch or edit the source. Bank changes apply to subsequent playback. KAR lyric text encoding is detected (UTF-8, Shift_JIS, GBK, Big5, CP949 with windows-1252 fallback); @T/@A/@C metadata feeds title/artist/copyright, @P pause codes shift lyric cues and \ echo lines are dimmed on the stage. Imported songs and SoundFont banks can be removed from My Set, missing private copies are repaired on load or re-import, and stage search includes the active library. The transport Previous button restarts the current song: seek-to-top is supported for MIDI/KAR synthesis and MP3/WAV playback. Key/tempo adjustments made while a song is playing are remembered for that song and re-applied the next time it plays; Reset in the Pitch & Tempo screen clears the per-song memory (or the app-wide default when the song has no override). My Set lists imported songs and offers Reserve, lists every retained SoundFont with an Active indicator and Use action, and persists bank selection across restart. Paired ShubBlob/kantablob and index-container import is available from My Set by selecting the index and then its paired blob. Single-file container selection remains rejected so a blob is never mistaken for a standalone song; the file-backed MKMD path now addresses records through the paired index's trailing offset table, with a bounded scan fallback for indexes without a usable table; exact-head runtime validation remains required.
 
 Party pads are bundled, edited CC0 WAV recordings (source details are included in the app assets) with at most four concurrent SoundPool voices. Import a short MP3/WAV into My Set to assign a custom pad (8 MiB / 30 seconds maximum, also bounded below SoundPool’s 1 MiB decoded limit). Between-song music selects an imported MP3/WAV, starts only when explicitly enabled and the karaoke queue is idle, and stops for karaoke, focus loss or leaving the foreground. Enabling is not restored automatically. Party volume is independent of karaoke volume.
 
@@ -531,7 +515,6 @@ The online preview uses a distinct transient UUID per selection and idempotent t
 
 Opening an online video requires paused local karaoke and disabled microphone/monitoring. It stops effects and between-song music. Starting local audio, an effect, microphone input or between-song music closes the online video; closing it does not restart those sounds automatically. The local song and queue are preserved. This PR #51 candidate requires fresh Android build/runtime validation and physical-device interruption/YouTube acceptance; see ../../docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md.
 
-<!-- party-sounds-assets-committed -->
 ## KANTA Karaoke candidate — legacy songbook interoperability
 
 KANTA Karaoke is the working name for bringing the karaoke loop the owner built as a
@@ -722,89 +705,3 @@ CI passes `kantaVersionCode` from its monotonic workflow allocation. Release met
 The Home/Search utility uses an app-owned persistent keyboard with a working number/letter switch and system-IME suppression.
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
-
-## Android runtime-only legacy import key — local candidate
-
-After selecting the index and blob in My Set, enter the 64-hex-digit key and
-32-hex-digit IV provided for your files. KANTA has no built-in default and does not
-save these details; each import asks again. Cancel or background the entry dialog
-to clear it. Only import content you are authorized to use. This local candidate
-still needs Android build/emulator and real-device import/playback checks.
-See [runtime ownership details](../../docs/ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
-
-## Local B1/B2/D5/D8 work (not the published build)
-
-The [local candidate notes](../../docs/ANDROID_LOCAL_B1_B2_D5_D8.md) track PCM
-spectrum analysis, custom lyric fonts and remaining validation. The owner chose
-to retain platform background-video playback (D5) and remove the nonfunctional
-melody/guide sliders (D8), not implement separate mixing. Key, tempo and the
-control deck's master volume remain supported. Nothing in this local candidate
-has been pushed or accepted on a device.
-
-## Local optional LRCLIB lyric lookup and font integration
-
-See [LRCLIB behavior/privacy/test limits](../../docs/LRCLIB_LYRICS.md),
-[B1 spectrum design](../../docs/B1-spectrum.md) and
-[B2 font integration](../../docs/B2-custom-fonts.md).
-The lookup is explicit, identified HTTPS on a worker, with user version selection,
-existing-lyric preservation and playback/foreground generation fences. LRC line
-timing is distinct from word sync; untimed text is previewed, not falsely timed.
-Host signal/LRC and device font/JSON checks are registered but not executed locally.
-Python/source checks are not a Java build or Android acceptance. No push, merge,
-signing or deployment is authorized.
-
-## Lyric-font persisted permission lint repair
-
-The lyric-font folder result validates the returned read grant before persisting only `Intent.FLAG_GRANT_READ_URI_PERMISSION`. Passing that explicit allowed constant satisfies Android lint without broadening folder access or suppressing the check.
-
-The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
-
-## Android layout improvements — historical candidate notes
-
-Home shows up to three reserved songs and the total queue count between search and the
-lower keypad, with a View all action to the existing Queue screen. Empty queues show a
-short explanation. Regular session updates preserve an in-progress code/title entry.
-Now Playing separates transport and key/tempo controls to reduce crowding, adapting to
-available width. Stages show a scrolling Up next strip from the existing reservation
-queue, hidden when empty. No playback or queue ownership changes are intended.
-These notes record the pre-validation candidate. See current published status above; device acceptance remains pending.
-
-Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
-keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
-unambiguous numeric codes reserve through the existing controller without starting
-playback. Blank input is ignored; titles, unknown codes and duplicate codes open Search
-for selection. Numeric lookup runs on the existing worker and is fenced against edits,
-navigation, foreground loss and library replacement. Leading zeros remain significant.
-The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
-added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
-remain unexecuted locally because the iSH JVM cannot start.
-
-
-### Screenshot review correction before merge
-
-The first PR run [43324277350](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43324277350)
-passed build/lint, 55,735 core checks and 548 emulator checks. Screenshot review still
-found unnecessary phone key/tempo stacking and default full-width adjustment columns.
-Columns now use intrinsic widths and sit side by side when they actually fit, otherwise
-stacking. Stronger instrumentation checks their horizontal bounds and normal-phone fit.
-Home explicitly disables system IME after configuring input type; instrumentation also
-checks that the system keyboard remains hidden after inline-keyboard interaction.
-This correction requires a new exact-head CI run; the first run is not its acceptance.
-
-
-### Window auto-IME regression
-
-Run [43327147562](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43327147562)
-passed build/lint/core and the stronger geometry assertions but failed the new system-IME
-visibility assertion. Logcat records `SHOW_AUTO_EDITOR_FORWARD_NAV` from the server on
-initial activity focus: field-level `setShowSoftInputOnFocus(false)` alone does not govern
-that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, preventing
-window auto-show while preserving explicit editor/dialog requests. The failing emulator
-assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
-required before merge, not a blind rerun of the failing commit.
-
-## Android lint hardening — published preview
-
-PR #204 introduced zero-warning debug/release lint and final APK native alignment
-gates. Exact-head and post-merge validation, signed preview publication and website
-deployment passed. See [evidence and remaining device limits](../../docs/ANDROID_LINT_HARDENING.md).
