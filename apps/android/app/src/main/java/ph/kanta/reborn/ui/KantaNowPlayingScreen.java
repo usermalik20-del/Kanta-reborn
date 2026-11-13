@@ -207,16 +207,6 @@ public class KantaNowPlayingScreen extends LinearLayout {
     });
     keyCol.addView(keyLabel); keyCol.addView(keyStepper);
 
-    TextView divider = new TextView(context);
-    divider.setText("|");
-    divider.setTextSize(14);
-    divider.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
-    divider.setGravity(Gravity.CENTER);
-    final LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    dp.topMargin = (int)(16*density); dp.bottomMargin = (int)(16*density);
-    dp.leftMargin = (int)(16*density); dp.rightMargin = (int)(16*density);
-    divider.setLayoutParams(dp);
-
     LinearLayout tempoCol = new LinearLayout(context);
     tempoCol.setOrientation(VERTICAL);
     tempoCol.setGravity(Gravity.CENTER);
@@ -250,15 +240,10 @@ public class KantaNowPlayingScreen extends LinearLayout {
           lastOrientation = newOrientation;
           setOrientation(newOrientation);
           setGravity(Gravity.CENTER);
-          divider.setText(useHorizontal ? "|" : "");
           if (useHorizontal) {
             keyCol.setGravity(Gravity.CENTER);
             tempoCol.setGravity(Gravity.CENTER);
-            dp.topMargin = 0; dp.bottomMargin = 0;
-          } else {
-            dp.topMargin = (int)(16*density); dp.bottomMargin = (int)(16*density);
           }
-          divider.setLayoutParams(dp);
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
       }
@@ -268,7 +253,6 @@ public class KantaNowPlayingScreen extends LinearLayout {
     perfContainer.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
 
     perfContainer.addView(keyCol, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-    perfContainer.addView(divider);
     perfContainer.addView(tempoCol, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
     addView(perfContainer);

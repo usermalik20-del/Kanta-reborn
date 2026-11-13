@@ -494,6 +494,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     main.addView(stagePane, new LinearLayout.LayoutParams(-1, 0, 0.42f));
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(true);
+    // Fade the hard edge where scrolling content meets the floating bottom dock.
+    scroll.setVerticalFadingEdgeEnabled(true);
+    scroll.setFadingEdgeLength(dp(24));
     body = column();
     body.setPadding(dp(4), 0, dp(4), dp(14));
     scroll.addView(body);
