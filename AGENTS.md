@@ -102,12 +102,11 @@ Native marquee must stop with host visibility and detach, remain noninteractive,
 reserve measured lyric space rather than covering lyrics. See
 [Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for hosted evidence and remaining device gates.
 
-## Android lint hardening (local, unpublished)
+## Android lint hardening — validated and published
 
-The current development branch addresses selected lint warnings with targeted
-fixes, reviewed security exceptions, and regression tests. Debug and release
-APK builds will reject new warning identities and invalid 16 KB native library
-alignment. Existing findings remain visible and explicitly tracked; local
-Python checks do not demonstrate an Android build. See
-[the lint hardening note](docs/ANDROID_LINT_HARDENING.md). The published Android
-preview has not changed.
+PR #204 merged as `802b4a37`. Exact-head PR and post-merge Android validation
+passed zero-warning debug/release lint, package alignment, core and emulator
+gates. The owner-signed preview passed signer continuity and immutable asset
+publication; the matching website deployment succeeded. The lint allowance
+remains empty; only narrowly documented design exceptions are annotated.
+See [the complete lint evidence and device limits](docs/ANDROID_LINT_HARDENING.md).
