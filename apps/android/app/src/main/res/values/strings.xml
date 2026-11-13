@@ -18,15 +18,15 @@
     <string name="label_section">Section</string>
     <string name="label_custom">Custom</string>
     <string name="label_voice_coach">🤖 Voice Coach</string>
-    <string name="label_start_singing_for_personalized_guidance">Start singing for personalized guidance...</string>
+    <string name="label_start_singing_for_personalized_guidance">Start singing for personalized guidance…</string>
     <string name="label_session_progress">📊 Session Progress</string>
     <string name="label_no_data_yet">No data yet</string>
     <string name="label_recommended_exercise">🎵 Recommended Exercise</string>
-    <string name="label_will_appear_after_singing">Will appear after singing...</string>
+    <string name="label_will_appear_after_singing">Will appear after singing…</string>
     <string name="label_performance_summary">📈 Performance Summary</string>
-    <string name="label_summary_will_appear_after_session">Summary will appear after session...</string>
+    <string name="label_summary_will_appear_after_session">Summary will appear after session…</string>
     <string name="label_pitch_detection_needs_a_microphone_source">Pitch detection needs a microphone source.</string>
-    <string name="label_listening_i_ll_analyze_your_pitch_in_real_time">🎤 Listening... I\'ll analyze your pitch in real-time!</string>
+    <string name="label_listening_i_ll_analyze_your_pitch_in_real_time">🎤 Listening… I\'ll analyze your pitch in real-time!</string>
     <string name="label_session_ended_great_practice">Session ended. Great practice!</string>
     <string name="label_remove">Remove</string>
     <string name="label_score_0">Score: 0</string>
@@ -37,12 +37,12 @@
     <string name="label_good">👍 GOOD!</string>
     <string name="label_close">📏 Close!</string>
     <string name="label_keep_trying">💫 Keep trying!</string>
-    <string name="label_listening_sing_the_target_note">🎤 Listening... Sing the target note!</string>
+    <string name="label_listening_sing_the_target_note">🎤 Listening… Sing the target note!</string>
     <string name="label_stopped">Stopped</string>
     <string name="label_up_next">Up Next</string>
     <string name="label_queue_is_empty">Queue is empty</string>
     <string name="label_offline">Offline</string>
-    <string name="label_waiting">Waiting...</string>
+    <string name="label_waiting">Waiting…</string>
     <string name="label_failed">Failed</string>
     <string name="label_dismiss">Dismiss</string>
     <string name="label_reserve">Reserve</string>
@@ -65,6 +65,5 @@
     <string name="game_streak">Streak: %1$d</string>
     <string name="achievement_unlocked">🏆 %1$s unlocked!</string>
     <string name="game_final_score">Game Over! Final Score: %1$d</string>
-    <string name="remote_connected_count">%1$d connected</string>
     <string name="companion_host_port">%1$s:%2$d</string>
 </resources>

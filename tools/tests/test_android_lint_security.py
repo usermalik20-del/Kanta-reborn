@@ -59,6 +59,11 @@ class AndroidLintSecurityTests(unittest.TestCase):
         app = ET.parse(MAIN / 'AndroidManifest.xml').getroot().find('application')
         self.assertEqual(app.get(ns + 'allowBackup'), 'false')
         self.assertEqual(app.get(ns + 'dataExtractionRules'), '@xml/data_extraction_rules')
+        self.assertEqual(app.get(ns + 'fullBackupContent'), '@xml/full_backup_content')
+        legacy = ET.parse(MAIN / 'res/xml/full_backup_content.xml').getroot().findall('exclude')
+        self.assertEqual({item.get('domain') for item in legacy},
+                         {'root', 'file', 'database', 'sharedpref', 'external'})
+        self.assertTrue(all(item.get('path') == '.' for item in legacy))
         rules = ET.parse(MAIN / 'res/xml/data_extraction_rules.xml').getroot()
         domains = {'root', 'file', 'database', 'sharedpref', 'external', 'device_root',
                    'device_file', 'device_database', 'device_sharedpref'}
@@ -66,6 +71,14 @@ class AndroidLintSecurityTests(unittest.TestCase):
             exclusions = rules.find(mode).findall('exclude')
             self.assertEqual({item.get('domain') for item in exclusions}, domains)
             self.assertTrue(all(item.get('path') == '.' for item in exclusions))
+
+    def test_localized_status_count_uses_plural_and_ellipsis_glyphs(self):
+        plurals = ET.parse(MAIN / 'res/values/plurals.xml').getroot().find('plurals')
+        self.assertEqual({item.get('quantity') for item in plurals}, {'one', 'other'})
+        source = (JAVA / 'stage/RemoteStatusView.java').read_text()
+        self.assertIn('getQuantityString(', source)
+        strings = (MAIN / 'res/values/strings.xml').read_text()
+        self.assertNotIn('...', strings)
 
     def test_only_reviewed_lint_exceptions_are_annotated_and_narrow(self):
         budget = json.loads((ROOT / 'tools/android-lint-debt.json').read_text())

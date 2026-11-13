@@ -97,7 +97,8 @@ public final class RemoteStatusView extends FrameLayout {
       case CONNECTED:
         iconView.setColorFilter(0xFF3DE0A8); // success
         iconView.setImageResource(android.R.drawable.ic_menu_manage); // placeholder
-        labelView.setText(labelView.getContext().getString(ph.kanta.reborn.R.string.remote_connected_count, connectedCount));
+        labelView.setText(labelView.getContext().getResources().getQuantityString(
+            ph.kanta.reborn.R.plurals.remote_connected_count, connectedCount, connectedCount));
         labelView.setTextColor(0xFF3DE0A8);
         stopPulse();
         break;
