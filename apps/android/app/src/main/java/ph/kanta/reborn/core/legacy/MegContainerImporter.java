@@ -239,13 +239,10 @@ public final class MegContainerImporter {
     FileOutputStream out = null;
     FileChannel channel = null;
     try {
-      temp = new File(dir, prefix + "-" + System.nanoTime() + ".tmp");
-      if (temp.exists()) throw new IOException("Temp file already exists: " + temp);
-      if (!temp.createNewFile()) throw new IOException("Cannot create temp file: " + temp);
-      temp.setReadable(false, false);
-      temp.setWritable(true, false);
-      temp.setReadable(true, true);
-      temp.setWritable(true, true);
+      // Atomically create owner-only media; never grant other users write access.
+      temp = java.nio.file.Files.createTempFile(dir.toPath(), prefix + "-", ".tmp",
+          java.nio.file.attribute.PosixFilePermissions.asFileAttribute(
+              java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"))).toFile();
       out = new FileOutputStream(temp);
       channel = out.getChannel();
       channel.write(ByteBuffer.wrap(data));
@@ -270,6 +267,10 @@ public final class MegContainerImporter {
   }
 
   private static void copyFile(File src, File dst) throws IOException {
+    // The rename fallback must retain the same owner-only permissions.
+    java.nio.file.Files.createFile(dst.toPath(),
+        java.nio.file.attribute.PosixFilePermissions.asFileAttribute(
+            java.nio.file.attribute.PosixFilePermissions.fromString("rw-------")));
     try (FileInputStream in = new FileInputStream(src);
          FileOutputStream out = new FileOutputStream(dst)) {
       FileChannel inChannel = in.getChannel();

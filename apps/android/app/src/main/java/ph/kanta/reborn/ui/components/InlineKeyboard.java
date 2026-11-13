@@ -10,6 +10,8 @@ import android.view.View;
 import ph.kanta.reborn.ui.KantaTheme;
 
 /** Compact in-app keyboard that never opens or resizes around the system IME. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class InlineKeyboard extends LinearLayout {
   public interface Listener { void onText(String value); void onBackspace(); void onSubmit(); }
   private final Listener listener;

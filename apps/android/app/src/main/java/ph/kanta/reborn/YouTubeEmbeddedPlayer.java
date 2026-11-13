@@ -10,11 +10,16 @@ import android.webkit.WebViewClient;
 import ph.kanta.reborn.core.YouTubeVideoReference;
 
 /** One visible official embed; release is terminal and never touches local playback. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 final class YouTubeEmbeddedPlayer extends WebView {
   private String loadedId;
   private boolean released;
   private final Runnable onFailure;
 
+  // The official visible YouTube embed requires JavaScript. Navigation is HTTPS
+  // allowlisted; file/content access and automatic windows remain disabled.
+  @android.annotation.SuppressLint("SetJavaScriptEnabled")
   YouTubeEmbeddedPlayer(Context context, Runnable onFailure) {
     super(context);
     this.onFailure = onFailure;

@@ -199,7 +199,7 @@ public final class KantaConnectHost {
     byte[] bytes = new byte[16];
     random.nextBytes(bytes);
     StringBuilder sb = new StringBuilder(32);
-    for (byte b : bytes) sb.append(String.format("%02x", b & 0xFF));
+    for (byte b : bytes) sb.append(String.format(java.util.Locale.ROOT, "%02x", b & 0xFF));
     return sb.toString();
   }
 

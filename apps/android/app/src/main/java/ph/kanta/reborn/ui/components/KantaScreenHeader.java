@@ -13,6 +13,8 @@ import ph.kanta.reborn.R;
 import ph.kanta.reborn.ui.KantaTheme;
 
 /** Shared branded app bar for non-home destinations. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class KantaScreenHeader extends LinearLayout {
   private final float density;
   private final TextView titleView;

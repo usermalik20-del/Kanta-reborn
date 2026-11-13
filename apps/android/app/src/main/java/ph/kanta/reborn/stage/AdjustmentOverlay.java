@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
+import java.util.Locale;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -153,7 +154,7 @@ public final class AdjustmentOverlay extends FrameLayout {
     if ("semitones".equals(unit)) {
       return (value >= 0 ? "+" : "") + value;
     } else if ("factor".equals(unit)) {
-      return String.format("%.2fx", value / 100f);
+      return String.format(Locale.getDefault(), "%.2fx", value / 100f);
     } else {
       return value + "%";
     }

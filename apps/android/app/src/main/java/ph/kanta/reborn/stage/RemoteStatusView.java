@@ -84,27 +84,28 @@ public final class RemoteStatusView extends FrameLayout {
       case DISCONNECTED:
         iconView.setColorFilter(0xFF999999); // textTertiary
         iconView.setImageResource(android.R.drawable.ic_menu_close_clear_cancel); // placeholder
-        labelView.setText("Offline");
+        labelView.setText(ph.kanta.reborn.R.string.label_offline);
         labelView.setTextColor(0xFF999999);
         break;
       case ADVERTISING:
         iconView.setColorFilter(0xFFFFB03A); // warning
         iconView.setImageResource(android.R.drawable.ic_menu_upload); // placeholder
-        labelView.setText("Waiting...");
+        labelView.setText(ph.kanta.reborn.R.string.label_waiting);
         labelView.setTextColor(0xFFFFB03A);
         startPulse();
         break;
       case CONNECTED:
         iconView.setColorFilter(0xFF3DE0A8); // success
         iconView.setImageResource(android.R.drawable.ic_menu_manage); // placeholder
-        labelView.setText(connectedCount + " connected");
+        labelView.setText(labelView.getContext().getResources().getQuantityString(
+            ph.kanta.reborn.R.plurals.remote_connected_count, connectedCount, connectedCount));
         labelView.setTextColor(0xFF3DE0A8);
         stopPulse();
         break;
       case ERROR:
         iconView.setColorFilter(0xFFFF5A6E); // destructive
         iconView.setImageResource(android.R.drawable.ic_dialog_alert);
-        labelView.setText("Failed");
+        labelView.setText(ph.kanta.reborn.R.string.label_failed);
         labelView.setTextColor(0xFFFF5A6E);
         stopPulse();
         break;

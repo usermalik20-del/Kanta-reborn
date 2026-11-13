@@ -9,6 +9,8 @@ android {
         minSdk 26
         targetSdk 36
         ndk { abiFilters "arm64-v8a", "armeabi-v7a", "x86_64" }
+        // NDK r27 does not opt into 16 KB ELF alignment by default.
+        externalNativeBuild { cmake { arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON" } }
         // CI supplies a monotonically allocated value; local builds retain a safe baseline.
         def kantaVersionCode = providers.gradleProperty('kantaVersionCode').orElse('10').map { value ->
             def parsed = value.toInteger()
@@ -76,11 +78,13 @@ dependencies {
     implementation 'androidx.camera:camera-lifecycle:1.5.3'
     implementation 'androidx.camera:camera-view:1.5.3'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.exifinterface:exifinterface:1.4.2'
     // FileProvider and PackageInfoCompat for the OTA updater's install hand-off.
     implementation 'androidx.core:core:1.13.1'
     // Optional pitch DSP adapter. The AAR declares no permissions and pulls in no Google
     // Play services, so the APK keeps its exact CAMERA/RECORD_AUDIO/INTERNET permission set.
-    implementation 'org.tensorflow:tensorflow-lite:2.16.1'
+    // Same org.tensorflow.lite.Interpreter API, with 16 KB-aligned 64-bit JNI libraries.
+    implementation 'com.google.ai.edge.litert:litert:1.4.0'
 }
 
 // Keep the exact upstream runtime notices available offline in the app.
@@ -114,3 +118,41 @@ def noticesTask = tasks.register('generateRuntimeNotices') {
     }
 }
 tasks.named('preBuild').configure { dependsOn noticesTask }
+
+// Lint stays fully enabled. A separate exact-finding debt inventory rejects new
+// warnings without hiding existing warnings from the normal HTML/XML reports.
+// Python 3 is required for local APK builds as well as hosted validation.
+def repositoryRoot = rootProject.projectDir.parentFile.parentFile
+def lintContracts = tasks.register('verifyAndroidLintContracts', Exec) {
+    workingDir repositoryRoot
+    commandLine 'python3', '-m', 'unittest', 'discover', '-s', 'tools/tests', '-p', 'test_android_lint*.py'
+}
+['Debug', 'Release'].each { variant ->
+    def reportName = variant.toLowerCase(java.util.Locale.ROOT)
+    def lintGate = tasks.register("verify${variant}LintDebt", Exec) {
+        dependsOn "lint${variant}"
+        dependsOn lintContracts
+        workingDir repositoryRoot
+        commandLine 'python3', new File(repositoryRoot, 'tools/verify-android-lint.py'),
+            layout.buildDirectory.file("reports/lint-results-${reportName}.xml").get().asFile
+    }
+    tasks.configureEach { task ->
+        if (task.name == "assemble${variant}" || task.name == "bundle${variant}") {
+            task.dependsOn lintGate
+        }
+        if (task.name == "assemble${variant}") {
+            task.doLast {
+                // Inspect ELF PT_LOAD segments in the packaged artifact, not just ZIP offsets.
+                def apkDirectory = layout.buildDirectory.dir("outputs/apk/${reportName}").get().asFile
+                def apks = fileTree(apkDirectory) { include '*.apk' }.files
+                if (apks.empty) throw new GradleException('No assembled APK for alignment validation')
+                apks.each { apk ->
+                    project.exec {
+                        workingDir repositoryRoot
+                        commandLine 'python3', new File(repositoryRoot, 'tools/verify-android-native-alignment.py'), apk
+                    }
+                }
+            }
+        }
+    }
+}

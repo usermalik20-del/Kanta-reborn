@@ -9,6 +9,9 @@ on:
     branches: [main]
     paths:
       - 'apps/android/**'
+      - 'tools/verify-android-lint.py'
+      - 'tools/verify-android-native-alignment.py'
+      - 'tools/android-lint-debt.json'
       - 'tools/check-product-branding.py'
       - 'tools/verify-android-runtime-package.py'
       - 'tools/verify-companion-browser.mjs'
@@ -24,6 +27,9 @@ on:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/android/**'
+      - 'tools/verify-android-lint.py'
+      - 'tools/verify-android-native-alignment.py'
+      - 'tools/android-lint-debt.json'
       - 'tools/check-product-branding.py'
       - 'tools/verify-android-runtime-package.py'
       - 'tools/verify-companion-browser.mjs'
@@ -94,18 +100,20 @@ jobs:
         run: python3 -m unittest tools.tests.test_android_update_contract tools.tests.test_ota_publication
       - name: Verify Android companion credential logging boundary
         run: python3 -m unittest tools.tests.test_companion_security_contract
+      - name: Verify lint regression and native alignment gates
+        run: python3 -m unittest discover -s tools/tests -p 'test_android_lint*.py'
       - name: Install required Android platform
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"'
       - name: Native SoundFont sanitizer regression
         run: |
           cc -D_POSIX_C_SOURCE=200809L -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer apps/android/tests/soundfont-test.c -lm -o /tmp/kanta-soundfont-test
           /tmp/kanta-soundfont-test apps/android/app/src/main/assets/starter/kanta-tone.sf2
-      - name: Build debug, lint and domain regression tests
+      - name: Build debug and unsigned release, lint and domain regression tests
         id: build_debug
         working-directory: apps/android
         run: |
           set -o pipefail
-          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
+          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:assembleRelease :app:lintRelease :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -178,6 +186,7 @@ jobs:
             apps/android/app/build/outputs/apk/debug/*.apk
             apps/android/app/build/outputs/apk/release/*.apk
             apps/android/app/build/reports/lint-results-debug.*
+            apps/android/app/build/reports/lint-results-release.*
             apps/android/app/build/outputs/apk/androidTest/debug/*.apk
             android-runtime.log
             android-logcat.log

@@ -10,6 +10,8 @@ import ph.kanta.reborn.core.*;
 import ph.kanta.reborn.font.FontStore;
 
 /** Renders controller state without owning transport or timing. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 final class StageView extends View {
   private final SessionController session;
   private final FontStore fontStore;

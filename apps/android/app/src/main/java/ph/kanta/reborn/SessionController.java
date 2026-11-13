@@ -1323,8 +1323,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         for (ph.kanta.reborn.lyrics.LrclibClient.Result r : found) {
           if (r.instrumental || r.timedCues.isEmpty()) continue;
           if (r.duration > 0 && Math.abs(r.duration * 1000 - currentDuration) > 8000) continue;
-          if (r.artist.length() > 0 && !r.artist.toLowerCase().contains(current.artist.toLowerCase())
-              && !current.artist.toLowerCase().contains(r.artist.toLowerCase())) continue;
+          if (r.artist.length() > 0 && !r.artist.toLowerCase(java.util.Locale.ROOT).contains(current.artist.toLowerCase(java.util.Locale.ROOT))
+              && !current.artist.toLowerCase(java.util.Locale.ROOT).contains(r.artist.toLowerCase(java.util.Locale.ROOT))) continue;
           best = r; break;
         }
         if (best == null) { message = "No confident LRCLIB match."; publish(); return; }
@@ -1752,7 +1752,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
           while (entries.hasMoreElements()) {
             java.util.zip.ZipEntry entry = entries.nextElement();
-            if (entry.getName().toLowerCase().endsWith(".sf2")) {
+            if (entry.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".sf2")) {
               try (java.io.InputStream zipIn = zip.getInputStream(entry);
                    java.io.FileOutputStream out = new java.io.FileOutputStream(destination)) {
                 byte[] buffer = new byte[65536];

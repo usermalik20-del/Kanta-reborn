@@ -2,6 +2,7 @@ package ph.kanta.reborn.core;
 
 
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.List;
 import java.util.Random;
 
@@ -157,7 +158,7 @@ public class LearningAssistant {
 
         StringBuilder summary = new StringBuilder();
         summary.append("📊 **Performance Summary**\n");
-        summary.append(String.format("Perfect: %d%% | Good: %d%% | Close: %d%% | Off: %d%%\n",
+        summary.append(String.format(Locale.getDefault(), "Perfect: %d%% | Good: %d%% | Close: %d%% | Off: %d%%\n",
                 perfect * 100 / total, good * 100 / total, close * 100 / total, off * 100 / total));
 
         if (sharpCount > flatCount && sharpCount > total * 0.3) {

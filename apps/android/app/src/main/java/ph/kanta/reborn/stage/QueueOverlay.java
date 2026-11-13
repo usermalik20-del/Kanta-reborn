@@ -62,7 +62,7 @@ public final class QueueOverlay extends FrameLayout {
 
     // Title
     TextView titleView = new TextView(context);
-    titleView.setText("Up Next");
+    titleView.setText(ph.kanta.reborn.R.string.label_up_next);
     titleView.setTextSize(19);
     titleView.setTextColor(0xFFFFFFFF);
     titleView.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -81,7 +81,7 @@ public final class QueueOverlay extends FrameLayout {
 
     // Empty view
     emptyView = new TextView(context);
-    emptyView.setText("Queue is empty");
+    emptyView.setText(ph.kanta.reborn.R.string.label_queue_is_empty);
     emptyView.setTextColor(0xFF999999);
     emptyView.setGravity(android.view.Gravity.CENTER);
     emptyView.setVisibility(GONE);
@@ -138,8 +138,23 @@ public final class QueueOverlay extends FrameLayout {
     private List<ReservationQueue.Entry> entries = new ArrayList<>();
 
     void setEntries(List<ReservationQueue.Entry> entries) {
-      this.entries = entries != null ? entries : new ArrayList<>();
-      notifyDataSetChanged();
+      List<ReservationQueue.Entry> previous = this.entries;
+      List<ReservationQueue.Entry> next = entries != null ? new ArrayList<>(entries) : new ArrayList<>();
+      androidx.recyclerview.widget.DiffUtil.DiffResult diff =
+          androidx.recyclerview.widget.DiffUtil.calculateDiff(new androidx.recyclerview.widget.DiffUtil.Callback() {
+            @Override public int getOldListSize() { return previous.size(); }
+            @Override public int getNewListSize() { return next.size(); }
+            @Override public boolean areItemsTheSame(int oldPosition, int newPosition) {
+              // Reservation identity, not song identity: repeated reservations are distinct rows.
+              return previous.get(oldPosition).id.equals(next.get(newPosition).id);
+            }
+            @Override public boolean areContentsTheSame(int oldPosition, int newPosition) {
+              // Rank and first-row appearance also change when a reservation moves.
+              return oldPosition == newPosition && previous.get(oldPosition) == next.get(newPosition);
+            }
+          });
+      this.entries = next;
+      diff.dispatchUpdatesTo(this);
     }
 
     @Override

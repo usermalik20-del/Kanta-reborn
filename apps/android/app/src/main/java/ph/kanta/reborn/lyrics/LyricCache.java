@@ -14,6 +14,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Locale;
 import ph.kanta.reborn.core.MidiLyrics;
 
 public final class LyricCache {
@@ -114,12 +115,12 @@ public final class LyricCache {
   }
 
   private static String hashKey(String track, String artist, long duration) {
-    String raw = track.trim().toLowerCase() + "|" + artist.trim().toLowerCase() + "|" + (duration / 1000);
+    String raw = track.trim().toLowerCase(Locale.ROOT) + "|" + artist.trim().toLowerCase(Locale.ROOT) + "|" + (duration / 1000);
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       byte[] hash = md.digest(raw.getBytes(StandardCharsets.UTF_8));
       StringBuilder sb = new StringBuilder(32);
-      for (int i = 0; i < 16; i++) sb.append(String.format("%02x", hash[i]));
+      for (int i = 0; i < 16; i++) sb.append(String.format(Locale.ROOT, "%02x", hash[i]));
       return sb.toString();
     } catch (NoSuchAlgorithmException e) {
       return String.valueOf(raw.hashCode());

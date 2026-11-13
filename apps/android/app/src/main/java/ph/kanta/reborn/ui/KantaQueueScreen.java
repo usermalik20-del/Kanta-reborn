@@ -10,6 +10,8 @@ import android.widget.TextView;
 
 import ph.kanta.reborn.ui.components.KantaScreenHeader;
 
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public class KantaQueueScreen extends LinearLayout {
   public interface Listener {
     void onBack();
@@ -130,7 +132,7 @@ public class KantaQueueScreen extends LinearLayout {
   }
   public void showAddSongsCTA() {
     Button add = new Button(context);
-    add.setText("+ Add Songs to Queue");
+    add.setText(ph.kanta.reborn.R.string.label_add_songs_to_queue);
     add.setTextSize(16);
     add.setTypeface(null, Typeface.BOLD);
     add.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);

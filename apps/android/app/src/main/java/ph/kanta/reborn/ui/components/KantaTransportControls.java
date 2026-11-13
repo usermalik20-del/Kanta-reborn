@@ -7,6 +7,8 @@ import android.view.View;
 
 import ph.kanta.reborn.R;
 
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public class KantaTransportControls extends LinearLayout {
   public interface Listener {
     void onShuffle();

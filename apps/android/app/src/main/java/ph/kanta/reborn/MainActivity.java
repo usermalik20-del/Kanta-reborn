@@ -953,7 +953,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     sensSeek.setProgress((int) ((currentSens - 0.1f) / 2.9f * 200));
     content.addView(sensSeek);
 
-    TextView sensValue = text(String.format("%.2f", currentSens), 18, ACCENT);
+    TextView sensValue = text(String.format(java.util.Locale.ROOT, "%.2f", currentSens), 18, ACCENT);
     sensValue.setGravity(android.view.Gravity.CENTER);
     content.addView(sensValue);
 
@@ -961,15 +961,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         if (fromUser) {
           float val = 0.1f + (progress / 200f) * 2.9f;
-          sensValue.setText(String.format("%.2f", val));
+          sensValue.setText(String.format(java.util.Locale.getDefault(), "%.2f", val));
         }
       }
       @Override public void onStartTrackingTouch(SeekBar seekBar) {}
       @Override public void onStopTrackingTouch(SeekBar seekBar) {
         float val = 0.1f + (seekBar.getProgress() / 200f) * 2.9f;
         store.setAssistantSensitivity(val);
-        sensValue.setText(String.format("%.2f", val));
-        Toast.makeText(MainActivity.this, "Sensitivity saved: " + String.format("%.2f", val), Toast.LENGTH_SHORT).show();
+        sensValue.setText(String.format(java.util.Locale.getDefault(), "%.2f", val));
+        Toast.makeText(MainActivity.this, "Sensitivity saved: " + String.format(java.util.Locale.getDefault(), "%.2f", val), Toast.LENGTH_SHORT).show();
       }
     });
 
@@ -984,8 +984,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         store.setAssistantSensitivity(val);
         int prog = (int) ((val - 0.1f) / 2.9f * 200);
         sensSeek.setProgress(prog);
-        sensValue.setText(String.format("%.2f", val));
-        Toast.makeText(MainActivity.this, "Sensitivity: " + String.format("%.2f", val), Toast.LENGTH_SHORT).show();
+        sensValue.setText(String.format(java.util.Locale.getDefault(), "%.2f", val));
+        Toast.makeText(MainActivity.this, "Sensitivity: " + String.format(java.util.Locale.getDefault(), "%.2f", val), Toast.LENGTH_SHORT).show();
       });
       b.setTextSize(12);
       presets.addView(b, new LinearLayout.LayoutParams(0, -2, 1));
@@ -1022,7 +1022,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         store.setPitchTargetHz(noteHz[position]);
         store.setPitchTargetName(notes[position]);
-        Toast.makeText(MainActivity.this, "Target pitch: " + notes[position] + " (" + String.format("%.1f", noteHz[position]) + " Hz)", Toast.LENGTH_SHORT).show();
+        Toast.makeText(MainActivity.this, "Target pitch: " + notes[position] + " (" + String.format(java.util.Locale.getDefault(), "%.1f", noteHz[position]) + " Hz)", Toast.LENGTH_SHORT).show();
       }
       @Override
       public void onNothingSelected(AdapterView<?> parent) {}
@@ -1038,7 +1038,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     hzInput.setHint("e.g. 440.0");
     hzInput.setTextColor(Color.WHITE);
     hzInput.setHintTextColor(0xFF888888);
-    hzInput.setText(String.format("%.1f", store.getPitchTargetHz()));
+    hzInput.setText(String.format(java.util.Locale.ROOT, "%.1f", store.getPitchTargetHz()));
     hzRow.addView(hzLabel, new LinearLayout.LayoutParams(dp(100), -2));
     hzRow.addView(hzInput, new LinearLayout.LayoutParams(0, -2, 1));
     content.addView(hzRow);
@@ -1049,7 +1049,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         if (hz > 20 && hz < 2000) {
           store.setPitchTargetHz(hz);
           store.setPitchTargetName("Custom");
-          Toast.makeText(MainActivity.this, "Target pitch: " + String.format("%.1f", hz) + " Hz", Toast.LENGTH_SHORT).show();
+          Toast.makeText(MainActivity.this, "Target pitch: " + String.format(java.util.Locale.getDefault(), "%.1f", hz) + " Hz", Toast.LENGTH_SHORT).show();
         } else {
           Toast.makeText(MainActivity.this, "Please enter 20-2000 Hz", Toast.LENGTH_SHORT).show();
         }
@@ -2118,7 +2118,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           }
 
           public void onProgressChanged(SeekBar bar, int value, boolean user) {
-            if (user) timing.setText("Score timing offset: " + (value * 10 - 500) + " ms");
+            if (user) timing.setText(timing.getContext().getString(ph.kanta.reborn.R.string.score_timing_offset, value * 10 - 500));
           }
         });
     body.addView(scoreTiming);
@@ -2618,7 +2618,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     list.setOrientation(LinearLayout.VERTICAL);
                     for (BgvLibrary.Entry entry : downloaded) {
                       TextView title = new TextView(MainActivity.this);
-                      title.setText(entry.title + " \u00b7 " + entry.attribution());
+                      title.setText(title.getContext().getString(ph.kanta.reborn.R.string.scenic_title_attribution, entry.title, entry.attribution()));
                       title.setTextColor(Color.WHITE);
                       title.setPadding(12, 8, 12, 8);
                       final String id = entry.id;
@@ -2636,13 +2636,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                           });
                       list.addView(title);
                       Button remove = new Button(MainActivity.this);
-                      remove.setText("Remove");
+                      remove.setText(ph.kanta.reborn.R.string.label_remove);
                       remove.setTag(id);
                       remove.setOnClickListener(
                           v -> {
                             session.deleteScenic(id);
-                            finish();
-                            startActivity(getIntent());
+                            recreate();
                           });
                       list.addView(remove);
                     }
@@ -3013,12 +3012,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       fullscreenProgress.setProgress(duration > 0
           ? (int) Math.max(0, Math.min(1000, Math.round(position * 1000.0 / duration))) : 0);
     if (fullscreenTime != null)
-      fullscreenTime.setText(stageTime(position) + " / " + (duration > 0 ? stageTime(duration) : "--:--"));
+      fullscreenTime.setText(fullscreenTime.getContext().getString(ph.kanta.reborn.R.string.playback_times, stageTime(position), duration > 0 ? stageTime(duration) : "--:--"));
     if (fullscreenKeyTempo != null)
-      fullscreenKeyTempo.setText("Key " + (session.pitch > 0 ? "+" : "") + session.pitch
-          + "   ·   Tempo " + Math.round(session.tempo * 100f) + "%");
+      fullscreenKeyTempo.setText(fullscreenKeyTempo.getContext().getString(ph.kanta.reborn.R.string.playback_key_tempo, session.pitch > 0 ? "+" : "", session.pitch, Math.round(session.tempo * 100f)));
     if (fullscreenQueue != null)
-      fullscreenQueue.setText("Queue (" + session.queue.snapshot().size() + ")");
+      fullscreenQueue.setText(fullscreenQueue.getContext().getString(ph.kanta.reborn.R.string.queue_count, session.queue.snapshot().size()));
     if (fullscreenPlayButton != null)
       fullscreenPlayButton.setText(session.playing ? "Pause" : "Play");
   }

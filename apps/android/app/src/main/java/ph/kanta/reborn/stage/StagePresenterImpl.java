@@ -49,6 +49,8 @@ import ph.kanta.reborn.ui.components.UpNextTicker;
  * <p>Implements {@link ScoreSink} to receive completed scores from
  * {@link SessionController} and display them via {@link ScoreOverlay}.
  */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class StagePresenterImpl extends FrameLayout
     implements StagePresenter, ScoreSink {
 
@@ -274,7 +276,7 @@ public final class StagePresenterImpl extends FrameLayout
     long seconds = millis / 1000;
     long minutes = seconds / 60;
     seconds = seconds % 60;
-    return String.format("%d:%02d", minutes, seconds);
+    return String.format(java.util.Locale.ROOT, "%d:%02d", minutes, seconds);
   }
 
   @Override
@@ -569,7 +571,7 @@ public final class StagePresenterImpl extends FrameLayout
 
       // Title
       TextView title = new TextView(getContext());
-      title.setText("Kanta-Connect");
+      title.setText(ph.kanta.reborn.R.string.label_kanta_connect);
       title.setTextSize(20);
       title.setTextColor(0xFFFFFFFF);
       title.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -578,7 +580,7 @@ public final class StagePresenterImpl extends FrameLayout
 
       // Address
       TextView address = new TextView(getContext());
-      address.setText(info.host + ":" + info.port);
+      address.setText(address.getContext().getString(ph.kanta.reborn.R.string.companion_host_port, info.host, info.port));
       address.setTextSize(14);
       address.setTextColor(0xFFFFFFFF);
       address.setGravity(Gravity.CENTER);

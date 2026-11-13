@@ -1,0 +1,4 @@
+{
+  "provenance": "No accepted lint findings. All 295 findings in the attached AGP 8.13.2 report have source fixes or narrowly scoped, tested design exceptions. New warnings block every debug/release APK and bundle; no automatic baseline refresh.",
+  "findings": []
+}

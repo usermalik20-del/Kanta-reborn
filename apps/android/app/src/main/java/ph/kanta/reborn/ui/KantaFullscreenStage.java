@@ -10,6 +10,8 @@ import ph.kanta.reborn.ui.components.KantaProgressBar;
 import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaTransportControls;
 
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public class KantaFullscreenStage extends LinearLayout {
   public interface Listener {
     void onExitFullscreen();
@@ -57,18 +59,18 @@ public class KantaFullscreenStage extends LinearLayout {
     lyrics.setGravity(Gravity.CENTER);
     lyrics.setPadding((int)(48*density), 0, (int)(48*density), 0);
     TextView line1 = new TextView(context);
-    line1.setText("Previous lyric line");
+    line1.setText(ph.kanta.reborn.R.string.label_previous_lyric_line);
     line1.setTextSize(18);
     line1.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
     line1.setGravity(Gravity.CENTER);
     TextView line2 = new TextView(context);
-    line2.setText("Current lyric line \u2014 bright white");
+    line2.setText(ph.kanta.reborn.R.string.label_current_lyric_line_bright_white);
     line2.setTextSize(32);
     line2.setTypeface(null, Typeface.BOLD);
     line2.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);
     line2.setGravity(Gravity.CENTER);
     TextView line3 = new TextView(context);
-    line3.setText("Next upcoming line");
+    line3.setText(ph.kanta.reborn.R.string.label_next_upcoming_line);
     line3.setTextSize(18);
     line3.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
     line3.setGravity(Gravity.CENTER);

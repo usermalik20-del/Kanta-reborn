@@ -115,7 +115,7 @@ public final class SearchOverlay extends FrameLayout {
 
     // Empty view
     emptyView = new TextView(context);
-    emptyView.setText("No songs found");
+    emptyView.setText(ph.kanta.reborn.R.string.label_no_songs_found);
     emptyView.setTextColor(0xFF999999);
     emptyView.setGravity(android.view.Gravity.CENTER);
     emptyView.setVisibility(GONE);
@@ -204,10 +204,29 @@ public final class SearchOverlay extends FrameLayout {
   /** Adapter for song results. */
   private final class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
     private List<Song> songs = new ArrayList<>();
+    private java.util.Set<String> queuedIds = new java.util.HashSet<>();
 
     void setSongs(List<Song> songs) {
-      this.songs = songs != null ? songs : new ArrayList<>();
-      notifyDataSetChanged();
+      List<Song> previous = this.songs;
+      List<Song> next = songs != null ? new ArrayList<>(songs) : new ArrayList<>();
+      java.util.Set<String> previousQueued = queuedIds;
+      java.util.Set<String> nextQueued = new java.util.HashSet<>();
+      if (queue != null) for (ReservationQueue.Entry entry : queue.snapshot()) nextQueued.add(entry.song.id);
+      androidx.recyclerview.widget.DiffUtil.DiffResult diff =
+          androidx.recyclerview.widget.DiffUtil.calculateDiff(new androidx.recyclerview.widget.DiffUtil.Callback() {
+            @Override public int getOldListSize() { return previous.size(); }
+            @Override public int getNewListSize() { return next.size(); }
+            @Override public boolean areItemsTheSame(int oldPosition, int newPosition) {
+              return previous.get(oldPosition).id.equals(next.get(newPosition).id);
+            }
+            @Override public boolean areContentsTheSame(int oldPosition, int newPosition) {
+              Song oldSong = previous.get(oldPosition), newSong = next.get(newPosition);
+              return oldSong == newSong && previousQueued.contains(oldSong.id) == nextQueued.contains(newSong.id);
+            }
+          });
+      this.songs = next;
+      queuedIds = nextQueued;
+      diff.dispatchUpdatesTo(this);
     }
 
     @Override
@@ -237,8 +256,7 @@ public final class SearchOverlay extends FrameLayout {
     }
 
     void bind(Song song) {
-      itemView.bind(song, queue != null && queue.snapshot().stream()
-          .anyMatch(e -> e.song.id.equals(song.id)),
+      itemView.bind(song, adapter.queuedIds.contains(song.id),
           (v) -> {
             if (listener != null) listener.onReserve(song);
           });
@@ -274,7 +292,7 @@ public final class SearchOverlay extends FrameLayout {
       metaView.setTextColor(0xFF999999);
 
       reserveButton = new TextView(context);
-      reserveButton.setText("Reserve");
+      reserveButton.setText(ph.kanta.reborn.R.string.label_reserve);
       reserveButton.setTextSize(13);
       reserveButton.setTextColor(0xFFFFFFFF);
       reserveButton.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -301,13 +319,13 @@ public final class SearchOverlay extends FrameLayout {
       metaView.setText(String.format(Locale.getDefault(), "Code: %s", song.code));
 
       if (alreadyQueued) {
-        reserveButton.setText("Queued");
+        reserveButton.setText(ph.kanta.reborn.R.string.label_queued);
         reserveButton.setEnabled(false);
         reserveButton.setBackgroundColor(0xFF241540); // surfaceHigh
         reserveButton.setTextColor(0xFF999999);
         reserveButton.setOnClickListener(null);
       } else {
-        reserveButton.setText("Reserve");
+        reserveButton.setText(ph.kanta.reborn.R.string.label_reserve);
         reserveButton.setEnabled(true);
         reserveButton.setBackgroundResource(ph.kanta.reborn.R.drawable.karaoke_reserve_btn_bg);
         reserveButton.setTextColor(0xFFFFFFFF);

@@ -12,6 +12,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public class HomeScreen extends LinearLayout {
   public interface Listener {
     void onHome();
@@ -94,7 +96,7 @@ public class HomeScreen extends LinearLayout {
     keyboardToggle.setTag("kanta.home.keyboard-toggle");
     keyboardToggle.setContentDescription("Switch keyboard to letters");
     keyboardToggle.setAllCaps(false);
-    keyboardToggle.setText("Letters");
+    keyboardToggle.setText(ph.kanta.reborn.R.string.label_letters);
     keyboardToggle.setTextSize(11);
     keyboardToggle.setTypeface(null, Typeface.BOLD);
     keyboardToggle.setTextColor(KantaTheme.TEXT_PRIMARY);
@@ -126,7 +128,7 @@ public class HomeScreen extends LinearLayout {
     queueHeading.setTextColor(KantaTheme.TEXT_PRIMARY);
     queueHeader.addView(queueHeading, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     Button viewQueue = new Button(context);
-    viewQueue.setText("View all");
+    viewQueue.setText(ph.kanta.reborn.R.string.label_view_all);
     viewQueue.setAllCaps(false);
     viewQueue.setTextSize(12);
     viewQueue.setTextColor(KantaTheme.PRIMARY_CYAN);
@@ -206,7 +208,7 @@ public class HomeScreen extends LinearLayout {
     if (reservationCount == total && visibleReservations.equals(songs)) return;
     visibleReservations = new java.util.ArrayList<>(songs);
     reservationCount = total;
-    queueHeading.setText("Reserved songs · " + total);
+    queueHeading.setText(queueHeading.getContext().getString(ph.kanta.reborn.R.string.reserved_song_count, total));
     reservedSongs.removeAllViews();
     if (songs.isEmpty()) {
       TextView empty = reservationText("No songs reserved yet. Find a song to add it here.");
@@ -234,7 +236,7 @@ public class HomeScreen extends LinearLayout {
   private Button groupCard(String title, String detail, String icon, int action) {
     Button card = new Button(context);
     card.setAllCaps(false);
-    card.setText(icon + "\n" + title + "\n" + detail);
+    card.setText(card.getContext().getString(ph.kanta.reborn.R.string.home_collection_card, icon, title, detail));
     card.setTextSize(10);
     card.setGravity(Gravity.CENTER);
     card.setTextColor(KantaTheme.TEXT_PRIMARY);

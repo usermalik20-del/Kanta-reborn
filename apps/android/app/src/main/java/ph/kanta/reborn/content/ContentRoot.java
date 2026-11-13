@@ -3,6 +3,7 @@ package ph.kanta.reborn.content;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import java.util.Locale;
 import java.io.File;
 
 /**
@@ -189,7 +190,7 @@ public final class ContentRoot {
     // Prefer kanta.sf2 (rebrand), then any .sf2
     File kantaSf2 = new File(soundDir, "kanta.sf2");
     if (kantaSf2.exists()) return kantaSf2;
-    File[] sf2Files = soundDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".sf2"));
+    File[] sf2Files = soundDir.listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).endsWith(".sf2"));
     return (sf2Files != null && sf2Files.length > 0) ? sf2Files[0] : null;
   }
 }

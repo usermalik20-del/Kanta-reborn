@@ -219,3 +219,12 @@ Privacy disclosure "Optional Android self-update" added to all four privacy file
 | Android CI was failing **open** | `c784fe5` | `set -o pipefail` on the Gradle step; two real defects surfaced immediately |
 | `MkmdDecoder` magic constant and AES padding | `1dfecd7`, `2a01654` | Every real payload was rejected before this |
 | iOS PR #113 navigation regression | `b7d69f2` | Walkthrough green before `80ae286`, red after, green again after the revert |
+
+## Android lint follow-up (local candidate; open)
+
+The uploaded 2026-11-13 debug report listed 295 warnings. Source fixes and
+per-variant anti-regression gates are local on `fix/android-lint-regressions-local`,
+not validated by an Android build or present in the published preview. Exact
+remaining debt and hardware gates: [Android lint hardening](ANDROID_LINT_HARDENING.md).
+Do not close until debug/release lint, final signed APK ELF/ZIP alignment,
+SPICE model runtime and real 16 KB page device have appropriate evidence.

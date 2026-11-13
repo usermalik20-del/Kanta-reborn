@@ -37,6 +37,7 @@ public final class StagePresenceOverlay extends FrameLayout {
   /** Fixed width of the song-code prompt, matching a hardware karaoke remote. */
   public static final String CODE_PROMPT = "00000";
 
+  private Shader scrimShader;
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint badgeTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -75,13 +76,13 @@ public final class StagePresenceOverlay extends FrameLayout {
     hintBlock.setOrientation(LinearLayout.VERTICAL);
     hintBlock.setGravity(Gravity.CENTER);
     titleView = new TextView(context);
-    titleView.setText("Enter a song code to sing");
+    titleView.setText(ph.kanta.reborn.R.string.label_enter_a_song_code_to_sing);
     titleView.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
     titleView.setTextSize(19f);
     titleView.setTextColor(0xFFFFFFFF);
     titleView.setGravity(Gravity.CENTER);
     subtitleView = new TextView(context);
-    subtitleView.setText("or find a song in Sing");
+    subtitleView.setText(ph.kanta.reborn.R.string.label_or_find_a_song_in_sing);
     subtitleView.setTextSize(13f);
     subtitleView.setTextColor(0xCCB9D8E8);
     subtitleView.setGravity(Gravity.CENTER);
@@ -157,6 +158,14 @@ public final class StagePresenceOverlay extends FrameLayout {
   }
 
   @Override
+  protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    super.onSizeChanged(w, h, oldw, oldh);
+    scrimShader = h > 0 ? new LinearGradient(0f, h * 0.10f, 0f, h,
+        new int[]{0x00000000, 0x55000000, 0xAA000000, 0xCC000000},
+        new float[]{0f, 0.32f, 0.72f, 1f}, Shader.TileMode.CLAMP) : null;
+  }
+
+  @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
     int w = getWidth();
@@ -168,9 +177,7 @@ public final class StagePresenceOverlay extends FrameLayout {
 
     // Scrim: a soft vertical gradient (transparent at the top, deep at the bottom) so the
     // video keeps reading as one continuous stage instead of a panel with a hard seam.
-    paint.setShader(new LinearGradient(0f, h * 0.10f, 0f, h,
-        new int[]{0x00000000, 0x55000000, 0xAA000000, 0xCC000000},
-        new float[]{0f, 0.32f, 0.72f, 1f}, Shader.TileMode.CLAMP));
+    paint.setShader(scrimShader);
     canvas.drawRect(0, h * 0.10f, w, h, paint);
     paint.setShader(null);
 

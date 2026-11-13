@@ -17,7 +17,7 @@ public class KantaSectionHeader extends LinearLayout {
     setGravity(Gravity.CENTER_VERTICAL);
     setPadding((int)(16*density),(int)(12*density),(int)(16*density),(int)(4*density));
     label = new TextView(context);
-    label.setText("Section");
+    label.setText(ph.kanta.reborn.R.string.label_section);
     label.setTextSize(13);
     label.setTypeface(null, Typeface.BOLD);
     label.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
