@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Deliberately simple glyph: launcher monochrome treats path alpha as its mask. -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5"
+        android:pathData="M54,14 C44,14 38,22 38,32 V50 C38,72 70,72 70,50 V32 C70,22 64,14 54,14 Z M45,36 H63 M45,47 H63 M45,58 H63 M30,47 V50 C30,82 78,82 78,50 V47 M54,75 V89 M39,94 H69" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,8 L57,15 L65,16 L59,21 L61,29 L54,25 L47,29 L49,21 L43,16 L51,15 Z" />
+</vector>

@@ -72,6 +72,16 @@ class AndroidLintSecurityTests(unittest.TestCase):
             self.assertEqual({item.get('domain') for item in exclusions}, domains)
             self.assertTrue(all(item.get('path') == '.' for item in exclusions))
 
+    def test_adaptive_launcher_has_alpha_monochrome_vector(self):
+        icon = ET.parse(MAIN / 'res/mipmap-anydpi/ic_launcher.xml').getroot()
+        monochrome = icon.find('monochrome')
+        self.assertIsNotNone(monochrome)
+        self.assertEqual(monochrome.get('{http://schemas.android.com/apk/res/android}drawable'),
+                         '@drawable/kanta_launcher_monochrome')
+        vector = ET.parse(MAIN / 'res/drawable/kanta_launcher_monochrome.xml').getroot()
+        self.assertEqual(vector.tag, 'vector')
+        self.assertGreaterEqual(len(vector.findall('path')), 1)
+
     def test_localized_status_count_uses_plural_and_ellipsis_glyphs(self):
         plurals = ET.parse(MAIN / 'res/values/plurals.xml').getroot().find('plurals')
         self.assertEqual({item.get('quantity') for item in plurals}, {'one', 'other'})
