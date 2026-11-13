@@ -1,3 +1,7 @@
+## Now Playing divider removed & scroll fade (2026-11-13)
+
+Removed the stray `|` divider between Key and Tempo columns in `KantaNowPlayingScreen`. Added a 24 dp vertical fading edge to the main `ScrollView` in `MainActivity`. No new tests required — existing Android emulator runtime checks cover the Now Playing UI and scroll behavior.
+
 ## Current Android layout status — published preview
 
 PR [#202](https://github.com/usermalik20-del/Kanta-reborn/pull/202) merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92`. Exact-head

@@ -25,6 +25,10 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
 
 <!-- party-sounds-assets-committed -->
+## Now Playing divider removed & scroll fade (2026-11-13)
+
+The stray `|` divider between Key and Tempo columns in the Now Playing header was removed. A vertical fading edge (24 dp) was added to the main scroll view so content fades softly into the floating bottom dock instead of a hard cutoff.
+
 ## Before you install
 
 - **Back up your music and saved work.** Switching Android test versions may require uninstalling the old app, which can erase its saved data.
