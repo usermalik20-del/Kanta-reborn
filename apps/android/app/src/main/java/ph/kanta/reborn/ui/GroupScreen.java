@@ -11,6 +11,8 @@ import android.widget.TextView;
 import ph.kanta.reborn.ui.components.KantaScreenHeader;
 
 /** Goal-oriented landing page for one primary KANTA user group. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class GroupScreen extends LinearLayout {
   public interface Listener { void onAction(String action); void onBack(); }
   public static final class Item {

@@ -116,7 +116,7 @@ public final class ShubBlobPayloadProbe {
   private static String hex(byte[] data) {
     StringBuilder builder = new StringBuilder();
     for (int index = 0; index < data.length; index++) {
-      builder.append(String.format("%02x", data[index] & 0xFF));
+      builder.append(String.format(java.util.Locale.ROOT, "%02x", data[index] & 0xFF));
     }
     return builder.toString();
   }

@@ -66,7 +66,7 @@ public class KantaMediaRow extends LinearLayout {
     addView(metadata, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
 
     Button sing = new Button(getContext());
-    sing.setText("Sing");
+    sing.setText(ph.kanta.reborn.R.string.label_sing);
     sing.setAllCaps(false);
     sing.setTextSize(13);
     sing.setTypeface(null, Typeface.BOLD);

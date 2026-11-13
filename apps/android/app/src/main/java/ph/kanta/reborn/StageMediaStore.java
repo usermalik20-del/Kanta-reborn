@@ -237,9 +237,9 @@ final class StageMediaStore {
     Bitmap image = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
     if (image == null) throw new IOException("Unsupported image");
     try {
-      android.media.ExifInterface metadata =
-          new android.media.ExifInterface(file.getAbsolutePath());
-      int orientation = metadata.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1);
+      androidx.exifinterface.media.ExifInterface metadata =
+          new androidx.exifinterface.media.ExifInterface(file.getAbsolutePath());
+      int orientation = metadata.getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, 1);
       android.graphics.Matrix transform = new android.graphics.Matrix();
       switch (orientation) {
         case 2:

@@ -20,6 +20,8 @@ import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaStepper;
 import ph.kanta.reborn.ui.components.KantaTransportControls;
 
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public class KantaNowPlayingScreen extends LinearLayout {
   public interface Listener {
     void onBack();
@@ -194,7 +196,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     keyCol.setGravity(Gravity.CENTER);
     keyCol.setTag("kanta.now-playing.key");
     TextView keyLabel = new TextView(context);
-    keyLabel.setText("Key");
+    keyLabel.setText(ph.kanta.reborn.R.string.label_key);
     keyLabel.setTextSize(12);
     keyLabel.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
     keyStepper = new KantaStepper(context);
@@ -220,7 +222,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     tempoCol.setGravity(Gravity.CENTER);
     tempoCol.setTag("kanta.now-playing.tempo");
     TextView tempoLabel = new TextView(context);
-    tempoLabel.setText("Tempo");
+    tempoLabel.setText(ph.kanta.reborn.R.string.label_tempo);
     tempoLabel.setTextSize(12);
     tempoLabel.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_SECONDARY);
     tempoStepper = new KantaStepper(context);

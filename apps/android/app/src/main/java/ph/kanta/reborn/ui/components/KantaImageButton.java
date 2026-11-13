@@ -7,6 +7,8 @@ import android.widget.ImageButton;
 import ph.kanta.reborn.ui.KantaTheme;
 
 /** Accessible image action with the shared KANTA surface and pressed states. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class KantaImageButton extends ImageButton {
   private final float density;
 

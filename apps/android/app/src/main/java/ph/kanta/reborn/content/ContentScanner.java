@@ -261,41 +261,41 @@ public final class ContentScanner {
   }
 
   private boolean isSongFile(String name) {
-    String lower = name.toLowerCase();
+    String lower = name.toLowerCase(Locale.ROOT);
     return lower.endsWith(".mid") || lower.endsWith(".midi") || lower.endsWith(".kar")
         || lower.endsWith(".mp3") || lower.endsWith(".wav");
   }
 
   private boolean isSoundFontFile(String name) {
-    return name.toLowerCase().endsWith(".sf2");
+    return name.toLowerCase(Locale.ROOT).endsWith(".sf2");
   }
 
   private boolean isBgvFile(String name) {
-    String lower = name.toLowerCase();
+    String lower = name.toLowerCase(Locale.ROOT);
     return lower.endsWith(".mp4") || lower.endsWith(".mov") || lower.endsWith(".m4v")
         || lower.endsWith(".webm") || lower.endsWith(".mkv");
   }
 
   private boolean isBgphotoFile(String name) {
-    String lower = name.toLowerCase();
+    String lower = name.toLowerCase(Locale.ROOT);
     return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")
         || lower.endsWith(".webp") || lower.endsWith(".bmp");
   }
 
   private boolean isIdxFile(String name) {
-    String lower = name.toLowerCase();
+    String lower = name.toLowerCase(Locale.ROOT);
     return lower.endsWith(".idx") || lower.endsWith(".blob")
         || name.equals(ContentRoot.INDEX_IDX) || name.equals(ContentRoot.INDEX_BLOB)
         || name.equals(ContentRoot.LEGACY_INDEX_IDX) || name.equals(ContentRoot.LEGACY_INDEX_BLOB);
   }
 
   private boolean isFontFile(String name) {
-    return name.toLowerCase().endsWith(".ttf") || name.toLowerCase().endsWith(".otf");
+    return name.toLowerCase(Locale.ROOT).endsWith(".ttf") || name.toLowerCase(Locale.ROOT).endsWith(".otf");
   }
 
   private boolean isAssetFile(String name) {
     // Accept common asset types
-    String lower = name.toLowerCase();
+    String lower = name.toLowerCase(Locale.ROOT);
     return lower.endsWith(".json") || lower.endsWith(".xml") || lower.endsWith(".txt")
         || isBgphotoFile(name) || lower.endsWith(".svg");
   }

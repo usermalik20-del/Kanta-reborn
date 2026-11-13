@@ -74,33 +74,33 @@ public class PitchGameOverlay extends FrameLayout {
 
         // Score display
         scoreTextView = new TextView(context);
-        scoreTextView.setText("Score: 0");
+        scoreTextView.setText(ph.kanta.reborn.R.string.label_score_0);
         scoreTextView.setTextColor(Color.WHITE);
         scoreTextView.setTextSize(24);
         scoreTextView.setGravity(Gravity.CENTER);
         FrameLayout.LayoutParams scoreParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-        scoreParams.gravity = Gravity.TOP | Gravity.LEFT;
+        scoreParams.gravity = Gravity.TOP | Gravity.START;
         scoreParams.topMargin = 240;
-        scoreParams.leftMargin = 20;
+        scoreParams.setMarginStart(20);
         addView(scoreTextView, scoreParams);
 
         // Streak display
         streakTextView = new TextView(context);
-        streakTextView.setText("Streak: 0");
+        streakTextView.setText(ph.kanta.reborn.R.string.label_streak_0);
         streakTextView.setTextColor(Color.parseColor("#FFD600"));
         streakTextView.setTextSize(20);
         streakTextView.setGravity(Gravity.CENTER);
         FrameLayout.LayoutParams streakParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-        streakParams.gravity = Gravity.TOP | Gravity.RIGHT;
+        streakParams.gravity = Gravity.TOP | Gravity.END;
         streakParams.topMargin = 240;
-        streakParams.rightMargin = 20;
+        streakParams.setMarginEnd(20);
         addView(streakTextView, streakParams);
 
         // Status text
         statusTextView = new TextView(context);
-        statusTextView.setText("Tap to start pitch practice");
+        statusTextView.setText(ph.kanta.reborn.R.string.label_tap_to_start_pitch_practice);
         statusTextView.setTextColor(Color.parseColor("#BBBBBB"));
         statusTextView.setTextSize(16);
         statusTextView.setGravity(Gravity.CENTER);
@@ -126,7 +126,7 @@ public class PitchGameOverlay extends FrameLayout {
 
     /** Shows the practice panel without opening the microphone. */
     public void showPanel() {
-        statusTextView.setText("Tap Start to begin pitch practice");
+        statusTextView.setText(ph.kanta.reborn.R.string.label_tap_start_to_begin_pitch_practice);
         setVisibility(VISIBLE);
     }
 
@@ -145,44 +145,44 @@ public class PitchGameOverlay extends FrameLayout {
             gameManager.setListener(new KaraokeGameManager.GameListener() {
                 @Override
                 public void onScoreChanged(int score) {
-                    post(() -> scoreTextView.setText("Score: " + score));
+                    post(() -> scoreTextView.setText(scoreTextView.getContext().getString(ph.kanta.reborn.R.string.game_score, score)));
                 }
 
                 @Override
                 public void onStreakChanged(int streak) {
-                    post(() -> streakTextView.setText("Streak: " + streak));
+                    post(() -> streakTextView.setText(streakTextView.getContext().getString(ph.kanta.reborn.R.string.game_streak, streak)));
                 }
 
                 @Override
                 public void onPerfectHit() {
                     pitchMeterView.triggerSuccess();
-                    post(() -> statusTextView.setText("🎯 PERFECT!"));
+                    post(() -> statusTextView.setText(ph.kanta.reborn.R.string.label_perfect));
                 }
 
                 @Override
                 public void onGoodHit() {
-                    post(() -> statusTextView.setText("👍 GOOD!"));
+                    post(() -> statusTextView.setText(ph.kanta.reborn.R.string.label_good));
                 }
 
                 @Override
                 public void onCloseHit() {
-                    post(() -> statusTextView.setText("📏 Close!"));
+                    post(() -> statusTextView.setText(ph.kanta.reborn.R.string.label_close));
                 }
 
                 @Override
                 public void onMiss() {
-                    post(() -> statusTextView.setText("💫 Keep trying!"));
+                    post(() -> statusTextView.setText(ph.kanta.reborn.R.string.label_keep_trying));
                 }
 
                 @Override
                 public void onAchievementUnlocked(String achievementName) {
-                    post(() -> statusTextView.setText("🏆 " + achievementName + " unlocked!"));
+                    post(() -> statusTextView.setText(statusTextView.getContext().getString(ph.kanta.reborn.R.string.achievement_unlocked, achievementName)));
                 }
 
                 @Override
                 public void onGameEnded(int finalScore, int maxStreak) {
                     post(() -> {
-                        statusTextView.setText("Game Over! Final Score: " + finalScore);
+                        statusTextView.setText(statusTextView.getContext().getString(ph.kanta.reborn.R.string.game_final_score, finalScore));
                         if (listener != null) listener.onGameEnded(finalScore, maxStreak);
                     });
                 }
@@ -202,7 +202,7 @@ public class PitchGameOverlay extends FrameLayout {
         // Setup audio service
         if (audioService == null) {
             if (pitchSource == null) {
-                statusTextView.setText("Pitch detection needs a microphone source.");
+                statusTextView.setText(ph.kanta.reborn.R.string.label_pitch_detection_needs_a_microphone_source);
                 return;
             }
             audioService = new AudioServiceImpl(pitchSource);
@@ -220,17 +220,17 @@ public class PitchGameOverlay extends FrameLayout {
 
                 @Override
                 public void onListeningStarted() {
-                    post(() -> statusTextView.setText("🎤 Listening... Sing the target note!"));
+                    post(() -> statusTextView.setText(ph.kanta.reborn.R.string.label_listening_sing_the_target_note));
                 }
 
                 @Override
                 public void onListeningStopped() {
-                    post(() -> statusTextView.setText("Stopped"));
+                    post(() -> statusTextView.setText(ph.kanta.reborn.R.string.label_stopped));
                 }
 
                 @Override
                 public void onError(String error) {
-                    post(() -> statusTextView.setText("Error: " + error));
+                    post(() -> statusTextView.setText(statusTextView.getContext().getString(ph.kanta.reborn.R.string.error_detail, error)));
                 }
             });
         }
@@ -238,7 +238,7 @@ public class PitchGameOverlay extends FrameLayout {
         audioService.startListening();
         isVisible = true;
         setVisibility(VISIBLE);
-        statusTextView.setText("🎤 Listening... Sing the target note!");
+        statusTextView.setText(ph.kanta.reborn.R.string.label_listening_sing_the_target_note);
 
         if (listener != null) listener.onGameStarted();
     }

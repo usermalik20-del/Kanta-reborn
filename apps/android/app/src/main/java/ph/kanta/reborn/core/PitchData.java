@@ -59,7 +59,7 @@ public final class PitchData {
 
     @Override
     public String toString() {
-        return String.format("PitchData{current=%.1fHz, target=%.1fHz, accuracy=%.2f, note=%s, cents=%d}",
+        return String.format(java.util.Locale.ROOT, "PitchData{current=%.1fHz, target=%.1fHz, accuracy=%.2f, note=%s, cents=%d}",
                 currentPitchHz, targetPitchHz, accuracy, noteName, centsOffset);
     }
 }

@@ -16,6 +16,8 @@ with zipfile.ZipFile(apk) as package:
     notices = package.read('assets/runtime-notices.txt').decode()
     for module in ('camera-core', 'camera-camera2', 'camera-lifecycle', 'camera-view'):
         assert 'androidx.camera:' + module + ':1.5.3' in notices, module
+    assert 'com.google.ai.edge.litert:litert:1.4.0' in notices
+    assert 'org.tensorflow:tensorflow-lite:2.16.1' not in notices
     assert 'Apache License' in notices and 'Version 2.0' in notices
     assert 'TERMS AND CONDITIONS' in notices
     privacy = package.read('assets/privacy.txt').decode()

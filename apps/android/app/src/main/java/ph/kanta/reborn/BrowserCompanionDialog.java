@@ -36,13 +36,13 @@ final class BrowserCompanionDialog {
         String pin=fingerprint.getText().toString().trim().toLowerCase(Locale.ROOT);
         if(!pin.matches("[a-f0-9]{64}"))throw new IllegalArgumentException();
         showRemote(activity,hostAddress,pin);
-      }catch(Exception e){notice.setText("Enter the host's private IPv4 address and exact 64-character certificate fingerprint.");}
+      }catch(Exception e){notice.setText(ph.kanta.reborn.R.string.label_enter_the_host_s_private_ipv4_address_and_exact_64_char);}
     }));
     body.addView(label(activity,"Browser guests: enter the full https:// address shown above. Verify the certificate SHA-256 fingerprint on the host before entering its pairing code. Cancel on a mismatch. Some browsers may require trusting the local certificate before continuing. No system-wide certificate or development workstation is required. Host pairing expires after five minutes, guests after ten minutes, and hosting after thirty minutes or app backgrounding."));
     AlertDialog dialog=new AlertDialog.Builder(activity).setTitle("KANTA Companion").setView(scroll).setPositiveButton("Done",null).create();
     Runnable refresh=()->{
       BrowserCompanion c=session.browserCompanion;
-      details.setText(c.status+(c.address.isEmpty()?"":"\n\nBrowser / app address\n"+c.address+"\n\nPairing code (private)\n"+c.code+"\n\nCertificate SHA-256\n"+c.fingerprint));
+      details.setText(c.address.isEmpty() ? c.status : details.getContext().getString(ph.kanta.reborn.R.string.companion_connection_details, c.status, c.address, c.code, c.fingerprint));
       host.setEnabled(!found.isEmpty()&&!c.active()&&!c.preparing);revoke.setEnabled(c.active());
     };
     session.browserCompanion.changed=refresh;
@@ -51,6 +51,9 @@ final class BrowserCompanionDialog {
     session.io.execute(()->{List<String> values=CompanionControl.addresses();session.main.post(()->{if(!dialog.isShowing())return;found.addAll(values);addresses.setAdapter(new ArrayAdapter<>(activity,android.R.layout.simple_spinner_dropdown_item,values));refresh.run();});});
     return dialog;
   }
+  // Required by the bundled remote UI. Every resource is intercepted by the pinned
+  // transport; file/content/mixed access is disabled and external navigation denied.
+  @android.annotation.SuppressLint("SetJavaScriptEnabled")
   static Dialog showRemote(Activity activity,String address,String fingerprint){
     String origin="https://"+address+":"+ph.kanta.reborn.core.BrowserRemoteServer.PORT;
     WebView web=new WebView(activity);web.setSaveEnabled(false);

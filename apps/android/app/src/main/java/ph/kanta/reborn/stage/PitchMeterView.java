@@ -22,6 +22,7 @@ public class PitchMeterView extends View {
     private static final int TARGET_ZONE_WIDTH = 80;
     private static final int INDICATOR_RADIUS = 12;
 
+    private final Paint centerLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint backgroundPaint;
     private Paint targetZonePaint;
     private Paint indicatorPaint;
@@ -150,7 +151,6 @@ public class PitchMeterView extends View {
         canvas.drawRoundRect(targetRect, 20, 20, targetZonePaint);
 
         // Draw center line
-        Paint centerLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         centerLinePaint.setColor(Color.parseColor("#00E676"));
         centerLinePaint.setStrokeWidth(2);
         centerLinePaint.setStyle(Paint.Style.STROKE);
@@ -227,12 +227,12 @@ public class PitchMeterView extends View {
 
         // Draw accuracy percentage
         String accuracyText =
-                currentPitchData == null ? "\u2014" : String.format("%.0f%%", animatedAccuracy * 100);
+                currentPitchData == null ? "\u2014" : String.format(java.util.Locale.getDefault(), "%.0f%%", animatedAccuracy * 100);
         canvas.drawText(accuracyText, centerX, centerY + 5, accuracyPaint);
 
         // Draw cents offset
         if (currentPitchData != null && Math.abs(currentPitchData.centsOffset) > 0) {
-            String centsText = String.format("%+d¢", currentPitchData.centsOffset);
+            String centsText = String.format(java.util.Locale.getDefault(), "%+d¢", currentPitchData.centsOffset);
             canvas.drawText(centsText, centerX, centerY - 55, textPaint);
         }
     }

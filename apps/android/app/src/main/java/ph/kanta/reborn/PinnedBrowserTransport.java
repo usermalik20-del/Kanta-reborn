@@ -23,6 +23,9 @@ final class PinnedBrowserTransport implements AutoCloseable {
   private final Set<HttpsURLConnection> connections=ConcurrentHashMap.newKeySet();
   private final AtomicBoolean busy=new AtomicBoolean();
   private volatile boolean closed;
+  // The user verifies this local host's self-signed leaf fingerprint out of band.
+  // checkServerTrusted rejects expired/mismatched leaves; public CA trust is not the identity.
+  @android.annotation.SuppressLint("CustomX509TrustManager")
   PinnedBrowserTransport(WebView web,String address,String fingerprint)throws Exception{
     this.web=web;this.address=address;origin="https://"+address+":"+ph.kanta.reborn.core.BrowserRemoteServer.PORT;
     SSLContext context=SSLContext.getInstance("TLS");

@@ -12,6 +12,8 @@ import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaTabSelector;
 import ph.kanta.reborn.ui.components.InlineKeyboard;
 
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public class KantaSearchScreen extends LinearLayout {
   public interface Listener {
     void onBack();
@@ -66,7 +68,7 @@ public class KantaSearchScreen extends LinearLayout {
     inputRow.setPadding((int)(16*density), (int)(12*density), (int)(16*density), (int)(4*density));
     inputRow.addView(searchBar, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     keyboardToggle = new Button(context);
-    keyboardToggle.setText("Letters");
+    keyboardToggle.setText(ph.kanta.reborn.R.string.label_letters);
     keyboardToggle.setAllCaps(false);
     keyboardToggle.setTag("kanta.search.keyboard-toggle");
     keyboardToggle.setTextSize(12);
@@ -117,7 +119,7 @@ public class KantaSearchScreen extends LinearLayout {
     rcParams.weight = 1;
     addView(resultsContainer, rcParams);
     emptyView = new TextView(context);
-    emptyView.setText("No songs found");
+    emptyView.setText(ph.kanta.reborn.R.string.label_no_songs_found);
     emptyView.setTextSize(15);
     emptyView.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
     emptyView.setGravity(Gravity.CENTER);

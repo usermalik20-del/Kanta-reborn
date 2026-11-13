@@ -104,7 +104,7 @@ public class KaraokeGameManager {
 
         int oldScore = score;
         score += points;
-        Log.d(TAG, hitType + " hit! +" + points + " (accuracy: " + String.format("%.2f", accuracy) + ")");
+        Log.d(TAG, hitType + " hit! +" + points + " (accuracy: " + String.format(java.util.Locale.ROOT, "%.2f", accuracy) + ")");
 
         if (listener != null) {
             listener.onScoreChanged(score);

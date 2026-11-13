@@ -6,6 +6,7 @@ import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
+import java.util.Locale;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -83,10 +84,10 @@ public class LearningAssistantOverlay extends FrameLayout {
 
         // Advice section
         TextView adviceLabel = new TextView(context);
-        adviceLabel.setText("🤖 Voice Coach");
+        adviceLabel.setText(ph.kanta.reborn.R.string.label_voice_coach);
         adviceLabel.setTextColor(Color.parseColor("#00E676"));
         adviceLabel.setTextSize(20);
-        adviceLabel.setGravity(Gravity.LEFT);
+        adviceLabel.setGravity(Gravity.START);
         FrameLayout.LayoutParams adviceLabelParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
         adviceLabelParams.topMargin = 0;
@@ -94,7 +95,7 @@ public class LearningAssistantOverlay extends FrameLayout {
         content.addView(adviceLabel, adviceLabelParams);
 
         adviceTextView = new TextView(context);
-        adviceTextView.setText("Start singing for personalized guidance...");
+        adviceTextView.setText(ph.kanta.reborn.R.string.label_start_singing_for_personalized_guidance);
         adviceTextView.setTextColor(Color.WHITE);
         adviceTextView.setTextSize(16);
         adviceTextView.setLineSpacing(8, 1.2f);
@@ -105,7 +106,7 @@ public class LearningAssistantOverlay extends FrameLayout {
 
         // Progress section
         TextView progressLabel = new TextView(context);
-        progressLabel.setText("📊 Session Progress");
+        progressLabel.setText(ph.kanta.reborn.R.string.label_session_progress);
         progressLabel.setTextColor(Color.parseColor("#FFD600"));
         progressLabel.setTextSize(18);
         FrameLayout.LayoutParams progressLabelParams = new FrameLayout.LayoutParams(
@@ -114,7 +115,7 @@ public class LearningAssistantOverlay extends FrameLayout {
         content.addView(progressLabel, progressLabelParams);
 
         progressTextView = new TextView(context);
-        progressTextView.setText("No data yet");
+        progressTextView.setText(ph.kanta.reborn.R.string.label_no_data_yet);
         progressTextView.setTextColor(Color.parseColor("#BBBBBB"));
         progressTextView.setTextSize(14);
         FrameLayout.LayoutParams progressParams = new FrameLayout.LayoutParams(
@@ -124,7 +125,7 @@ public class LearningAssistantOverlay extends FrameLayout {
 
         // Exercise recommendation
         TextView exerciseLabel = new TextView(context);
-        exerciseLabel.setText("🎵 Recommended Exercise");
+        exerciseLabel.setText(ph.kanta.reborn.R.string.label_recommended_exercise);
         exerciseLabel.setTextColor(Color.parseColor("#4ECDC4"));
         exerciseLabel.setTextSize(18);
         FrameLayout.LayoutParams exerciseLabelParams = new FrameLayout.LayoutParams(
@@ -133,7 +134,7 @@ public class LearningAssistantOverlay extends FrameLayout {
         content.addView(exerciseLabel, exerciseLabelParams);
 
         exerciseTextView = new TextView(context);
-        exerciseTextView.setText("Will appear after singing...");
+        exerciseTextView.setText(ph.kanta.reborn.R.string.label_will_appear_after_singing);
         exerciseTextView.setTextColor(Color.parseColor("#BBBBBB"));
         exerciseTextView.setTextSize(14);
         FrameLayout.LayoutParams exerciseParams = new FrameLayout.LayoutParams(
@@ -143,7 +144,7 @@ public class LearningAssistantOverlay extends FrameLayout {
 
         // Summary section
         TextView summaryLabel = new TextView(context);
-        summaryLabel.setText("📈 Performance Summary");
+        summaryLabel.setText(ph.kanta.reborn.R.string.label_performance_summary);
         summaryLabel.setTextColor(Color.parseColor("#FF6B9D"));
         summaryLabel.setTextSize(18);
         FrameLayout.LayoutParams summaryLabelParams = new FrameLayout.LayoutParams(
@@ -152,7 +153,7 @@ public class LearningAssistantOverlay extends FrameLayout {
         content.addView(summaryLabel, summaryLabelParams);
 
         summaryTextView = new TextView(context);
-        summaryTextView.setText("Summary will appear after session...");
+        summaryTextView.setText(ph.kanta.reborn.R.string.label_summary_will_appear_after_session);
         summaryTextView.setTextColor(Color.parseColor("#BBBBBB"));
         summaryTextView.setTextSize(14);
         FrameLayout.LayoutParams summaryParams = new FrameLayout.LayoutParams(
@@ -197,7 +198,7 @@ public class LearningAssistantOverlay extends FrameLayout {
         // Setup audio service
         if (audioService == null) {
             if (pitchSource == null) {
-                adviceTextView.setText("Pitch detection needs a microphone source.");
+                adviceTextView.setText(ph.kanta.reborn.R.string.label_pitch_detection_needs_a_microphone_source);
                 return;
             }
             audioService = new AudioServiceImpl(pitchSource);
@@ -215,17 +216,17 @@ public class LearningAssistantOverlay extends FrameLayout {
 
                 @Override
                 public void onListeningStarted() {
-                    post(() -> adviceTextView.setText("🎤 Listening... I'll analyze your pitch in real-time!"));
+                    post(() -> adviceTextView.setText(ph.kanta.reborn.R.string.label_listening_i_ll_analyze_your_pitch_in_real_time));
                 }
 
                 @Override
                 public void onListeningStopped() {
-                    post(() -> adviceTextView.setText("Session ended. Great practice!"));
+                    post(() -> adviceTextView.setText(ph.kanta.reborn.R.string.label_session_ended_great_practice));
                 }
 
                 @Override
                 public void onError(String error) {
-                    post(() -> adviceTextView.setText("Error: " + error));
+                    post(() -> adviceTextView.setText(adviceTextView.getContext().getString(ph.kanta.reborn.R.string.error_detail, error)));
                 }
             });
         }
@@ -251,7 +252,7 @@ public class LearningAssistantOverlay extends FrameLayout {
             for (PitchData pd : pitchHistory) sum += pd.accuracy;
             avgAccuracy = sum / pitchHistory.size();
         }
-        progressTextView.setText(String.format("Average Accuracy: %.0f%% | Notes Analyzed: %d",
+        progressTextView.setText(String.format(Locale.getDefault(), "Average Accuracy: %.0f%% | Notes Analyzed: %d",
                 avgAccuracy * 100, pitchHistory.size()));
 
         // Update exercise recommendation periodically
@@ -295,7 +296,7 @@ public class LearningAssistantOverlay extends FrameLayout {
             float sum = 0f;
             for (PitchData pd : pitchHistory) sum += pd.accuracy;
             avgAccuracy = sum / pitchHistory.size();
-            progressTextView.setText(String.format("Final Accuracy: %.0f%% | Total Notes: %d",
+            progressTextView.setText(String.format(Locale.getDefault(), "Final Accuracy: %.0f%% | Total Notes: %d",
                     avgAccuracy * 100, pitchHistory.size()));
 
             // Record session for achievements

@@ -11,6 +11,8 @@ import android.widget.TextView;
 import ph.kanta.reborn.R;
 
 /** Mic and voice controls backed by the app's existing capture, monitor and scoring owners. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class KantaMicVoiceScreen extends LinearLayout {
   public interface Listener {
     void onBack();
@@ -125,7 +127,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
       @Override public void onStopTrackingTouch(SeekBar seekBar) {}
       @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         if (fromUser && listener != null) {
-          gainValue.setText(progress + "%");
+          gainValue.setText(gainValue.getContext().getString(ph.kanta.reborn.R.string.gain_percent, progress));
           listener.onMonitorGainChanged(progress / 100f);
         }
       }

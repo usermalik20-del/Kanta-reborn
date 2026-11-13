@@ -29,6 +29,7 @@ public final class CountdownStage extends View {
   private static final int REDUCED_STEP_MS = 500;
   private static final int ORBIT_DOTS = 12;
 
+  private final RectF ring = new RectF();
   private final Paint ringTrackPaint;
   private final Paint ringProgressPaint;
   private final Paint textPaint;
@@ -176,6 +177,33 @@ public final class CountdownStage extends View {
   }
 
   @Override
+  protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    super.onSizeChanged(w, h, oldw, oldh);
+    if (w <= 0 || h <= 0) return;
+    float cx = w / 2f, cy = h / 2f;
+    float radius = Math.min(w, h) * 0.28f;
+    ring.set(cx - radius, cy - radius, cx + radius, cy + radius);
+    glowPaint.setShader(
+        new LinearGradient(
+            ring.left,
+            ring.top,
+            ring.right,
+            ring.bottom,
+            new int[] {0x55A24BFF, 0x3300F0FF},
+            null,
+            Shader.TileMode.CLAMP));
+    ringProgressPaint.setShader(
+        new LinearGradient(
+            ring.left,
+            ring.top,
+            ring.right,
+            ring.bottom,
+            new int[] {0xFFFF3D8B, 0xFFA24BFF, 0xFF00F0FF},
+            null,
+            Shader.TileMode.CLAMP));
+  }
+
+  @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
 
@@ -190,38 +218,17 @@ public final class CountdownStage extends View {
 
     canvas.drawColor(0xF00A0614);
 
-    RectF ring = new RectF(cx - radius, cy - radius, cx + radius, cy + radius);
 
     float total = maxSeconds + 2f;
     float overall = Math.min(1f, (currentStep + stepProgress) / total);
     float pop = 0.62f + 0.38f * stepProgress;
     boolean finalStep = currentStep > maxSeconds;
 
-    glowPaint.setShader(
-        new LinearGradient(
-            ring.left,
-            ring.top,
-            ring.right,
-            ring.bottom,
-            new int[] {0x55A24BFF, 0x3300F0FF},
-            null,
-            Shader.TileMode.CLAMP));
     canvas.drawCircle(cx, cy, radius * 1.12f, glowPaint);
-    glowPaint.setShader(null);
 
     canvas.drawArc(ring, 0f, 360f, false, ringTrackPaint);
 
-    ringProgressPaint.setShader(
-        new LinearGradient(
-            ring.left,
-            ring.top,
-            ring.right,
-            ring.bottom,
-            new int[] {0xFFFF3D8B, 0xFFA24BFF, 0xFF00F0FF},
-            null,
-            Shader.TileMode.CLAMP));
     canvas.drawArc(ring, -90f, overall * 360f, false, ringProgressPaint);
-    ringProgressPaint.setShader(null);
 
     drawOrbitDots(canvas, cx, cy, radius, overall, density);
     if (finalStep) drawConfetti(canvas, cx, cy, radius, stepProgress, density);

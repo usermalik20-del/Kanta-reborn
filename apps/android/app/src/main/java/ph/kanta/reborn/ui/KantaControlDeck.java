@@ -17,6 +17,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /** Hardware-inspired projection of KANTA's existing controls. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class KantaControlDeck extends FrameLayout {
   public interface Listener {
     void onAction(String action);
@@ -27,6 +29,7 @@ public final class KantaControlDeck extends FrameLayout {
   private static final int SURFACE = 0xFF0D1930;
   private static final int BORDER = 0xFF24508A;
   private static final int CYAN = 0xFF29D9FF;
+  private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final float density;
   private final Listener listener;
   private final Map<View, Slot> slots = new LinkedHashMap<>();
@@ -131,7 +134,6 @@ public final class KantaControlDeck extends FrameLayout {
 
   @Override protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
-    Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     line.setColor(0x6629D9FF);
     line.setStyle(Paint.Style.STROKE);
     line.setStrokeWidth(dp(1));
@@ -168,6 +170,7 @@ public final class KantaControlDeck extends FrameLayout {
 
   private final class VolumeDial extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Shader fillShader;
     private float volume = 1f;
     private float downY;
 
@@ -190,13 +193,19 @@ public final class KantaControlDeck extends FrameLayout {
           Math.round(volume * 100f)));
     }
 
+    @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+      super.onSizeChanged(w, h, oldw, oldh);
+      float radius = Math.min(w, h) / 2f - dp(3);
+      fillShader = radius > 0 ? new RadialGradient(w / 2f, h / 2f, radius,
+          new int[] {0xFF111B34, 0xFF0A1730, 0xFF020815},
+          new float[] {0f, .72f, 1f}, Shader.TileMode.CLAMP) : null;
+    }
+
     @Override protected void onDraw(Canvas canvas) {
       float cx = getWidth() / 2f;
       float cy = getHeight() / 2f;
       float radius = Math.min(cx, cy) - dp(3);
-      paint.setShader(new RadialGradient(cx, cy, radius,
-          new int[] {0xFF111B34, 0xFF0A1730, 0xFF020815},
-          new float[] {0f, .72f, 1f}, Shader.TileMode.CLAMP));
+      paint.setShader(fillShader);
       canvas.drawCircle(cx, cy, radius, paint);
       paint.setShader(null);
       paint.setStyle(Paint.Style.STROKE);

@@ -10,6 +10,8 @@ import android.widget.SeekBar;
 import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaStepper;
 
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public class KantaPitchTempoScreen extends LinearLayout {
   public interface Listener {
     void onBack();
@@ -60,7 +62,7 @@ public class KantaPitchTempoScreen extends LinearLayout {
     addView(keyCard);
     // A readable semitone legend. It is a reference, not a control, and says so.
     TextView legend = new TextView(context);
-    legend.setText("Semitone scale · \u266D\u266D lower  ·  0 original  ·  \u266F\u266F higher");
+    legend.setText(ph.kanta.reborn.R.string.label_semitone_scale_lower_0_original_higher);
     legend.setTextSize(12);
     legend.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
     legend.setGravity(Gravity.CENTER);
@@ -100,7 +102,7 @@ public class KantaPitchTempoScreen extends LinearLayout {
     sliderParams.setMargins((int)(24*density), 0, (int)(24*density), 0);
     addView(tempoSlider, sliderParams);
     TextView sliderNote = new TextView(context);
-    sliderNote.setText("50%                                      200%");
+    sliderNote.setText(ph.kanta.reborn.R.string.label_50_200);
     sliderNote.setTextSize(12);
     sliderNote.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_MUTED);
     sliderNote.setGravity(Gravity.CENTER);

@@ -144,7 +144,7 @@ public final class ScoreOverlay extends FrameLayout {
 
     // Close button
     closeButton = new TextView(context);
-    closeButton.setText("Dismiss");
+    closeButton.setText(ph.kanta.reborn.R.string.label_dismiss);
     closeButton.setTextSize(13);
     closeButton.setTextColor(0xFFCCCCCC);
     closeButton.setPadding(0, (int)(16 * context.getResources().getDisplayMetrics().density), 0, 0);

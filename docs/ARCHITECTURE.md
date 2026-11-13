@@ -1538,3 +1538,13 @@ that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, 
 window auto-show while preserving explicit editor/dialog requests. The failing emulator
 assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
 required before merge, not a blind rerun of the failing commit.
+
+## Android lint hardening (local, unpublished)
+
+The current development branch addresses selected lint warnings with targeted
+fixes, reviewed security exceptions, and regression tests. Debug and release
+APK builds will reject new warning identities and invalid 16 KB native library
+alignment. Existing findings remain visible and explicitly tracked; local
+Python checks do not demonstrate an Android build. See
+[the lint hardening note](docs/ANDROID_LINT_HARDENING.md). The published Android
+preview has not changed.

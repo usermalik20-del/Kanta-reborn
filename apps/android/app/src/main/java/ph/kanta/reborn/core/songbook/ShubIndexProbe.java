@@ -304,7 +304,7 @@ public final class ShubIndexProbe {
   private static String hex(byte[] data, int from, int to) {
     StringBuilder builder = new StringBuilder();
     for (int index = from; index < to && index < data.length; index++) {
-      builder.append(String.format("%02x", data[index] & 0xFF));
+      builder.append(String.format(java.util.Locale.ROOT, "%02x", data[index] & 0xFF));
     }
     return builder.toString();
   }

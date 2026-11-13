@@ -11,6 +11,8 @@ import android.widget.TextView;
 import ph.kanta.reborn.R;
 
 /** Visual picker wired to bundled KANTA artwork, CameraStage and the existing media import owner. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 public final class KantaVisualsScreen extends LinearLayout {
   public interface Listener {
     void onBack();
@@ -169,7 +171,7 @@ public final class KantaVisualsScreen extends LinearLayout {
     icon.setPadding(dp(28), dp(18), dp(28), dp(18));
     tile.addView(icon, new LayoutParams(LayoutParams.MATCH_PARENT, dp(92)));
     TextView label = new TextView(context);
-    label.setText("Custom");
+    label.setText(ph.kanta.reborn.R.string.label_custom);
     label.setTextColor(KantaTheme.TEXT_PRIMARY);
     label.setTextSize(12);
     label.setTypeface(null, Typeface.BOLD);

@@ -10,6 +10,8 @@ import java.io.File;
 import ph.kanta.reborn.ui.components.UpNextTicker;
 
 /** Lifecycle-bound visual output. Karaoke state and its clock stay in SessionController. */
+// Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 final class StageSurface extends FrameLayout implements TextureView.SurfaceTextureListener {
   private final SessionController session;
   private final TextureView video;
@@ -41,7 +43,7 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     addView(presence, new FrameLayout.LayoutParams(-1, -1));
     standbyPrompt = new android.widget.TextView(context);
     standbyPrompt.setTag("kanta.fullscreen.standby");
-    standbyPrompt.setText("Reserve a song to begin");
+    standbyPrompt.setText(ph.kanta.reborn.R.string.label_reserve_a_song_to_begin);
     standbyPrompt.setTextColor(0xFFB9D8E8);
     standbyPrompt.setTextSize(12);
     FrameLayout.LayoutParams promptParams = new FrameLayout.LayoutParams(-2, -2);

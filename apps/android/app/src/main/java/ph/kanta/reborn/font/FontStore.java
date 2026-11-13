@@ -23,6 +23,9 @@ import ph.kanta.reborn.settings.SettingsStore;
 
 /** App-lifetime font adapter. UI reads a cached face only; all provider/font I/O is serial. */
 public final class FontStore {
+  // getInstance converts every caller to application context before construction.
+  // No Activity context is retained; this cache intentionally has app lifetime.
+  @android.annotation.SuppressLint("StaticFieldLeak")
   private static FontStore instance;
   private static final long MAX_FONT_BYTES = 8L * 1024 * 1024;
   private static final int MAX_FONTS = 64;

@@ -101,3 +101,13 @@ codes and titles require Search selection. DEL remains one-character deletion.
 Native marquee must stop with host visibility and detach, remain noninteractive, and
 reserve measured lyric space rather than covering lyrics. See
 [Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for hosted evidence and remaining device gates.
+
+## Android lint hardening (local, unpublished)
+
+The current development branch addresses selected lint warnings with targeted
+fixes, reviewed security exceptions, and regression tests. Debug and release
+APK builds will reject new warning identities and invalid 16 KB native library
+alignment. Existing findings remain visible and explicitly tracked; local
+Python checks do not demonstrate an Android build. See
+[the lint hardening note](docs/ANDROID_LINT_HARDENING.md). The published Android
+preview has not changed.

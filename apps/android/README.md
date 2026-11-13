@@ -802,3 +802,9 @@ that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, 
 window auto-show while preserving explicit editor/dialog requests. The failing emulator
 assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
 required before merge, not a blind rerun of the failing commit.
+
+## Local lint candidate (not in published APK)
+
+Debug/release lint debt is gated by exact existing findings and final APK native
+alignment. Read [the validation note](../../docs/ANDROID_LINT_HARDENING.md)
+before claiming build or device acceptance.
