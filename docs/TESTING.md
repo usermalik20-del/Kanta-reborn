@@ -1,3 +1,19 @@
+## Current Android layout status — published preview
+
+PR [#202](https://github.com/usermalik20-del/Kanta-reborn/pull/202) merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92`. Exact-head
+[PR validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43328747178) and post-merge
+[Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43331249690) passed build/lint, 55,735 core checks
+and 555 emulator checks. Home and playback screenshots were reviewed after the fixes.
+The code-introduction/first-publication evidence below is immutable; later docs-only
+rebuilds may have a newer packaging source. Use the [download page](https://kanta-public.vercel.app/android)
+for the latest package rather than treating this evidence tag as a moving latest link.
+The [publisher](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332183448) verified the signed APK and published
+[`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a);
+[website deployment](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332262432) succeeded.
+This supersedes the local/pending status in the dated candidate notes below.
+Physical-device, large-text/rotation, long-session and actual external-display acceptance
+remain open; independent review workers did not return a usable review.
+
 ## Distinct monitor presets regression (K1)
 
 `CoreRegressionTests.monitorChecks()` retains one-second impulse, reset-to-silence and
@@ -1351,7 +1367,7 @@ The ancestor check fetches `refs/heads/main` explicitly into `refs/remotes/origi
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
 
-## Android Home, playback spacing and next-song strip — local candidate
+## Android Home, playback spacing and next-song strip — historical candidate notes
 
 Source guards cover bounded FIFO projection, the queue-before-keypad layout, empty state,
 Home input retention across session publications, and the real search placeholder.

@@ -1,3 +1,19 @@
+## Current Android layout status — published preview
+
+PR [#202](https://github.com/usermalik20-del/Kanta-reborn/pull/202) merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92`. Exact-head
+[PR validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43328747178) and post-merge
+[Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43331249690) passed build/lint, 55,735 core checks
+and 555 emulator checks. Home and playback screenshots were reviewed after the fixes.
+The code-introduction/first-publication evidence below is immutable; later docs-only
+rebuilds may have a newer packaging source. Use the [download page](https://kanta-public.vercel.app/android)
+for the latest package rather than treating this evidence tag as a moving latest link.
+The [publisher](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332183448) verified the signed APK and published
+[`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a);
+[website deployment](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332262432) succeeded.
+This supersedes the local/pending status in the dated candidate notes below.
+Physical-device, large-text/rotation, long-session and actual external-display acceptance
+remain open; independent review workers did not return a usable review.
+
 ## Distinct monitor-effect presets (K1)
 
 Small Room and Concert Hall now have their own tuning rather than duplicating Room and
@@ -743,7 +759,7 @@ The lyric-font folder result validates the returned read grant before persisting
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
 
-## Android layout improvements — local candidate
+## Android layout improvements — historical candidate notes
 
 Home shows up to three reserved songs and the total queue count between search and the
 lower keypad, with a View all action to the existing Queue screen. Empty queues show a
@@ -751,7 +767,7 @@ short explanation. Regular session updates preserve an in-progress code/title en
 Now Playing separates transport and key/tempo controls to reduce crowding, adapting to
 available width. Stages show a scrolling Up next strip from the existing reservation
 queue, hidden when empty. No playback or queue ownership changes are intended.
-These edits are local and not included in the published APK; device acceptance is pending.
+These notes record the pre-validation candidate. See current published status above; device acceptance remains pending.
 
 Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
 keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
