@@ -1,3 +1,23 @@
+## Now Playing divider removed & scroll fade (2026-11-13)
+
+Removed the stray `|` divider between Key and Tempo columns in `KantaNowPlayingScreen`. Added a 24 dp vertical fading edge to the main `ScrollView` in `MainActivity`. No new tests required — existing Android emulator runtime checks cover the Now Playing UI and scroll behavior.
+
+## Current Android layout status — published preview
+
+PR [#202](https://github.com/usermalik20-del/Kanta-reborn/pull/202) merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92`. Exact-head
+[PR validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43328747178) and post-merge
+[Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43331249690) passed build/lint, 55,735 core checks
+and 555 emulator checks. Home and playback screenshots were reviewed after the fixes.
+The code-introduction/first-publication evidence below is immutable; later docs-only
+rebuilds may have a newer packaging source. Use the [download page](https://kanta-public.vercel.app/android)
+for the latest package rather than treating this evidence tag as a moving latest link.
+The [publisher](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332183448) verified the signed APK and published
+[`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a);
+[website deployment](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332262432) succeeded.
+This supersedes the local/pending status in the dated candidate notes below.
+Physical-device, large-text/rotation, long-session and actual external-display acceptance
+remain open; independent review workers did not return a usable review.
+
 ## Distinct monitor presets regression (K1)
 
 `CoreRegressionTests.monitorChecks()` retains one-second impulse, reset-to-silence and
@@ -1277,5 +1297,148 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `vercel-deploy.yml` must keep checkout credentials unpersisted, restrict production deployment to `refs/heads/main`, and scope `VERCEL_TOKEN` only to the verification, domain API, pull, build, and deploy steps. `configure-is-a-dev-domain.yml` is also main-only. BLA candidate steps must not receive the token.
 - `tools/tests/test_workflow_path_ownership.py` guards the Android main-history check, step-scoped signing, keystore cleanup, checkout credential policy, and pinned BLA CLI. `tools/tests/test_vercel_deploy_workflow.py` guards Vercel token scope and main-only production domain/deploy jobs.
 - Repository branch protection and security settings are not controlled by these workflow tests. On 2026-11-09 the GitHub API reported `main` as unprotected; repository-admin action is required to enable protection and restrict production secrets to a protected environment.
+## Android runtime-only legacy import key — local candidate
 
-Android party-pad checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the bundled asset-loading path. Device decoding, SoundPool playback and physical listening remain separate acceptance.
+`LegacyFileContainerImporterRegressionTests` now uses unrelated synthetic key/IV
+fixtures, without reflecting application constants. Coverage adds strict hex/length
+validation, defensive ownership, idempotent clearing, missing-file cleanup, correct
+and wrong supplied keys, and refusal to reuse cleared keys. Run
+`cd apps/android && ./gradlew --no-daemon :app:coreRegression` on Java 17.
+`python3 -m unittest tools.tests.test_runtime_import_key` covers four source contracts
+for no embedded default and UI/controller cleanup. Full local Python suite: 170 tests
+pass; preflight passes, including 149-file structure and 59 workspace checks.
+Java tests/build/lint, emulator prompt/picker/cancel/background/busy/error acceptance
+and real-device playback are NOT verified: local JVM fails on `getcpu(2)`.
+See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
+<<<<<<< Updated upstream
+=======
+
+Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path (tools/tests/test_party_assets.py). Physical listening, device decoding and SoundPool playback remain separate acceptance.
+>>>>>>> Stashed changes
+
+## Local Android B1/B2/D5/D8 validation
+
+See [candidate scope and environment limits](ANDROID_LOCAL_B1_B2_D5_D8.md).
+`tools/tests/test_android_audio_controls.py` rejects the original no-op sliders
+and callbacks, preserves key/tempo callbacks and guards master-volume persistence.
+It passes on the local removal candidate and fails against base `00d97f0`.
+This is source-contract regression evidence, not Android UI execution or listening.
+B1 Java signal regressions and B2 malformed-font/rendering tests must run later
+on a working Java/Android toolchain; local VM startup fails on `getcpu(2)`.
+No CI workflow was dispatched and no APK/device acceptance is claimed.
+
+## Local optional LRCLIB lyric lookup and font integration
+
+See [LRCLIB behavior/privacy/test limits](LRCLIB_LYRICS.md),
+[B1 spectrum design](B1-spectrum.md) and
+[B2 font integration](B2-custom-fonts.md).
+The lookup is explicit, identified HTTPS on a worker, with user version selection,
+existing-lyric preservation and playback/foreground generation fences. LRC line
+timing is distinct from word sync; untimed text is previewed, not falsely timed.
+Host signal/LRC and device font/JSON checks are registered but not executed locally.
+Python/source checks are not a Java build or Android acceptance. No push, merge,
+signing or deployment is authorized.
+
+### Final local source checks (uncommitted candidate)
+
+The full Python suite passes **184 tests**, including 12 new source-contract checks.
+Java structure (155 production files), Android workspace (59 checks), companion
+interface, branding and uncommitted owner-document presence guards pass. Twenty
+changed/new Java files also pass a Java syntax-parser check; its unsupported
+pre-existing `String[]::new` syntax was normalized only in memory for that parse.
+This is not Java type checking, Gradle compilation or Android runtime execution.
+
+The direct `tools/verify-website.py` command exits zero without validating pages:
+its checked-in source defines `main()` but has no top-level entry call, and its
+last `main()` call is indented inside that function. This pre-existing unrelated
+verifier defect is not changed here. Do not count that exit status as website
+acceptance; the new privacy markup/links have separate local structural checks.
+## Website validation fixes (2026-11-12)
+
+Fixed verify-website.py entry-point guard and link/sitemap/CSP validation for blog routes. Added blog/all.html and blog.css. Local verify-website.py now passes.
+
+## CI fix (2026-11-12)
+
+Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.
+
+## Lyric-font persisted permission lint repair
+
+`FontContractTests.test_saf_traversal_and_picker_permission` now pins read-bit validation before persistence, the explicit lint-recognized read constant, and absence of write permission in the font-folder handler. The strengthened guard fails before the fix. Hosted Android lint and emulator results are separate gates; artifact upload on failure is not acceptance.
+
+## Android CI remote-main trust check
+
+The ancestor check fetches `refs/heads/main` explicitly into `refs/remotes/origin/main` and checks the selected commit against that remote-tracking ref. It does not force-update a checked-out local branch. Non-main history remains ineligible for release signing; existing release and runtime gates remain blocking.
+
+The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
+
+## Android Home, playback spacing and next-song strip — historical candidate notes
+
+Source guards cover bounded FIFO projection, the queue-before-keypad layout, empty state,
+Home input retention across session publications, and the real search placeholder.
+`RuntimeChecks.homeLayoutChecks()` measures Home at 320/411/720dp widths and 320/620dp
+utility heights, checks preview order/count and queue/keypad bounds, and verifies that a
+render preserves typed input. Existing Home navigation assertions now use the search
+field tag instead of relying on editable placeholder text. Extend runtime acceptance to
+check transport gaps, key/tempo separation and on-stage Up next updates, including empty,
+long/duplicate titles, removal/reordering, rotation, large text, fullscreen/external and
+background/foreground. The ticker must not obscure active lyric lines or capture taps.
+
+Local Python/source checks do not establish compilation, emulator or physical-device
+acceptance. The current iSH JVM fails with unsupported `getcpu(2)`; Android platform and
+AAPT2/D8 are missing and ADB lists no device. No APK build, signing or publication is
+implied by this local candidate.
+
+Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
+keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
+unambiguous numeric codes reserve through the existing controller without starting
+playback. Blank input is ignored; titles, unknown codes and duplicate codes open Search
+for selection. Numeric lookup runs on the existing worker and is fenced against edits,
+navigation, foreground loss and library replacement. Leading zeros remain significant.
+The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
+added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
+remain unexecuted locally because the iSH JVM cannot start.
+
+
+### Layout candidate pre-push validation record
+
+On the local candidate: 196 Python tests pass, `git diff --check` passes, Java structure
+covers 157 production files and the Android workspace contract passes all 59 checks.
+Seven initial Home source guards reject the prior main source. Eleven exact-code Java
+core assertions and Android Home/player/ticker instrumentation are registered but have
+not executed locally. Independent QA/review workers returned no usable review, so they
+are not an acceptance gate. Owner has now authorized PR validation, merge on green,
+and the existing main signing/publication/deployment pipelines. Hosted evidence and
+remaining device gates are tracked in [ANDROID_HOME_LAYOUT.md](ANDROID_HOME_LAYOUT.md).
+
+
+### Screenshot review correction before merge
+
+The first PR run [43324277350](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43324277350)
+passed build/lint, 55,735 core checks and 548 emulator checks. Screenshot review still
+found unnecessary phone key/tempo stacking and default full-width adjustment columns.
+Columns now use intrinsic widths and sit side by side when they actually fit, otherwise
+stacking. Stronger instrumentation checks their horizontal bounds and normal-phone fit.
+Home explicitly disables system IME after configuring input type; instrumentation also
+checks that the system keyboard remains hidden after inline-keyboard interaction.
+This correction requires a new exact-head CI run; the first run is not its acceptance.
+
+
+### Window auto-IME regression
+
+Run [43327147562](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43327147562)
+passed build/lint/core and the stronger geometry assertions but failed the new system-IME
+visibility assertion. Logcat records `SHOW_AUTO_EDITOR_FORWARD_NAV` from the server on
+initial activity focus: field-level `setShowSoftInputOnFocus(false)` alone does not govern
+that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, preventing
+window auto-show while preserving explicit editor/dialog requests. The failing emulator
+assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
+required before merge, not a blind rerun of the failing commit.
+
+## Android lint hardening — validated and published
+
+PR #204 merged as `802b4a37`. Exact-head PR and post-merge Android validation
+passed zero-warning debug/release lint, package alignment, core and emulator
+gates. The owner-signed preview passed signer continuity and immutable asset
+publication; the matching website deployment succeeded. The lint allowance
+remains empty; only narrowly documented design exceptions are annotated.
+See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).

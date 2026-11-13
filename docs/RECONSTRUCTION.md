@@ -1,3 +1,23 @@
+## Now Playing divider removed & scroll fade (2026-11-13)
+
+Removed the stray `|` divider between Key and Tempo columns in `KantaNowPlayingScreen`. Added a 24 dp vertical fading edge to the main `ScrollView` in `MainActivity` so content fades into the floating bottom dock.
+
+## Current Android layout status — published preview
+
+PR [#202](https://github.com/usermalik20-del/Kanta-reborn/pull/202) merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92`. Exact-head
+[PR validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43328747178) and post-merge
+[Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43331249690) passed build/lint, 55,735 core checks
+and 555 emulator checks. Home and playback screenshots were reviewed after the fixes.
+The code-introduction/first-publication evidence below is immutable; later docs-only
+rebuilds may have a newer packaging source. Use the [download page](https://kanta-public.vercel.app/android)
+for the latest package rather than treating this evidence tag as a moving latest link.
+The [publisher](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332183448) verified the signed APK and published
+[`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a);
+[website deployment](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332262432) succeeded.
+This supersedes the local/pending status in the dated candidate notes below.
+Physical-device, large-text/rotation, long-session and actual external-display acceptance
+remain open; independent review workers did not return a usable review.
+
 ## K1 closed — distinct monitor effects (2026-11-11)
 
 Small Room and Concert Hall have distinct tuning; legacy Room and Hall values remain
@@ -1093,3 +1113,100 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `songbook-fx.js` — 3D page flip, ambient particles, search highlight, lock transitions
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
+
+<!-- party-sounds-assets-committed -->
+## Android runtime-only legacy import key — local candidate
+
+Android paired import no longer embeds key/IV constants: the caller supplies them
+for one import, with explicit ownership/clearing across prompt, controller and
+synchronous importer. No automatic extraction or persistent key storage was added.
+Local Python/source checks pass; Java compilation/regressions, emulator acceptance
+and real-device playback remain pending because the local JVM cannot start.
+D2/D4 remain open; iOS is unchanged.
+See [ownership contract](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate)
+and [validation scope](TESTING.md#android-runtime-only-legacy-import-key--local-candidate).
+
+## Local Android B1/B2/D5/D8 candidate
+
+Work is based on `00d97f0` and remains local and uncommitted; see
+[candidate notes](ANDROID_LOCAL_B1_B2_D5_D8.md). The owner explicitly retained
+the existing background-video backend (D5) and chose removal of unsupported
+melody/guide volume controls (D8). The architecture/component plans now reflect
+those decisions. Neither change claims per-part mixing or device soak acceptance.
+B1/B2 implementation and validation remain subject to the same named-commit
+evidence requirements as the other unfinished work. No push/merge/release is
+authorized; host-only checks do not close real-device gates.
+
+## Local optional LRCLIB lyric lookup and font integration
+
+See [LRCLIB behavior/privacy/test limits](LRCLIB_LYRICS.md),
+[B1 spectrum design](B1-spectrum.md) and
+[B2 font integration](B2-custom-fonts.md).
+The lookup is explicit, identified HTTPS on a worker, with user version selection,
+existing-lyric preservation and playback/foreground generation fences. LRC line
+timing is distinct from word sync; untimed text is previewed, not falsely timed.
+Host signal/LRC and device font/JSON checks are registered but not executed locally.
+Python/source checks are not a Java build or Android acceptance. No push, merge,
+signing or deployment is authorized.
+## Website validation fixes (2026-11-12)
+
+Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog routes. No reconstruction impact.
+
+## Lyric-font persisted permission lint repair
+
+Android validation run 43211938789 failed `lintDebug` with `WrongConstant` at the lyric-font persisted grant call. The candidate passes the explicit read constant after the existing nonzero read-bit check; it does not disable lint or change release gates. Exact-head hosted validation remains required.
+
+The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
+
+## Android layout and singer queue hints — historical candidate notes
+
+User screenshot feedback identified unused Home height and touching/cramped playback
+controls. The local branch adds a bounded reserved-song preview above the lower keypad,
+preserves typed input during queue refresh, separates Now Playing controls and adds a
+scrolling next-song hint to the existing stage projections. Playback/FIFO remain owned
+by `SessionController`; no iOS/web behavior, persistence, signing or release changes.
+This was not in the public APK when these candidate notes were written. Source guards and instrumentation are separate from physical
+Android runtime/device acceptance, which remains pending.
+
+Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
+keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,
+unambiguous numeric codes reserve through the existing controller without starting
+playback. Blank input is ignored; titles, unknown codes and duplicate codes open Search
+for selection. Numeric lookup runs on the existing worker and is fenced against edits,
+navigation, foreground loss and library replacement. Leading zeros remain significant.
+The Java core runner covers exact, partial, missing, duplicate and zero-prefixed codes;
+added instrumentation covers DEL/RES labels and deletion. These Java/runtime checks
+remain unexecuted locally because the iSH JVM cannot start.
+
+
+### Screenshot review correction before merge
+
+The first PR run [43324277350](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43324277350)
+passed build/lint, 55,735 core checks and 548 emulator checks. Screenshot review still
+found unnecessary phone key/tempo stacking and default full-width adjustment columns.
+Columns now use intrinsic widths and sit side by side when they actually fit, otherwise
+stacking. Stronger instrumentation checks their horizontal bounds and normal-phone fit.
+Home explicitly disables system IME after configuring input type; instrumentation also
+checks that the system keyboard remains hidden after inline-keyboard interaction.
+This correction requires a new exact-head CI run; the first run is not its acceptance.
+
+
+### Window auto-IME regression
+
+Run [43327147562](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43327147562)
+passed build/lint/core and the stronger geometry assertions but failed the new system-IME
+visibility assertion. Logcat records `SHOW_AUTO_EDITOR_FORWARD_NAV` from the server on
+initial activity focus: field-level `setShowSoftInputOnFocus(false)` alone does not govern
+that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, preventing
+window auto-show while preserving explicit editor/dialog requests. The failing emulator
+assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
+required before merge, not a blind rerun of the failing commit.
+
+## Android lint hardening — validated and published
+
+PR #204 merged as `802b4a37`. Exact-head PR and post-merge Android validation
+passed zero-warning debug/release lint, package alignment, core and emulator
+gates. The owner-signed preview passed signer continuity and immutable asset
+publication; the matching website deployment succeeded. The lint allowance
+remains empty; only narrowly documented design exceptions are annotated.
+See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).

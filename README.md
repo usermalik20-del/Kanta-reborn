@@ -17,12 +17,17 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 
 ## What you can do
 
-- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries. This is experimental and may not work with every library or play every song.
-- **Plan your session:** search your library, line up songs and keep saved song sets. Android also includes party sound buttons, with the option to use your own clips.
-- **Personalize the screen:** choose backgrounds or use your own photos and videos.
+- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Party sounds are now bundled recordings. This is experimental and may not work with every library or play every song.
+- **Plan your session:** search your library, line up songs and keep saved song sets. The Android preview now shows reserved songs above the keypad, accepts exact song codes with RES, and displays an Up next hint on stage. Playback controls have more room.
+- **Personalize the screen:** choose backgrounds or use your own photos and videos. Android also lets you choose a lyric font from a folder you grant read access to.
 - **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
 
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
+
+<!-- party-sounds-assets-committed -->
+## Now Playing divider removed & scroll fade (2026-11-13)
+
+The stray `|` divider between Key and Tempo columns in the Now Playing header was removed. A vertical fading edge (24 dp) was added to the main scroll view so content fades softly into the floating bottom dock instead of a hard cutoff.
 
 ## Before you install
 
@@ -45,6 +50,14 @@ Build instructions, test results and engineering details live in the developer d
 - [Android development](apps/android/README.md) · [iOS development](apps/ios/AGENTS.md) · [Website development](apps/web/README.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Engineering rules](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md)
 - [Testing and release requirements](docs/TESTING.md) · [Download verification](docs/VERIFIED_DOWNLOADS.md)
-- [Outstanding work](docs/UNFINISHED_WORK.md)
+- [Outstanding work](docs/UNFINISHED_WORK.md) · [Android engineering records and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
+- [Android lint validation and release evidence](docs/ANDROID_LINT_HARDENING.md)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.
+## Website validation fixes (2026-11-12)
+
+Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog routes. No user-facing changes.
+
+## CI fix (2026-11-12)
+
+Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.
