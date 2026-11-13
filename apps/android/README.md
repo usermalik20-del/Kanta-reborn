@@ -803,8 +803,8 @@ window auto-show while preserving explicit editor/dialog requests. The failing e
 assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
 required before merge, not a blind rerun of the failing commit.
 
-## Local lint candidate (not in published APK)
+## Android lint hardening — published preview
 
-Debug/release lint debt is gated by exact existing findings and final APK native
-alignment. Read [the validation note](../../docs/ANDROID_LINT_HARDENING.md)
-before claiming build or device acceptance.
+PR #204 introduced zero-warning debug/release lint and final APK native alignment
+gates. Exact-head and post-merge validation, signed preview publication and website
+deployment passed. See [evidence and remaining device limits](../../docs/ANDROID_LINT_HARDENING.md).

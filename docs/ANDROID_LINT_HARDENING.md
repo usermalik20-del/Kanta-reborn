@@ -1,10 +1,10 @@
-# Android lint hardening — local candidate (not published)
+# Android lint hardening — published preview
 
-Branch `fix/android-lint-regressions-local`, based on `main` at `4d9c1a6`. This
-is local source work; it has **not** been built, signed, installed, pushed or
-released. The uploaded 2026-11-13 AGP 8.13.2 debug lint report contains 295
-warnings and no errors. Passing earlier CI lint meant no error-level findings;
-it never meant zero warnings.
+PR [#204](https://github.com/usermalik20-del/Kanta-reborn/pull/204) merged as
+`802b4a376434d28c749626e29a045ff590a48bea` after exact-head Android validation.
+The original 2026-11-13 debug report contained 295 warnings; the final hosted
+debug and release lint gates pass with an empty accepted-warning inventory.
+Earlier green CI had allowed warnings; the new gate does not.
 
 ## Build contract
 
@@ -14,7 +14,8 @@ variant-specific Android lint plus `tools/verify-android-lint.py`. The checked-i
 error fails the build. No automatic baseline refresh is possible. All lint checks
 stay enabled, and reports remain available. Narrow `SuppressLint` annotations
 are allowed only for the exact local TLS-pinning manager, required JavaScript in
-the two hardened embedded WebViews, and programmatic-only views. Source guards
+the two hardened embedded WebViews, the application-context-only font singleton,
+and programmatic-only views. Source guards
 verify those boundaries and that the views are absent from XML. The hosted job
 also builds unsigned debug/release variants; signing remains confined to the
 trusted-main-only step.
@@ -51,14 +52,29 @@ entry no longer replays the incoming Intent. Imported media temp and rename
 fallback files use atomic owner-only permissions. Android 12+ backup and
 transfer rules exclude app storage; older OSes retain `allowBackup=false`.
 
-## Evidence and blocker
+## Hosted evidence and remaining acceptance
 
-`python3 -m unittest discover -s tools/tests -p 'test_android_lint*.py'` covers
-lint gate negative controls, final APK ELF/ZIP alignment, security exceptions,
-programmatic-view XML absence and build wiring. The full Python suite, workspace
-contract and Java structure checks pass locally. The official LiteRT AAR was
-independently checked for 16 KB ELF segment alignment. A locally runnable
-Android build is unavailable here (the JVM fails on unsupported `getcpu(2)`;
-platform-36 SDK/AAPT2 are absent). Therefore source work and tests **do not prove
-a zero-warning Android build**. Hosted exact-head debug/release lint, native APK
-checks, core tests and emulator acceptance must pass before merge/release.
+- Final PR head `3d3c2f985387cfac0539f45491d712bd92f2b8d7` passed
+  [Android validation 43373300585](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43373300585).
+- Merge source `802b4a37` passed [post-merge validation 43374761810](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43374761810),
+  including debug/release zero-warning lint, packaged 16 KB alignment, core tests,
+  emulator checks and the owner-signed release build.
+- [Publisher 43375517109](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43375517109)
+  passed signer continuity and immutable asset checks; [Vercel 43375582622](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43375582622)
+  deployed the matching Android page and manifest.
+- First code-publication release: [`v0.10.0.851-preview-802b4a37`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.851-preview-802b4a37).
+  APK SHA-256: `87d7687f5944e19fb80f5455d9cc01533b83db3d4d3a6c26d6afc69ea67dff23`.
+  The live manifest and GitHub release digest matched. Later documentation-only
+  rebuilds may have a newer packaging source; use the [download page](https://kanta-public.vercel.app/android)
+  for the latest package rather than treating this immutable evidence as a moving link.
+
+The first PR run exposed missing legacy backup rules, a plural-count resource and
+six ellipsis characters after extraction; the second exposed the release-only
+monochrome adaptive icon requirement. These were fixed without changing the empty
+lint allowance or bypassing checks. Tests now guard legacy/modern backup parity,
+pluralization, typography and the dedicated monochrome icon.
+
+Physical-device listening, actual SPICE model inference/latency and real 16 KB
+page-device acceptance remain open. The local iSH JVM/SDK limitations still apply,
+but they no longer prevent the separate claim of successful hosted validation.
+No physical-device acceptance is claimed by emulator or source checks.

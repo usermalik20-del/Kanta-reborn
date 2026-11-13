@@ -1,6 +1,6 @@
 # Unfinished work
 
-**Last updated:** 2026-11-13 · **main reviewed:** `df87c03a` · **Android layout code source:** `df87c03a`
+**Last updated:** 2026-11-13 · **main reviewed:** `d62db1a` · **Android layout code source:** `df87c03a`
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
@@ -220,11 +220,11 @@ Privacy disclosure "Optional Android self-update" added to all four privacy file
 | `MkmdDecoder` magic constant and AES padding | `1dfecd7`, `2a01654` | Every real payload was rejected before this |
 | iOS PR #113 navigation regression | `b7d69f2` | Walkthrough green before `80ae286`, red after, green again after the revert |
 
-## Android lint follow-up (local candidate; open)
+## Android lint hardening — published; device acceptance open
 
-The uploaded 2026-11-13 debug report listed 295 warnings. Source fixes and
-per-variant anti-regression gates are local on `fix/android-lint-regressions-local`,
-not validated by an Android build or present in the published preview. Exact
-remaining debt and hardware gates: [Android lint hardening](ANDROID_LINT_HARDENING.md).
-Do not close until debug/release lint, final signed APK ELF/ZIP alignment,
-SPICE model runtime and real 16 KB page device have appropriate evidence.
+The 295-warning debug report has been remediated by PR #204 (`802b4a37`),
+with narrowly documented intentional-design exceptions. Zero-warning debug and
+release lint, APK ELF/ZIP alignment, core/emulator checks, signed preview publication
+and website deployment passed. See [immutable evidence](ANDROID_LINT_HARDENING.md).
+Keep physical-device SPICE model inference/listening/latency and real 16 KB page
+device acceptance open; neither source tests nor ordinary emulator runs prove those.
