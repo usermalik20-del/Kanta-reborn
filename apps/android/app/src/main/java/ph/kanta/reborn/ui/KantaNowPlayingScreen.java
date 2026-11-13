@@ -243,6 +243,15 @@ public class KantaNowPlayingScreen extends LinearLayout {
           if (useHorizontal) {
             keyCol.setGravity(Gravity.CENTER);
             tempoCol.setGravity(Gravity.CENTER);
+            // Remove vertical margin in horizontal layout
+            LayoutParams keyParams = (LayoutParams) keyCol.getLayoutParams();
+            keyParams.bottomMargin = 0;
+            keyCol.setLayoutParams(keyParams);
+          } else {
+            // Add vertical margin in vertical layout to separate key and tempo controls
+            LayoutParams keyParams = (LayoutParams) keyCol.getLayoutParams();
+            keyParams.bottomMargin = (int)(16 * density);
+            keyCol.setLayoutParams(keyParams);
           }
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -252,7 +261,9 @@ public class KantaNowPlayingScreen extends LinearLayout {
     perfContainer.setGravity(Gravity.CENTER);
     perfContainer.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
 
-    perfContainer.addView(keyCol, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+    LayoutParams keyParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    keyParams.bottomMargin = (int)(16 * density);
+    perfContainer.addView(keyCol, keyParams);
     perfContainer.addView(tempoCol, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
     addView(perfContainer);
