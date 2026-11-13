@@ -100,4 +100,4 @@ controller, fenced against stale edits/navigation/foreground/library state; ambi
 codes and titles require Search selection. DEL remains one-character deletion.
 Native marquee must stop with host visibility and detach, remain noninteractive, and
 reserve measured lyric space rather than covering lyrics. See
-[Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for pending runtime/device gates.
+[Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for hosted evidence and remaining device gates.

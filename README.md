@@ -18,7 +18,7 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 ## What you can do
 
 - **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Party sounds are now bundled recordings. This is experimental and may not work with every library or play every song.
-- **Plan your session:** search your library, line up songs and keep saved song sets. Android layout improvements are in progress: a Home queue preview with an inline keypad, roomier playback controls that adapt to the screen and an on-stage next-song strip; these are not in the current download yet.
+- **Plan your session:** search your library, line up songs and keep saved song sets. The Android preview now shows reserved songs above the keypad, accepts exact song codes with RES, and displays an Up next hint on stage. Playback controls have more room.
 - **Personalize the screen:** choose backgrounds or use your own photos and videos. Android also lets you choose a lyric font from a folder you grant read access to.
 - **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
 
@@ -46,7 +46,7 @@ Build instructions, test results and engineering details live in the developer d
 - [Android development](apps/android/README.md) · [iOS development](apps/ios/AGENTS.md) · [Website development](apps/web/README.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Engineering rules](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md)
 - [Testing and release requirements](docs/TESTING.md) · [Download verification](docs/VERIFIED_DOWNLOADS.md)
-- [Outstanding work](docs/UNFINISHED_WORK.md) · [Local Android work and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
+- [Outstanding work](docs/UNFINISHED_WORK.md) · [Android engineering records and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.
 ## Website validation fixes (2026-11-12)

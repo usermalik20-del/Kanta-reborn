@@ -15,25 +15,35 @@
   intentional repeated-song reservations remain visible. The measured strip height is
   reserved below lyrics. No additional playback/FIFO owner, timer or permission.
 
-## Candidate and evidence
+## Current Android layout status — published preview
 
-Base: `22b8e375`. Branch: `work/android-home-player-spacing`.
+PR [#202](https://github.com/usermalik20-del/Kanta-reborn/pull/202) merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92`. Exact-head
+[PR validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43328747178) and post-merge
+[Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43331249690) passed build/lint, 55,735 core checks
+and 555 emulator checks. Home and playback screenshots were reviewed after the fixes.
+The code-introduction/first-publication evidence below is immutable; later docs-only
+rebuilds may have a newer packaging source. Use the [download page](https://kanta-public.vercel.app/android)
+for the latest package rather than treating this evidence tag as a moving latest link.
+The [publisher](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332183448) verified the signed APK and published
+[`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a);
+[website deployment](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43332262432) succeeded.
+This supersedes the local/pending status in the dated candidate notes below.
+Physical-device, large-text/rotation, long-session and actual external-display acceptance
+remain open; independent review workers did not return a usable review.
 
-Local preflight passes: 196 Python tests, 157 production Java structure checks,
-59 Android workspace checks, companion and branding contracts, and whitespace checks.
-Seven initial Home guards reject the pre-change source. Eleven Java core code-match
-assertions and Android geometry/input/ticker instrumentation are added, but cannot run
-on the local iSH JVM (`getcpu(2)` unsupported). Android platform/AAPT2/D8 are absent;
-ADB has no device. No local APK build, emulator or physical-device acceptance.
+## Published artifact
 
-**Hosted validation and publication: pending.** Owner authorized pushing the branch,
-merging only after green checks, and the existing main signing/publisher/deploy pipeline.
-Independent review workers did not return usable final reviews; no independent acceptance
-is claimed. Hosted evidence will be added after it exists, not inferred from local checks.
+- Source: `df87c03a4c11d6fee6ba514334bb940e651b2d92` (PR #202).
+- Preview: [`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a).
+- APK SHA-256: `eb67e3aebd355b601a71a6d9f81b97c8016edcf7ab5b3a769134e66590b66682`.
+- Local final checks: 197 Python tests, Java structure 157 files, workspace 59 checks,
+  documentation synchronization and whitespace checks passed.
+- Java core and Android instrumentation have now executed in the linked hosted runs.
+- The local iSH JVM/SDK limitations still apply; no local APK/device validation is claimed.
 
 ## Remaining acceptance
 
-- Exact-head Android build/lint, core regressions and blocking emulator instrumentation.
+- Physical-device acceptance remains distinct from the completed hosted build/core/emulator gates.
 - Physical phone/tablet: Home queue/keypad fit, both keyboard modes, RES success and
   ambiguity fallback, rapid edits/navigation/backgrounding, rotation and large text.
 - Stage: readable scrolling/lyric clearance with long and duplicate titles, reorder,

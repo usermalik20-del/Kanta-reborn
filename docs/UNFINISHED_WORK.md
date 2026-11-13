@@ -1,19 +1,19 @@
 # Unfinished work
 
-**Last updated:** 2026-11-13 · **main reviewed:** `22b8e375` · **Android public release source:** `eed8020e`
+**Last updated:** 2026-11-13 · **main reviewed:** `df87c03a` · **Android layout code source:** `df87c03a`
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
 
-## Android layout candidate — validation pending
+## Android layout — hosted validation and preview publication complete
 
-The screenshot-driven Home/Now Playing/keypad/stage improvements are implemented on
-`work/android-home-player-spacing`, not yet in the public APK. See the
-[scope and validation record](ANDROID_HOME_LAYOUT.md). Local preflight and 196 Python
-tests pass; exact-commit Android compilation, core regressions and emulator checks are
-required before merge. A green workflow is not physical-device acceptance. Keep rotation,
-large-text, long-queue/long-title readability and fullscreen/external-display acceptance
-open until demonstrated; no hardware testing is claimed.
+PR #202 merged as `df87c03a4c11d6fee6ba514334bb940e651b2d92` and is included in
+[`v0.10.0.845-preview-df87c03a`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.845-preview-df87c03a). Home queue preview,
+DEL/RES, one keyboard toggle, roomier playback controls and the stage Up next strip passed
+[post-merge Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43331249690); signed publication and
+website deployment also succeeded. See [scope and evidence](ANDROID_HOME_LAYOUT.md).
+Keep physical-phone/tablet, large-text/rotation, long-title/queue readability and actual
+external-display acceptance open. Green CI and screenshot review are not hardware acceptance.
 
 ## How to use this file
 
