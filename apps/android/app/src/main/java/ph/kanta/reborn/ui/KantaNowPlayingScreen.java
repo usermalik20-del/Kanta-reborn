@@ -248,6 +248,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
       }
     };
+    perfContainer.setTag("kanta.group.key-tempo");
     perfContainer.setOrientation(VERTICAL);
     perfContainer.setGravity(Gravity.CENTER);
     perfContainer.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
