@@ -102,8 +102,14 @@ def publish():
         raise ValueError("Package artifact is outside its valid retention window")
     days = round((expires-created).total_seconds()/86400)
     if not 1 <= days <= 30:
-        raise ValueError("Package artifact retention must be 1–30 days")
-    url = f"https://github.com/{REPO}/actions/runs/{run_id}/artifacts/{package_id}"
+        raise ValueError("Package artifact retention must be 1-30 days")
+    
+    # Use GitHub Release asset URL (public, no sign-in, permanent)
+    version = info.get("version", "").split("-")[0] if info.get("version") else "unknown"
+    tag = f"v{version}-preview-{source[:8]}"
+    asset_name = f"KANTA-Android-preview-{source[:8]}.apk" if platform == "android" else f"KANTA-iOS-personal-unsigned-{source[:8]}.ipa"
+    url = f"https://github.com/{REPO}/releases/download/{tag}/{asset_name}"
+    
     path = ROOT / "apps/web/downloads.json"
     manifest = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     require_forward_source(platform, source, source_run, manifest)
@@ -126,10 +132,11 @@ def publish():
             peer_entry["packagingRun"] = int(match.group(1))
     manifest.setdefault("repository", REPO)
     manifest["verifiedAt"] = now.date().isoformat()
-    manifest["signInRequired"] = True
+    manifest["signInRequired"] = False  # Release assets are public
     manifest.setdefault("platforms", {})
     entry = {"source": source, "run": source_run, "artifact": int(info["artifact"]),
              "packagingRun": run_id, "packagingArtifact": package_id, "downloadUrl": url,
+             "releaseUrl": f"https://github.com/{REPO}/releases/tag/{tag}",
              "retentionDays": days,
              "artifactName": "KANTA-" + ("Android-preview-download" if platform == "android" else "iOS-personal-unsigned-download"),
              "signed": info["signed"], "sha256": digest,
@@ -151,9 +158,9 @@ def publish():
     page_path = ROOT / ("apps/web/android.html" if platform == "android" else "apps/web/ios-download.html")
     page = page_path.read_text(encoding="utf-8")
     section = (f'<section class="section" id="download"><h2>{"Android preview download" if platform == "android" else "Unsigned iPhone / iPad package"}</h2>'
-      f'<p><a class="button primary" href="{url}">Download {"verified Android bundle" if platform == "android" else "unsigned iOS bundle"} ↗</a></p>'
-      f'<p class="release-note">Verified CI artifact · GitHub sign-in required · {days}-day retention.</p>'
-      f'<p>Source <code>{source[:8]}</code> · Validated build run <a href="https://github.com/{REPO}/actions/runs/{source_run}">#{source_run}</a>.</p>'
+      f'<p><a class="button primary" href="{url}">Download {"verified Android bundle" if platform == "android" else "unsigned iOS bundle"} \u2197</a></p>'
+      f'<p class="release-note">Verified CI release \u00b7 Public download \u00b7 No sign-in required.</p>'
+      f'<p>Source <code>{source[:8]}</code> \u00b7 Validated build run <a href="https://github.com/{REPO}/actions/runs/{source_run}">#{source_run}</a>.</p>'
       + ('<p>Owner-signed Android preview; not a Google Play release. This new signing identity cannot update earlier debug-signed installs in place; reinstall may remove app-private data. SHA256.txt is included in this Android bundle.</p>' if platform == "android" else '<p><strong>Separate trusted personal signing is required before installation.</strong> This is not a Safari installer, App Store app or TestFlight invitation. iCloud Save is unavailable.</p><p>Both iPhone and iPad simulator walkthroughs passed on this exact source in <a href="https://github.com/' + REPO + '/actions/runs/' + str(int(info["walkthroughRun"])) + '">run #' + str(int(info["walkthroughRun"])) + '</a>. Simulator results do not establish physical-device acceptance.</p>')
       + f'<p>Artifact ZIP SHA-256: <code>{digest}</code>. {"APK SHA-256" if platform == "android" else "IPA SHA-256"}: <code>{info["sha256"]}</code>.</p></section>')
     import re as regex
