@@ -35,3 +35,30 @@ class PartyAssetTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class KeypadAssetsTest(unittest.TestCase):
+    KEYPAD_DIR = ROOT / "apps/android/app/src/main/assets/keypad"
+    KEYS = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Delete","Reserve"]
+
+    def test_all_keypad_tones_present(self):
+        for key in self.KEYS:
+            f = self.KEYPAD_DIR / (key + ".mp3")
+            self.assertTrue(f.exists(), f"Missing keypad tone: {key}.mp3")
+            self.assertGreater(f.stat().st_size, 500, f"{key}.mp3 too small")
+
+    def test_keypad_sounds_class_exists(self):
+        src = (ROOT / "apps/android/app/src/main/java/ph/kanta/reborn/KeypadSounds.java").read_text()
+        self.assertIn("SoundPool", src)
+        self.assertIn("USAGE_ASSISTANCE_SONIFICATION", src)
+
+    def test_session_gates_keypad_on_playing(self):
+        src = (ROOT / "apps/android/app/src/main/java/ph/kanta/reborn/SessionController.java").read_text()
+        self.assertIn("playKeypadSound", src)
+        self.assertIn("if (playing) return;", src)
+
+    def test_stage_presenter_triggers_keypad_sound(self):
+        src = (ROOT / "apps/android/app/src/main/java/ph/kanta/reborn/stage/StagePresenterImpl.java").read_text()
+        self.assertIn("session.playKeypadSound(digit)", src)
+        self.assertIn('session.playKeypadSound("delete")', src)
+        self.assertIn('session.playKeypadSound("reserve")', src)

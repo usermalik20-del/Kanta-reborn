@@ -143,9 +143,18 @@ public final class StagePresenterImpl extends FrameLayout
     upNextTicker = new UpNextTicker(context);
     remoteStatusView = new RemoteStatusView(context);
     keypad = new Keypad(context, null, new Keypad.KeypadListener() {
-      @Override public void onKey(String digit) { /* handled by SearchOverlay */ }
-      @Override public void onBackspace() { /* handled by SearchOverlay */ }
-      @Override public void onSubmit() { /* handled by SearchOverlay */ }
+      @Override public void onKey(String digit) {
+        session.playKeypadSound(digit);
+        // handled by SearchOverlay
+      }
+      @Override public void onBackspace() {
+        session.playKeypadSound("delete");
+        // handled by SearchOverlay
+      }
+      @Override public void onSubmit() {
+        session.playKeypadSound("reserve");
+        // handled by SearchOverlay
+      }
       @Override public void onDismiss() { keypad.hide(); }
     });
 

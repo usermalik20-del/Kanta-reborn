@@ -123,13 +123,16 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private final SettingsStore settings;
   boolean realm;
   final PartyAudio party;
+  final KeypadSounds keypadSounds;
   final MicrophoneInput microphone;
   /** Scenic video library; null when its private storage cannot be opened. */
   final BgvLibrary bgvLibrary;
   final MicrophoneMonitor monitor;
   public final android.content.SharedPreferences options;
-  boolean foreground, loopEnabled, auxiliaryInterrupted, assigningPad;
+  boolean foreground, loopEnabled = true, auxiliaryInterrupted, assigningPad;
   String loopSongId = "";
+  /** Cached copy of the bundled standby interlude; null until prepared on startup. */
+  private File bundledInterludeFile;
   final String[] customPads = new String[8];
   private final long[] padGeneration = new long[8];
   String soundFontName = "KANTA original tone";
@@ -253,6 +256,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   if (importProgressListener != null)
                     repository.setImportProgressListener(importProgressDispatcher);
                   preparePads();
+                  prepareInterlude();
+                  prepareKeypadSounds();
                   restoreStage();
                   message = "Your music. Your stage.";
                   publish();
@@ -422,7 +427,65 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     publish();
   }
 
+  private void prepareInterlude() {
+    io.execute(
+        () -> {
+          try {
+            File root = new File(context.getCacheDir(), "interlude-v1");
+            if (!root.isDirectory() && !root.mkdirs())
+              throw new IOException("Cannot create interlude cache");
+            File file = new File(root, "standby-loop.mp3");
+            if (BundledInterlude.copyTo(context, file)) {
+              main.post(
+                  () -> {
+                    bundledInterludeFile = file;
+                    publish();
+                  });
+            }
+          } catch (Exception failure) {
+            // The bundled welcome is optional: a failed cache write leaves the
+            // intermission silent; a user import can still be used.
+          }
+        });
+  }
+
+
+  /** Copies keypad tone assets to cache and loads them into the SoundPool. */
+  private void prepareKeypadSounds() {
+    io.execute(
+        () -> {
+          try {
+            File root = new File(context.getCacheDir(), "keypad-v1");
+            if (!root.isDirectory() && !root.mkdirs())
+              throw new IOException("Cannot create keypad cache");
+            String[] names = {"Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Delete","Reserve"};
+            for (String name : names) {
+              File file = new File(root, name + ".mp3");
+              try (java.io.InputStream in = context.getAssets().open("keypad/" + name + ".mp3");
+                   java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+              }
+            }
+            main.post(() -> keypadSounds.load(root));
+          } catch (Exception ignored) {}
+        });
+  }
+
+  /**
+   * Plays a keypad tone if no song is currently playing.
+   *
+   * <p>Key feedback must never mask or interrupt karaoke audio, so the tone is gated on
+   * {@code !isPlaying()}. Accepts "0"–"9", "delete", "reserve".
+   */
+  public void playKeypadSound(String key) {
+    if (playing) return;
+    keypadSounds.play(key);
+  }
+
   private void preparePads() {
+
     io.execute(
         () -> {
           try {
@@ -750,11 +813,20 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             && queue.peek() == null;
     if (allowed && requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       allowed = false;
-    party.loop(
-        selected == null || repository == null
-            ? null
-            : new File(repository.media, selected.fileName),
-        allowed);
+    File intermissionSource = null;
+    if (selected != null && repository != null) {
+      intermissionSource = new File(repository.media, selected.fileName);
+    } else if (bundledInterludeFile != null) {
+      intermissionSource = bundledInterludeFile; // bundled standby welcome
+    }
+    party.loop(intermissionSource, allowed);
+  }
+
+  /** Clears any imported track so the bundled standby welcome plays again. */
+  void useBundledInterlude() {
+    loopSongId = "";
+    options.edit().remove("loopSong").apply();
+    publish();
   }
 
   void chooseIntermission(Song song) {
@@ -771,7 +843,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     publish();
   }
 
-  void triggerPad(int slot) {
+  
+    } catch (Exception ignored) {}
+  }
+
+void triggerPad(int slot) {
     if (!foreground || requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       return;
     auxiliaryInterrupted = false;

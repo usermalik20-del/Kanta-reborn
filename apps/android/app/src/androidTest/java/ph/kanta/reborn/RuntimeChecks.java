@@ -1344,6 +1344,7 @@ public final class RuntimeChecks extends Instrumentation {
             session.stopMicrophone();
             session.setScoring(false);
             session.chooseIntermission(loopSong);
+            if (session.loopEnabled) session.toggleIntermission();
             session.toggleIntermission();
           });
       await(() -> session.party.loopPlaying(), "Idle intermission did not start");

@@ -2747,9 +2747,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(text("Loop & party sounds", 22, ACCENT));
     body.addView(
         text(
-            "Choose an imported MP3/WAV for between-song music. It stops for karaoke and when you"
-                + " leave the app. Party clips can be assigned from My Set (up to 8 MB / 30"
-                + " seconds).",
+            "The bundled standby welcome plays on the empty stage. Choose your own MP3/WAV to"
+                + " override it; it stops for karaoke and when you leave the app. Party clips can"
+                + " be assigned from My Set (up to 8 MB / 30 seconds).",
             15,
             Color.WHITE));
     Song loopSong =
@@ -2759,13 +2759,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             .orElse(null);
     body.addView(
         button(
-            loopSong == null ? "Choose between-song music" : "Music: " + loopSong.title,
+            loopSong == null
+                ? "Override with your own track"
+                : "Track: " + loopSong.title + "  (tap to change)",
             () -> chooseAudio("Between-song music", session::chooseIntermission)));
+    if (loopSong != null)
+      body.addView(button("Use the bundled standby track", session::useBundledInterlude));
     Button enabled =
         button(
             session.loopEnabled ? "Turn off between-song music" : "Turn on between-song music",
             session::toggleIntermission);
-    enabled.setEnabled(loopSong != null);
     body.addView(enabled);
     volumeControl(
         "Between-song volume",
