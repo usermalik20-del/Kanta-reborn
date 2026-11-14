@@ -29,6 +29,9 @@ DOC_ONLY_PATHS = {
     "apps/web/README.md", "apps/web/privacy.html",
     "apps/android/README.md", "apps/android/app/src/main/assets/privacy.txt",
     "apps/ios/PRIVACY.md", "apps/ios/README.md", "apps/ios/AGENTS.md",
+    # Publisher workflow modifies these without doc changes; ignore them
+    "apps/web/downloads.json", "apps/web/android.html", "apps/web/ios-download.html",
+    "apps/web/updates.json",
 }
 
 
