@@ -184,6 +184,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     pitch = Math.min(12, Math.max(-12, settings.getPitch()));
     lyricScale = Math.max(.75f, Math.min(1.5f, options.getFloat("lyricScale", 1)));
     loopSongId = options.getString("loopSong", "");
+    keypadSounds = new KeypadSounds();
     party =
         new PartyAudio(
             this::publish,
@@ -843,11 +844,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     publish();
   }
 
-  
-    } catch (Exception ignored) {}
-  }
-
-void triggerPad(int slot) {
+  void triggerPad(int slot) {
     if (!foreground || requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       return;
     auxiliaryInterrupted = false;
