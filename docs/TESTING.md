@@ -1442,3 +1442,8 @@ gates. The owner-signed preview passed signer continuity and immutable asset
 publication; the matching website deployment succeeded. The lint allowance
 remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
+
+
+### Keypad sound guards
+
+`test_party_assets.py` verifies all 12 keypad MP3s exist, `KeypadSounds.java` uses SoundPool with sonification attributes, `SessionController.playKeypadSound` gates on `!isPlaying()`, and `StagePresenterImpl` triggers tones from the keypad listener. `test_interlude_assets.py` verifies the standby loop asset, `BundledInterlude` catalog, and SessionController wiring.

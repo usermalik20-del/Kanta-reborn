@@ -25,6 +25,10 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
 
 <!-- party-sounds-assets-committed -->
+## Keypad press sounds & standby interlude (2026-11-14)
+
+The on-screen keypad now plays a short tone for each key press (0–9, Delete, Reserve). Tones are silent while a song is playing on stage. A bundled standby welcome (backing track + branding line) plays between songs on the empty stage; the owner can override with a custom track or disable it in Party Mode.
+
 ## Now Playing divider removed & scroll fade (2026-11-13)
 
 The stray `|` divider between Key and Tempo columns in the Now Playing header was removed. A vertical fading edge (24 dp) was added to the main scroll view so content fades softly into the floating bottom dock instead of a hard cutoff.

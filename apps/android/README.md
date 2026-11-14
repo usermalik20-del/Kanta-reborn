@@ -1,3 +1,9 @@
+## Keypad press sounds & standby interlude (2026-11-14)
+
+`KeypadSounds` (SoundPool, 1 stream, `USAGE_ASSISTANCE_SONIFICATION`) plays a tone per keypad key. `SessionController.playKeypadSound()` gates on `!isPlaying()` so feedback never masks karaoke. Twelve MP3 assets live in `assets/keypad/`.
+
+The standby interlude (`BundledInterlude`, `assets/interlude/standby-loop.mp3`) is the default between-song source, plays on the empty stage, and stops for karaoke/online audio. Party Mode offers "Override with your own track" and "Use the bundled standby track."
+
 ## Now Playing divider removed & scroll fade (2026-11-13)
 
 The stray `|` divider between Key and Tempo columns in `KantaNowPlayingScreen` was removed. `MainActivity` adds a vertical fading edge (24 dp) to the main `ScrollView` so content fades into the floating bottom dock.
