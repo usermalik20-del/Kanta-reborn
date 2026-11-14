@@ -2,17 +2,17 @@
   "format": "kanta-update-feed",
   "formatVersion": 1,
   "channel": "stable-reconstruction",
-  "publishedAt": "2026-11-14T14:03:59Z",
-  "sourceCommit": "5a23b67d09860fa9a477ec1d72c755ca8b133b10",
+  "publishedAt": "2026-11-14T14:26:50Z",
+  "sourceCommit": "c92b149698b6d96d4ea4049df612d51fe89d4657",
   "android": {
-    "versionCode": 873,
-    "versionName": "0.10.0.873-preview",
+    "versionCode": 874,
+    "versionName": "0.10.0.874-preview",
     "minSdk": 26,
     "signingCertSha256": "04488bab3deaf6c9702605e27b7e5469e5f1b6bcf2d440b0bd2b507202d385fc",
-    "apkUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0.873-preview-5a23b67d/KANTA-Android-preview-5a23b67d.apk",
+    "apkUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0.874-preview-c92b1496/KANTA-Android-preview-c92b1496.apk",
     "apkBytes": 118204843,
-    "apkSha256": "72aed53df9350d693126d50932ea866b01e4db6daf6ae40e75e464080be7583d",
-    "notes": "KANTA preview built from 5a23b67d",
+    "apkSha256": "374cfeba616c6340f2f0411be872a566f29391ab0f72b669e721af8de510c065",
+    "notes": "KANTA preview built from c92b1496",
     "mandatory": false
   }
 }
