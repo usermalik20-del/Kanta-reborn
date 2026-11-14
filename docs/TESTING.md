@@ -1,3 +1,9 @@
+## Publisher release asset URL fix (2026-11-14)
+
+- `tools/publish-platform-download.py`: Read version from `apk-metadata.json` for correct GitHub Release asset URL.
+- `tools/check-documentation-sync.py`: Added publisher-only website files to `DOC_ONLY_PATHS` to prevent false documentation sync failures.
+
+---
 ## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
 
 - **Keypad sounds**: Fixed `SoundPool.OnLoadCompleteListener` to use anonymous class for D8 desugaring compatibility; keypad tones now load on IO thread for faster readiness.
