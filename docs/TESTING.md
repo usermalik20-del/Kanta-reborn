@@ -1450,3 +1450,4 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 
 > Note: `KeypadSounds` is initialized in the `SessionController` constructor alongside `PartyAudio`.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
+<!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
