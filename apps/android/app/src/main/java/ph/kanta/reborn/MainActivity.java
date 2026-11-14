@@ -1840,6 +1840,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         tab = "Visuals";
         render();
         break;
+      case "bgv":
+        openBackgroundVideoLibrary();
+        break;
       case "scenic":
         tab = "Scenic";
         render();
@@ -1906,9 +1909,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body.addView(groupScreen("More", "Advanced settings and tools.", new ph.kanta.reborn.ui.GroupScreen.Item[] {
       new ph.kanta.reborn.ui.GroupScreen.Item("settings", "Settings", "Advanced voice and app settings", ph.kanta.reborn.R.drawable.kanta_settings_color),
       new ph.kanta.reborn.ui.GroupScreen.Item("companion", "Companion control", "Use another device as a remote", ph.kanta.reborn.R.drawable.kanta_companion_color),
+      new ph.kanta.reborn.ui.GroupScreen.Item("bgv", "Background Video", "Manage stage background videos", ph.kanta.reborn.R.drawable.kanta_scenic_color),
       new ph.kanta.reborn.ui.GroupScreen.Item("diagnostics", "Diagnostics", "Inspect app and audio state", ph.kanta.reborn.R.drawable.kanta_diagnostics_color),
       new ph.kanta.reborn.ui.GroupScreen.Item("help", "Help", "Learn how KANTA works", ph.kanta.reborn.R.drawable.kanta_help_color)
     }));
+  }
+
+  private void openBackgroundVideoLibrary() {
+    tab = "Scenic";
+    render();
   }
 
   private void openYouTubeVideo() {
@@ -2403,15 +2412,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
 
   private void downloadFluidR3GM() {
-    session.downloadFluidR3GM();
+    showDownloadProgress("FluidR3 GM", session::downloadFluidR3GM);
   }
 
   private void downloadMuseScoreGeneral() {
-    session.downloadMuseScoreGeneral();
+    showDownloadProgress("MuseScore General", session::downloadMuseScoreGeneral);
   }
 
   private void downloadSGMv201() {
-    session.downloadSGMv201();
+    showDownloadProgress("SGM-v2.01 Yamaha Grand", session::downloadSGMv201);
   }
 
   private String formatBytes(long bytes) {
@@ -2434,6 +2443,33 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     } catch (Exception e) {
       return "License file not found: " + assetName;
     }
+  }
+
+  private void showDownloadProgress(String name, Runnable downloadAction) {
+    android.app.ProgressDialog dialog = new android.app.ProgressDialog(this);
+    dialog.setTitle("Downloading " + name);
+    dialog.setMessage("Preparing download...");
+    dialog.setIndeterminate(true);
+    dialog.setCancelable(false);
+    dialog.show();
+    session.setDownloadProgressListener(new SessionController.DownloadProgressListener() {
+      @Override public void onProgress(String message) {
+        runOnUiThread(() -> {
+          if (dialog.isShowing()) dialog.setMessage(message);
+        });
+      }
+      @Override public void onComplete(boolean success, String message) {
+        runOnUiThread(() -> {
+          dialog.dismiss();
+          new android.app.AlertDialog.Builder(MainActivity.this)
+              .setTitle(success ? "Download Complete" : "Download Failed")
+              .setMessage(message)
+              .setPositiveButton("OK", null)
+              .show();
+        });
+      }
+    });
+    downloadAction.run();
   }
   private void nameSet(boolean played) {
     ArrayList<Song> songs = new ArrayList<>();

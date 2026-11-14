@@ -24,6 +24,17 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     void changed();
   }
 
+  interface DownloadProgressListener {
+    void onProgress(String message);
+    void onComplete(boolean success, String message);
+  }
+
+  private DownloadProgressListener downloadProgressListener;
+
+  void setDownloadProgressListener(DownloadProgressListener l) {
+    downloadProgressListener = l;
+  }
+
   final CompanionControl companion;
   final BrowserCompanion browserCompanion;
   public final KantaConnectHost kantaConnectHost;
@@ -453,6 +464,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   /** Copies keypad tone assets to cache and loads them into the SoundPool. */
   private void prepareKeypadSounds() {
+    // Load keypad sounds on IO thread to avoid blocking UI
     io.execute(
         () -> {
           try {
@@ -469,7 +481,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
               }
             }
-            main.post(() -> keypadSounds.load(root));
+            // Load into SoundPool on IO thread (load() is async but returns immediately)
+            keypadSounds.load(root);
           } catch (Exception ignored) {}
         });
   }
@@ -814,19 +827,21 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             && queue.peek() == null;
     if (allowed && requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       allowed = false;
-    File intermissionSource = null;
     if (selected != null && repository != null) {
-      intermissionSource = new File(repository.media, selected.fileName);
+      File customFile = new File(repository.media, selected.fileName);
+      party.loop(customFile, allowed); // custom intermission track loops
     } else if (bundledInterludeFile != null) {
-      intermissionSource = bundledInterludeFile; // bundled standby welcome
+      party.playWelcomeOnce(bundledInterludeFile, allowed); // bundled welcome plays once
+    } else {
+      party.loop((File) null, false); // stop any looping custom track
     }
-    party.loop(intermissionSource, allowed);
   }
 
   /** Clears any imported track so the bundled standby welcome plays again. */
   void useBundledInterlude() {
     loopSongId = "";
     options.edit().remove("loopSong").apply();
+    party.resetWelcomePlayed();
     publish();
   }
 
@@ -834,13 +849,17 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     if (!isAudio(song)) return;
     loopSongId = song.id;
     options.edit().putString("loopSong", loopSongId).apply();
+    party.resetWelcomePlayed();
     publish();
   }
 
   void toggleIntermission() {
     auxiliaryInterrupted = false;
     loopEnabled = !loopEnabled;
-    if (loopEnabled) revokeOnlineAudio();
+    if (loopEnabled) {
+      revokeOnlineAudio();
+      party.resetWelcomePlayed();
+    }
     publish();
   }
 
@@ -1796,6 +1815,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         main.post(() -> {
           message = "Downloading FluidR3 GM... 0%";
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onProgress("Downloading FluidR3 GM... 0%");
         });
         try (java.io.InputStream in = new java.net.URL("https://ftp.osuosl.org/pub/musescore/soundfont/fluid-soundfont.zip").openStream();
              java.io.FileOutputStream out = new java.io.FileOutputStream(tempZip)) {
@@ -1811,6 +1831,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 int pct = totalBytes > 0 ? (int) (finalDownloaded * 100 / totalBytes) : 0;
                 message = "Downloading FluidR3 GM... " + pct + "% (" + formatBytes(finalDownloaded) + " / " + formatBytes(totalBytes) + ")";
                 publish();
+                if (downloadProgressListener != null) downloadProgressListener.onProgress(message);
               });
             }
           }
@@ -1856,6 +1877,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           libraryImporting = false;
           message = "FluidR3 GM downloaded successfully! Select it from SoundFonts.";
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onComplete(true, message);
         });
       } catch (Exception e) {
         if (tempZip != null) tempZip.delete();
@@ -1865,6 +1887,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           libraryImporting = false;
           message = "Download failed: " + e.getMessage();
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onComplete(false, message);
         });
       }
     });
@@ -1896,6 +1919,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         main.post(() -> {
           message = "Downloading MuseScore General... 0%";
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onProgress("Downloading MuseScore General... 0%");
         });
         try (java.io.InputStream in = new java.net.URL("https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2").openStream();
              java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
@@ -1911,6 +1935,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 int pct = totalBytes > 0 ? (int) (finalDownloaded * 100 / totalBytes) : 0;
                 message = "Downloading MuseScore General... " + pct + "% (" + formatBytes(finalDownloaded) + " / " + formatBytes(totalBytes) + ")";
                 publish();
+                if (downloadProgressListener != null) downloadProgressListener.onProgress(message);
               });
             }
           }
@@ -1934,6 +1959,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           libraryImporting = false;
           message = "MuseScore General downloaded successfully! Select it from SoundFonts.";
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onComplete(true, message);
         });
       } catch (Exception e) {
         if (temp != null) temp.delete();
@@ -1942,6 +1968,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           libraryImporting = false;
           message = "Download failed: " + e.getMessage();
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onComplete(false, message);
         });
       }
     });
@@ -1972,6 +1999,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         main.post(() -> {
           message = "Downloading SGM-v2.01... 0%";
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onProgress("Downloading SGM-v2.01... 0%");
         });
         try (java.io.InputStream in = new java.net.URL("https://huggingface.co/spaces/projectlosangeles/Orpheus-Mono-Melodies-Mixer/resolve/main/SGM-v2.01-YamahaGrand-Guit-Bass-v2.7.sf2").openStream();
              java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
@@ -1987,6 +2015,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 int pct = totalBytes > 0 ? (int) (finalDownloaded * 100 / totalBytes) : 0;
                 message = "Downloading SGM-v2.01... " + pct + "% (" + formatBytes(finalDownloaded) + " / " + formatBytes(totalBytes) + ")";
                 publish();
+                if (downloadProgressListener != null) downloadProgressListener.onProgress(message);
               });
             }
           }
@@ -2010,6 +2039,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           libraryImporting = false;
           message = "SGM-v2.01 downloaded successfully! Select it from SoundFonts.";
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onComplete(true, message);
         });
       } catch (Exception e) {
         if (temp != null) temp.delete();
@@ -2018,6 +2048,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           libraryImporting = false;
           message = "Download failed: " + e.getMessage();
           publish();
+          if (downloadProgressListener != null) downloadProgressListener.onComplete(false, message);
         });
       }
     });

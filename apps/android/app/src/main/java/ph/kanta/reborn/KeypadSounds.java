@@ -18,10 +18,6 @@ final class KeypadSounds {
   private final Map<String, Integer> keyToIndex = new HashMap<>();
   private final Set<Integer> ready = new HashSet<>();
 
-  static {
-    // Build the key→index map for quick lookup.
-  }
-
   KeypadSounds() {
     pool = new SoundPool.Builder()
         .setMaxStreams(1)
@@ -31,8 +27,11 @@ final class KeypadSounds {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build())
         .build();
-    pool.setOnLoadCompleteListener((p, id, status) -> {
-      if (status == 0) ready.add(id);
+    pool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+      @Override
+      public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
+        if (status == 0) ready.add(sampleId);
+      }
     });
     // Map human key strings to pool indices.
     for (int i = 0; i < 10; i++) keyToIndex.put(String.valueOf(i), i);
