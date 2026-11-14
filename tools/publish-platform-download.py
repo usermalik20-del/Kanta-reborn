@@ -105,7 +105,18 @@ def publish():
         raise ValueError("Package artifact retention must be 1-30 days")
     
     # Use GitHub Release asset URL (public, no sign-in, permanent)
-    version = info.get("version", "").split("-")[0] if info.get("version") else "unknown"
+    if platform == "android":
+        # Read version from apk-metadata.json (created by verify-ota-publication.py)
+        import json as _json
+        apk_meta_path = ROOT / "verified-downloads" / "android" / "apk-metadata.json"
+        if apk_meta_path.exists():
+            apk_meta = _json.loads(apk_meta_path.read_text())
+            version = apk_meta.get("versionName", "").split("-")[0] if apk_meta.get("versionName") else "unknown"
+        else:
+            version = "unknown"
+    else:
+        # iOS: version not available in build-info, use "unknown"
+        version = "unknown"
     tag = f"v{version}-preview-{source[:8]}"
     asset_name = f"KANTA-Android-preview-{source[:8]}.apk" if platform == "android" else f"KANTA-iOS-personal-unsigned-{source[:8]}.ipa"
     url = f"https://github.com/{REPO}/releases/download/{tag}/{asset_name}"
