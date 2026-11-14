@@ -1215,3 +1215,4 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 ### Keypad sounds & standby interlude (2026-11-14)
 
 Keypad key-press tones: 12 MP3 assets in `assets/keypad/`, played via `KeypadSounds` (SoundPool) gated on `!isPlaying()`. Standby interlude: `BundledInterlude` catalog copies `assets/interlude/standby-loop.mp3` to cache; `SessionController` uses it as default between-song source (loopEnabled=true), with user override in Party Mode.
+<!-- keypad-sounds+interlude: 2026-11-14 -->
