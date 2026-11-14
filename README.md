@@ -15,6 +15,14 @@ Import your music, follow the lyrics when available, and line up songs for your 
 
 The iPhone/iPad download cannot be installed directly: it needs a separate, trusted tool to prepare it for installation using your own Apple account. KANTA's website does not ask for your Apple password.
 
+## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
+
+- **Keypad sounds**: Fixed `SoundPool.OnLoadCompleteListener` to use anonymous class for D8 desugaring compatibility; keypad tones now load on IO thread for faster readiness.
+- **Standby interlude**: Bundled welcome track now plays once on startup (not looping); custom intermission tracks still loop via `PartyAudio.loop()`.
+- **Background Video (BGV)**: Added prominent entry in More ▸ Background Video for managing stage background videos.
+- **SoundFont downloads**: Added progress dialog with live percentage for FluidR3 GM, MuseScore General, and SGM-v2.01 downloads via `SessionController.DownloadProgressListener`.
+
+---
 ## What you can do
 
 - **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Party sounds are now bundled recordings. This is experimental and may not work with every library or play every song.

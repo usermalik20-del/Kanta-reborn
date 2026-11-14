@@ -1158,6 +1158,14 @@ Android validation run 43211938789 failed `lintDebug` with `WrongConstant` at th
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
 
+## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
+
+- **Keypad sounds**: Fixed `SoundPool.OnLoadCompleteListener` to use anonymous class for D8 desugaring compatibility; keypad tones now load on IO thread for faster readiness.
+- **Standby interlude**: Bundled welcome track now plays once on startup (not looping); custom intermission tracks still loop via `PartyAudio.loop()`.
+- **Background Video (BGV)**: Added prominent entry in More ▸ Background Video for managing stage background videos.
+- **SoundFont downloads**: Added progress dialog with live percentage for FluidR3 GM, MuseScore General, and SGM-v2.01 downloads via `SessionController.DownloadProgressListener`.
+
+---
 ## Android layout and singer queue hints — historical candidate notes
 
 User screenshot feedback identified unused Home height and touching/cramped playback

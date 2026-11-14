@@ -4,6 +4,14 @@
 
 The standby interlude (`BundledInterlude`, `assets/interlude/standby-loop.mp3`) is the default between-song source, plays on the empty stage, and stops for karaoke/online audio. Party Mode offers "Override with your own track" and "Use the bundled standby track."
 
+## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
+
+- **Keypad sounds**: Fixed `SoundPool.OnLoadCompleteListener` to use anonymous class for D8 desugaring compatibility; keypad tones now load on IO thread for faster readiness.
+- **Standby interlude**: Bundled welcome track now plays once on startup (not looping); custom intermission tracks still loop via `PartyAudio.loop()`.
+- **Background Video (BGV)**: Added prominent entry in More ▸ Background Video for managing stage background videos.
+- **SoundFont downloads**: Added progress dialog with live percentage for FluidR3 GM, MuseScore General, and SGM-v2.01 downloads via `SessionController.DownloadProgressListener`.
+
+---
 ## Now Playing divider removed & scroll fade (2026-11-13)
 
 The stray `|` divider between Key and Tempo columns in `KantaNowPlayingScreen` was removed. `MainActivity` adds a vertical fading edge (24 dp) to the main `ScrollView` so content fades into the floating bottom dock.
