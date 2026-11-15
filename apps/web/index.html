@@ -35,20 +35,8 @@
     <button class="button" data-theme-toggle="dark" aria-pressed="false" aria-label="Dark theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">🌙</button>
     <button class="button" data-theme-toggle="system" aria-pressed="true" aria-label="System theme" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;">💻</button>
     <a class="button primary header-cta" href="/android">Download App</a>
-
   </div>
 </header>
-  <div class="drawer-overlay" id="drawer-overlay" aria-hidden="true"></div>
-  <div class="nav-drawer" id="nav-drawer" role="navigation" aria-label="Mobile menu">
-    <a href="/ios-download">iPhone / iPad</a>
-    <a href="/android">Android</a>
-    <a href="/guide">How to Use</a>
-    <a href="/features">Features</a>
-    <a href="/songbook">My Songbook</a>
-    <a href="/support">Help</a>
-    <a href="/blog">Blog</a>
-    <a class="button primary" href="/android" style="margin-top: 16px; text-align: center; justify-content: center;">Download App</a>
-  </nav>
 
 <main id="content">
 
@@ -284,33 +272,5 @@
 <script defer src="/command-palette.js"></script>
 <script defer src="/hero-animation.js"></script>
 
-  <script>
-    const toggle = document.querySelector(x27.mobile-nav-togglex27);
-    const drawer = document.getElementById(x27nav-drawerx27);
-    const overlay = document.getElementById(x27drawer-overlayx27);
-    if (toggle </body></body> drawer </body></body> overlay) {
-      toggle.addEventListener(x27clickx27, () => {
-        const open = drawer.classList.toggle(x27openx27);
-        overlay.classList.toggle(x27openx27, open);
-        toggle.setAttribute(x27aria-expandedx27, open);
-        toggle.textContent = open ? x27✕x27 : x27☰x27;
-        document.body.style.overflow = open ? x27hiddenx27 : x27x27;
-      });
-      overlay.addEventListener(x27clickx27, () => {
-        drawer.classList.remove(x27openx27);
-        overlay.classList.remove(x27openx27);
-        toggle.setAttribute(x27aria-expandedx27, x27falsex27);
-        toggle.textContent = x27☰x27;
-        document.body.style.overflow = x27x27;
-      });
-      drawer.querySelectorAll(x27ax27).forEach(a => a.addEventListener(x27clickx27, () => {
-        drawer.classList.remove(x27openx27);
-        overlay.classList.remove(x27openx27);
-        toggle.setAttribute(x27aria-expandedx27, x27falsex27);
-        toggle.textContent = x27☰x27;
-        document.body.style.overflow = x27x27;
-      }));
-    }
-  </script>
 </body>
 </html>
