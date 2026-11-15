@@ -1582,3 +1582,4 @@ publication; the matching website deployment succeeded. The lint allowance
 remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
+

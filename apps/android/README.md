@@ -849,3 +849,4 @@ PR #204 introduced zero-warning debug/release lint and final APK native alignmen
 gates. Exact-head and post-merge validation, signed preview publication and website
 deployment passed. See [evidence and remaining device limits](../../docs/ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
+
