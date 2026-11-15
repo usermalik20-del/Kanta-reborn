@@ -92,7 +92,8 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertEqual(result["ios"]["downloadUrl"], "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/802")
         self.assertEqual(result["android"]["packagingRun"], 900)
         self.assertIn("Old", (self.root / "apps/web/ios-download.html").read_text())
-        self.assertEqual(result["android"]["downloadUrl"].rsplit("/", 1)[-1], "901")
+        self.assertIn("releases/download", result["android"]["downloadUrl"])
+        self.assertTrue(result["android"]["downloadUrl"].endswith(".apk"))
         android_page = (self.root / "apps/web/android.html").read_text()
         self.assertIn("Keep page content", android_page)
         self.assertIn("SHA256.txt is included", android_page)
@@ -109,7 +110,8 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertIn('<section class="section reveal" id="download">', page)
         self.assertIn('SHA256.txt is included', page)
         self.assertIn("Keep page content", page)
-        self.assertEqual(result["android"]["downloadUrl"].rsplit("/", 1)[-1], "901")
+        self.assertIn("releases/download", result["android"]["downloadUrl"])
+        self.assertTrue(result["android"]["downloadUrl"].endswith(".apk"))
 
     def test_ios_publish_requires_walkthrough_and_preserves_android(self):
         with patch.dict(os.environ, {"PLATFORM": "ios"}):

@@ -1,3 +1,13 @@
+## Landscape mode support (2026-11-15)
+
+- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
+- **MainActivity.java**: 
+  - Added `lastOrientation` field to track orientation changes
+  - `onConfigurationChanged()` rebuilds layout when orientation changes
+  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
+  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+
+---
 ## Keypad press sounds & standby interlude (2026-11-14)
 
 `KeypadSounds` (SoundPool, 1 stream, `USAGE_ASSISTANCE_SONIFICATION`) plays a tone per keypad key. `SessionController.playKeypadSound()` gates on `!isPlaying()` so feedback never masks karaoke. Twelve MP3 assets live in `assets/keypad/`.

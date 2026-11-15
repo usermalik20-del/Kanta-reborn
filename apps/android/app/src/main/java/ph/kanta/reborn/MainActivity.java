@@ -98,6 +98,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int searchGeneration = 0;
   private int workspaceSearchGeneration = 0;
   private int referenceSearchGeneration = 0;
+  private int lastOrientation = -1;
   private ph.kanta.reborn.ui.KantaNowPlayingScreen nowPlayingScreen;
   private ph.kanta.reborn.ui.KantaMicVoiceScreen micVoiceScreen;
   private Button onlineLyricsButton;
@@ -256,6 +257,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   @Override
   public void onConfigurationChanged(android.content.res.Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
+    int newOrient = newConfig.orientation;
+    if (lastOrientation >= 0 && newOrient != lastOrientation) {
+      // Orientation changed: rebuild the window layout for the new form factor.
+      root = null;
+      body = null;
+      stagePane = null;
+      navigationTabs = null;
+      appHeader = null;
+      buildWindow();
+      render();
+    }
+    lastOrientation = newOrient;
     // Handset/tablet changes re-lay out the presented accessory so it stays a
     // bottom sheet on a handset and an anchored panel on a large screen.
     if (workspace != null) workspace.requestLayout();
@@ -438,10 +451,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     header.addView(brandBlock, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(button("Help", this::help));
     root.addView(header);
+    boolean landscape = getResources().getConfiguration().orientation
+        == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
     LinearLayout main = new LinearLayout(this);
-    // The live stage is always the first row. Utilities flow below it on every
-    // form factor; a tablet must not turn the stage into a side rail.
-    main.setOrientation(LinearLayout.VERTICAL);
+    // Portrait: stage on top, utilities below.
+    // Landscape: stage on the left, utilities on the right (wider stage area).
+    main.setOrientation(landscape ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
     root.addView(main, new LinearLayout.LayoutParams(-1, 0, 1));
     stagePane = column();
     // The workspace now owns only the persistent presenter. Utility actions are
@@ -491,7 +506,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // Split the available main area instead of reserving a fixed landscape height;
     // compact displays must leave usable space for the lower utility destination.
     stagePane.setMinimumHeight(dp(140));
-    main.addView(stagePane, new LinearLayout.LayoutParams(-1, 0, 0.42f));
+    // Landscape: stage takes ~55% width, content takes ~45%.
+    // Portrait: stage takes ~42% height, content takes ~58%.
+    float stageWeight = landscape ? 0.55f : 0.42f;
+    float contentWeight = landscape ? 0.45f : 0.58f;
+    LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(-1, -1);
+    stageParams.weight = stageWeight;
+    if (!landscape) stageParams.height = 0; // weight-based height in portrait
+    main.addView(stagePane, stageParams);
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(true);
     // Fade the hard edge where scrolling content meets the floating bottom dock.
@@ -500,7 +522,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     body = column();
     body.setPadding(dp(4), 0, dp(4), dp(14));
     scroll.addView(body);
-    main.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 0.58f));
+    LinearLayout.LayoutParams contentParams = new LinearLayout.LayoutParams(-1, -1);
+    contentParams.weight = contentWeight;
+    if (!landscape) contentParams.height = 0; // weight-based height in portrait
+    main.addView(scroll, contentParams);
     // Bottom navigation is one continuous floating dock: icon over label,
     // muted when inactive, cyan + a subtle glow pill when the destination is active.
     LinearLayout tabs = row();

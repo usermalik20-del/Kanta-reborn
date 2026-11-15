@@ -1,3 +1,13 @@
+## Landscape mode support (2026-11-15)
+
+- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
+- **MainActivity.java**: 
+  - Added `lastOrientation` field to track orientation changes
+  - `onConfigurationChanged()` rebuilds layout when orientation changes
+  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
+  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+
+---
 ## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
 
 - **Keypad sounds**: Fixed `SoundPool.OnLoadCompleteListener` to use anonymous class for D8 desugaring compatibility; keypad tones now load on IO thread for faster readiness.

@@ -1,3 +1,13 @@
+## Landscape mode support (2026-11-15)
+
+- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
+- **MainActivity.java**: 
+  - Added `lastOrientation` field to track orientation changes
+  - `onConfigurationChanged()` rebuilds layout when orientation changes
+  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
+  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+
+---
 # KANTA Reborn
 
 **Karaoke with your own songs, on Android, iPhone and iPad.**
