@@ -1,3 +1,15 @@
+## Mobile-first responsive enhancements (2026-11-16)
+
+- **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
+- **Buttons**: Full-width on mobile (actions, download cards), auto-width on desktop
+- **Feature cards**: Single column mobile, 2 columns tablet (768px), 3 columns desktop (900px), 4 columns large (1200px)
+- **Footer**: Stacks on mobile, 2-col tablet, 5-col desktop
+- **Sections**: Improved mobile spacing (40px/56px margins), hero padding 32px/48px
+- **Split banner**: Stacks on mobile with centered content
+- **Navigation**: Preserved original responsive pattern (site-nav with overflow-x: auto on mobile)
+- **Accessibility**: Added mobile nav drawer HTML/JS as progressive enhancement
+
+---
 ## Landscape mode support (2026-11-15)
 
 - **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
