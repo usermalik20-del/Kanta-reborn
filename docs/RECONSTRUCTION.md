@@ -7,8 +7,10 @@ older iOS entry still used an Actions artifact. Both status bars therefore faile
 closed even though the visible page links were valid. The contract is now per platform:
 Release URLs must match the record's source-SHA tag suffix and expected APK/IPA
 filename; Actions URLs must match that platform's packaging run and artifact IDs.
-The current manifest records Android as public and the legacy iOS artifact as
-sign-in protected. No package bytes or production release were changed by this repair.
+The current manifest records Android as public and the iOS Actions artifact as
+sign-in protected. The publisher must keep the iOS URL on the exact packaging run and
+artifact ID; the workflow does not upload an IPA Release asset. No package bytes or
+production release were changed by this repair.
 
 ## Mobile-first responsive enhancements (2026-11-16)
 

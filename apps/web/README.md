@@ -2,14 +2,15 @@
 
 The sticky download status bar reads the selected platform entry in
 `apps/web/downloads.json`. Access is per platform, not a shared manifest flag:
-public GitHub Release assets are marked `signInRequired: false`, while retained
-Actions-artifact links are marked `true`. The browser validates a Release URL against
+the Android GitHub Release asset is marked `signInRequired: false`, while the iOS
+retained Actions-artifact link is marked `true`. The browser validates a Release URL against
 its tag suffix and source-derived APK/IPA filename, or validates an Actions URL against
 the exact packaging run and artifact IDs. It also requires the page's primary link to
 match the manifest. The status bar reports metadata and checksums; it does not download
-or independently hash the package bytes. The active publisher creates public Release
-links for new packages while leaving an older peer entry untouched until that platform
-is republished.
+or independently hash the package bytes. The active publisher creates a public Release link for Android. iOS remains on its
+retained Actions artifact because the workflow does not upload an IPA Release asset.
+Publishing one platform leaves the peer entry untouched until that platform is
+republished.
 
 ## Website: feature copy resynced with the current preview (2026-11-10) — local candidate
 

@@ -7,9 +7,11 @@ GitHub Release asset (`signInRequired: false`) or a retained Actions artifact
 and source-derived APK/IPA filename. Actions artifact URLs must match that entry's
 packaging run and artifact IDs. The page anchor must exactly match the manifest URL.
 The status bar checks publication metadata and displayed checksums; it does not fetch
-or independently re-hash the downloadable bytes. The active publisher emits public
-Release links for new Android and iOS packages while preserving an older peer entry
-until that platform is separately republished.
+or independently re-hash the downloadable bytes. The active publisher emits a public Release link for Android, whose workflow uploads
+the APK to that Release. iOS remains a retained Actions artifact with
+`signInRequired: true` because the workflow does not upload the IPA as a Release asset.
+Its URL must match the exact packaging run and artifact ID. Publishing one platform
+preserves the peer entry until that platform is separately republished.
 
 ## Mobile-first responsive enhancements (2026-11-16)
 
