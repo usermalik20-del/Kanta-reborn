@@ -35,14 +35,31 @@ class PlatformPublisherTests(unittest.TestCase):
         self.new_source = self.git("rev-parse", "HEAD")
         tree = self.git("write-tree")
         self.unrelated_source = self.git("commit-tree", tree, "-m", "unrelated source")
+        android_entry = {
+            "source": self.old_source, "run": 10, "artifact": 11,
+            "packagingRun": 800, "packagingArtifact": 801,
+            "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/801",
+            "signInRequired": True, "artifactName": "KANTA-Android-preview-download",
+            "retentionDays": 30, "sha256": "a" * 64, "apkSha256": "b" * 64,
+            "bytes": 123, "signed": "release",
+        }
+        ios_entry = {
+            "source": self.old_source, "run": 20, "artifact": 21,
+            "packagingRun": 800, "packagingArtifact": 802,
+            "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/802",
+            "signInRequired": True, "artifactName": "KANTA-iOS-personal-unsigned-download",
+            "retentionDays": 30, "sha256": "c" * 64, "ipaSha256": "d" * 64,
+            "bytes": 456, "signed": False,
+        }
         (self.root / "apps/web/downloads.json").write_text(json.dumps({
             "repository": "usermalik20-del/Kanta-reborn",
             "packagingRun": 800,
-            "android": {"source": self.old_source, "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/801"},
-            "ios": {"source": self.old_source, "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/802"},
+            "signInRequired": True,
+            "android": android_entry,
+            "ios": ios_entry,
             "platforms": {
-                "android": {"source": self.old_source, "run": 10},
-                "ios": {"source": self.old_source, "run": 20},
+                "android": dict(android_entry),
+                "ios": dict(ios_entry),
             },
         }))
         for page in ("android.html", "ios-download.html"):
@@ -90,6 +107,9 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertEqual(result["platforms"]["ios"]["run"], 20)
         self.assertEqual(result["ios"]["packagingRun"], 800)
         self.assertEqual(result["ios"]["downloadUrl"], "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/802")
+        self.assertTrue(result["ios"]["signInRequired"])
+        self.assertFalse(result["android"]["signInRequired"])
+        self.assertNotIn("signInRequired", result)
         self.assertEqual(result["android"]["packagingRun"], 900)
         self.assertIn("Old", (self.root / "apps/web/ios-download.html").read_text())
         self.assertIn("releases/download", result["android"]["downloadUrl"])
@@ -127,6 +147,11 @@ class PlatformPublisherTests(unittest.TestCase):
         self.assertEqual(result["android"]["packagingRun"], 800)
         self.assertEqual(result["ios"]["packagingRun"], 900)
         self.assertEqual(result["android"]["downloadUrl"], "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/800/artifacts/801")
+        self.assertTrue(result["android"]["signInRequired"])
+        self.assertFalse(result["ios"]["signInRequired"])
+        self.assertNotIn("signInRequired", result)
+        self.assertIn("releases/download", result["ios"]["downloadUrl"])
+        self.assertIn("No sign-in required", (self.root / "apps/web/ios-download.html").read_text())
         self.assertIn("Old", (self.root / "apps/web/android.html").read_text())
         self.assertEqual(result["ios"]["source"], self.new_source)
         self.assertTrue(result["ios"]["personalSigningRequired"])

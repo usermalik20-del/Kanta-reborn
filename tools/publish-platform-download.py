@@ -143,12 +143,14 @@ def publish():
             peer_entry["packagingRun"] = int(match.group(1))
     manifest.setdefault("repository", REPO)
     manifest["verifiedAt"] = now.date().isoformat()
-    manifest["signInRequired"] = False  # Release assets are public
+    # Access requirements belong to each platform entry; the shared manifest
+    # can legitimately contain a public release and a legacy Actions artifact.
+    manifest.pop("signInRequired", None)
     manifest.setdefault("platforms", {})
     entry = {"source": source, "run": source_run, "artifact": int(info["artifact"]),
              "packagingRun": run_id, "packagingArtifact": package_id, "downloadUrl": url,
              "releaseUrl": f"https://github.com/{REPO}/releases/tag/{tag}",
-             "retentionDays": days,
+             "retentionDays": days, "signInRequired": False,
              "artifactName": "KANTA-" + ("Android-preview-download" if platform == "android" else "iOS-personal-unsigned-download"),
              "signed": info["signed"], "sha256": digest,
          **({"apkSha256": info["sha256"]} if platform == "android" else {"ipaSha256": info["sha256"]}),

@@ -1,3 +1,16 @@
+## Platform-specific download status contract (2026-11-16)
+
+The website status bar reads `downloads.json` per platform. There is no authoritative
+global sign-in flag: each platform entry records whether its current link is a public
+GitHub Release asset (`signInRequired: false`) or a retained Actions artifact
+(`signInRequired: true`). Release URLs must match the entry's source-SHA tag suffix
+and source-derived APK/IPA filename. Actions artifact URLs must match that entry's
+packaging run and artifact IDs. The page anchor must exactly match the manifest URL.
+The status bar checks publication metadata and displayed checksums; it does not fetch
+or independently re-hash the downloadable bytes. The active publisher emits public
+Release links for new Android and iOS packages while preserving an older peer entry
+until that platform is separately republished.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
