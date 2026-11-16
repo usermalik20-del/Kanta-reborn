@@ -1133,3 +1133,22 @@ synthetic non-primary `StageSurface` as camera owner through both orientation ch
 
 **Validation:** exact-head Android build/lint/core/emulator validation is pending on the
 updated PR head. Physical-device and actual external-display acceptance remain separate.
+
+
+## Android — camera rotation instrumentation accessed a private Activity field (2026-11-16) — candidate
+
+**Fingerprint:** KANTA Android validation, job `android`, step `Build debug and unsigned release, lint and domain regression tests`; `compileDebugAndroidTestJavaWithJavac` reports six instances of `camera has private access in MainActivity` in `RuntimeChecks.java:985-1011`.
+
+**Affected SHA / first observed run:** `2ba455d409724466079b2b7e55203d7b48e31e02`, run [#43786549407](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43786549407).
+
+**Cause (confirmed):** the camera-rotation regression directly referenced `activity.camera`, although `MainActivity.camera` is intentionally private. The runtime harness already has a reflection-based `field(Object, String)` helper for private Activity state; the new assertions bypassed it and failed Java test compilation before runtime acceptance.
+
+**Fix candidate:** route those test-only accesses through a typed helper backed by the existing reflection accessor. Keep the production field private; do not add a visibility escape hatch solely for instrumentation.
+
+**Regression coverage:** retain all first-rotation, primary-stage rebind, non-primary ownership-preservation and return-to-primary assertions. No tests are removed or weakened.
+
+**Validation:** the first exact-head run failed at Android test compilation; emulator checks were skipped. A fresh exact-head Android validation is pending.
+
+**Recurrence rule:** use the existing reflection accessor for private Activity fields in instrumentation; prefer observable behavior over widening production internals.
+
+**Status:** `candidate`.

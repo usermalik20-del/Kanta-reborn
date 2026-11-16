@@ -1,3 +1,14 @@
+## Android camera-rotation instrumentation access repair (2026-11-16)
+
+The rotation runtime check inspects the Activity's private CameraStage through the
+existing reflection helper. It must not directly access MainActivity.camera or widen
+production visibility just for instrumentation. The failed exact-head run
+[43786549407](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43786549407)
+reported six Java compile errors in RuntimeChecks.java before emulator checks began.
+The repair keeps the production field private and preserves all camera-ownership assertions;
+new exact-head Android validation is required before this candidate is considered verified.
+
+---
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

@@ -982,8 +982,8 @@ public final class RuntimeChecks extends Instrumentation {
       // A non-primary StageSurface (fullscreen or external display) remains the camera
       // owner when the primary Activity changes orientation.
       StageSurface nonPrimaryStage = new StageSurface(activity, session);
-      runOnMainSync(() -> activity.camera.moveTo(nonPrimaryStage));
-      check(state(() -> activity.camera.ownsSurface(nonPrimaryStage)),
+      runOnMainSync(() -> cameraStage().moveTo(nonPrimaryStage));
+      check(state(() -> cameraStage().ownsSurface(nonPrimaryStage)),
           "Camera did not attach to the non-primary stage fixture");
       runOnMainSync(() -> {
         android.content.res.Configuration changed =
@@ -991,7 +991,7 @@ public final class RuntimeChecks extends Instrumentation {
         changed.orientation = alternateOrientation;
         activity.onConfigurationChanged(changed);
       });
-      check(state(() -> activity.camera.ownsSurface(nonPrimaryStage)),
+      check(state(() -> cameraStage().ownsSurface(nonPrimaryStage)),
           "Primary rotation stole the camera preview from a non-primary stage");
       runOnMainSync(() -> {
         android.content.res.Configuration restored =
@@ -999,16 +999,16 @@ public final class RuntimeChecks extends Instrumentation {
         restored.orientation = originalOrientation;
         activity.onConfigurationChanged(restored);
       });
-      check(state(() -> activity.camera.ownsSurface(nonPrimaryStage)),
+      check(state(() -> cameraStage().ownsSurface(nonPrimaryStage)),
           "Restoring primary orientation stole the non-primary camera preview");
       AtomicReference<ph.kanta.reborn.stage.StagePresenterImpl> currentPrimary =
           new AtomicReference<>();
       runOnMainSync(() -> {
         currentPrimary.set((ph.kanta.reborn.stage.StagePresenterImpl) field(activity, "stagePresenter"));
-        activity.camera.moveTo(currentPrimary.get());
+        cameraStage().moveTo(currentPrimary.get());
       });
       await(() -> activity.cameraStreaming()
-              && activity.camera.ownsSurface(currentPrimary.get())
+              && cameraStage().ownsSurface(currentPrimary.get())
               && currentPrimary.get().isCameraVisible(),
           "Camera did not return to the current primary stage after non-primary ownership");
       check(!nonPrimaryStage.isCameraVisible(),
@@ -1697,6 +1697,10 @@ public final class RuntimeChecks extends Instrumentation {
                   && field(activity, "lowerUtilityAccessory") == null;
             }),
         "Back dismissal detached the persistent stage or retained the lower utility");
+  }
+
+  private CameraStage cameraStage() {
+    return (CameraStage) field(activity, "camera");
   }
 
   private Object field(Object target, String name) {
