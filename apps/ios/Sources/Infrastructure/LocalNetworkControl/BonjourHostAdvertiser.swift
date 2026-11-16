@@ -144,6 +144,7 @@ public final class BonjourHostAdvertiser: ObservableObject {
         // Existing remote sessions must authenticate again.
         let activeSessions = Array(sessions.values)
         sessions.removeAll(keepingCapacity: false)
+        admission.reset()
         pairedControllerCount = 0
 
         for session in activeSessions {

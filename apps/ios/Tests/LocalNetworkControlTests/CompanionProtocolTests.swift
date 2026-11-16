@@ -1,4 +1,5 @@
 import Foundation
+import GeloKaraokeCore
 import Testing
 @testable import LocalNetworkControl
 
