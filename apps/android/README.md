@@ -1,3 +1,13 @@
+## Legacy MKMD decompression safety (2026-11-16)
+
+The paired `.shubidx`/`.shubblob` importer validates each record independently.
+Raw-deflate decoding now rejects dictionary-required, truncated and zero-progress
+streams instead of looping indefinitely. The inflater's native zlib state is ended
+in a `finally` path, including malformed-data and declared-size failures. A bad
+record remains a skipped record with an error; valid indexed records can still import.
+The regression uses a deliberately stalled inflater and verifies prompt rejection
+and cleanup through the existing `:app:coreRegression` gate.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

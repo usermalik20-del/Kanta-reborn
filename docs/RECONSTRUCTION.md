@@ -1,3 +1,14 @@
+## Android paired legacy importer inflater repair — 2026-11-16
+
+The paired-container path had a second inline raw-DEFLATE loop separate from
+`MkmdDecoder`. It broke only when `needsInput()` became true. A stream that
+requested a preset dictionary or otherwise returned zero without needing input could
+loop forever; exceptions and size-overrun failures also skipped `Inflater.end()`.
+The path now rejects every no-progress state and releases native inflater state in
+`finally`. The regression injects a dictionary-required stalled inflater, enforces a
+two-second completion bound, and checks that cleanup ran. No accepted format, index
+mapping, key handling or valid payload behavior changed.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

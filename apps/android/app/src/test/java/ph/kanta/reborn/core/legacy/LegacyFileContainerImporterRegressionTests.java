@@ -5,6 +5,11 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.zip.Inflater;
 
 /** Synthetic address tests; no user media or key material is included. */
 public final class LegacyFileContainerImporterRegressionTests {
@@ -38,6 +43,37 @@ public final class LegacyFileContainerImporterRegressionTests {
       refused = true;
     }
     check(refused, reason);
+  }
+
+  private static final class DictionaryRequiredInflater extends Inflater {
+    volatile boolean ended;
+    DictionaryRequiredInflater() { super(true); }
+    @Override public int inflate(byte[] output) { return 0; }
+    @Override public boolean needsDictionary() { return true; }
+    @Override public boolean needsInput() { return false; }
+    @Override public boolean finished() { return false; }
+    @Override public void end() { ended = true; super.end(); }
+  }
+
+  private static void rejectsStalledLegacyInflater() throws Exception {
+    DictionaryRequiredInflater inflater = new DictionaryRequiredInflater();
+    FutureTask<byte[]> task = new FutureTask<>(
+        () -> LegacyFileContainerImporter.inflateExact(new byte[] {1}, 1, 1, inflater));
+    Thread worker = new Thread(task, "legacy-mkmd-stalled-inflater-regression");
+    worker.setDaemon(true);
+    worker.start();
+    try {
+      task.get(2, TimeUnit.SECONDS);
+      check(false, "Dictionary-required legacy MKMD stream was accepted");
+    } catch (ExecutionException failure) {
+      check(failure.getCause() instanceof IOException,
+          "Dictionary-required legacy MKMD stream did not fail as an import error");
+      check(failure.getCause().getMessage().contains("dictionary"),
+          "Legacy MKMD no-progress failure was not classified");
+    } catch (TimeoutException timeout) {
+      check(false, "Legacy MKMD inflater stalled instead of rejecting no progress");
+    }
+    check(inflater.ended, "Legacy MKMD inflater native state was released on failure");
   }
 
   private static void namedImport() throws Exception {
@@ -213,6 +249,7 @@ public final class LegacyFileContainerImporterRegressionTests {
       Files.deleteIfExists(blob.toPath());
     }
     runtimeKeyLifecycle();
+    rejectsStalledLegacyInflater();
     namedImport();
     return checks;
   }

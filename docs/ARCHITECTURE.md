@@ -1,3 +1,12 @@
+## Android legacy MKMD decompression boundary (2026-11-16)
+
+Both direct MKMD decoding and the paired legacy-container importer use raw DEFLATE.
+The legacy importer now checks every zero-output result: dictionary requests,
+truncated input and any other no-progress state become bounded import errors. The
+native `Inflater` is always ended in `finally`, even when output exceeds the
+declared size or the compressed stream is malformed. Record-level errors remain
+isolated so one bad indexed record does not prevent later valid records from importing.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

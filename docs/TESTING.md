@@ -1,3 +1,12 @@
+## Android legacy MKMD inflater regression (2026-11-16)
+
+`:app:coreRegression` runs `LegacyFileContainerImporterRegressionTests` alongside
+the direct `MkmdDecoderRegressionTests`. The paired importer test injects a
+dictionary-required inflater that returns zero bytes without requesting more input;
+the operation must fail within two seconds and call `Inflater.end()`. Valid paired
+records, title/address mapping, wrong-key rejection and credential zeroization remain
+covered. Malformed record failures are isolated and reported as skipped entries.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

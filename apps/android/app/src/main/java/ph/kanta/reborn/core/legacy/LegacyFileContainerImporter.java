@@ -103,20 +103,78 @@ public final class LegacyFileContainerImporter {
     return true;
   }
 
-  private static byte[] decodeRecord(File blob, long start, byte[] key, byte[] iv) throws IOException, GeneralSecurityException {
+  private static byte[] decodeRecord(File blob, long start, byte[] key, byte[] iv)
+      throws IOException, GeneralSecurityException {
     try (RandomAccessFile in = new RandomAccessFile(blob, "r")) {
-      in.seek(start); byte[] header = new byte[13]; in.readFully(header);
-      if (header[0]!='M'||header[1]!='K'||header[2]!='M'||header[3]!='D'||header[4]!=1) throw new IOException("Invalid MKMD header");
-      long decoded = u32(header,5), compressed = u32(header,9);
-      if (decoded <= 0 || decoded > MAX_PAYLOAD_BYTES || compressed <= 0 || compressed > MAX_PAYLOAD_BYTES) throw new IOException("MKMD size exceeds limit");
-      int encrypted = (int)(((compressed + 15) / 16) * 16); byte[] cipher = new byte[encrypted]; in.readFully(cipher);
+      in.seek(start);
+      byte[] header = new byte[13];
+      in.readFully(header);
+      if (header[0] != 'M' || header[1] != 'K' || header[2] != 'M'
+          || header[3] != 'D' || header[4] != 1) {
+        throw new IOException("Invalid MKMD header");
+      }
+      long decoded = u32(header, 5), compressed = u32(header, 9);
+      if (decoded <= 0 || decoded > MAX_PAYLOAD_BYTES
+          || compressed <= 0 || compressed > MAX_PAYLOAD_BYTES) {
+        throw new IOException("MKMD size exceeds limit");
+      }
+      int encrypted = (int) (((compressed + 15) / 16) * 16);
+      byte[] cipher = new byte[encrypted];
+      in.readFully(cipher);
       javax.crypto.Cipher aes = javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
-      aes.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key,"AES"), new javax.crypto.spec.IvParameterSpec(iv));
-      byte[] plain = aes.doFinal(cipher); Inflater inflater = new Inflater(true); inflater.setInput(plain,0,(int)compressed);
-      ByteArrayOutputStream out = new ByteArrayOutputStream((int)Math.min(decoded,1<<20)); byte[] buf = new byte[8192];
-      while (!inflater.finished()) { int n=inflater.inflate(buf); if(n==0 && inflater.needsInput()) break; out.write(buf,0,n); if(out.size()>decoded) throw new IOException("Inflated payload exceeds declared size"); }
-      inflater.end(); byte[] payload=out.toByteArray(); if(payload.length!=decoded) throw new IOException("Decoded size mismatch"); return payload;
-    } catch (java.util.zip.DataFormatException e) { throw new IOException("MKMD compression failed",e); }
+      aes.init(javax.crypto.Cipher.DECRYPT_MODE,
+          new javax.crypto.spec.SecretKeySpec(key, "AES"),
+          new javax.crypto.spec.IvParameterSpec(iv));
+      byte[] plain = aes.doFinal(cipher);
+      return inflateExact(plain, (int) compressed, decoded);
+    }
+  }
+
+  static byte[] inflateExact(byte[] plain, int compressedBytes, long decodedBytes)
+      throws IOException {
+    return inflateExact(plain, compressedBytes, decodedBytes, new Inflater(true));
+  }
+
+  static byte[] inflateExact(
+      byte[] plain, int compressedBytes, long decodedBytes, Inflater inflater)
+      throws IOException {
+    try {
+      if (compressedBytes <= 0 || compressedBytes > plain.length
+          || decodedBytes <= 0 || decodedBytes > MAX_PAYLOAD_BYTES) {
+        throw new IOException("MKMD compressed bounds are invalid");
+      }
+      inflater.setInput(plain, 0, compressedBytes);
+      ByteArrayOutputStream out =
+          new ByteArrayOutputStream((int) Math.min(decodedBytes, 1 << 20));
+      byte[] buffer = new byte[8192];
+      while (!inflater.finished()) {
+        int count = inflater.inflate(buffer);
+        if (count > 0) {
+          out.write(buffer, 0, count);
+          if (out.size() > decodedBytes) {
+            throw new IOException("Inflated payload exceeds declared size");
+          }
+          continue;
+        }
+        if (inflater.needsDictionary()) {
+          throw new IOException("MKMD compressed stream requires an unsupported dictionary");
+        }
+        if (inflater.needsInput()) {
+          throw new IOException("MKMD compressed stream is truncated");
+        }
+        throw new IOException("MKMD inflater made no progress");
+      }
+      byte[] payload = out.toByteArray();
+      if (payload.length != decodedBytes) {
+        throw new IOException("Decoded size mismatch");
+      }
+      return payload;
+    } catch (java.util.zip.DataFormatException malformed) {
+      throw new IOException("MKMD compression failed", malformed);
+    } finally {
+      // Inflater owns native zlib state and must be ended on every path.
+      inflater.end();
+    }
   }
   private static long u32(byte[] b,int o){return (b[o]&255L)|((b[o+1]&255L)<<8)|((b[o+2]&255L)<<16)|((b[o+3]&255L)<<24);}
   private static byte[] readBounded(File f,int max)throws IOException{if(f.length()>max)throw new IOException("Index exceeds limit");try(FileInputStream in=new FileInputStream(f)){byte[] b=new byte[(int)f.length()];int o=0,n;while(o<b.length&&(n=in.read(b,o,b.length-o))>0)o+=n;if(o!=b.length)throw new IOException("Short index read");return b;}}
