@@ -82,6 +82,24 @@ class HomeLayoutTests(unittest.TestCase):
         prefill = source[start:source.index('    renderSearchResults(screen, visibleSongs);', start)]
         self.assertLess(prefill.index('query = ""'), prefill.index('screen.setQuery(committedQuery)'))
 
+    def test_first_rotation_rebuilds_layout_and_rebinds_primary_camera(self):
+        activity = (JAVA / 'MainActivity.java').read_text()
+        on_create = activity[activity.index('  public void onCreate('):activity.index('  @Override', activity.index('  public void onCreate('))]
+        self.assertIn('lastOrientation = getResources().getConfiguration().orientation;', on_create)
+        callback_start = activity.index('  public void onConfigurationChanged(')
+        callback = activity[callback_start:activity.index('  @Override', callback_start)]
+        self.assertIn('buildWindow(newOrient)', callback)
+        self.assertIn('camera.moveTo(stagePresenter)', callback)
+        self.assertIn('cameraWasOnPrimaryStage', callback)
+        build_start = activity.index('  private void buildWindow(int orientation)')
+        build_window = activity[build_start:activity.index('  /** Logo-triggered', build_start)]
+        self.assertIn('orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE', build_window)
+
+        runtime = (ROOT / 'apps/android/app/src/androidTest/java/ph/kanta/reborn/RuntimeChecks.java').read_text()
+        self.assertIn('First orientation change did not rebuild the primary stage', runtime)
+        self.assertIn('Primary camera preview was not rebound after orientation change', runtime)
+        self.assertIn('Superseded primary stage retained the camera preview', runtime)
+
     def test_runtime_covers_sizes_and_typed_entry(self):
         source = (ROOT / 'apps/android/app/src/androidTest/java/ph/kanta/reborn/RuntimeChecks.java').read_text()
         self.assertIn('homeLayoutChecks();', source)

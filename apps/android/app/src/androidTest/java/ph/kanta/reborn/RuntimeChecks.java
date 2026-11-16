@@ -892,6 +892,82 @@ public final class RuntimeChecks extends Instrumentation {
               activity.cameraStreaming()
                   && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
           "Opt-in front camera never rendered on the primary stage");
+
+      // Exercise the first in-place configuration change while the primary camera is active.
+      // A fresh Activity has not received a prior onConfigurationChanged callback yet.
+      int originalOrientation =
+          state(() -> activity.getResources().getConfiguration().orientation);
+      int alternateOrientation =
+          originalOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+              ? android.content.res.Configuration.ORIENTATION_PORTRAIT
+              : android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+      runOnMainSync(
+          () -> {
+            android.content.res.Configuration changed =
+                new android.content.res.Configuration(activity.getResources().getConfiguration());
+            changed.orientation = alternateOrientation;
+            activity.onConfigurationChanged(changed);
+          });
+      View rotatedPrimaryStage = (View) field(activity, "stagePresenter");
+      check(
+          rotatedPrimaryStage != primaryStage,
+          "First orientation change did not rebuild the primary stage");
+      int rotatedMainOrientation =
+          state(
+              () ->
+                  ((android.widget.LinearLayout)
+                          ((android.widget.LinearLayout) field(activity, "root")).getChildAt(1))
+                      .getOrientation());
+      check(
+          rotatedMainOrientation
+              == (alternateOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                  ? android.widget.LinearLayout.HORIZONTAL
+                  : android.widget.LinearLayout.VERTICAL),
+          "First orientation change did not use the incoming layout orientation");
+      await(
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) rotatedPrimaryStage)
+                      .isCameraVisible(),
+          "Primary camera preview was not rebound after orientation change");
+      check(
+          !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+          "Detached primary stage retained the camera preview");
+
+      runOnMainSync(
+          () -> {
+            android.content.res.Configuration restored =
+                new android.content.res.Configuration(activity.getResources().getConfiguration());
+            restored.orientation = originalOrientation;
+            activity.onConfigurationChanged(restored);
+          });
+      View primaryStageAfterRotation = (View) field(activity, "stagePresenter");
+      check(
+          primaryStageAfterRotation != rotatedPrimaryStage,
+          "Restoring the original orientation did not rebuild the primary stage");
+      int restoredMainOrientation =
+          state(
+              () ->
+                  ((android.widget.LinearLayout)
+                          ((android.widget.LinearLayout) field(activity, "root")).getChildAt(1))
+                      .getOrientation());
+      check(
+          restoredMainOrientation
+              == (originalOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                  ? android.widget.LinearLayout.HORIZONTAL
+                  : android.widget.LinearLayout.VERTICAL),
+          "Restored orientation did not restore the corresponding layout");
+      await(
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                      .isCameraVisible(),
+          "Camera preview did not return to the rebuilt primary stage");
+      check(
+          !((ph.kanta.reborn.stage.StagePresenterImpl) rotatedPrimaryStage).isCameraVisible(),
+          "Superseded primary stage retained the camera preview");
+      stableStage.set(primaryStageAfterRotation);
+
       runOnMainSync(activity::fullscreen);
       await(
           () -> field(activity, "fullscreenStage") instanceof StageSurface,
@@ -902,11 +978,12 @@ public final class RuntimeChecks extends Instrumentation {
           () -> activity.cameraStreaming() && cameraStageRef.get().isCameraVisible(),
           "Front camera did not render on the fullscreen stage");
       runOnMainSync(activity::closeFullscreen);
-      stableStage.set(primaryStage);
+      stableStage.set(primaryStageAfterRotation);
       await(
           () ->
               activity.cameraStreaming()
-                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                      .isCameraVisible(),
           "Front camera did not return to the primary stage");
       await(
           () -> !cameraStageRef.get().isCameraVisible(),
@@ -916,10 +993,16 @@ public final class RuntimeChecks extends Instrumentation {
           () ->
               !session.cameraPreviewEnabled
                   && !activity.cameraStreaming()
-                  && !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+                  && !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                      .isCameraVisible(),
           "Disabling the camera did not release the primary preview");
       runOnMainSync(activity::toggleCamera);
-      await(activity::cameraStreaming, "Camera did not reopen after explicit opt-in");
+      await(
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                      .isCameraVisible(),
+          "Camera did not reopen on the current primary stage after explicit opt-in");
       capture("camera_optin.png");
       shell("input keyevent KEYCODE_HOME");
       await(() -> !session.foreground, "Home did not background KANTA");
