@@ -5,12 +5,12 @@
 **Documentation rule:** Treat `Docs/HARDENING_HANDOVER.md` as the current iOS change ledger; `Docs/PROJECT_STATUS_2026-10-10.md` is not present in this monorepo and must not be treated as current. Documentation-only commits should include `[skip ci]` and must not allocate macOS Actions. Real implementation/merge code requires explicit owner consent for testing.
 
 
-## Current source and verified baseline — 2026-10-08
+## Historical source and verified baseline — 2026-10-08 (archived)
 
 - Main now includes KANTA Songbook codes/search and local CSV export (#36), saved session Favorites and manual artist corrections (#37), and optional wired/USB Vocal Soundcard (#38). The corresponding Swift Core CI + Release iOS Simulator runs #176, #179 and #182 passed before merge.
 - **DO NOT** infer TestFlight signing, physical input/output testing, actual 47,998-title hardware import, playable protected media or encrypted LAN from those results.
 - Current iOS source-of-truth documents: `Docs/ARCHITECTURE.md`, `Docs/ROADMAP.md`, and `Docs/HARDENING_HANDOVER.md`. The historical `Docs/FEATURE_PARITY.md` and standalone `PublicSite/` references are not current monorepo paths.
-- This current note supersedes the dated PR #25 baseline below for the most recent feature scope.
+- This archived note supersedes the dated PR #25 baseline only within the historical October notes; the repository baseline above is current.
 
 ## Archived 2026-10-07 baseline
 

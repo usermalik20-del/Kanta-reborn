@@ -23,7 +23,7 @@ on the maintenance PR. No signed IPA, TestFlight upload, or physical-LAN accepta
 claimed. The native Bonjour protocol remains plaintext and still lacks a global
 failed-PIN rate limit; keep it on trusted LANs only.
 
-**Current status — 2026-10-07:** PR #25 merged as `beb63b5`; Core CI #130
+**Historical status — 2026-10-07:** PR #25 merged as `beb63b5`; Core CI #130
 passed on main; UI Screenshots #48 passed on its PR head. Manual TestFlight
 run `37575087891` stopped at missing signing inputs, before archive/upload.
 Read the final dated entry below for the release follow-up. Earlier pending
