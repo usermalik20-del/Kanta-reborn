@@ -3,6 +3,25 @@ import GeloKaraokeCore
 import Testing
 @testable import LocalNetworkControl
 
+@Test func remoteHostAdmissionCapsSessionsAndReusesReleasedSlots() {
+    var admission = RemoteHostConnectionAdmission(maximumConnections: 2)
+    let first = UUID()
+    let second = UUID()
+    let third = UUID()
+
+    #expect(admission.admit(first))
+    #expect(admission.admit(second))
+    #expect(!admission.admit(third))
+    #expect(!admission.admit(first))
+    #expect(admission.count == 2)
+
+    admission.release(first)
+    #expect(admission.admit(third))
+    #expect(admission.count == 2)
+    admission.reset()
+    #expect(admission.count == 0)
+}
+
 @Test func remoteFrameCodecRoundTripsFragmentedFrame() throws {
     let envelope = RemoteEnvelope(
         id: UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!,

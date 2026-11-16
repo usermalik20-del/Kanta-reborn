@@ -1,7 +1,27 @@
 # KANTA reliability hardening handover
 
-**Current merged source baseline (October 10, 2026):** `kanta-ph/Gelo-Karaoke-iOS` `main`, merge commit [`6dcdf5f`](https://github.com/kanta-ph/Gelo-Karaoke-iOS/commit/6dcdf5f675572771f0377fe2197c2cee41b4bf5c), PR #44 merged and PR #40 closed as superseded. The last green Core CI ([run #38003895381](https://github.com/kanta-ph/Gelo-Karaoke-iOS/actions/runs/38003895381)) validated **173 Swift tests**, an unsigned Release iOS Simulator build, and live Host/CONTROL simulator startup on an earlier PR head; it **did not rebuild the final in-app Legal & Privacy edit or this merge commit**. KANTA has **no verified signed TestFlight upload or physical-device acceptance** for this merged batch. Website `/legal` and `/privacy` are live and were checked on production. Historical draft/pending paragraphs below record their original dates and must not supersede this status.
+**Current repository baseline (November 16, 2026):** `usermalik20-del/Kanta-reborn` `main` at `11e6710b1cd0b6417315423b90bb9097fb2af18c`. This iOS subtree is part of the monorepo; standalone-repository CI and merge references below are historical. No signed TestFlight upload or physical-device acceptance is implied. The native Bonjour Remote remains plaintext; Browser Remote and KCP1 Android Companion are separate protected paths.
 
+
+## 2026-11-16 — Bound legacy Bonjour remote session admission
+
+**Finding:** `BonjourHostAdvertiser` accepted an unbounded number of TCP sessions, and
+`HostRemoteConnection` had no deadline before PIN pairing. A peer could therefore open
+many sockets and leave each one idle indefinitely without authenticating.
+
+**Fix:** Admission now allows at most four concurrent native Bonjour sessions. An
+unpaired connection is closed after 20 seconds; pairing cancels the deadline, while
+disconnect, host stop, and PIN rotation cancel it and release the admission slot.
+
+**Regression protection:** Added a pure admission-capacity test and a macOS loopback
+Network.framework test that leaves a connection unpaired and verifies it closes at an
+injected 100 ms deadline. Existing framing, session-gate, invalid-PIN, and replay-cache
+tests remain in place.
+
+**Validation:** Exact-head iOS Core, simulator, and visual workflow results are pending
+on the maintenance PR. No signed IPA, TestFlight upload, or physical-LAN acceptance is
+claimed. The native Bonjour protocol remains plaintext and still lacks a global
+failed-PIN rate limit; keep it on trusted LANs only.
 
 **Current status — 2026-10-07:** PR #25 merged as `beb63b5`; Core CI #130
 passed on main; UI Screenshots #48 passed on its PR head. Manual TestFlight

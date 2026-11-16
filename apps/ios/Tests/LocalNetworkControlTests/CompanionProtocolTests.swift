@@ -134,6 +134,81 @@ private enum Vector {
 #if os(macOS)
 import Network
 
+private struct IdleRemoteController: KaraokeController {
+    func snapshot() async -> KaraokeSnapshot { KaraokeSnapshot() }
+    func send(_ command: KaraokeCommand) async throws {}
+}
+
+@MainActor @Test func unpairedRemoteConnectionExpiresWithoutReceivingAFrame() async throws {
+    let queue = DispatchQueue(label: "kanta.remote-pairing-timeout-test")
+    let listener = try NWListener(using: .tcp, on: .any)
+    defer { listener.cancel() }
+
+    let incoming = AsyncStream<NWConnection> { continuation in
+        listener.newConnectionHandler = { connection in
+            continuation.yield(connection)
+        }
+    }
+    let ready = AsyncStream<NWEndpoint.Port> { continuation in
+        listener.stateUpdateHandler = { state in
+            if case .ready = state, let port = listener.port {
+                continuation.yield(port)
+                continuation.finish()
+            } else if case .failed = state {
+                continuation.finish()
+            } else if case .cancelled = state {
+                continuation.finish()
+            }
+        }
+    }
+
+    listener.start(queue: queue)
+    var readyIterator = ready.makeAsyncIterator()
+    let port = try #require(await readyIterator.next())
+    let client = NWConnection(
+        to: .hostPort(host: .ipv4(.loopback), port: port),
+        using: .tcp
+    )
+    defer { client.cancel() }
+
+    let clientReady = AsyncStream<Bool> { continuation in
+        client.stateUpdateHandler = { state in
+            if case .ready = state {
+                continuation.yield(true)
+                continuation.finish()
+            } else if case .failed = state {
+                continuation.yield(false)
+                continuation.finish()
+            }
+        }
+    }
+    client.start(queue: queue)
+    var clientReadyIterator = clientReady.makeAsyncIterator()
+    #expect(await clientReadyIterator.next() == true)
+
+    var incomingIterator = incoming.makeAsyncIterator()
+    let accepted = try #require(await incomingIterator.next())
+    let session = HostRemoteConnection(
+        connection: accepted,
+        controller: IdleRemoteController(),
+        catalogSearch: nil,
+        expectedPairingCode: PairingCode("123456")!,
+        queue: queue,
+        pairingTimeout: .milliseconds(100)
+    )
+    defer { session.cancel() }
+
+    var didClose = false
+    session.onClose = { _ in didClose = true }
+    session.start()
+
+    let deadline = ContinuousClock.now + .seconds(2)
+    while !didClose && ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(didClose)
+}
+
 @MainActor @Test func companionClientExchangesWithProductionJavaProtocol() async throws {
     let classes = try #require(ProcessInfo.processInfo.environment["KANTA_KCP_TEST_CLASSES"])
     let host = Process()

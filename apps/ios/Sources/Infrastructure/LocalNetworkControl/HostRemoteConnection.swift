@@ -25,6 +25,8 @@ final class HostRemoteConnection {
     private var decoder = RemoteFrameStreamDecoder()
     private var commandReplay = RemoteCommandReplayCache()
     private var didClose = false
+    private let pairingTimeout: Duration
+    private var pairingTimeoutTask: Task<Void, Never>?
 
     init(
         connection: NWConnection,
@@ -32,12 +34,14 @@ final class HostRemoteConnection {
         catalogSearch:
             (@Sendable (String, Int, Int) async -> [LibrarySong])?,
         expectedPairingCode: PairingCode,
-        queue: DispatchQueue
+        queue: DispatchQueue,
+        pairingTimeout: Duration = .seconds(20)
     ) {
         self.connection = connection
         self.controller = controller
         self.catalogSearch = catalogSearch
         self.queue = queue
+        self.pairingTimeout = pairingTimeout
         self.gate = RemoteHostSessionGate(
             expectedPairingCode: expectedPairingCode
         )
@@ -48,6 +52,15 @@ final class HostRemoteConnection {
     }
 
     func start() {
+        pairingTimeoutTask = Task { [weak self, pairingTimeout] in
+            do {
+                try await Task.sleep(for: pairingTimeout)
+            } catch {
+                return
+            }
+            guard let self, !self.didClose, !self.isPaired else { return }
+            self.finish()
+        }
         connection.stateUpdateHandler = {
             [weak self] state in
             Task { @MainActor [weak self] in
@@ -59,6 +72,7 @@ final class HostRemoteConnection {
 
     func cancel() {
         guard !didClose else { return }
+        cancelPairingTimeout()
         gate.close()
         didClose = true
         connection.cancel()
@@ -138,6 +152,9 @@ final class HostRemoteConnection {
 
         switch action {
         case let .reply(body):
+            if case .paired = body {
+                cancelPairingTimeout()
+            }
             send(body)
 
             if case .paired = body {
@@ -258,8 +275,14 @@ final class HostRemoteConnection {
         )
     }
 
+    private func cancelPairingTimeout() {
+        pairingTimeoutTask?.cancel()
+        pairingTimeoutTask = nil
+    }
+
     private func finish() {
         guard !didClose else { return }
+        cancelPairingTimeout()
         gate.close()
         didClose = true
         connection.cancel()
