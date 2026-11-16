@@ -9,14 +9,21 @@ import Testing
     let second = UUID()
     let third = UUID()
 
-    #expect(admission.admit(first))
-    #expect(admission.admit(second))
-    #expect(!admission.admit(third))
-    #expect(!admission.admit(first))
+    // Evaluate mutating admission calls before #expect; Swift Testing's
+    // macro captures its expression in an immutable autoclosure.
+    let admittedFirst = admission.admit(first)
+    #expect(admittedFirst)
+    let admittedSecond = admission.admit(second)
+    #expect(admittedSecond)
+    let rejectedThird = admission.admit(third)
+    #expect(!rejectedThird)
+    let rejectedDuplicate = admission.admit(first)
+    #expect(!rejectedDuplicate)
     #expect(admission.count == 2)
 
     admission.release(first)
-    #expect(admission.admit(third))
+    let admittedAfterRelease = admission.admit(third)
+    #expect(admittedAfterRelease)
     #expect(admission.count == 2)
     admission.reset()
     #expect(admission.count == 0)

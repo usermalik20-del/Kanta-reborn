@@ -1871,3 +1871,12 @@ Source 339b8f6 passed hosted Android APK/instrumentation assembly, lint, native 
 **Fix:** recheck cancellation after library resolution and each native preparation await. If cancellation occurs before engine.load begins, leave the current backend playing; once loading starts, retire the uncommitted backend and set needsPlaybackReload. Preserve the current item, playback identity and queue reservation. Natural-completion auto-advance explicitly ignores cancellation inherited from a UI snapshot poll.
 
 **Regression protection:** added five deterministic Swift regressions: canceled enqueue, canceled Next during asset resolution, canceled Next during native load/recovery, and natural auto-advance surviving a canceled snapshot poll, and pre-load cancellation preserving the current playing asset. Hosted Swift package tests and simulator build are pending on the PR head; no simulator/device acceptance is claimed yet.
+
+
+## Legacy Bonjour remote admission test compilation repair — November 16, 2026
+
+**Observed failure:** the exact-head iOS validation job built the unsigned simulator app, then failed Swift test compilation before package tests started. Swift Testing's `#expect` macro captures its expression in an immutable autoclosure; invoking the mutating `RemoteHostConnectionAdmission.admit` method directly inside the macro produced “cannot use mutating member on immutable value” errors.
+
+**Repair:** execute each mutating admission call first, store its Boolean result, then assert the immutable result. Production admission, pairing timeout and session behavior are unchanged. No assertions were removed.
+
+**Validation:** the prior unsigned simulator app build succeeded. The failed iOS validation did not execute package tests; a fresh exact-head iOS validation, focused simulator smoke and visual walkthrough are required after this compile-only repair. No signing, physical-device, merge or release acceptance is implied.
