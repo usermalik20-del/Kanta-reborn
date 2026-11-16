@@ -1,3 +1,13 @@
+## Website download manifest and status boundary (2026-11-16)
+
+The website's download manifest is platform-owned. Each `platforms.android` and
+`platforms.ios` record carries its own `signInRequired` value because one platform
+may already use a public GitHub Release asset while the peer still uses a retained
+Actions artifact. The status bar validates the Release tag and source-derived asset
+name, or the exact Actions run/artifact path, and verifies that the page link matches
+the selected record. It does not fetch or re-hash the download. The publisher writes
+only the selected platform entry and page; it must not rewrite the peer's provenance.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

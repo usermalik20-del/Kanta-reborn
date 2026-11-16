@@ -1,3 +1,15 @@
+## Website download status contract repair — 2026-11-16
+
+The previous status-bar validator still required the legacy global
+`signInRequired: true` flag and Actions-artifact URLs. The active publisher had moved
+new downloads to public GitHub Release assets and set the shared flag false, while the
+older iOS entry still used an Actions artifact. Both status bars therefore failed
+closed even though the visible page links were valid. The contract is now per platform:
+Release URLs must match the record's source-SHA tag suffix and expected APK/IPA
+filename; Actions URLs must match that platform's packaging run and artifact IDs.
+The current manifest records Android as public and the legacy iOS artifact as
+sign-in protected. No package bytes or production release were changed by this repair.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
