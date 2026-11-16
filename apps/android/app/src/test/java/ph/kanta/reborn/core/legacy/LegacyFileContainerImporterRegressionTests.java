@@ -55,6 +55,33 @@ public final class LegacyFileContainerImporterRegressionTests {
     @Override public void end() { ended = true; super.end(); }
   }
 
+  private static final class CancellationInflater extends Inflater {
+    volatile boolean ended;
+    private int calls;
+    CancellationInflater() { super(true); }
+    @Override public int inflate(byte[] output) {
+      if (calls++ == 0) { output[0] = 1; return 1; }
+      return 0;
+    }
+    @Override public boolean needsDictionary() { return false; }
+    @Override public boolean needsInput() { return false; }
+    @Override public boolean finished() { return false; }
+    @Override public void end() { ended = true; super.end(); }
+  }
+
+  private static void cancellationStopsInflaterAndEndsNativeState() throws Exception {
+    CancellationInflater inflater = new CancellationInflater();
+    java.util.concurrent.atomic.AtomicInteger polls = new java.util.concurrent.atomic.AtomicInteger();
+    boolean cancelled = false;
+    try {
+      LegacyFileContainerImporter.inflateExact(
+          new byte[] {1}, 1, 2, inflater, () -> polls.incrementAndGet() > 1);
+    } catch (java.io.InterruptedIOException expected) {
+      cancelled = true;
+    }
+    check(cancelled, "Legacy MKMD decompression observes cancellation between inflate calls");
+    check(inflater.ended, "Cancelled legacy MKMD inflater native state was released");
+  }
   private static void rejectsStalledLegacyInflater() throws Exception {
     DictionaryRequiredInflater inflater = new DictionaryRequiredInflater();
     FutureTask<byte[]> task = new FutureTask<>(
@@ -132,6 +159,51 @@ public final class LegacyFileContainerImporterRegressionTests {
     }
   }
 
+  private static void cancelledImportRemovesPartialOutputs() throws Exception {
+    java.nio.file.Path dir = Files.createTempDirectory("legacy-cancelled-import-");
+    File output = dir.resolve("output").toFile();
+    try {
+      File index = dir.resolve("input.idx").toFile();
+      File blob = dir.resolve("input.blob").toFile();
+      byte[] first = new byte[] {'M', 'T', 'h', 'd', 11};
+      byte[] second = new byte[] {'M', 'T', 'h', 'd', 22};
+      try (RandomAccessFile out = new RandomAccessFile(blob, "rw")) {
+        out.setLength(4096);
+        encryptedRecord(out, 0, first);
+        encryptedRecord(out, 2048, second);
+      }
+      try (RandomAccessFile out = new RandomAccessFile(index, "rw")) {
+        out.setLength(28);
+        out.seek(20); u32(out, 28);
+        out.seek(28);
+        for (int i = 0; i < 2; i++) {
+          byte[] title = (i == 0 ? "Synthetic B" : "Synthetic A")
+              .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+          out.write(1); out.write(12 + title.length); out.writeShort(0);
+          u32(out, 0); u32(out, i == 0 ? 1 : 0); out.write(title);
+        }
+        u32(out, 17); u32(out, 513);
+      }
+      LegacyImportKey credentials = new LegacyImportKey(TEST_KEY, TEST_IV);
+      byte[] ownedKey = credentials.key(), ownedIv = credentials.iv();
+      boolean cancelled = false;
+      try {
+        LegacyFileContainerImporter.importPair(index, blob, output, credentials,
+            () -> output.isDirectory() && output.listFiles() != null && output.listFiles().length > 0);
+      } catch (java.io.InterruptedIOException expected) {
+        cancelled = true;
+      }
+      check(cancelled, "Legacy paired import stops after cancellation during record processing");
+      check(output.isDirectory() && output.listFiles().length == 0,
+          "Cancelled legacy import deletes already-decoded staged files");
+      checkCleared(credentials, ownedKey, ownedIv);
+    } finally {
+      try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(dir)) {
+        for (java.nio.file.Path path : paths.sorted(java.util.Comparator.reverseOrder())
+            .toArray(java.nio.file.Path[]::new)) Files.delete(path);
+      }
+    }
+  }
   private static void encryptedRecord(RandomAccessFile out, long offset, byte[] payload)
       throws Exception {
     java.util.zip.Deflater compressor = new java.util.zip.Deflater(6, true);
@@ -250,7 +322,9 @@ public final class LegacyFileContainerImporterRegressionTests {
     }
     runtimeKeyLifecycle();
     rejectsStalledLegacyInflater();
+    cancellationStopsInflaterAndEndsNativeState();
     namedImport();
+    cancelledImportRemovesPartialOutputs();
     return checks;
   }
 }

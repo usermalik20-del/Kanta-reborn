@@ -1770,11 +1770,15 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024);
           ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
               ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
-                  index, blob, new File(repository.media, "legacy-import"), owned);
+                  index, blob, new File(repository.media, "legacy-import"), owned, importCancelled::get);
           good = repository.importLegacyResult(result);
           resultMessage = "Imported " + good + " legacy song(s); " + result.skippedCount + " record(s) skipped.";
         } catch (Exception failure) {
-          resultMessage = "Legacy import failed: " + (failure.getMessage() == null ? "unsupported container" : failure.getMessage());
+          if (importCancelled.get() || failure instanceof java.io.InterruptedIOException) {
+            resultMessage = "Legacy import cancelled.";
+          } else {
+            resultMessage = "Legacy import failed: " + (failure.getMessage() == null ? "unsupported container" : failure.getMessage());
+          }
         } finally { if (index != null) index.delete(); if (blob != null) blob.delete(); }
         final int imported = good; final String messageValue = resultMessage;
         main.post(() -> { songs = repository.songs(); importing = false; libraryImporting = false; message = messageValue; completeImportProgress(imported > 0, messageValue); publish(); });

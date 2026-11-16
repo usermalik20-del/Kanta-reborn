@@ -5,7 +5,9 @@ the direct `MkmdDecoderRegressionTests`. The paired importer test injects a
 dictionary-required inflater that returns zero bytes without requesting more input;
 the operation must fail within two seconds and call `Inflater.end()`. Valid paired
 records, title/address mapping, wrong-key rejection and credential zeroization remain
-covered. Malformed record failures are isolated and reported as skipped entries.
+covered. Malformed record failures are isolated and reported as skipped entries. Cancellation is tested
+inside a running inflate loop and between indexed records; a cancelled pair must remove
+all staged outputs and zero its owned key and IV.
 
 ## Mobile-first responsive enhancements (2026-11-16)
 

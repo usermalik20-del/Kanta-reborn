@@ -6,7 +6,9 @@ streams instead of looping indefinitely. The inflater's native zlib state is end
 in a `finally` path, including malformed-data and declared-size failures. A bad
 record remains a skipped record with an error; valid indexed records can still import.
 The regression uses a deliberately stalled inflater and verifies prompt rejection
-and cleanup through the existing `:app:coreRegression` gate.
+and cleanup through the existing `:app:coreRegression` gate. Import cancellation is
+checked during index validation, each record and every DEFLATE iteration; any files
+staged earlier in a cancelled pair are deleted.
 
 ## Mobile-first responsive enhancements (2026-11-16)
 
