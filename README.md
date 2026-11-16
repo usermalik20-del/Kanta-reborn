@@ -68,7 +68,7 @@ The stray `|` divider between Key and Tempo columns in the Now Playing header wa
 - **Back up your music and saved work.** Switching Android test versions may require uninstalling the old app, which can erase its saved data.
 - **Some downloads require a GitHub account** and are available for a limited time. Follow the current download page rather than an old build link.
 - **Real-device testing is not complete.** Voice quality, microphone delay, camera use and external displays still need testing on physical devices. Passing automated tests does not guarantee they work on your device.
-- **Remote control is experimental.** Compatibility and setup differ between platforms; use a trusted private network and share pairing codes only with people you trust.
+- **Remote control is experimental.** Compatibility and setup differ between platforms; use a trusted private network and share pairing codes only with people you trust. Closing the host screen or leaving the app disconnects the session; commands are not replayed after reconnect.
 - **YouTube playback is not available.**
 
 ## Privacy
