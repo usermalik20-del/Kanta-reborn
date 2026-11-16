@@ -1583,3 +1583,13 @@ remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook interaction ownership (2026-11-16)
+
+The private browser Songbook has one state owner: `songbook.js`. It controls unlock
+success/failure, locking and plaintext cleanup, filtering, page indexes, keyboard
+navigation, print and CSV export. `songbook-fx.js` is decorative-only; duplicate
+click/keyboard handlers or list DOM swaps there can reveal the reader before AES-GCM
+decryption succeeds and can desynchronize page contents from page numbers. The core
+script toggles `.physical-book.next` / `.prev`; `songbook.css` owns the corresponding
+flip-sheet animation. `theme.css` must not hide the flip sheet.

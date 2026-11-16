@@ -1488,3 +1488,10 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 <!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
 
+
+## Private Songbook interaction ownership
+
+`python -m unittest tools.tests.test_songbook_ui_contract` verifies that the FX script
+does not attach unlock/lock/page/keyboard handlers or mutate song-list HTML, that the
+core script owns those controls, that the flip-sheet remains visible to the core CSS
+animation, and that `songbook.html` loads the core before the decorative FX script.
