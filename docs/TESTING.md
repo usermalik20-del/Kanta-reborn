@@ -1501,3 +1501,10 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 <!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
 
+
+### Instrumentation main-thread predicate rule
+
+`RuntimeChecks.await()` delegates to `state()`, which already invokes the predicate through
+`Instrumentation.runOnMainSync`. Predicates passed to `await()` must access views directly
+and must not nest another `runOnMainSync`; doing so crashes the instrumentation process
+with `This method can not be called from the main application thread`.

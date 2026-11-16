@@ -1151,4 +1151,6 @@ updated PR head. Physical-device and actual external-display acceptance remain s
 
 **Recurrence rule:** use the existing reflection accessor for private Activity fields in instrumentation; prefer observable behavior over widening production internals.
 
-**Status:** `candidate`.
+**Second exact-head failure:** run [#43787585095](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43787585095) at SHA `55cd2464eb2976f064b6f3d6fa45696a5461263f` compiled successfully, then crashed in `RuntimeChecks.assertPersistentStage` because its `await()` predicate nested `runOnMainSync`. `await()` already routes predicates through `state()` and `runOnMainSync`, so Android rejects the nested call from the main thread. The predicate now reads the views directly and returns its result without nested dispatch.
+
+**Status:** `candidate`; a fresh exact-head Android run is pending.

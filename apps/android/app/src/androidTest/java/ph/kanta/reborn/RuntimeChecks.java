@@ -1969,35 +1969,30 @@ public final class RuntimeChecks extends Instrumentation {
   /** Navigation must project the same mounted, visible presenter above every utility panel. */
   private void assertPersistentStage(String lowerPanelTag) {
     await(() -> {
-      AtomicReference<Boolean> matches = new AtomicReference<>(false);
-      runOnMainSync(() -> {
+      // await() evaluates predicates through state(), which already runs on the main thread.
+      // Do not nest Instrumentation.runOnMainSync here: Android rejects that call from main.
+      int orientation = (Integer) field(activity, "lastOrientation");
+      if (orientation != persistentStageOrientation) {
         // A real configuration change intentionally replaces StagePresenterImpl.
         // Refresh the identity baseline only when the Activity's orientation changes;
         // navigation within one orientation must still preserve the same stage view.
-        int orientation = (Integer) field(activity, "lastOrientation");
-        if (orientation != persistentStageOrientation) {
-          persistentPrimaryStage = activity.getWindow().getDecorView()
-              .findViewWithTag("kanta.stage.primary");
-          persistentStageOrientation = orientation;
-        }
-        View primary = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
-        if (primary == null || primary != persistentPrimaryStage
-            || !primary.isAttachedToWindow() || !visibleOnScreen("kanta.stage.primary")) return;
-        if (lowerPanelTag == null) {
-          matches.set(true);
-          return;
-        }
-        View panel = activity.getWindow().getDecorView().findViewWithTag(lowerPanelTag);
-        // Long group menus can place a tile below the current ScrollView viewport;
-        // attachment and geometry still prove it belongs to the lower utility region.
-        if (panel == null || !panel.isAttachedToWindow() || panel.getHeight() <= 0) return;
-        int[] stageLocation = new int[2];
-        int[] panelLocation = new int[2];
-        primary.getLocationInWindow(stageLocation);
-        panel.getLocationInWindow(panelLocation);
-        matches.set(panelLocation[1] >= stageLocation[1] + primary.getHeight());
-      });
-      return matches.get();
+        persistentPrimaryStage = activity.getWindow().getDecorView()
+            .findViewWithTag("kanta.stage.primary");
+        persistentStageOrientation = orientation;
+      }
+      View primary = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
+      if (primary == null || primary != persistentPrimaryStage
+          || !primary.isAttachedToWindow() || !visibleOnScreen("kanta.stage.primary")) return false;
+      if (lowerPanelTag == null) return true;
+      View panel = activity.getWindow().getDecorView().findViewWithTag(lowerPanelTag);
+      // Long group menus can place a tile below the current ScrollView viewport;
+      // attachment and geometry still prove it belongs to the lower utility region.
+      if (panel == null || !panel.isAttachedToWindow() || panel.getHeight() <= 0) return false;
+      int[] stageLocation = new int[2];
+      int[] panelLocation = new int[2];
+      primary.getLocationInWindow(stageLocation);
+      panel.getLocationInWindow(panelLocation);
+      return panelLocation[1] >= stageLocation[1] + primary.getHeight();
     }, "Navigation hid, replaced or overlapped the persistent stage: " + lowerPanelTag);
   }
 
