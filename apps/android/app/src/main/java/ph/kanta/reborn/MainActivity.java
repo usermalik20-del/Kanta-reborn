@@ -261,7 +261,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     super.onConfigurationChanged(newConfig);
     int newOrient = newConfig.orientation;
     boolean cameraWasOnPrimaryStage =
-        camera != null && camera.enabled() && (fullscreen == null || !fullscreen.isShowing());
+        camera != null && stagePresenter != null && camera.ownsSurface(stagePresenter);
     if (newOrient != lastOrientation) {
       // Rebuild from the incoming configuration. Resources can still reflect the old
       // orientation while this callback is executing in synthetic/runtime checks.
@@ -272,8 +272,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       appHeader = null;
       buildWindow(newOrient);
       render();
-      // buildWindow creates a new StagePresenterImpl. Rebind an active primary preview
-      // to its new PreviewView; a fullscreen preview remains owned by its StageSurface.
+      // buildWindow creates a new StagePresenterImpl. Rebind only when the old primary
+      // presenter owned the camera; fullscreen/external StageSurface targets stay put.
       if (cameraWasOnPrimaryStage && stagePresenter != null) camera.moveTo(stagePresenter);
     }
     lastOrientation = newOrient;

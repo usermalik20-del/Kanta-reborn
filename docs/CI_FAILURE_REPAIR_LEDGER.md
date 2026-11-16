@@ -1110,3 +1110,26 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 - **Cause:** the publisher job had `actions: read`, but GitHub's workflow-dispatch endpoint requires Actions write permission. The ordinary publisher push is intentionally performed with `GITHUB_TOKEN` and therefore does not trigger another workflow automatically.
 - **Repair:** elevate only the publisher job to `actions: write` so it can explicitly dispatch the Vercel deployment after its verified commit. Keep the permission scoped to that job and preserve platform isolation.
 - **Validation:** rerun the publisher after merge; confirm the download commit lands on main, Vercel deployment succeeds, and the live Android page points to the newly uploaded package.
+
+
+## Android rotation runtime stage identity and camera target ownership — November 16, 2026
+
+**Fingerprint:** PR #208 Android runtime job failed twice at
+`RuntimeChecks.persistentStagePlaybackChecks()` with
+`Navigation hid, replaced or overlapped the persistent stage: null`.
+
+**Finding:** the runtime helper captured one `StagePresenterImpl` reference before the
+navigation sequence and required that same view forever. In-place orientation handling
+is designed to rebuild that presenter; the test must refresh its identity baseline when
+`lastOrientation` changes while continuing to require identity stability across normal
+navigation within an orientation. Separately, the first camera rebind guard inferred
+primary ownership from fullscreen-dialog visibility, which is not a reliable indicator
+when the camera is attached to an external `StageSurface`.
+
+**Repair:** the assertion now updates its expected stage only on an orientation transition
+and performs view checks on the main thread. `CameraStage.ownsSurface` compares the exact
+active target; only the old primary presenter is rebound. Runtime coverage keeps a
+synthetic non-primary `StageSurface` as camera owner through both orientation changes.
+
+**Validation:** exact-head Android build/lint/core/emulator validation is pending on the
+updated PR head. Physical-device and actual external-display acceptance remain separate.

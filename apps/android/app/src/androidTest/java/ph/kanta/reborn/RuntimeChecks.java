@@ -22,6 +22,7 @@ public final class RuntimeChecks extends Instrumentation {
   private MainActivity activity;
   private SessionController session;
   private View persistentPrimaryStage;
+  private int persistentStageOrientation = -1;
 
   @Override
   public void onCreate(Bundle arguments) {
@@ -238,8 +239,11 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null),
           "Reference-led Home dashboard was not mounted at launch");
-      runOnMainSync(() -> persistentPrimaryStage = activity.getWindow().getDecorView()
-          .findViewWithTag("kanta.stage.primary"));
+      runOnMainSync(() -> {
+        persistentPrimaryStage = activity.getWindow().getDecorView()
+            .findViewWithTag("kanta.stage.primary");
+        persistentStageOrientation = (Integer) field(activity, "lastOrientation");
+      });
       assertPersistentStage(null);
       // The empty stage must read as a karaoke machine waiting for a song code, and its
       // background must be the moving BGV video rather than a frozen wallpaper. Runs only
@@ -975,6 +979,43 @@ public final class RuntimeChecks extends Instrumentation {
           "Superseded primary stage retained the camera preview");
       stableStage.set(primaryStageAfterRotation);
 
+      // A non-primary StageSurface (fullscreen or external display) remains the camera
+      // owner when the primary Activity changes orientation.
+      StageSurface nonPrimaryStage = new StageSurface(activity, session);
+      runOnMainSync(() -> activity.camera.moveTo(nonPrimaryStage));
+      check(state(() -> activity.camera.ownsSurface(nonPrimaryStage)),
+          "Camera did not attach to the non-primary stage fixture");
+      runOnMainSync(() -> {
+        android.content.res.Configuration changed =
+            new android.content.res.Configuration(activity.getResources().getConfiguration());
+        changed.orientation = alternateOrientation;
+        activity.onConfigurationChanged(changed);
+      });
+      check(state(() -> activity.camera.ownsSurface(nonPrimaryStage)),
+          "Primary rotation stole the camera preview from a non-primary stage");
+      runOnMainSync(() -> {
+        android.content.res.Configuration restored =
+            new android.content.res.Configuration(activity.getResources().getConfiguration());
+        restored.orientation = originalOrientation;
+        activity.onConfigurationChanged(restored);
+      });
+      check(state(() -> activity.camera.ownsSurface(nonPrimaryStage)),
+          "Restoring primary orientation stole the non-primary camera preview");
+      AtomicReference<ph.kanta.reborn.stage.StagePresenterImpl> currentPrimary =
+          new AtomicReference<>();
+      runOnMainSync(() -> {
+        currentPrimary.set((ph.kanta.reborn.stage.StagePresenterImpl) field(activity, "stagePresenter"));
+        activity.camera.moveTo(currentPrimary.get());
+      });
+      await(() -> activity.cameraStreaming()
+              && activity.camera.ownsSurface(currentPrimary.get())
+              && currentPrimary.get().isCameraVisible(),
+          "Camera did not return to the current primary stage after non-primary ownership");
+      check(!nonPrimaryStage.isCameraVisible(),
+          "Non-primary stage retained the camera preview after ownership moved away");
+      nonPrimaryStage.setVisualActive(false);
+      stableStage.set(currentPrimary.get());
+
       runOnMainSync(activity::fullscreen);
       await(
           () -> field(activity, "fullscreenStage") instanceof StageSurface,
@@ -985,11 +1026,11 @@ public final class RuntimeChecks extends Instrumentation {
           () -> activity.cameraStreaming() && cameraStageRef.get().isCameraVisible(),
           "Front camera did not render on the fullscreen stage");
       runOnMainSync(activity::closeFullscreen);
-      stableStage.set(primaryStageAfterRotation);
+      stableStage.set(currentPrimary.get());
       await(
           () ->
               activity.cameraStreaming()
-                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) currentPrimary.get())
                       .isCameraVisible(),
           "Front camera did not return to the primary stage");
       await(
@@ -1000,14 +1041,14 @@ public final class RuntimeChecks extends Instrumentation {
           () ->
               !session.cameraPreviewEnabled
                   && !activity.cameraStreaming()
-                  && !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                  && !((ph.kanta.reborn.stage.StagePresenterImpl) currentPrimary.get())
                       .isCameraVisible(),
           "Disabling the camera did not release the primary preview");
       runOnMainSync(activity::toggleCamera);
       await(
           () ->
               activity.cameraStreaming()
-                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) currentPrimary.get())
                       .isCameraVisible(),
           "Camera did not reopen on the current primary stage after explicit opt-in");
       capture("camera_optin.png");
@@ -1924,19 +1965,35 @@ public final class RuntimeChecks extends Instrumentation {
   /** Navigation must project the same mounted, visible presenter above every utility panel. */
   private void assertPersistentStage(String lowerPanelTag) {
     await(() -> {
-      View primary = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
-      if (primary == null || primary != persistentPrimaryStage
-          || !primary.isAttachedToWindow() || !visibleOnScreen("kanta.stage.primary")) return false;
-      if (lowerPanelTag == null) return true;
-      View panel = activity.getWindow().getDecorView().findViewWithTag(lowerPanelTag);
-      // Long group menus can place a tile below the current ScrollView viewport;
-      // attachment and geometry still prove it belongs to the lower utility region.
-      if (panel == null || !panel.isAttachedToWindow() || panel.getHeight() <= 0) return false;
-      int[] stageLocation = new int[2];
-      int[] panelLocation = new int[2];
-      primary.getLocationInWindow(stageLocation);
-      panel.getLocationInWindow(panelLocation);
-      return panelLocation[1] >= stageLocation[1] + primary.getHeight();
+      AtomicReference<Boolean> matches = new AtomicReference<>(false);
+      runOnMainSync(() -> {
+        // A real configuration change intentionally replaces StagePresenterImpl.
+        // Refresh the identity baseline only when the Activity's orientation changes;
+        // navigation within one orientation must still preserve the same stage view.
+        int orientation = (Integer) field(activity, "lastOrientation");
+        if (orientation != persistentStageOrientation) {
+          persistentPrimaryStage = activity.getWindow().getDecorView()
+              .findViewWithTag("kanta.stage.primary");
+          persistentStageOrientation = orientation;
+        }
+        View primary = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
+        if (primary == null || primary != persistentPrimaryStage
+            || !primary.isAttachedToWindow() || !visibleOnScreen("kanta.stage.primary")) return;
+        if (lowerPanelTag == null) {
+          matches.set(true);
+          return;
+        }
+        View panel = activity.getWindow().getDecorView().findViewWithTag(lowerPanelTag);
+        // Long group menus can place a tile below the current ScrollView viewport;
+        // attachment and geometry still prove it belongs to the lower utility region.
+        if (panel == null || !panel.isAttachedToWindow() || panel.getHeight() <= 0) return;
+        int[] stageLocation = new int[2];
+        int[] panelLocation = new int[2];
+        primary.getLocationInWindow(stageLocation);
+        panel.getLocationInWindow(panelLocation);
+        matches.set(panelLocation[1] >= stageLocation[1] + primary.getHeight());
+      });
+      return matches.get();
     }, "Navigation hid, replaced or overlapped the persistent stage: " + lowerPanelTag);
   }
 

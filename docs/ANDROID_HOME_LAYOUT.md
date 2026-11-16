@@ -80,12 +80,17 @@ required before merge, not a blind rerun of the failing commit.
 
 The Activity records the initial resource orientation in `onCreate()`; the first
 `onConfigurationChanged()` can therefore rebuild the layout instead of being skipped.
-The rebuild uses the callback's incoming orientation directly. When the camera was
-owned by the primary stage, it is moved to the replacement `StagePresenterImpl` after
-rendering. A fullscreen camera remains on its existing `StageSurface` and is returned
-to the current primary presenter when fullscreen closes.
+The rebuild uses the callback's incoming orientation directly. Camera rebind checks
+the exact old target with `CameraStage.ownsSurface()`: only a primary `StagePresenterImpl`
+is rebound. A fullscreen or external-display preview remains on its `StageSurface`
+through primary rotation; the fullscreen flow explicitly returns the preview to the
+current primary presenter when it closes.
 
-The Android emulator runtime check now simulates a first orientation change and
-restoration while the primary camera is enabled. It verifies the layout direction,
-new presenter ownership, camera preview rebind, and release from the superseded stage.
+The Android emulator runtime check simulates a first orientation change and restoration
+while the primary camera is enabled. It verifies layout direction, new presenter ownership,
+primary preview rebind, and release from the superseded stage. A separate synthetic
+`StageSurface` target proves that primary rotation does not steal a fullscreen/external
+camera preview. The persistent-stage assertion refreshes its identity baseline only when
+the Activity orientation changes, while navigation within one orientation must preserve
+the same stage view.
 Physical-device rotation, large-text, and external-display acceptance remain open.

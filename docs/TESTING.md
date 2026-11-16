@@ -16,12 +16,10 @@
   change is not skipped.
 - `onConfigurationChanged()` passes `newConfig.orientation` to `buildWindow(int)`
   instead of reading potentially stale resource configuration.
-- If the camera was owned by the primary stage, it is moved to the replacement
-  `StagePresenterImpl` after render. A fullscreen preview stays on its existing
-  `StageSurface`.
-- `RuntimeChecks` simulates a first orientation transition and restoration while the
-  camera is enabled, checking layout direction, stage replacement, preview rebind, and
-  release from the superseded stage. Physical-device rotation remains a separate acceptance.
+- Camera rebind checks exact target ownership. Only a primary `StagePresenterImpl` is rebound;
+  fullscreen/external `StageSurface` targets must remain unchanged during primary rotation.
+- The persistent-stage runtime assertion refreshes its baseline only when `lastOrientation`
+  changes, while still requiring the same view instance across ordinary navigation.
 
 ---
 ## Publisher release asset URL fix (2026-11-14)

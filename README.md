@@ -13,8 +13,8 @@
 ## Landscape mode and camera rotation (2026-11-16)
 
 - Android reflows between portrait and landscape without restarting the karaoke session.
-- The camera preview stays attached to the visible primary stage when the device rotates or
-  returns from fullscreen.
+- A primary-stage camera preview rebinds to the replacement primary stage. Fullscreen or
+  external-stage previews stay on their selected stage during primary-screen rotation.
 - Physical-device rotation and camera acceptance remain outstanding; emulator checks are not
   a substitute for testing on the target phone/tablet.
 

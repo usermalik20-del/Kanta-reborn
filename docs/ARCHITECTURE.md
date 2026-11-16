@@ -19,12 +19,13 @@
   the incoming orientation into `buildWindow(int)` rather than rereading stale resources.
 - The stage remains horizontal in landscape (55% stage / 45% content) and vertical in
   portrait (42% stage / 58% content).
-- If the camera preview is active on the primary stage, it is rebound to the newly created
-  `StagePresenterImpl` after the layout rebuild. A fullscreen preview remains owned by its
-  `StageSurface` and returns to the current primary stage when fullscreen closes.
-- `RuntimeChecks` exercises a first synthetic orientation transition and restoration while
-  the camera is active, asserting new stage ownership and preview release on the old stage.
-  This is emulator lifecycle evidence; physical-device rotation acceptance remains separate.
+- Camera rebind uses exact target identity (`CameraStage.ownsSurface`), not fullscreen-dialog
+  visibility as a proxy. Only the old primary `StagePresenterImpl` is rebound; fullscreen or
+  external-display `StageSurface` targets remain attached through primary orientation changes.
+- `RuntimeChecks` covers primary rebind, non-primary target preservation, and preview release
+  from superseded stages. The persistent-stage baseline refreshes only after an orientation
+  change, so ordinary navigation must still preserve the same view instance. This is emulator
+  lifecycle evidence; physical-device rotation acceptance remains separate.
 
 ---
 ## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
