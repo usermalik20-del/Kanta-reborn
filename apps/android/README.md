@@ -10,14 +10,18 @@
 - **Accessibility**: Added mobile nav drawer HTML/JS as progressive enhancement
 
 ---
-## Landscape mode support (2026-11-15)
+## Landscape mode and camera rotation lifecycle (2026-11-16)
 
-- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
-- **MainActivity.java**: 
-  - Added `lastOrientation` field to track orientation changes
-  - `onConfigurationChanged()` rebuilds layout when orientation changes
-  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
-  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+- `MainActivity.onCreate()` initializes `lastOrientation`, so the first configuration
+  change is not skipped.
+- `onConfigurationChanged()` passes `newConfig.orientation` to `buildWindow(int)`
+  instead of reading potentially stale resource configuration.
+- If the camera was owned by the primary stage, it is moved to the replacement
+  `StagePresenterImpl` after render. A fullscreen preview stays on its existing
+  `StageSurface`.
+- `RuntimeChecks` simulates a first orientation transition and restoration while the
+  camera is enabled, checking layout direction, stage replacement, preview rebind, and
+  release from the superseded stage. Physical-device rotation remains a separate acceptance.
 
 ---
 ## Keypad press sounds & standby interlude (2026-11-14)
