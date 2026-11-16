@@ -895,8 +895,11 @@ public final class RuntimeChecks extends Instrumentation {
 
       // Exercise the first in-place configuration change while the primary camera is active.
       // A fresh Activity has not received a prior onConfigurationChanged callback yet.
-      int originalOrientation =
-          state(() -> activity.getResources().getConfiguration().orientation);
+      AtomicReference<Integer> originalOrientationRef = new AtomicReference<>();
+      runOnMainSync(
+          () -> originalOrientationRef.set(
+              activity.getResources().getConfiguration().orientation));
+      int originalOrientation = originalOrientationRef.get();
       int alternateOrientation =
           originalOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
               ? android.content.res.Configuration.ORIENTATION_PORTRAIT
@@ -912,12 +915,14 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           rotatedPrimaryStage != primaryStage,
           "First orientation change did not rebuild the primary stage");
-      int rotatedMainOrientation =
-          state(
-              () ->
+      AtomicReference<Integer> rotatedMainOrientationRef = new AtomicReference<>();
+      runOnMainSync(
+          () ->
+              rotatedMainOrientationRef.set(
                   ((android.widget.LinearLayout)
                           ((android.widget.LinearLayout) field(activity, "root")).getChildAt(1))
-                      .getOrientation());
+                      .getOrientation()));
+      int rotatedMainOrientation = rotatedMainOrientationRef.get();
       check(
           rotatedMainOrientation
               == (alternateOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -945,12 +950,14 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           primaryStageAfterRotation != rotatedPrimaryStage,
           "Restoring the original orientation did not rebuild the primary stage");
-      int restoredMainOrientation =
-          state(
-              () ->
+      AtomicReference<Integer> restoredMainOrientationRef = new AtomicReference<>();
+      runOnMainSync(
+          () ->
+              restoredMainOrientationRef.set(
                   ((android.widget.LinearLayout)
                           ((android.widget.LinearLayout) field(activity, "root")).getChildAt(1))
-                      .getOrientation());
+                      .getOrientation()));
+      int restoredMainOrientation = restoredMainOrientationRef.get();
       check(
           restoredMainOrientation
               == (originalOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
