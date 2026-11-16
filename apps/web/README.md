@@ -342,3 +342,10 @@ or download manifest changes are part of this local work.
 ## Validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point, link validator (static assets, directory indexes), sitemap/CSP validation for blog routes. Added blog/all.html and blog.css to resolve missing assets.
+## Private Songbook CSV export
+
+Songbook CSV downloads are rebuilt from parsed song objects rather than copying the
+decrypted source text. Every field is quoted, embedded quotes are doubled, and cells
+whose first non-whitespace/control character is `=`, `+`, `-` or `@` are prefixed with
+an apostrophe so spreadsheet software treats them as text. Keep all four fields
+(code, title, artist and availability) on the same safe serializer.

@@ -1583,3 +1583,13 @@ remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook CSV trust boundary (2026-11-16)
+
+Authenticated Songbook plaintext is still untrusted catalog data. Browser CSV export
+must serialize parsed fields rather than return the decrypted source string, quote all
+cells, double embedded quotes and neutralize spreadsheet formula sigils after leading
+whitespace/control characters. The four exported columns are all untrusted. The
+browser's AES-GCM envelope, domain-separated SHA-256 key derivation and decrypt
+routine remain byte-identical to the archived reader reference; parser/export changes
+are covered separately by the website regression suite.

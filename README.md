@@ -97,3 +97,12 @@ Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog rou
 Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook CSV safety
+
+The browser Songbook keeps its AES-GCM envelope, key derivation and decrypt routine
+byte-identical to the archived reader reference. After authenticated decryption, the
+four catalog fields are parsed and re-serialized for export; formula-leading cells
+(including values with leading whitespace/control characters) are forced to text.
+Exports do not reuse the raw decrypted CSV string, and the parser enforces the song
+count limit even when the final row has no trailing newline.

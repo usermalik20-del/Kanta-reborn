@@ -1488,3 +1488,12 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 <!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
 
+
+## Private Songbook CSV security
+
+`python -m unittest tools.tests.test_songbook_csv_security` checks the formula-neutralizing
+cell serializer, all four exported fields, raw-plaintext non-retention, final-row bounds
+and text-only DOM rendering. `tools/verify-website.py` keeps the `async function decrypt`
+body byte-identical to `docs/evidence/website/2026-10-15/songbook.js` and keeps
+`songbook.css` byte-identical; only parser/export logic is allowed to evolve under
+explicit regression tests.

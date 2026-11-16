@@ -453,8 +453,18 @@ def main():
                 assert destination in known_pages and url.fragment in (pages.get(destination, Page()).ids), (name, link)
 
     original = ROOT / "docs/evidence/website/2026-10-15"
-    for name in ("songbook.js", "songbook.css"):
-        assert (WEB / name).read_bytes() == (original / name).read_bytes(), name + " reader changed"
+    current_reader = (WEB / "songbook.js").read_text(encoding="utf-8")
+    original_reader = (original / "songbook.js").read_text(encoding="utf-8")
+    def extract_js_function(source, marker):
+        start = source.index(marker)
+        end = source.find("\nfunction ", start)
+        return source[start:] if end < 0 else source[start:end]
+    # Keep the authenticated AES-GCM envelope/key/decrypt boundary byte-identical;
+    # parser and export behavior may evolve only with explicit regression coverage.
+    assert extract_js_function(current_reader, "async function decrypt") == extract_js_function(
+        original_reader, "async function decrypt"
+    ), "Songbook AES-GCM decrypt changed"
+    assert (WEB / "songbook.css").read_bytes() == (original / "songbook.css").read_bytes(), "songbook.css reader changed"
 
     validate_public_resources()
     validate_responsive_navigation_styles()

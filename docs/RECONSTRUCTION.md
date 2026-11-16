@@ -1247,3 +1247,13 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 Keypad key-press tones: 12 MP3 assets in `assets/keypad/`, played via `KeypadSounds` (SoundPool) gated on `!isPlaying()`. Standby interlude: `BundledInterlude` catalog copies `assets/interlude/standby-loop.mp3` to cache; `SessionController` uses it as default between-song source (loopEnabled=true), with user override in Party Mode.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook CSV export hardening (2026-11-16)
+
+The browser reader continues to use the same AES-GCM envelope and key derivation.
+Export now reconstructs CSV from parsed catalog rows, quotes every cell, doubles
+embedded quotes and prefixes formula-leading values (including whitespace/control
+prefixed values) so spreadsheet applications import them as text. The parser also
+enforces its 150,000-song bound on the final row when the source has no trailing
+newline. The archived reader snapshot remains unchanged; verification pins the
+authenticated decrypt function byte-for-byte rather than freezing safe export logic.
