@@ -27,11 +27,11 @@ class SongbookCSVSecurityTests(unittest.TestCase):
         self.assertNotIn("innerHTML", SOURCE)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_website_verifier_keeps_the_crypto_boundary_pinned(self):
         verifier = (ROOT / "tools/verify-website.py").read_text(encoding="utf-8")
         self.assertIn('extract_js_function(current_reader, "async function decrypt")', verifier)
         self.assertIn('extract_js_function(original_reader, "async function decrypt")', verifier)
         self.assertIn('assert (WEB / "songbook.css").read_bytes()', verifier)
+
+if __name__ == "__main__":
+    unittest.main()
