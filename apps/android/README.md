@@ -850,3 +850,13 @@ gates. Exact-head and post-merge validation, signed preview publication and webs
 deployment passed. See [evidence and remaining device limits](../../docs/ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+
+## Legacy MKMD decoder malformed-stream handling (2026-11-16)
+
+`MkmdDecoder` rejects raw-DEFLATE streams that exhaust input, require an unsupported
+preset dictionary, or return no output without reaching a finished state. It also
+releases `Inflater` native state in `finally`, including output-cap and malformed-data
+failures. This prevents a corrupt encrypted legacy payload from spinning the import
+worker indefinitely. The framework-free core regression uses an encrypted MKMD
+envelope with zero compressed bytes and requires a prompt decode failure.

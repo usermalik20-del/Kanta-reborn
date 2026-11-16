@@ -1488,3 +1488,14 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 <!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
 
+
+
+## Android legacy MKMD malformed-stream regression (2026-11-16)
+
+`MkmdDecoderRegressionTests.rejectsEmptyDeflateWithoutHanging` builds a valid encrypted
+MKMD envelope whose compressed section is empty while the decoded-size field is
+non-zero. It executes decode in a daemon `FutureTask` with a two-second deadline and
+requires a `DecodeException`; a timeout fails the regression. The class is registered
+in `CoreRegressionTests` and therefore runs in Gradle `:app:coreRegression`. Existing
+MIDI, WAVE, and MP3 round-trip fixtures remain required. Exact-head Android CI is the
+build/runtime evidence; no local Gradle execution is claimed for this cloud-only run.

@@ -1583,3 +1583,13 @@ remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+
+## Android legacy MKMD decoder failure contract (2026-11-16)
+
+The encrypted MKMD envelope is size-checked before raw-DEFLATE expansion. During
+expansion, `MkmdDecoder` now treats exhausted input as truncation, preset-dictionary
+requests as unsupported, and any other zero-output/no-progress result as malformed.
+`Inflater.end()` is guaranteed through `finally`, so invalid input and decoded-size
+cap failures release native zlib state. Valid MIDI/WAVE/MP3 payload classification and
+the existing decoded-output ceiling are unchanged.
