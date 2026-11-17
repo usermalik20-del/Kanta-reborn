@@ -137,6 +137,12 @@ Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog rou
 Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+**Publisher tag-race fix (2026-11-18):** `platform-download-publishing.yml` now passes
+`--target ${SOURCE_SHA}` to `gh release create`. Without it, the tag defaults to the
+runner's checkout head, which can be a descendant of the claimed source SHA when main
+advances between build and publish — making the tag object disagree with its
+`-preview-<sha>` suffix and tripping the release-notes guard.
+
 
 ## Private Songbook CSV safety
 
