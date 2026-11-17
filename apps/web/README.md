@@ -23,6 +23,13 @@ Node `--check` runs are unreliable in this iSH environment (intermittent hangs),
 Node steps in `website-validation.yml` remain the authoritative gate for those files.
 No ad code, consent gating, or ads.txt changes; no claims of AdSense approval.
 
+**Production 404 fix (same pass):** all 15 blog articles, `/blog/all` and the six blog
+category pages returned 404 in production: `vercel.json` dispatches those routes to
+`/api/page`, but `PAGES` in `api/page.js` contained no blog entries (pre-existing since
+the blog routes were added). Added the 22 missing `PAGES` entries, exported `PAGES`, and
+added two regression tests: every `/api/page` route in `vercel.json` must resolve to a
+`PAGES` entry, and every blog entry must point at an existing file.
+
 ## Website: feature copy resynced with the current preview (2026-11-10) — local candidate
 
 The public site's feature pages had drifted from the app. They described the build at
