@@ -1361,11 +1361,9 @@ pass; preflight passes, including 149-file structure and 59 workspace checks.
 Java tests/build/lint, emulator prompt/picker/cancel/background/busy/error acceptance
 and real-device playback are NOT verified: local JVM fails on `getcpu(2)`.
 See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
-<<<<<<< Updated upstream
-=======
+
 
 Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path (tools/tests/test_party_assets.py). Physical listening, device decoding and SoundPool playback remain separate acceptance.
->>>>>>> Stashed changes
 
 ## Local Android B1/B2/D5/D8 validation
 
@@ -1541,6 +1539,15 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 <!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
 
+
+## Private Songbook CSV security
+
+`python -m unittest tools.tests.test_songbook_csv_security` checks the formula-neutralizing
+cell serializer, all four exported fields, raw-plaintext non-retention, final-row bounds
+and text-only DOM rendering. `tools/verify-website.py` keeps the `async function decrypt`
+body byte-identical to `docs/evidence/website/2026-10-15/songbook.js` and keeps
+`songbook.css` byte-identical; only parser/export logic is allowed to evolve under
+explicit regression tests.
 
 ## Private Songbook interaction ownership
 
