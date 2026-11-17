@@ -15,7 +15,32 @@ const PAGES = {
   "/licenses": "licenses.html",
   "/support": "support.html",
   "/about": "about.html",
-  "/songbook": "songbook.html"
+  "/songbook": "songbook.html",
+  // Blog routes are also dispatched to this function by vercel.json. Keep every
+  // blog entry in vercel.json routes in sync with this map: a route whose dest is
+  // /api/page but which is absent here returns 404 in production.
+  "/blog/all": "blog/all.html",
+  "/blog/category/file-formats": "blog/category/file-formats/index.html",
+  "/blog/category/soundfonts": "blog/category/soundfonts/index.html",
+  "/blog/category/stage-setup": "blog/category/stage-setup/index.html",
+  "/blog/category/vocal-practice": "blog/category/vocal-practice/index.html",
+  "/blog/category/library-management": "blog/category/library-management/index.html",
+  "/blog/category/technical-deep-dives": "blog/category/technical-deep-dives/index.html",
+  "/blog/midi-kar-mp3-wav-karaoke-file-formats-explained": "blog/midi-kar-mp3-wav-karaoke-file-formats-explained.html",
+  "/blog/choosing-the-right-soundfont-for-karaoke": "blog/choosing-the-right-soundfont-for-karaoke.html",
+  "/blog/building-your-personal-karaoke-library": "blog/building-your-personal-karaoke-library.html",
+  "/blog/spice-pitch-estimation-how-it-works": "blog/spice-pitch-estimation-how-it-works.html",
+  "/blog/vocal-practice-techniques-pitch-training": "blog/vocal-practice-techniques-pitch-training.html",
+  "/blog/converting-karaoke-files-ffmpeg-tools": "blog/converting-karaoke-files-ffmpeg-tools.html",
+  "/blog/soundfont-bank-size-vs-quality": "blog/soundfont-bank-size-vs-quality.html",
+  "/blog/karaoke-songbook-export-sharing-privacy": "blog/karaoke-songbook-export-sharing-privacy.html",
+  "/blog/external-display-hdmi-airplay-karaoke": "blog/external-display-hdmi-airplay-karaoke.html",
+  "/blog/microphone-selection-karaoke-recording": "blog/microphone-selection-karaoke-recording.html",
+  "/blog/tinysoundfont-android-midi-engine": "blog/tinysoundfont-android-midi-engine.html",
+  "/blog/karaoke-party-effects-intermission-music": "blog/karaoke-party-effects-intermission-music.html",
+  "/blog/organizing-karaoke-files-metadata-tagging": "blog/organizing-karaoke-files-metadata-tagging.html",
+  "/blog/pitch-correction-vs-pitch-training": "blog/pitch-correction-vs-pitch-training.html",
+  "/blog/encrypted-companion-control-android": "blog/encrypted-companion-control-android.html"
 };
 // Crawler policy enforced on the rendered-page path. Keep in sync with
 // apps/web/robots.txt: the block list below must be exactly the real
@@ -165,5 +190,6 @@ module.exports = handler;
 module.exports.renderHtml = renderHtml;
 module.exports.makeCsp = makeCsp;
 module.exports.isBlockedCrawler = isBlockedCrawler;
+module.exports.PAGES = PAGES;
 module.exports.BLOCKED_USER_AGENT_TOKENS = BLOCKED_USER_AGENT_TOKENS;
 module.exports.ROBOTS_ONLY_TOKENS = ROBOTS_ONLY_TOKENS;
