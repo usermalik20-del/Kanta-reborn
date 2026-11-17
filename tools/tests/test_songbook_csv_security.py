@@ -10,7 +10,7 @@ class SongbookCSVSecurityTests(unittest.TestCase):
     def test_export_serializes_every_untrusted_field_and_neutralizes_formulas(self):
         self.assertIn("function csvCell(value)", SOURCE)
         self.assertIn(r"/^[\s\u0000-\u001f]*[=+\-@]/", SOURCE)
-        self.assertIn(r"""cell.replace(/"/g, '""')""", SOURCE)
+        self.assertIn(r"""cell.replace(/"/g,'""')""", SOURCE)
         self.assertIn("row.map(csvCell)", SOURCE)
         self.assertIn("songs.map(song=>[song.code,song.title,song.artist,song.availability])", SOURCE)
         self.assertIn("new Blob([data]", SOURCE)
@@ -29,8 +29,12 @@ class SongbookCSVSecurityTests(unittest.TestCase):
 
     def test_website_verifier_keeps_the_crypto_boundary_pinned(self):
         verifier = (ROOT / "tools/verify-website.py").read_text(encoding="utf-8")
-        self.assertIn('extract_js_function(current_reader, "async function decrypt")', verifier)
-        self.assertIn('extract_js_function(original_reader, "async function decrypt")', verifier)
+        # The verifier splits these calls across lines; match whitespace-tolerantly.
+        for reader in ("current_reader", "original_reader"):
+            self.assertRegex(
+                verifier,
+                rf'extract_js_function\(\s*{reader},\s*"async function decrypt"\s*\)',
+            )
         self.assertIn('assert (WEB / "songbook.css").read_bytes()', verifier)
 
 if __name__ == "__main__":
