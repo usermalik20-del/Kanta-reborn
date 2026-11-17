@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import re
 import unittest
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "apps/web"
@@ -50,7 +51,7 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertEqual(rewrites["^/$"], "/api/page?route=%2F")
         for route in ROUTES - {"/"}:
             self.assertIn("^" + route + "$", rewrites)
-        self.assertEqual(CONFIG["functions"]["api/page.js"]["includeFiles"], "*.html")
+        self.assertEqual(CONFIG["functions"]["api/page.js"]["includeFiles"], "**/*.html")
 
     def test_nonce_renderer_and_songbook_exclusion(self):
         source = PAGE_SOURCE
@@ -199,6 +200,12 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertIn("entry.packagingRun", source)
         self.assertIn("entry.packagingArtifact", source)
         self.assertIn("entry.sha256", source)
+        self.assertIn("entry.signInRequired", source)
+        self.assertIn("entry.releaseUrl", source)
+        self.assertIn("releases/download", source)
+        self.assertIn("actions/runs/", source)
+        self.assertNotIn("manifest.signInRequired", source)
+        self.assertNotIn("signInRequired", manifest)
         self.assertIn("downloadLink.href", source)
         self.assertIn("text.textContent", source)
         self.assertNotIn("innerHTML", source)
@@ -215,6 +222,34 @@ class WebsiteSecurityContractTests(unittest.TestCase):
             self.assertIn(entry["downloadUrl"], page, filename)
             self.assertIn(entry["sha256"], page, filename)
             self.assertIn(entry[digest_key], page, filename)
+
+            parsed = urlparse(entry["downloadUrl"])
+            self.assertEqual(parsed.scheme, "https")
+            self.assertEqual(parsed.netloc, "github.com")
+            self.assertFalse(parsed.query or parsed.fragment)
+            if "/releases/download/" in parsed.path:
+                self.assertFalse(entry["signInRequired"])
+                release = urlparse(entry["releaseUrl"])
+                self.assertEqual(release.scheme, "https")
+                self.assertEqual(release.netloc, "github.com")
+                self.assertFalse(release.query or release.fragment)
+                tag = release.path.rsplit("/", 1)[-1]
+                expected_name = (
+                    f"KANTA-Android-preview-{entry['source'][:8]}.apk"
+                    if platform == "android"
+                    else f"KANTA-iOS-personal-unsigned-{entry['source'][:8]}.ipa"
+                )
+                self.assertEqual(
+                    parsed.path,
+                    f"/usermalik20-del/Kanta-reborn/releases/download/{tag}/{expected_name}",
+                )
+                self.assertTrue(tag.endswith("-preview-" + entry["source"][:8]))
+            else:
+                self.assertTrue(entry["signInRequired"])
+                self.assertEqual(
+                    parsed.path,
+                    f"/usermalik20-del/Kanta-reborn/actions/runs/{entry['packagingRun']}/artifacts/{entry['packagingArtifact']}",
+                )
 
 
 if __name__ == "__main__":

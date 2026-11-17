@@ -95,3 +95,31 @@ test("rendered pages carry the crawler preference on the response itself", async
   assert.equal(res.headers["x-robots-tag"], "noai, noimageai");
   assert.match(res.body, /<html/i);
 });
+
+// Regression: every vercel.json route that dispatches to /api/page must have an
+// entry in PAGES. When a blog route was added to vercel.json without one, all 15
+// blog articles, /blog/all and six category pages returned 404 in production.
+const fs = require("node:fs");
+const path = require("node:path");
+
+test("every /api/page route in vercel.json resolves to a PAGES entry", () => {
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, "../../apps/web/vercel.json"), "utf8"));
+  const { PAGES } = require("../../apps/web/api/page.js");
+  const dispatched = [];
+  for (const rule of config.routes || []) {
+    const match = /^\/api\/page\?route=(.+)$/.exec(rule.dest || "");
+    if (match) dispatched.push(decodeURIComponent(match[1]));
+  }
+  assert.ok(dispatched.length > 0, "expected vercel.json to dispatch routes to /api/page");
+  const missing = dispatched.filter((route) => !PAGES[route]);
+  assert.deepEqual(missing, [], "vercel.json dispatches routes absent from PAGES: " + missing.join(", "));
+});
+
+test("every blog route in PAGES resolves to an existing file", () => {
+  const { PAGES } = require("../../apps/web/api/page.js");
+  const missing = Object.entries(PAGES)
+    .filter(([route]) => route.startsWith("/blog"))
+    .map(([route, file]) => [route, file])
+    .filter(([, file]) => !fs.existsSync(path.join(__dirname, "../../apps/web", file)));
+  assert.deepEqual(missing, [], "PAGES blog entries point at missing files: " + JSON.stringify(missing));
+});

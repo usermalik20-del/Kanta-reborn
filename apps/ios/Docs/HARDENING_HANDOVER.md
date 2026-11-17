@@ -1,9 +1,29 @@
 # KANTA reliability hardening handover
 
-**Current merged source baseline (October 10, 2026):** `kanta-ph/Gelo-Karaoke-iOS` `main`, merge commit [`6dcdf5f`](https://github.com/kanta-ph/Gelo-Karaoke-iOS/commit/6dcdf5f675572771f0377fe2197c2cee41b4bf5c), PR #44 merged and PR #40 closed as superseded. The last green Core CI ([run #38003895381](https://github.com/kanta-ph/Gelo-Karaoke-iOS/actions/runs/38003895381)) validated **173 Swift tests**, an unsigned Release iOS Simulator build, and live Host/CONTROL simulator startup on an earlier PR head; it **did not rebuild the final in-app Legal & Privacy edit or this merge commit**. KANTA has **no verified signed TestFlight upload or physical-device acceptance** for this merged batch. Website `/legal` and `/privacy` are live and were checked on production. Historical draft/pending paragraphs below record their original dates and must not supersede this status.
+**Current repository baseline (November 16, 2026):** `usermalik20-del/Kanta-reborn` `main` at `11e6710b1cd0b6417315423b90bb9097fb2af18c`. This iOS subtree is part of the monorepo; standalone-repository CI and merge references below are historical. No signed TestFlight upload or physical-device acceptance is implied. The native Bonjour Remote remains plaintext; Browser Remote and KCP1 Android Companion are separate protected paths.
 
 
-**Current status — 2026-10-07:** PR #25 merged as `beb63b5`; Core CI #130
+## 2026-11-16 — Bound legacy Bonjour remote session admission
+
+**Finding:** `BonjourHostAdvertiser` accepted an unbounded number of TCP sessions, and
+`HostRemoteConnection` had no deadline before PIN pairing. A peer could therefore open
+many sockets and leave each one idle indefinitely without authenticating.
+
+**Fix:** Admission now allows at most four concurrent native Bonjour sessions. An
+unpaired connection is closed after 20 seconds; pairing cancels the deadline, while
+disconnect, host stop, and PIN rotation cancel it and release the admission slot.
+
+**Regression protection:** Added a pure admission-capacity test and a macOS loopback
+Network.framework test that leaves a connection unpaired and verifies it closes at an
+injected 100 ms deadline. Existing framing, session-gate, invalid-PIN, and replay-cache
+tests remain in place.
+
+**Validation:** Exact-head iOS Core, simulator, and visual workflow results are pending
+on the maintenance PR. No signed IPA, TestFlight upload, or physical-LAN acceptance is
+claimed. The native Bonjour protocol remains plaintext and still lacks a global
+failed-PIN rate limit; keep it on trusted LANs only.
+
+**Historical status — 2026-10-07:** PR #25 merged as `beb63b5`; Core CI #130
 passed on main; UI Screenshots #48 passed on its PR head. Manual TestFlight
 run `37575087891` stopped at missing signing inputs, before archive/upload.
 Read the final dated entry below for the release follow-up. Earlier pending
@@ -1851,3 +1871,12 @@ Source 339b8f6 passed hosted Android APK/instrumentation assembly, lint, native 
 **Fix:** recheck cancellation after library resolution and each native preparation await. If cancellation occurs before engine.load begins, leave the current backend playing; once loading starts, retire the uncommitted backend and set needsPlaybackReload. Preserve the current item, playback identity and queue reservation. Natural-completion auto-advance explicitly ignores cancellation inherited from a UI snapshot poll.
 
 **Regression protection:** added five deterministic Swift regressions: canceled enqueue, canceled Next during asset resolution, canceled Next during native load/recovery, and natural auto-advance surviving a canceled snapshot poll, and pre-load cancellation preserving the current playing asset. Hosted Swift package tests and simulator build are pending on the PR head; no simulator/device acceptance is claimed yet.
+
+
+## Legacy Bonjour remote admission test compilation repair — November 16, 2026
+
+**Observed failure:** the exact-head iOS validation job built the unsigned simulator app, then failed Swift test compilation before package tests started. Swift Testing's `#expect` macro captures its expression in an immutable autoclosure; invoking the mutating `RemoteHostConnectionAdmission.admit` method directly inside the macro produced “cannot use mutating member on immutable value” errors.
+
+**Repair:** execute each mutating admission call first, store its Boolean result, then assert the immutable result. Production admission, pairing timeout and session behavior are unchanged. No assertions were removed.
+
+**Validation:** the prior unsigned simulator app build succeeded. The failed iOS validation did not execute package tests; a fresh exact-head iOS validation, focused simulator smoke and visual walkthrough are required after this compile-only repair. No signing, physical-device, merge or release acceptance is implied.

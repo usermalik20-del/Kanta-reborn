@@ -1,3 +1,55 @@
+## Platform-specific download status (2026-11-16)
+
+The sticky download status bar reads the selected platform entry in
+`apps/web/downloads.json`. Access is per platform, not a shared manifest flag:
+the Android GitHub Release asset is marked `signInRequired: false`, while the iOS
+retained Actions-artifact link is marked `true`. The browser validates a Release URL against
+its tag suffix and source-derived APK/IPA filename, or validates an Actions URL against
+the exact packaging run and artifact IDs. It also requires the page's primary link to
+match the manifest. The status bar reports metadata and checksums; it does not download
+or independently hash the package bytes. The active publisher creates a public Release link for Android. iOS remains on its
+retained Actions artifact because the workflow does not upload an IPA Release asset.
+Publishing one platform leaves the peer entry untouched until that platform is
+republished.
+
+## AdSense policy truthfulness pass (2026-11-17)
+
+Fixed public-site trust and content-quality issues ahead of AdSense re-review:
+- Removed inflated reading times: all 15 blog articles now show estimates matching their
+  actual word counts and the `blog.js` values (previously 8–18 min claims on 2–7 min pages).
+- Added self-referential `rel="canonical"` links to every main page and blog article
+  (category pages already had them).
+- Removed the unsupported "ultimate karaoke app" superlative from the home description.
+- Added `/about` (factual site-identity page: what KANTA is, what is tested vs open,
+  how the site is maintained, GitHub issue tracker as the contact path); registered in
+  `vercel.json` routes, `api/page.js` PAGES, `sitemap.xml` and `tools/verify-website.py`
+  PUBLIC_ROUTES; linked from every footer.
+- Corrected blog claims that contradicted the verified feature copy: party pad list and
+  intermission behaviors (party-effects article), companion pairing/session/security facts
+  (companion article, matches support.html), external-display settings path and
+  dual-screen status, microphone setup flow (no calibration routine exists), SPICE
+  accuracy wording and mic-capture phrasing, `.kanta-book` scope in two articles
+  (metadata-only catalog; browser reader; no in-app import/restore flow).
+
+Validation: `python3 tools/verify-website.py` passes; website security, Vercel workflow,
+documentation-sync, customer-legal-copy and site-page-handler suites pass locally.
+Node `--check` runs are unreliable in this iSH environment (intermittent hangs), so the
+Node steps in `website-validation.yml` remain the authoritative gate for those files.
+No ad code, consent gating, or ads.txt changes; no claims of AdSense approval.
+
+**Production 404 fix (same pass):** all 15 blog articles, `/blog/all` and the six blog
+category pages returned 404 in production: `vercel.json` dispatches those routes to
+`/api/page`, but `PAGES` in `api/page.js` contained no blog entries (pre-existing since
+the blog routes were added). Added the 22 missing `PAGES` entries, exported `PAGES`, and
+added two regression tests: every `/api/page` route in `vercel.json` must resolve to a
+`PAGES` entry, and every blog entry must point at an existing file.
+
+**Function bundle fix (follow-up):** after adding blog `PAGES` entries, production
+returned 500 on those routes because `functions["api/page.js"].includeFiles` was `*.html`,
+which bundles only root-level HTML — the function never received `blog/*.html`. Changed
+to `**/*.html` and updated both guards (`tools/verify-website.py`,
+`tools/tests/test_website_security_contract.py`).
+
 ## Website: feature copy resynced with the current preview (2026-11-10) — local candidate
 
 The public site's feature pages had drifted from the app. They described the build at
@@ -342,3 +394,20 @@ or download manifest changes are part of this local work.
 ## Validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point, link validator (static assets, directory indexes), sitemap/CSP validation for blog routes. Added blog/all.html and blog.css to resolve missing assets.
+## Private Songbook CSV export
+
+Songbook CSV downloads are rebuilt from parsed song objects rather than copying the
+decrypted source text. Every field is quoted, embedded quotes are doubled, and cells
+whose first non-whitespace/control character is `=`, `+`, `-` or `@` are prefixed with
+an apostrophe so spreadsheet software treats them as text. Keep all four fields
+(code, title, artist and availability) on the same safe serializer.
+
+## Private Songbook interaction ownership (2026-11-16)
+
+`apps/web/songbook.js` is the sole owner of unlock/lock state, search, page navigation,
+keyboard navigation, print and CSV actions. `songbook-fx.js` is decorative only and may
+add the particle canvas; it must not attach reader controls, swap song-list HTML or
+toggle the reader's visibility. Page turns are driven by the core script's
+`.physical-book.next` / `.prev` classes and the `songbook.css` flip-sheet animation.
+`theme.css` must not hide that flip sheet. Keep the core script before the FX script
+in `songbook.html`.
