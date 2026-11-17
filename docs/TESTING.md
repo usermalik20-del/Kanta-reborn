@@ -1425,6 +1425,12 @@ the blog routes were added). Added the 22 missing `PAGES` entries, exported `PAG
 added two regression tests: every `/api/page` route in `vercel.json` must resolve to a
 `PAGES` entry, and every blog entry must point at an existing file.
 
+**Function bundle fix (follow-up):** after adding blog `PAGES` entries, production
+returned 500 on those routes because `functions["api/page.js"].includeFiles` was `*.html`,
+which bundles only root-level HTML — the function never received `blog/*.html`. Changed
+to `**/*.html` and updated both guards (`tools/verify-website.py`,
+`tools/tests/test_website_security_contract.py`).
+
 ## CI fix (2026-11-12)
 
 Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.

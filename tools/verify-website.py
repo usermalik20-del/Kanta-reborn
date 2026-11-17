@@ -70,7 +70,9 @@ def validate_csp_config(config):
         key = "^" + route + "$"
         actual = routes.get(key)
         assert actual == expected, (f"CSP route mismatch for {route}: expected {expected}, got {actual}")
-    assert config.get("functions", {}).get("api/page.js", {}).get("includeFiles") == "*.html"
+    # The function renders blog routes too, so every nested HTML file (blog/**)
+    # must ship with the function; "*.html" only bundles root-level pages.
+    assert config.get("functions", {}).get("api/page.js", {}).get("includeFiles") == "**/*.html"
     assert not any(
         header.get("key", "").lower() == "content-security-policy"
         for rule in config.get("headers", []) for header in rule.get("headers", [])
