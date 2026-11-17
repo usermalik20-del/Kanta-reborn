@@ -5,6 +5,7 @@
 <meta name="description" content="Deep dive into Google's SPICE model running on TensorFlow Lite — how it estimates pitch from microphone input without sending audio to the cloud.">
 <meta name="theme-color" content="#111326">
 <title>SPICE Pitch Estimation: How On-Device Vocal Analysis Works · KANTA Blog</title>
+<link rel="canonical" href="https://kanta-public.vercel.app/blog/spice-pitch-estimation-how-it-works">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/blog.css">
@@ -31,7 +32,7 @@
   <header class="article-header reveal">
     <span class="eyebrow">Technical Deep Dives</span>
     <h1>SPICE Pitch Estimation: How On-Device Vocal Analysis Works</h1>
-    <div class="article-meta"><time datetime="2026-10-22">2026-10-22</time><span class="author">By KANTA Team</span><span class="read-time">18 min read</span></div>
+    <div class="article-meta"><time datetime="2026-10-22">2026-10-22</time><span class="author">By KANTA Team</span><span class="read-time">5 min read</span></div>
   </header>
   <div class="article-content">
       <section id="what-spice-is">
@@ -105,7 +106,7 @@
         <p>This is the part that matters most for a singing app. Here's KANTA's privacy guarantee:</p>
 <ul>
 <li><strong>100% on-device</strong> — SPICE runs via TensorFlow Lite entirely on your phone. No audio is uploaded.</li>
-<li><strong>No server round-trip</strong> — there's no "cloud scoring" mode. Even offline, pitch estimation works perfectly.</li>
+<li><strong>No server round-trip</strong> — there's no "cloud scoring" mode; pitch estimation runs offline on the device. Note that model output quality itself is a separate matter: accuracy, latency and the confidence threshold have not yet been verified on a physical device.</li>
 <li><strong>No audio storage</strong> — KANTA doesn't record or save your singing. The microphone buffer is processed in memory and discarded.</li>
 <li><strong>No network permission for audio</strong> — KANTA's network permission is used for app updates and companion control, never for audio transmission.</li>
 </ul>

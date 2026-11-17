@@ -14,6 +14,7 @@ const PAGES = {
   "/legal": "legal.html",
   "/licenses": "licenses.html",
   "/support": "support.html",
+  "/about": "about.html",
   "/songbook": "songbook.html"
 };
 // Crawler policy enforced on the rendered-page path. Keep in sync with
