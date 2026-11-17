@@ -135,3 +135,10 @@ Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog rou
 Fixed trusted_main check in Android validation workflow by updating tracking branch before ancestor check.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook interaction safety
+
+The browser Songbook keeps unlock/lock, page navigation and keyboard controls in its
+core reader script. Decorative effects must not reveal the reader before decryption
+succeeds or replace the core page-navigation state. The existing CSS flip-sheet
+animation is driven by the core page state; decorative JavaScript only owns effects.

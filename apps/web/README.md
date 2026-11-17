@@ -380,3 +380,12 @@ or download manifest changes are part of this local work.
 ## Validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point, link validator (static assets, directory indexes), sitemap/CSP validation for blog routes. Added blog/all.html and blog.css to resolve missing assets.
+## Private Songbook interaction ownership (2026-11-16)
+
+`apps/web/songbook.js` is the sole owner of unlock/lock state, search, page navigation,
+keyboard navigation, print and CSV actions. `songbook-fx.js` is decorative only and may
+add the particle canvas; it must not attach reader controls, swap song-list HTML or
+toggle the reader's visibility. Page turns are driven by the core script's
+`.physical-book.next` / `.prev` classes and the `songbook.css` flip-sheet animation.
+`theme.css` must not hide that flip sheet. Keep the core script before the FX script
+in `songbook.html`.

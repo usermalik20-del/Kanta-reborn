@@ -1285,3 +1285,12 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 Keypad key-press tones: 12 MP3 assets in `assets/keypad/`, played via `KeypadSounds` (SoundPool) gated on `!isPlaying()`. Standby interlude: `BundledInterlude` catalog copies `assets/interlude/standby-loop.mp3` to cache; `SessionController` uses it as default between-song source (loopEnabled=true), with user override in Party Mode.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook interaction ownership (2026-11-16)
+
+The Songbook reader had duplicate event handlers in its decorative effects script.
+The unlock handler could reveal the reader before authenticated decryption completed,
+and the second page-flip handler could swap song lists without updating page labels.
+The FX script is now decorative-only; the core reader owns unlock/lock, search,
+navigation and keyboard state. The core CSS flip-sheet is visible again and provides
+the page animation. The AES-GCM reader and encrypted file format were not changed.
