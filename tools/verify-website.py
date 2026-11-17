@@ -23,6 +23,7 @@ PUBLIC_ROUTES = {
     "/legal": "legal.html",
     "/licenses": "licenses.html",
     "/support": "support.html",
+    "/about": "about.html",
     "/songbook": "songbook.html",
     "/blog": "blog/index.html",
     "/blog/all": "blog/all.html",
