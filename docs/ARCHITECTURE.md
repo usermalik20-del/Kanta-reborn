@@ -1,3 +1,13 @@
+## Android pinned browser transport lifecycle (2026-11-16)
+
+The native pinned WebView client owns a single-thread executor for bridge requests.
+Its JavaScript interface runs on a WebView background thread, so `closed` can become
+true after the bridge's initial check but before executor submission. The submission
+boundary catches only `RejectedExecutionException`, releases the busy latch and drops
+the late request. Closing the transport clears the latch, disconnects active HTTPS
+connections and shuts down the worker. Certificate pinning, origin/path restrictions,
+session authorization and bounded payloads remain independent security gates.
+
 ## Website download manifest and status boundary (2026-11-16)
 
 The website's download manifest is platform-owned. Each `platforms.android` and

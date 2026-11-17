@@ -13,6 +13,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.*;
 import org.json.*;
+import ph.kanta.reborn.core.SafeExecutorSubmission;
 
 /** Every native request checks the exact host leaf pin, including otherwise trusted certificates. */
 final class PinnedBrowserTransport implements AutoCloseable {
@@ -58,7 +59,7 @@ final class PinnedBrowserTransport implements AutoCloseable {
   /** The bridge cannot read files, navigate, invoke sensors or address any endpoint except this pinned host. */
   @JavascriptInterface public void post(String id,String path,String encoded,String token){
     if(closed||id==null||!id.matches("[a-f0-9-]{36}")||path==null||!Arrays.asList("/pair","/command","/leave").contains(path)||encoded==null||encoded.length()>1400||token==null||!token.matches("([a-f0-9]{64})?")||!busy.compareAndSet(false,true))return;
-    worker.execute(()->{
+    if (!SafeExecutorSubmission.execute(worker, () -> {
       int status=0;String body="";
       try{byte[] bytes=Base64.decode(encoded,Base64.NO_WRAP);if(bytes.length>1024)throw new IOException("Body limit");Result response=fetch(path,bytes,token);status=response.status;body=new String(response.bytes,StandardCharsets.UTF_8);}catch(Exception ignored){}
       busy.set(false);
@@ -70,7 +71,7 @@ final class PinnedBrowserTransport implements AutoCloseable {
           }catch(JSONException ignored){}
         }});
       }
-    });
+    }, busy)) return;
   }
   private static final class Result {int status;byte[] bytes;Map<String,String> headers=new HashMap<>();}
   private Result fetch(String path,byte[] body,String token)throws Exception{
@@ -94,5 +95,5 @@ final class PinnedBrowserTransport implements AutoCloseable {
       return result;
     }finally{connections.remove(connection);connection.disconnect();}
   }
-  public void close(){closed=true;for(HttpsURLConnection connection:connections)connection.disconnect();worker.shutdownNow();}
+  public void close(){closed=true;busy.set(false);for(HttpsURLConnection connection:connections)connection.disconnect();worker.shutdownNow();}
 }

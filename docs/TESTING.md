@@ -1,3 +1,12 @@
+## Android pinned browser transport close race (2026-11-16)
+
+The Java `:app:coreRegression` suite exercises `SafeExecutorSubmission` with a
+rejecting executor and a normal executor. A WebView JavaScript bridge call may pass
+the transport's open check just before screen teardown shuts down its worker; a
+rejected submission must release the busy latch and must not run the request.
+Transport teardown still disconnects active HTTPS requests. TLS pinning, origin and
+path allowlists, token checks and body/response bounds remain unchanged.
+
 ## Platform-specific download status contract (2026-11-16)
 
 The website status bar reads `downloads.json` per platform. There is no authoritative

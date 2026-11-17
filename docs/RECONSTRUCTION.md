@@ -1,3 +1,13 @@
+## Android pinned browser transport close-race repair — 2026-11-16
+
+A bridge request could pass the initial `closed` check, then race with screen teardown
+calling `shutdownNow()`. The executor could reject the later submission. The repair
+centralizes submission in a pure-Java helper, catches the expected rejection, releases
+the busy latch and discards the late request. Teardown also clears the latch while
+disconnecting active connections. Regression coverage exercises both rejected and
+accepted executor submissions through the framework-free core runner. No pairing
+protocol, TLS trust, permission or public command behavior changed.
+
 ## Website download status contract repair — 2026-11-16
 
 The previous status-bar validator still required the legacy global
