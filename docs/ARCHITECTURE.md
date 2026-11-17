@@ -1,3 +1,16 @@
+## Website download manifest and status boundary (2026-11-16)
+
+The website's download manifest is platform-owned. Each `platforms.android` and
+`platforms.ios` record carries its own `signInRequired` value because one platform
+uses a public GitHub Release asset for Android while iOS still uses its retained
+Actions artifact. The current workflow uploads the Android APK to a Release; it does
+not upload the unsigned iOS IPA there. The status bar validates the Release tag and source-derived asset
+name, or the exact Actions run/artifact path, and verifies that the page link matches
+the selected record. It does not fetch or re-hash the download. The publisher writes
+only the selected platform entry and page; it must not rewrite the peer's provenance.
+The publisher must keep iOS on its exact Actions run/artifact URL and mark it
+`signInRequired: true` until a verified immutable IPA Release asset is actually uploaded.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

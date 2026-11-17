@@ -1,3 +1,17 @@
+## Platform-specific download status (2026-11-16)
+
+The sticky download status bar reads the selected platform entry in
+`apps/web/downloads.json`. Access is per platform, not a shared manifest flag:
+the Android GitHub Release asset is marked `signInRequired: false`, while the iOS
+retained Actions-artifact link is marked `true`. The browser validates a Release URL against
+its tag suffix and source-derived APK/IPA filename, or validates an Actions URL against
+the exact packaging run and artifact IDs. It also requires the page's primary link to
+match the manifest. The status bar reports metadata and checksums; it does not download
+or independently hash the package bytes. The active publisher creates a public Release link for Android. iOS remains on its
+retained Actions artifact because the workflow does not upload an IPA Release asset.
+Publishing one platform leaves the peer entry untouched until that platform is
+republished.
+
 ## AdSense policy truthfulness pass (2026-11-17)
 
 Fixed public-site trust and content-quality issues ahead of AdSense re-review:

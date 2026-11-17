@@ -2,7 +2,6 @@
   "repository": "usermalik20-del/Kanta-reborn",
   "verifiedAt": "2026-11-17",
   "retentionDays": 30,
-  "signInRequired": false,
   "source": "846d7e7634d942be10ded6c05cfa54704eb6d56f",
   "packagingRun": 44116673899,
   "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/44116673899",
@@ -20,7 +19,8 @@
     "signed": "release",
     "sha256": "8c1ccdc99b15c167a680fd192fcae10f27beb4f9c7a76daf92b9a19096475090",
     "apkSha256": "b0a56391e268e0acdc2819e6bf32a7cef44cb635df492a8bbb1a44a8099c2976",
-    "bytes": 118205143
+    "bytes": 118205143,
+    "signInRequired": false
   },
   "ios": {
     "source": "49d92657d67e88c38a9327acaa7c5d9e6aea1472",
@@ -37,7 +37,8 @@
     "bytes": 25979163,
     "personalSigningRequired": true,
     "icloudAvailable": false,
-    "walkthroughRun": 41473591538
+    "walkthroughRun": 41473591538,
+    "signInRequired": true
   },
   "platforms": {
     "android": {
@@ -53,7 +54,8 @@
       "signed": "release",
       "sha256": "8c1ccdc99b15c167a680fd192fcae10f27beb4f9c7a76daf92b9a19096475090",
       "apkSha256": "b0a56391e268e0acdc2819e6bf32a7cef44cb635df492a8bbb1a44a8099c2976",
-      "bytes": 118205143
+      "bytes": 118205143,
+      "signInRequired": false
     },
     "ios": {
       "source": "49d92657d67e88c38a9327acaa7c5d9e6aea1472",
@@ -70,7 +72,8 @@
       "bytes": 25979163,
       "personalSigningRequired": true,
       "icloudAvailable": false,
-      "walkthroughRun": 41473591538
+      "walkthroughRun": 41473591538,
+      "signInRequired": true
     }
   }
 }
