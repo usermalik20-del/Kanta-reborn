@@ -144,6 +144,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   @Override
   public void onCreate(Bundle saved) {
     super.onCreate(saved);
+    // Configuration changes are handled in-place, so seed the comparison before the first rotation.
+    lastOrientation = getResources().getConfiguration().orientation;
     workspaceBackCallback =
         new OnBackPressedCallback(false) {
           @Override
@@ -258,15 +260,21 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   public void onConfigurationChanged(android.content.res.Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     int newOrient = newConfig.orientation;
-    if (lastOrientation >= 0 && newOrient != lastOrientation) {
-      // Orientation changed: rebuild the window layout for the new form factor.
+    boolean cameraWasOnPrimaryStage =
+        camera != null && stagePresenter != null && camera.ownsSurface(stagePresenter);
+    if (newOrient != lastOrientation) {
+      // Rebuild from the incoming configuration. Resources can still reflect the old
+      // orientation while this callback is executing in synthetic/runtime checks.
       root = null;
       body = null;
       stagePane = null;
       navigationTabs = null;
       appHeader = null;
-      buildWindow();
+      buildWindow(newOrient);
       render();
+      // buildWindow creates a new StagePresenterImpl. Rebind only when the old primary
+      // presenter owned the camera; fullscreen/external StageSurface targets stay put.
+      if (cameraWasOnPrimaryStage && stagePresenter != null) camera.moveTo(stagePresenter);
     }
     lastOrientation = newOrient;
     // Handset/tablet changes re-lay out the presented accessory so it stays a
@@ -414,6 +422,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void buildWindow() {
+    buildWindow(getResources().getConfiguration().orientation);
+  }
+
+  private void buildWindow(int orientation) {
     root = column();
     root.setBackgroundColor(ph.kanta.reborn.ui.KantaTheme.BG_MAIN);
     root.setPadding(dp(12), 0, dp(12), 0);
@@ -451,8 +463,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     header.addView(brandBlock, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(button("Help", this::help));
     root.addView(header);
-    boolean landscape = getResources().getConfiguration().orientation
-        == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+    boolean landscape =
+        orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
     LinearLayout main = new LinearLayout(this);
     // Portrait: stage on top, utilities below.
     // Landscape: stage on the left, utilities on the right (wider stage area).

@@ -33,14 +33,19 @@ origin checks, token validation or request-size limits. The regression is part o
 - **Accessibility**: Added mobile nav drawer HTML/JS as progressive enhancement
 
 ---
-## Landscape mode support (2026-11-15)
+## Landscape mode and camera rotation lifecycle (2026-11-16)
 
-- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
-- **MainActivity.java**: 
-  - Added `lastOrientation` field to track orientation changes
-  - `onConfigurationChanged()` rebuilds layout when orientation changes
-  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
-  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+- `MainActivity.onCreate()` initializes `lastOrientation`, so the first configuration
+  change is not skipped.
+- `onConfigurationChanged()` passes `newConfig.orientation` to `buildWindow(int)`
+  instead of reading potentially stale resource configuration.
+- Camera ownership is checked by exact target identity through `CameraStage.ownsSurface()`.
+  Only a preview attached to the old primary `StagePresenterImpl` is rebound after render;
+  fullscreen and external-display `StageSurface` targets remain owners during primary rotation.
+- `RuntimeChecks` simulates a first orientation transition and restoration while the
+  camera is enabled, checking layout direction, stage replacement, primary rebind, external
+  target preservation, and release from superseded stages. Its persistent-stage baseline
+  refreshes only on an orientation change, not on ordinary navigation. Physical-device rotation remains a separate acceptance.
 
 ---
 ## Keypad press sounds & standby interlude (2026-11-14)

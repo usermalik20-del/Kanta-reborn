@@ -1,3 +1,15 @@
+## Android camera-rotation instrumentation access repair (2026-11-16)
+
+The rotation runtime check inspects the Activity's private CameraStage through the
+existing reflection helper. It must not directly access MainActivity.camera or widen
+production visibility just for instrumentation. The failed exact-head run
+[43786549407](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43786549407)
+reported six Java compile errors in RuntimeChecks.java before emulator checks began.
+The repair keeps the production field private and preserves all camera-ownership assertions;
+new exact-head Android validation is required before this candidate is considered verified.
+
+---
+
 ## Android legacy MKMD inflater regression (2026-11-16)
 
 `:app:coreRegression` runs `LegacyFileContainerImporterRegressionTests` alongside
@@ -45,14 +57,16 @@ preserves the peer entry until that platform is separately republished.
 - **Accessibility**: Added mobile nav drawer HTML/JS as progressive enhancement
 
 ---
-## Landscape mode support (2026-11-15)
+## Landscape mode and camera rotation lifecycle (2026-11-16)
 
-- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
-- **MainActivity.java**: 
-  - Added `lastOrientation` field to track orientation changes
-  - `onConfigurationChanged()` rebuilds layout when orientation changes
-  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
-  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+- `MainActivity.onCreate()` initializes `lastOrientation`, so the first configuration
+  change is not skipped.
+- `onConfigurationChanged()` passes `newConfig.orientation` to `buildWindow(int)`
+  instead of reading potentially stale resource configuration.
+- Camera rebind checks exact target ownership. Only a primary `StagePresenterImpl` is rebound;
+  fullscreen/external `StageSurface` targets must remain unchanged during primary rotation.
+- The persistent-stage runtime assertion refreshes its baseline only when `lastOrientation`
+  changes, while still requiring the same view instance across ordinary navigation.
 
 ---
 ## Publisher release asset URL fix (2026-11-14)
@@ -1571,6 +1585,14 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 > Note: `KeypadSounds` is initialized in the `SessionController` constructor alongside `PartyAudio`.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 <!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
+
+
+### Instrumentation main-thread predicate rule
+
+`RuntimeChecks.await()` delegates to `state()`, which already invokes the predicate through
+`Instrumentation.runOnMainSync`. Predicates passed to `await()` must access views directly
+and must not nest another `runOnMainSync`; doing so crashes the instrumentation process
+with `This method can not be called from the main application thread`.
 
 **Publisher tag-race fix (2026-11-18):** `platform-download-publishing.yml` now passes
 `--target ${SOURCE_SHA}` to `gh release create`. Without it, the tag defaults to the

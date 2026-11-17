@@ -45,14 +45,18 @@ production release were changed by this repair.
 - **Accessibility**: Added mobile nav drawer HTML/JS as progressive enhancement
 
 ---
-## Landscape mode support (2026-11-15)
+## Landscape mode and camera rotation lifecycle (2026-11-16)
 
-- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
-- **MainActivity.java**: 
-  - Added `lastOrientation` field to track orientation changes
-  - `onConfigurationChanged()` rebuilds layout when orientation changes
-  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
-  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+- `MainActivity.onCreate()` initializes `lastOrientation`, so the first configuration
+  change is not skipped.
+- `onConfigurationChanged()` passes `newConfig.orientation` to `buildWindow(int)`
+  instead of reading potentially stale resource configuration.
+- Camera rebind checks the exact previous target with `CameraStage.ownsSurface`. Only the
+  primary `StagePresenterImpl` is moved to its replacement; fullscreen/external
+  `StageSurface` targets remain owners during primary rotation.
+- `RuntimeChecks` also verifies non-primary target preservation and refreshes its persistent
+  stage identity baseline only when `lastOrientation` changes. Navigation within an
+  orientation still requires the same stage view. Physical-device rotation remains separate.
 
 ---
 ## Now Playing divider removed & scroll fade (2026-11-13)

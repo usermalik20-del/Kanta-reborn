@@ -43,6 +43,11 @@ final class CameraStage {
     return streaming;
   }
 
+  /** True only when this camera binding is owned by the exact supplied stage surface. */
+  boolean ownsSurface(android.view.View target) {
+    return enabled && surface == target;
+  }
+
   void start(android.view.View target) {
     android.util.Log.i("KantaCamera", "start target=" + (target == null ? "null" : target.getClass().getName())
         + " foreground=" + session.foreground + " permission="

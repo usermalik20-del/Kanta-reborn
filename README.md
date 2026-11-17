@@ -10,14 +10,13 @@
 - **Accessibility**: Added mobile nav drawer HTML/JS as progressive enhancement
 
 ---
-## Landscape mode support (2026-11-15)
+## Landscape mode and camera rotation (2026-11-16)
 
-- **AndroidManifest.xml**: Added `android:configChanges` to prevent Activity recreation on rotation.
-- **MainActivity.java**: 
-  - Added `lastOrientation` field to track orientation changes
-  - `onConfigurationChanged()` rebuilds layout when orientation changes
-  - `buildWindow()` detects landscape and uses horizontal layout (stage left 55%, content right 45%)
-  - Portrait keeps vertical layout (stage top 42%, content bottom 58%)
+- Android reflows between portrait and landscape without restarting the karaoke session.
+- A primary-stage camera preview rebinds to the replacement primary stage. Fullscreen or
+  external-stage previews stay on their selected stage during primary-screen rotation.
+- Physical-device rotation and camera acceptance remain outstanding; emulator checks are not
+  a substitute for testing on the target phone/tablet.
 
 ---
 # KANTA Reborn

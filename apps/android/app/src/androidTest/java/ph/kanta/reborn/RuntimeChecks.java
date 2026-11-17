@@ -22,6 +22,7 @@ public final class RuntimeChecks extends Instrumentation {
   private MainActivity activity;
   private SessionController session;
   private View persistentPrimaryStage;
+  private int persistentStageOrientation = -1;
 
   @Override
   public void onCreate(Bundle arguments) {
@@ -238,8 +239,11 @@ public final class RuntimeChecks extends Instrumentation {
       check(
           state(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null),
           "Reference-led Home dashboard was not mounted at launch");
-      runOnMainSync(() -> persistentPrimaryStage = activity.getWindow().getDecorView()
-          .findViewWithTag("kanta.stage.primary"));
+      runOnMainSync(() -> {
+        persistentPrimaryStage = activity.getWindow().getDecorView()
+            .findViewWithTag("kanta.stage.primary");
+        persistentStageOrientation = (Integer) field(activity, "lastOrientation");
+      });
       assertPersistentStage(null);
       // The empty stage must read as a karaoke machine waiting for a song code, and its
       // background must be the moving BGV video rather than a frozen wallpaper. Runs only
@@ -892,6 +896,126 @@ public final class RuntimeChecks extends Instrumentation {
               activity.cameraStreaming()
                   && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
           "Opt-in front camera never rendered on the primary stage");
+
+      // Exercise the first in-place configuration change while the primary camera is active.
+      // A fresh Activity has not received a prior onConfigurationChanged callback yet.
+      AtomicReference<Integer> originalOrientationRef = new AtomicReference<>();
+      runOnMainSync(
+          () -> originalOrientationRef.set(
+              activity.getResources().getConfiguration().orientation));
+      int originalOrientation = originalOrientationRef.get();
+      int alternateOrientation =
+          originalOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+              ? android.content.res.Configuration.ORIENTATION_PORTRAIT
+              : android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+      runOnMainSync(
+          () -> {
+            android.content.res.Configuration changed =
+                new android.content.res.Configuration(activity.getResources().getConfiguration());
+            changed.orientation = alternateOrientation;
+            activity.onConfigurationChanged(changed);
+          });
+      View rotatedPrimaryStage = (View) field(activity, "stagePresenter");
+      check(
+          rotatedPrimaryStage != primaryStage,
+          "First orientation change did not rebuild the primary stage");
+      AtomicReference<Integer> rotatedMainOrientationRef = new AtomicReference<>();
+      runOnMainSync(
+          () ->
+              rotatedMainOrientationRef.set(
+                  ((android.widget.LinearLayout)
+                          ((android.widget.LinearLayout) field(activity, "root")).getChildAt(1))
+                      .getOrientation()));
+      int rotatedMainOrientation = rotatedMainOrientationRef.get();
+      check(
+          rotatedMainOrientation
+              == (alternateOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                  ? android.widget.LinearLayout.HORIZONTAL
+                  : android.widget.LinearLayout.VERTICAL),
+          "First orientation change did not use the incoming layout orientation");
+      await(
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) rotatedPrimaryStage)
+                      .isCameraVisible(),
+          "Primary camera preview was not rebound after orientation change");
+      check(
+          !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+          "Detached primary stage retained the camera preview");
+
+      runOnMainSync(
+          () -> {
+            android.content.res.Configuration restored =
+                new android.content.res.Configuration(activity.getResources().getConfiguration());
+            restored.orientation = originalOrientation;
+            activity.onConfigurationChanged(restored);
+          });
+      View primaryStageAfterRotation = (View) field(activity, "stagePresenter");
+      check(
+          primaryStageAfterRotation != rotatedPrimaryStage,
+          "Restoring the original orientation did not rebuild the primary stage");
+      AtomicReference<Integer> restoredMainOrientationRef = new AtomicReference<>();
+      runOnMainSync(
+          () ->
+              restoredMainOrientationRef.set(
+                  ((android.widget.LinearLayout)
+                          ((android.widget.LinearLayout) field(activity, "root")).getChildAt(1))
+                      .getOrientation()));
+      int restoredMainOrientation = restoredMainOrientationRef.get();
+      check(
+          restoredMainOrientation
+              == (originalOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                  ? android.widget.LinearLayout.HORIZONTAL
+                  : android.widget.LinearLayout.VERTICAL),
+          "Restored orientation did not restore the corresponding layout");
+      await(
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStageAfterRotation)
+                      .isCameraVisible(),
+          "Camera preview did not return to the rebuilt primary stage");
+      check(
+          !((ph.kanta.reborn.stage.StagePresenterImpl) rotatedPrimaryStage).isCameraVisible(),
+          "Superseded primary stage retained the camera preview");
+      stableStage.set(primaryStageAfterRotation);
+
+      // A non-primary StageSurface (fullscreen or external display) remains the camera
+      // owner when the primary Activity changes orientation.
+      StageSurface nonPrimaryStage = new StageSurface(activity, session);
+      runOnMainSync(() -> cameraStage().moveTo(nonPrimaryStage));
+      check(state(() -> cameraStage().ownsSurface(nonPrimaryStage)),
+          "Camera did not attach to the non-primary stage fixture");
+      runOnMainSync(() -> {
+        android.content.res.Configuration changed =
+            new android.content.res.Configuration(activity.getResources().getConfiguration());
+        changed.orientation = alternateOrientation;
+        activity.onConfigurationChanged(changed);
+      });
+      check(state(() -> cameraStage().ownsSurface(nonPrimaryStage)),
+          "Primary rotation stole the camera preview from a non-primary stage");
+      runOnMainSync(() -> {
+        android.content.res.Configuration restored =
+            new android.content.res.Configuration(activity.getResources().getConfiguration());
+        restored.orientation = originalOrientation;
+        activity.onConfigurationChanged(restored);
+      });
+      check(state(() -> cameraStage().ownsSurface(nonPrimaryStage)),
+          "Restoring primary orientation stole the non-primary camera preview");
+      AtomicReference<ph.kanta.reborn.stage.StagePresenterImpl> currentPrimary =
+          new AtomicReference<>();
+      runOnMainSync(() -> {
+        currentPrimary.set((ph.kanta.reborn.stage.StagePresenterImpl) field(activity, "stagePresenter"));
+        cameraStage().moveTo(currentPrimary.get());
+      });
+      await(() -> activity.cameraStreaming()
+              && cameraStage().ownsSurface(currentPrimary.get())
+              && currentPrimary.get().isCameraVisible(),
+          "Camera did not return to the current primary stage after non-primary ownership");
+      check(!nonPrimaryStage.isCameraVisible(),
+          "Non-primary stage retained the camera preview after ownership moved away");
+      nonPrimaryStage.setVisualActive(false);
+      stableStage.set(currentPrimary.get());
+
       runOnMainSync(activity::fullscreen);
       await(
           () -> field(activity, "fullscreenStage") instanceof StageSurface,
@@ -902,11 +1026,20 @@ public final class RuntimeChecks extends Instrumentation {
           () -> activity.cameraStreaming() && cameraStageRef.get().isCameraVisible(),
           "Front camera did not render on the fullscreen stage");
       runOnMainSync(activity::closeFullscreen);
-      stableStage.set(primaryStage);
+      stableStage.set(currentPrimary.get());
+      // The synthetic orientation round-trips above rebuilt the primary stage and returned
+      // lastOrientation to its launch value, so assertPersistentStage's orientation-change
+      // refresh will not fire. Re-baseline the persistent stage to the current primary now;
+      // navigation checks from here on must compare against this rebuilt view.
+      runOnMainSync(() -> {
+        persistentPrimaryStage = currentPrimary.get();
+        persistentStageOrientation = (Integer) field(activity, "lastOrientation");
+      });
       await(
           () ->
               activity.cameraStreaming()
-                  && ((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) currentPrimary.get())
+                      .isCameraVisible(),
           "Front camera did not return to the primary stage");
       await(
           () -> !cameraStageRef.get().isCameraVisible(),
@@ -916,10 +1049,16 @@ public final class RuntimeChecks extends Instrumentation {
           () ->
               !session.cameraPreviewEnabled
                   && !activity.cameraStreaming()
-                  && !((ph.kanta.reborn.stage.StagePresenterImpl) primaryStage).isCameraVisible(),
+                  && !((ph.kanta.reborn.stage.StagePresenterImpl) currentPrimary.get())
+                      .isCameraVisible(),
           "Disabling the camera did not release the primary preview");
       runOnMainSync(activity::toggleCamera);
-      await(activity::cameraStreaming, "Camera did not reopen after explicit opt-in");
+      await(
+          () ->
+              activity.cameraStreaming()
+                  && ((ph.kanta.reborn.stage.StagePresenterImpl) currentPrimary.get())
+                      .isCameraVisible(),
+          "Camera did not reopen on the current primary stage after explicit opt-in");
       capture("camera_optin.png");
       shell("input keyevent KEYCODE_HOME");
       await(() -> !session.foreground, "Home did not background KANTA");
@@ -1568,6 +1707,10 @@ public final class RuntimeChecks extends Instrumentation {
         "Back dismissal detached the persistent stage or retained the lower utility");
   }
 
+  private CameraStage cameraStage() {
+    return (CameraStage) field(activity, "camera");
+  }
+
   private Object field(Object target, String name) {
     try {
       java.lang.reflect.Field field = target.getClass().getDeclaredField(name);
@@ -1834,6 +1977,17 @@ public final class RuntimeChecks extends Instrumentation {
   /** Navigation must project the same mounted, visible presenter above every utility panel. */
   private void assertPersistentStage(String lowerPanelTag) {
     await(() -> {
+      // await() evaluates predicates through state(), which already runs on the main thread.
+      // Do not nest Instrumentation.runOnMainSync here: Android rejects that call from main.
+      int orientation = (Integer) field(activity, "lastOrientation");
+      if (orientation != persistentStageOrientation) {
+        // A real configuration change intentionally replaces StagePresenterImpl.
+        // Refresh the identity baseline only when the Activity's orientation changes;
+        // navigation within one orientation must still preserve the same stage view.
+        persistentPrimaryStage = activity.getWindow().getDecorView()
+            .findViewWithTag("kanta.stage.primary");
+        persistentStageOrientation = orientation;
+      }
       View primary = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.primary");
       if (primary == null || primary != persistentPrimaryStage
           || !primary.isAttachedToWindow() || !visibleOnScreen("kanta.stage.primary")) return false;

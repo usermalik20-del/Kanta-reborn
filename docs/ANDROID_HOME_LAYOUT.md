@@ -74,3 +74,23 @@ that window policy. MainActivity now declares `stateAlwaysHidden|adjustResize`, 
 window auto-show while preserving explicit editor/dialog requests. The failing emulator
 assertion stays blocking; a new source guard pins the manifest policy. Revalidation is
 required before merge, not a blind rerun of the failing commit.
+
+
+## Rotation and camera-preview lifecycle — 2026-11-16
+
+The Activity records the initial resource orientation in `onCreate()`; the first
+`onConfigurationChanged()` can therefore rebuild the layout instead of being skipped.
+The rebuild uses the callback's incoming orientation directly. Camera rebind checks
+the exact old target with `CameraStage.ownsSurface()`: only a primary `StagePresenterImpl`
+is rebound. A fullscreen or external-display preview remains on its `StageSurface`
+through primary rotation; the fullscreen flow explicitly returns the preview to the
+current primary presenter when it closes.
+
+The Android emulator runtime check simulates a first orientation change and restoration
+while the primary camera is enabled. It verifies layout direction, new presenter ownership,
+primary preview rebind, and release from the superseded stage. A separate synthetic
+`StageSurface` target proves that primary rotation does not steal a fullscreen/external
+camera preview. The persistent-stage assertion refreshes its identity baseline only when
+the Activity orientation changes, while navigation within one orientation must preserve
+the same stage view.
+Physical-device rotation, large-text, and external-display acceptance remain open.

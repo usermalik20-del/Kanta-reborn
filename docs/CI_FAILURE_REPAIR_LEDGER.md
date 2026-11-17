@@ -1110,3 +1110,47 @@ The repaired camera path reached a real CameraX `STREAMING` state on the emulato
 - **Cause:** the publisher job had `actions: read`, but GitHub's workflow-dispatch endpoint requires Actions write permission. The ordinary publisher push is intentionally performed with `GITHUB_TOKEN` and therefore does not trigger another workflow automatically.
 - **Repair:** elevate only the publisher job to `actions: write` so it can explicitly dispatch the Vercel deployment after its verified commit. Keep the permission scoped to that job and preserve platform isolation.
 - **Validation:** rerun the publisher after merge; confirm the download commit lands on main, Vercel deployment succeeds, and the live Android page points to the newly uploaded package.
+
+
+## Android rotation runtime stage identity and camera target ownership — November 16, 2026
+
+**Fingerprint:** PR #208 Android runtime job failed twice at
+`RuntimeChecks.persistentStagePlaybackChecks()` with
+`Navigation hid, replaced or overlapped the persistent stage: null`.
+
+**Finding:** the runtime helper captured one `StagePresenterImpl` reference before the
+navigation sequence and required that same view forever. In-place orientation handling
+is designed to rebuild that presenter; the test must refresh its identity baseline when
+`lastOrientation` changes while continuing to require identity stability across normal
+navigation within an orientation. Separately, the first camera rebind guard inferred
+primary ownership from fullscreen-dialog visibility, which is not a reliable indicator
+when the camera is attached to an external `StageSurface`.
+
+**Repair:** the assertion now updates its expected stage only on an orientation transition
+and performs view checks on the main thread. `CameraStage.ownsSurface` compares the exact
+active target; only the old primary presenter is rebound. Runtime coverage keeps a
+synthetic non-primary `StageSurface` as camera owner through both orientation changes.
+
+**Validation:** exact-head Android build/lint/core/emulator validation is pending on the
+updated PR head. Physical-device and actual external-display acceptance remain separate.
+
+
+## Android — camera rotation instrumentation accessed a private Activity field (2026-11-16) — candidate
+
+**Fingerprint:** KANTA Android validation, job `android`, step `Build debug and unsigned release, lint and domain regression tests`; `compileDebugAndroidTestJavaWithJavac` reports six instances of `camera has private access in MainActivity` in `RuntimeChecks.java:985-1011`.
+
+**Affected SHA / first observed run:** `2ba455d409724466079b2b7e55203d7b48e31e02`, run [#43786549407](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43786549407).
+
+**Cause (confirmed):** the camera-rotation regression directly referenced `activity.camera`, although `MainActivity.camera` is intentionally private. The runtime harness already has a reflection-based `field(Object, String)` helper for private Activity state; the new assertions bypassed it and failed Java test compilation before runtime acceptance.
+
+**Fix candidate:** route those test-only accesses through a typed helper backed by the existing reflection accessor. Keep the production field private; do not add a visibility escape hatch solely for instrumentation.
+
+**Regression coverage:** retain all first-rotation, primary-stage rebind, non-primary ownership-preservation and return-to-primary assertions. No tests are removed or weakened.
+
+**Validation:** the first exact-head run failed at Android test compilation; emulator checks were skipped. A fresh exact-head Android validation is pending.
+
+**Recurrence rule:** use the existing reflection accessor for private Activity fields in instrumentation; prefer observable behavior over widening production internals.
+
+**Second exact-head failure:** run [#43787585095](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43787585095) at SHA `55cd2464eb2976f064b6f3d6fa45696a5461263f` compiled successfully, then crashed in `RuntimeChecks.assertPersistentStage` because its `await()` predicate nested `runOnMainSync`. `await()` already routes predicates through `state()` and `runOnMainSync`, so Android rejects the nested call from the main thread. The predicate now reads the views directly and returns its result without nested dispatch.
+
+**Status:** `candidate`; a fresh exact-head Android run is pending.
