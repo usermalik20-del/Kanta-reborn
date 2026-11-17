@@ -1,3 +1,26 @@
+## Legacy MKMD decompression safety (2026-11-16)
+
+The paired `.shubidx`/`.shubblob` importer validates each record independently.
+Raw-deflate decoding now rejects dictionary-required, truncated and zero-progress
+streams instead of looping indefinitely. The inflater's native zlib state is ended
+in a `finally` path, including malformed-data and declared-size failures. A bad
+record remains a skipped record with an error; valid indexed records can still import.
+The regression uses a deliberately stalled inflater and verifies prompt rejection
+and cleanup through the existing `:app:coreRegression` gate. Import cancellation is
+checked during index validation, each record and every DEFLATE iteration; any files
+staged earlier in a cancelled pair are deleted.
+
+## Pinned browser transport teardown (2026-11-16)
+
+The WebView JavaScript bridge and native screen lifecycle can overlap: a bridge call
+may pass its open-state check just before the owning screen shuts down the transport's
+single-thread executor. `SafeExecutorSubmission` treats the resulting
+`RejectedExecutionException` as a revoked late request and releases the busy latch.
+Transport close also clears that latch and disconnects active HTTPS connections.
+This does not expand commands or destinations and does not change certificate pinning,
+origin checks, token validation or request-size limits. The regression is part of
+`BrowserRemoteRegressionTests`, which the existing `:app:coreRegression` task runs.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
@@ -855,3 +878,13 @@ gates. Exact-head and post-merge validation, signed preview publication and webs
 deployment passed. See [evidence and remaining device limits](../../docs/ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+
+## Legacy MKMD decoder malformed-stream handling (2026-11-16)
+
+`MkmdDecoder` rejects raw-DEFLATE streams that exhaust input, require an unsupported
+preset dictionary, or return no output without reaching a finished state. It also
+releases `Inflater` native state in `finally`, including output-cap and malformed-data
+failures. This prevents a corrupt encrypted legacy payload from spinning the import
+worker indefinitely. The framework-free core regression uses an encrypted MKMD
+envelope with zero compressed bytes and requires a prompt decode failure.

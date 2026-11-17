@@ -3,6 +3,10 @@ package ph.kanta.reborn.core.legacy;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.zip.Deflater;
 
 public final class MkmdDecoderRegressionTests {
@@ -32,9 +36,9 @@ public final class MkmdDecoderRegressionTests {
     Arrays.fill(aesIv, (byte) 0x17);
   }
 
-  private static byte[] buildMkmd(byte[] rawPayload) {
+  private static byte[] rawDeflate(byte[] rawPayload) throws Exception {
+    Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
     try {
-      Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
       deflater.setInput(rawPayload);
       deflater.finish();
       ByteArrayOutputStream compressedOut = new ByteArrayOutputStream();
@@ -43,23 +47,32 @@ public final class MkmdDecoderRegressionTests {
         int n = deflater.deflate(buf);
         if (n > 0) compressedOut.write(buf, 0, n);
       }
+      return compressedOut.toByteArray();
+    } finally {
       deflater.end();
-      byte[] compressed = compressedOut.toByteArray();
+    }
+  }
 
-      ByteArrayOutputStream plain = new ByteArrayOutputStream();
-      append(plain, 0x4D, 0x4B, 0x4D, 0x44);
-      append(plain, 0x01);
-      appendLE32(plain, rawPayload.length);
-      appendLE32(plain, compressed.length);
-      plain.write(compressed);
+  private static byte[] encryptMkmd(byte[] compressed, long decodedBytes) throws Exception {
+    ByteArrayOutputStream plain = new ByteArrayOutputStream();
+    append(plain, 0x4D, 0x4B, 0x4D, 0x44);
+    append(plain, 0x01);
+    appendLE32(plain, decodedBytes);
+    appendLE32(plain, compressed.length);
+    plain.write(compressed);
 
-      javax.crypto.Cipher cipher =
-          javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
-      cipher.init(
-          javax.crypto.Cipher.ENCRYPT_MODE,
-          new javax.crypto.spec.SecretKeySpec(aesKey, "AES"),
-          new javax.crypto.spec.IvParameterSpec(aesIv));
-      return cipher.doFinal(padToBlock(plain.toByteArray()));
+    javax.crypto.Cipher cipher =
+        javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+    cipher.init(
+        javax.crypto.Cipher.ENCRYPT_MODE,
+        new javax.crypto.spec.SecretKeySpec(aesKey, "AES"),
+        new javax.crypto.spec.IvParameterSpec(aesIv));
+    return cipher.doFinal(padToBlock(plain.toByteArray()));
+  }
+
+  private static byte[] buildMkmd(byte[] rawPayload) {
+    try {
+      return encryptMkmd(rawDeflate(rawPayload), rawPayload.length);
     } catch (Exception e) {
       throw new RuntimeException("Failed to build test fixture", e);
     }
@@ -205,6 +218,29 @@ public final class MkmdDecoderRegressionTests {
     }
   }
 
+  private static void rejectsEmptyDeflateWithoutHanging() throws Exception {
+    // A valid MKMD envelope can declare zero compressed bytes. Inflater then
+    // reports needsInput without finishing; the decoder must fail instead of
+    // spinning forever on a zero-byte result.
+    byte[] ciphertext = encryptMkmd(new byte[0], 1);
+    FutureTask<MkmdDecoder.DecodedPayload> task =
+        new FutureTask<>(() -> MkmdDecoder.decode(ciphertext, aesKey, aesIv));
+    Thread worker = new Thread(task, "mkmd-empty-deflate-regression");
+    worker.setDaemon(true);
+    worker.start();
+
+    try {
+      task.get(2, TimeUnit.SECONDS);
+      check(false, "Empty compressed MKMD stream was accepted");
+    } catch (ExecutionException failure) {
+      check(
+          failure.getCause() instanceof MkmdDecoder.DecodeException,
+          "Empty compressed MKMD stream did not fail with DecodeException");
+    } catch (TimeoutException timeout) {
+      check(false, "Empty compressed MKMD stream stalled instead of failing");
+    }
+  }
+
   private static void classifiesKnownSignatures() {
     check(MkmdDecoder.classifyPayloadForTest(new byte[] {(byte) 'M', (byte) 'T', (byte) 'h', (byte) 'd'})
         == MkmdDecoder.Signature.STANDARD_MIDI, "MIDI signature");
@@ -241,6 +277,7 @@ public final class MkmdDecoderRegressionTests {
     rejectsUnsupportedVersion();
     rejectsWrongKey();
     sizeCapRejectsOversizedCompressed();
+    rejectsEmptyDeflateWithoutHanging();
     classifiesKnownSignatures();
     return checks;
   }

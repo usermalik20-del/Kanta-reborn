@@ -94,7 +94,7 @@ jobs:
           chmod 600 "$notes_file"
           for attempt in 1 2 3; do
             if ! gh release view "$tag" --repo "${GITHUB_REPOSITORY}" --json assets >/tmp/release.json 2>/dev/null; then
-              gh release create "$tag" "$apk" --title "KANTA Android preview ${SOURCE_SHA:0:8}" --notes-file "$notes_file" --repo "${GITHUB_REPOSITORY}" && break
+              gh release create "$tag" "$apk" --title "KANTA Android preview ${SOURCE_SHA:0:8}" --notes-file "$notes_file" --repo "${GITHUB_REPOSITORY}" --target "${SOURCE_SHA}" && break
             fi
             asset="$(jq -r --arg n "$(basename "$apk")" '.assets[] | select(.name==$n) | .digest // empty' /tmp/release.json)"
             test -n "$asset" && test "${asset#sha256:}" = "$digest" && break

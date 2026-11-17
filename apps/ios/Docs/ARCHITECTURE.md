@@ -1,6 +1,6 @@
 # Architecture
 
-**Current merged source baseline (October 10, 2026):** `kanta-ph/Gelo-Karaoke-iOS` `main`, merge commit [`6dcdf5f`](https://github.com/kanta-ph/Gelo-Karaoke-iOS/commit/6dcdf5f675572771f0377fe2197c2cee41b4bf5c), PR #44 merged and PR #40 closed as superseded. The last green Core CI ([run #38003895381](https://github.com/kanta-ph/Gelo-Karaoke-iOS/actions/runs/38003895381)) validated **173 Swift tests**, an unsigned Release iOS Simulator build, and live Host/CONTROL simulator startup on an earlier PR head; it **did not rebuild the final in-app Legal & Privacy edit or this merge commit**. KANTA has **no verified signed TestFlight upload or physical-device acceptance** for this merged batch. Website `/legal` and `/privacy` are live and were checked on production. Historical draft/pending paragraphs below record their original dates and must not supersede this status.
+**Current repository baseline (November 16, 2026):** `usermalik20-del/Kanta-reborn` `main` at `11e6710b1cd0b6417315423b90bb9097fb2af18c`. This iOS subtree is part of the monorepo; older standalone-repository CI and transfer notes below are historical. No signed TestFlight upload or physical-device acceptance is implied. Native Bonjour Remote v2 remains plaintext, while Browser Remote and the KCP1 Android companion are separate protected paths.
 
 
 ## Architectural principles
@@ -214,11 +214,18 @@ Remote Protocol v2 translates authenticated LAN commands into the same `KaraokeC
 
 `Infrastructure/LocalNetworkControl` now owns Bonjour/mDNS presence and discovery using Network.framework with service type `_gelokaraoke._tcp`. Host mode advertises only while the Host screen is active; Remote mode browses the LAN and projects discovered service names into UI state. The iOS app declares `NSLocalNetworkUsageDescription` and `NSBonjourServices` in an explicit Info.plist so on-device discovery follows Apple's local-network permission model.
 
-A six-digit `PairingCode` primitive is generated and displayed by Host mode but is deliberately not placed in Bonjour TXT metadata. `LocalNetworkControl` uses a bounded 4-byte big-endian length prefix around JSON `RemoteEnvelope` frames (maximum payload 1 MiB). A session must identify as `.controller`, complete the PIN exchange, and reach a paired session state before any `KaraokeCommand` can execute. Invalid framing, protocol versions, roles, sequencing, or PINs fail closed. Rotating the Host PIN revokes active remote sessions. Paired sessions receive authoritative `KaraokeSnapshot` updates every 500 ms and after accepted commands. Remote mode exposes transport, volume, pitch, tempo, now-playing, queue-state, bounded catalog search, enqueue, and queue removal. Catalog queries are accepted only after pairing, trimmed to 200 characters, capped at 100 results, correlated by request UUID so stale responses can be ignored, and return only `LibrarySong` metadata—never bookmarks or filesystem paths. The current TCP stream is application-authorized but not cryptographically confidential, so it is intended for trusted LAN use until encrypted-channel hardening is added.
+A six-digit `PairingCode` primitive is generated and displayed by Host mode but is deliberately not placed in Bonjour TXT metadata. `LocalNetworkControl` uses a bounded 4-byte big-endian length prefix around JSON `RemoteEnvelope` frames (maximum payload 1 MiB). A session must identify as `.controller`, complete the PIN exchange, and reach a paired session state before any `KaraokeCommand` can execute. Invalid framing, protocol versions, roles, sequencing, or PINs fail closed. Rotating the Host PIN revokes active remote sessions. Paired sessions receive authoritative `KaraokeSnapshot` updates every 500 ms and after accepted commands. Remote mode exposes transport, volume, pitch, tempo, now-playing, queue-state, bounded catalog search, enqueue, and queue removal. Catalog queries are accepted only after pairing, trimmed to 200 characters, capped at 100 results, correlated by request UUID so stale responses can be ignored, and return only `LibrarySong` metadata—never bookmarks or filesystem paths. The legacy Bonjour TCP stream is application-authorized but not cryptographically
+confidential. Host admission is capped at four simultaneous sessions, and an
+unpaired connection is closed after 20 seconds. These limits bound resource use;
+they do not encrypt traffic or globally rate-limit six-digit PIN guesses. Keep
+this legacy path on trusted LANs only.
 
-Phase 6 treats transport confidentiality as an explicit release-hardening
-gate. PIN authentication prevents unauthenticated command execution but
-does not provide secrecy against a local-network observer.
+The separate Browser Remote uses HTTPS with an ephemeral certificate whose
+fingerprint is verified during pairing. The separate `EncryptedCompanionClient`
+uses KCP1 AES-GCM for Android hosts. Neither path upgrades the legacy Bonjour
+stream, and PIN authentication alone does not provide secrecy against a
+local-network observer. Transport confidentiality for the legacy path remains
+an explicit release-hardening gate.
 
 ## Scoring and microphone boundary
 

@@ -1,3 +1,35 @@
+## Android legacy MKMD decompression boundary (2026-11-16)
+
+Both direct MKMD decoding and the paired legacy-container importer use raw DEFLATE.
+The legacy importer now checks every zero-output result: dictionary requests,
+truncated input and any other no-progress state become bounded import errors. The
+native `Inflater` is always ended in `finally`, even when output exceeds the
+declared size or the compressed stream is malformed. Record-level errors remain
+isolated so one bad indexed record does not prevent later valid records from importing.
+
+## Android pinned browser transport lifecycle (2026-11-16)
+
+The native pinned WebView client owns a single-thread executor for bridge requests.
+Its JavaScript interface runs on a WebView background thread, so `closed` can become
+true after the bridge's initial check but before executor submission. The submission
+boundary catches only `RejectedExecutionException`, releases the busy latch and drops
+the late request. Closing the transport clears the latch, disconnects active HTTPS
+connections and shuts down the worker. Certificate pinning, origin/path restrictions,
+session authorization and bounded payloads remain independent security gates.
+
+## Website download manifest and status boundary (2026-11-16)
+
+The website's download manifest is platform-owned. Each `platforms.android` and
+`platforms.ios` record carries its own `signInRequired` value because one platform
+uses a public GitHub Release asset for Android while iOS still uses its retained
+Actions artifact. The current workflow uploads the Android APK to a Release; it does
+not upload the unsigned iOS IPA there. The status bar validates the Release tag and source-derived asset
+name, or the exact Actions run/artifact path, and verifies that the page link matches
+the selected record. It does not fetch or re-hash the download. The publisher writes
+only the selected platform entry and page; it must not rewrite the peer's provenance.
+The publisher must keep iOS on its exact Actions run/artifact URL and mark it
+`signInRequired: true` until a verified immutable IPA Release asset is actually uploaded.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
@@ -879,6 +911,16 @@ Android companion implementation, automated acceptance, original-byte packaging 
 
 This milestone is iPhone/iPad controller → Android host only. The recovered Bonjour/PIN iOS host remains separate, plaintext, explicitly labeled legacy and incompatible. It is not upgraded by this client. Android public 0.10 bytes/website and current unsigned iOS download remain unchanged pending changed-source acceptance and separately verified packaging. Protocol lacks forward secrecy and independent review; physical cross-device behavior remains unverified. Tests include independent fixed Python vectors, adversarial records and a real TCP Swift client exchange with the unmodified production Java codec and a synthetic peer queue. That peer is not Android runtime/device acceptance.
 
+### Legacy Bonjour host admission hardening (2026-11-16)
+
+The native Bonjour host now admits at most four concurrent sessions, including
+unpaired peers. A connection that has not completed the six-digit PIN exchange is
+closed after 20 seconds; successful pairing cancels the deadline. Stop and PIN
+rotation cancel sessions and reset admission state. This bounds unauthenticated idle
+socket retention, but it does not add confidentiality or a global failed-PIN rate
+limit. Keep the native protocol on trusted LANs only.
+
+
 
 ## Fullscreen stage presentation-gate wiring (PR #36 repair)
 
@@ -1516,6 +1558,44 @@ timing is distinct from word sync; untimed text is previewed, not falsely timed.
 Host signal/LRC and device font/JSON checks are registered but not executed locally.
 Python/source checks are not a Java build or Android acceptance. No push, merge,
 signing or deployment is authorized.
+## AdSense policy truthfulness pass (2026-11-17)
+
+Fixed public-site trust and content-quality issues ahead of AdSense re-review:
+- Removed inflated reading times: all 15 blog articles now show estimates matching their
+  actual word counts and the `blog.js` values (previously 8–18 min claims on 2–7 min pages).
+- Added self-referential `rel="canonical"` links to every main page and blog article
+  (category pages already had them).
+- Removed the unsupported "ultimate karaoke app" superlative from the home description.
+- Added `/about` (factual site-identity page: what KANTA is, what is tested vs open,
+  how the site is maintained, GitHub issue tracker as the contact path); registered in
+  `vercel.json` routes, `api/page.js` PAGES, `sitemap.xml` and `tools/verify-website.py`
+  PUBLIC_ROUTES; linked from every footer.
+- Corrected blog claims that contradicted the verified feature copy: party pad list and
+  intermission behaviors (party-effects article), companion pairing/session/security facts
+  (companion article, matches support.html), external-display settings path and
+  dual-screen status, microphone setup flow (no calibration routine exists), SPICE
+  accuracy wording and mic-capture phrasing, `.kanta-book` scope in two articles
+  (metadata-only catalog; browser reader; no in-app import/restore flow).
+
+Validation: `python3 tools/verify-website.py` passes; website security, Vercel workflow,
+documentation-sync, customer-legal-copy and site-page-handler suites pass locally.
+Node `--check` runs are unreliable in this iSH environment (intermittent hangs), so the
+Node steps in `website-validation.yml` remain the authoritative gate for those files.
+No ad code, consent gating, or ads.txt changes; no claims of AdSense approval.
+
+**Production 404 fix (same pass):** all 15 blog articles, `/blog/all` and the six blog
+category pages returned 404 in production: `vercel.json` dispatches those routes to
+`/api/page`, but `PAGES` in `api/page.js` contained no blog entries (pre-existing since
+the blog routes were added). Added the 22 missing `PAGES` entries, exported `PAGES`, and
+added two regression tests: every `/api/page` route in `vercel.json` must resolve to a
+`PAGES` entry, and every blog entry must point at an existing file.
+
+**Function bundle fix (follow-up):** after adding blog `PAGES` entries, production
+returned 500 on those routes because `functions["api/page.js"].includeFiles` was `*.html`,
+which bundles only root-level HTML — the function never received `blog/*.html`. Changed
+to `**/*.html` and updated both guards (`tools/verify-website.py`,
+`tools/tests/test_website_security_contract.py`).
+
 ## Website validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point guard and link/sitemap/CSP validation for blog routes. No architecture changes.
@@ -1591,3 +1671,39 @@ remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+**Publisher tag-race fix (2026-11-18):** `platform-download-publishing.yml` now passes
+`--target ${SOURCE_SHA}` to `gh release create`. Without it, the tag defaults to the
+runner's checkout head, which can be a descendant of the claimed source SHA when main
+advances between build and publish — making the tag object disagree with its
+`-preview-<sha>` suffix and tripping the release-notes guard.
+
+
+
+## Android legacy MKMD decoder failure contract (2026-11-16)
+
+The encrypted MKMD envelope is size-checked before raw-DEFLATE expansion. During
+expansion, `MkmdDecoder` now treats exhausted input as truncation, preset-dictionary
+requests as unsupported, and any other zero-output/no-progress result as malformed.
+`Inflater.end()` is guaranteed through `finally`, so invalid input and decoded-size
+cap failures release native zlib state. Valid MIDI/WAVE/MP3 payload classification and
+the existing decoded-output ceiling are unchanged.
+
+## Private Songbook CSV trust boundary (2026-11-16)
+
+Authenticated Songbook plaintext is still untrusted catalog data. Browser CSV export
+must serialize parsed fields rather than return the decrypted source string, quote all
+cells, double embedded quotes and neutralize spreadsheet formula sigils after leading
+whitespace/control characters. The four exported columns are all untrusted. The
+browser's AES-GCM envelope, domain-separated SHA-256 key derivation and decrypt
+routine remain byte-identical to the archived reader reference; parser/export changes
+are covered separately by the website regression suite.
+
+## Private Songbook interaction ownership (2026-11-16)
+
+The private browser Songbook has one state owner: `songbook.js`. It controls unlock
+success/failure, locking and plaintext cleanup, filtering, page indexes, keyboard
+navigation, print and CSV export. `songbook-fx.js` is decorative-only; duplicate
+click/keyboard handlers or list DOM swaps there can reveal the reader before AES-GCM
+decryption succeeds and can desynchronize page contents from page numbers. The core
+script toggles `.physical-book.next` / `.prev`; `songbook.css` owns the corresponding
+flip-sheet animation. `theme.css` must not hide the flip sheet.
