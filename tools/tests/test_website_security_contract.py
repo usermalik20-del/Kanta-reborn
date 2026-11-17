@@ -50,7 +50,7 @@ class WebsiteSecurityContractTests(unittest.TestCase):
         self.assertEqual(rewrites["^/$"], "/api/page?route=%2F")
         for route in ROUTES - {"/"}:
             self.assertIn("^" + route + "$", rewrites)
-        self.assertEqual(CONFIG["functions"]["api/page.js"]["includeFiles"], "*.html")
+        self.assertEqual(CONFIG["functions"]["api/page.js"]["includeFiles"], "**/*.html")
 
     def test_nonce_renderer_and_songbook_exclusion(self):
         source = PAGE_SOURCE
