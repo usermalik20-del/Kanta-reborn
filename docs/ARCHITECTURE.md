@@ -1,3 +1,16 @@
+## Website download manifest and status boundary (2026-11-16)
+
+The website's download manifest is platform-owned. Each `platforms.android` and
+`platforms.ios` record carries its own `signInRequired` value because one platform
+uses a public GitHub Release asset for Android while iOS still uses its retained
+Actions artifact. The current workflow uploads the Android APK to a Release; it does
+not upload the unsigned iOS IPA there. The status bar validates the Release tag and source-derived asset
+name, or the exact Actions run/artifact path, and verifies that the page link matches
+the selected record. It does not fetch or re-hash the download. The publisher writes
+only the selected platform entry and page; it must not rewrite the peer's provenance.
+The publisher must keep iOS on its exact Actions run/artifact URL and mark it
+`signInRequired: true` until a verified immutable IPA Release asset is actually uploaded.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
@@ -1508,6 +1521,44 @@ timing is distinct from word sync; untimed text is previewed, not falsely timed.
 Host signal/LRC and device font/JSON checks are registered but not executed locally.
 Python/source checks are not a Java build or Android acceptance. No push, merge,
 signing or deployment is authorized.
+## AdSense policy truthfulness pass (2026-11-17)
+
+Fixed public-site trust and content-quality issues ahead of AdSense re-review:
+- Removed inflated reading times: all 15 blog articles now show estimates matching their
+  actual word counts and the `blog.js` values (previously 8–18 min claims on 2–7 min pages).
+- Added self-referential `rel="canonical"` links to every main page and blog article
+  (category pages already had them).
+- Removed the unsupported "ultimate karaoke app" superlative from the home description.
+- Added `/about` (factual site-identity page: what KANTA is, what is tested vs open,
+  how the site is maintained, GitHub issue tracker as the contact path); registered in
+  `vercel.json` routes, `api/page.js` PAGES, `sitemap.xml` and `tools/verify-website.py`
+  PUBLIC_ROUTES; linked from every footer.
+- Corrected blog claims that contradicted the verified feature copy: party pad list and
+  intermission behaviors (party-effects article), companion pairing/session/security facts
+  (companion article, matches support.html), external-display settings path and
+  dual-screen status, microphone setup flow (no calibration routine exists), SPICE
+  accuracy wording and mic-capture phrasing, `.kanta-book` scope in two articles
+  (metadata-only catalog; browser reader; no in-app import/restore flow).
+
+Validation: `python3 tools/verify-website.py` passes; website security, Vercel workflow,
+documentation-sync, customer-legal-copy and site-page-handler suites pass locally.
+Node `--check` runs are unreliable in this iSH environment (intermittent hangs), so the
+Node steps in `website-validation.yml` remain the authoritative gate for those files.
+No ad code, consent gating, or ads.txt changes; no claims of AdSense approval.
+
+**Production 404 fix (same pass):** all 15 blog articles, `/blog/all` and the six blog
+category pages returned 404 in production: `vercel.json` dispatches those routes to
+`/api/page`, but `PAGES` in `api/page.js` contained no blog entries (pre-existing since
+the blog routes were added). Added the 22 missing `PAGES` entries, exported `PAGES`, and
+added two regression tests: every `/api/page` route in `vercel.json` must resolve to a
+`PAGES` entry, and every blog entry must point at an existing file.
+
+**Function bundle fix (follow-up):** after adding blog `PAGES` entries, production
+returned 500 on those routes because `functions["api/page.js"].includeFiles` was `*.html`,
+which bundles only root-level HTML — the function never received `blog/*.html`. Changed
+to `**/*.html` and updated both guards (`tools/verify-website.py`,
+`tools/tests/test_website_security_contract.py`).
+
 ## Website validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point guard and link/sitemap/CSP validation for blog routes. No architecture changes.
@@ -1593,3 +1644,13 @@ whitespace/control characters. The four exported columns are all untrusted. The
 browser's AES-GCM envelope, domain-separated SHA-256 key derivation and decrypt
 routine remain byte-identical to the archived reader reference; parser/export changes
 are covered separately by the website regression suite.
+
+## Private Songbook interaction ownership (2026-11-16)
+
+The private browser Songbook has one state owner: `songbook.js`. It controls unlock
+success/failure, locking and plaintext cleanup, filtering, page indexes, keyboard
+navigation, print and CSV export. `songbook-fx.js` is decorative-only; duplicate
+click/keyboard handlers or list DOM swaps there can reveal the reader before AES-GCM
+decryption succeeds and can desynchronize page contents from page numbers. The core
+script toggles `.physical-book.next` / `.prev`; `songbook.css` owns the corresponding
+flip-sheet animation. `theme.css` must not hide the flip sheet.

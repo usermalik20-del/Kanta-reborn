@@ -35,5 +35,6 @@
   
   <ns0:url><ns0:loc>https://kanta-public.vercel.app/privacy</ns0:loc><ns0:lastmod>2026-11-08</ns0:lastmod><ns0:changefreq>yearly</ns0:changefreq><ns0:priority>0.5</ns0:priority></ns0:url>
   <ns0:url><ns0:loc>https://kanta-public.vercel.app/songbook</ns0:loc><ns0:lastmod>2026-11-08</ns0:lastmod><ns0:changefreq>monthly</ns0:changefreq><ns0:priority>0.7</ns0:priority></ns0:url>
+  <ns0:url><ns0:loc>https://kanta-public.vercel.app/about</ns0:loc><ns0:lastmod>2026-11-17</ns0:lastmod><ns0:changefreq>monthly</ns0:changefreq><ns0:priority>0.6</ns0:priority></ns0:url>
   <ns0:url><ns0:loc>https://kanta-public.vercel.app/support</ns0:loc><ns0:lastmod>2026-11-08</ns0:lastmod><ns0:changefreq>monthly</ns0:changefreq><ns0:priority>0.7</ns0:priority></ns0:url>
   </ns0:urlset>

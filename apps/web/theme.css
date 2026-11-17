@@ -214,7 +214,7 @@
   transform-style: preserve-3d;
   backface-visibility: hidden;
 }
-.flip-sheet { display: none; } /* legacy hide */
+/* .flip-sheet visibility and animation are owned by songbook.css. */
 
 /* ---------- Reduced Motion Overrides ---------- */
 @media (prefers-reduced-motion: reduce) {

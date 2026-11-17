@@ -66,7 +66,7 @@ The stray `|` divider between Key and Tempo columns in the Now Playing header wa
 ## Before you install
 
 - **Back up your music and saved work.** Switching Android test versions may require uninstalling the old app, which can erase its saved data.
-- **Some downloads require a GitHub account** and are available for a limited time. Follow the current download page rather than an old build link.
+- **Download access varies by platform and build.** Each download page shows whether a GitHub account is required and any expiry limits; always use the current page rather than an old build link.
 - **Real-device testing is not complete.** Voice quality, microphone delay, camera use and external displays still need testing on physical devices. Passing automated tests does not guarantee they work on your device.
 - **Remote control is experimental.** Compatibility and setup differ between platforms; use a trusted private network and share pairing codes only with people you trust.
 - **YouTube playback is not available.**
@@ -88,6 +88,44 @@ Build instructions, test results and engineering details live in the developer d
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
 - [Android lint validation and release evidence](docs/ANDROID_LINT_HARDENING.md)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.
+## AdSense policy truthfulness pass (2026-11-17)
+
+Fixed public-site trust and content-quality issues ahead of AdSense re-review:
+- Removed inflated reading times: all 15 blog articles now show estimates matching their
+  actual word counts and the `blog.js` values (previously 8–18 min claims on 2–7 min pages).
+- Added self-referential `rel="canonical"` links to every main page and blog article
+  (category pages already had them).
+- Removed the unsupported "ultimate karaoke app" superlative from the home description.
+- Added `/about` (factual site-identity page: what KANTA is, what is tested vs open,
+  how the site is maintained, GitHub issue tracker as the contact path); registered in
+  `vercel.json` routes, `api/page.js` PAGES, `sitemap.xml` and `tools/verify-website.py`
+  PUBLIC_ROUTES; linked from every footer.
+- Corrected blog claims that contradicted the verified feature copy: party pad list and
+  intermission behaviors (party-effects article), companion pairing/session/security facts
+  (companion article, matches support.html), external-display settings path and
+  dual-screen status, microphone setup flow (no calibration routine exists), SPICE
+  accuracy wording and mic-capture phrasing, `.kanta-book` scope in two articles
+  (metadata-only catalog; browser reader; no in-app import/restore flow).
+
+Validation: `python3 tools/verify-website.py` passes; website security, Vercel workflow,
+documentation-sync, customer-legal-copy and site-page-handler suites pass locally.
+Node `--check` runs are unreliable in this iSH environment (intermittent hangs), so the
+Node steps in `website-validation.yml` remain the authoritative gate for those files.
+No ad code, consent gating, or ads.txt changes; no claims of AdSense approval.
+
+**Production 404 fix (same pass):** all 15 blog articles, `/blog/all` and the six blog
+category pages returned 404 in production: `vercel.json` dispatches those routes to
+`/api/page`, but `PAGES` in `api/page.js` contained no blog entries (pre-existing since
+the blog routes were added). Added the 22 missing `PAGES` entries, exported `PAGES`, and
+added two regression tests: every `/api/page` route in `vercel.json` must resolve to a
+`PAGES` entry, and every blog entry must point at an existing file.
+
+**Function bundle fix (follow-up):** after adding blog `PAGES` entries, production
+returned 500 on those routes because `functions["api/page.js"].includeFiles` was `*.html`,
+which bundles only root-level HTML — the function never received `blog/*.html`. Changed
+to `**/*.html` and updated both guards (`tools/verify-website.py`,
+`tools/tests/test_website_security_contract.py`).
+
 ## Website validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point and link/sitemap/CSP validation for blog routes. No user-facing changes.
@@ -106,3 +144,10 @@ four catalog fields are parsed and re-serialized for export; formula-leading cel
 (including values with leading whitespace/control characters) are forced to text.
 Exports do not reuse the raw decrypted CSV string, and the parser enforces the song
 count limit even when the final row has no trailing newline.
+
+## Private Songbook interaction safety
+
+The browser Songbook keeps unlock/lock, page navigation and keyboard controls in its
+core reader script. Decorative effects must not reveal the reader before decryption
+succeeds or replace the core page-navigation state. The existing CSS flip-sheet
+animation is driven by the core page state; decorative JavaScript only owns effects.

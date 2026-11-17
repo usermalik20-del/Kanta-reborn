@@ -5,6 +5,7 @@
 <meta name="description" content="How KANTA's experimental encrypted Android-to-Android companion protocol works — pairing, encryption, session management, and security considerations.">
 <meta name="theme-color" content="#111326">
 <title>Encrypted Companion Control: Remote Karaoke from a Second Android · KANTA Blog</title>
+<link rel="canonical" href="https://kanta-public.vercel.app/blog/encrypted-companion-control-android">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/blog.css">
@@ -31,7 +32,7 @@
   <header class="article-header reveal">
     <span class="eyebrow">Technical Deep Dives</span>
     <h1>Encrypted Companion Control: Remote Karaoke from a Second Android</h1>
-    <div class="article-meta"><time datetime="2026-09-16">2026-09-16</time><span class="author">By KANTA Team</span><span class="read-time">14 min read</span></div>
+    <div class="article-meta"><time datetime="2026-09-16">2026-09-16</time><span class="author">By KANTA Team</span><span class="read-time">3 min read</span></div>
   </header>
   <div class="article-content">
       <section id="what-companion-control-is">
@@ -46,12 +47,12 @@
 
       <section id="how-kcp1-encryption-works">
         <h2>How KCP1 Encryption Works</h2>
-<p>KCP1 (KANTA Companion Protocol 1) uses:</p><ul><li><strong>Device-to-device key exchange</strong> — Pairing establishes a shared secret without transmitting it over the network</li><li><strong>AES-256 session encryption</strong> — All commands (song selection, queue, transport) are encrypted for the session</li><li><strong>Per-session keys</strong> — A new key is generated for each connection; compromising one session doesn't expose others</li><li><strong>No cloud involvement</strong> — Everything happens on your local network. No data leaves your devices.</li></ul><p>Even if someone on your Wi-Fi is sniffing packets, they see only encrypted noise.</p>
+<p>KCP1 (KANTA Companion Protocol 1) encrypts song and singer details in transit using AES-GCM:</p><ul><li><strong>Explicit pairing</strong> — The second device enters the host's private network address and full 32-character code; nothing is open by default</li><li><strong>Session-scoped</strong> — The code expires in five minutes and a session lasts up to ten minutes</li><li><strong>No cloud involvement</strong> — Everything happens on your local network; music and recordings are not sent to the companion</li></ul><p>Physical two-device testing and an independent security review remain open — treat this as an experimental feature, not a audited product. What is encrypted is the control traffic (song and singer details); what is <em>not</em> protected is your Wi-Fi itself, so pair only on a network you trust.</p>
       </section>
 
       <section id="pairing-process">
         <h2>Pairing Process</h2>
-<ol><li>On the host device: <strong>More → Companion → Enable Companion Mode</strong></li><li>On the client device: <strong>More → Companion → Control an Android Host</strong></li><li>The client scans the local network and discovers the host</li><li>Tap to pair — an encrypted key exchange happens automatically</li><li>Once paired, the client shows a remote control interface: song list, queue, play/pause, next, previous, volume</li></ol><p>Pairing is remembered. Future connections are automatic when both devices are on the same network.</p>
+<ol><li>On both Android devices, open <strong>Control → Companion control</strong></li><li>On the host: select its private network address and choose <strong>Start hosting</strong></li><li>On the second device: enter that address and the full private 32-character code, then <strong>Connect</strong></li><li>Once connected, the second device can search songs, reserve, cancel, and use Play/Pause/Next</li></ol><p>Share the code only with someone you trust — it grants those controls. The code expires in five minutes, and a session lasts up to ten minutes. There is no remembered pairing: if either app stops or you leave it, the session disconnects, and returning does not reconnect.</p>
       </section>
 
       <section id="session-management">

@@ -5,6 +5,7 @@
 <meta name="description" content="Setting up a dedicated karaoke stage on TVs and projectors — cable choices, latency considerations, and optimizing KANTA's dual-screen mode.">
 <meta name="theme-color" content="#111326">
 <title>External Displays for Karaoke: HDMI, AirPlay, and Wireless Options · KANTA Blog</title>
+<link rel="canonical" href="https://kanta-public.vercel.app/blog/external-display-hdmi-airplay-karaoke">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/blog.css">
@@ -31,7 +32,7 @@
   <header class="article-header reveal">
     <span class="eyebrow">Stage & Visuals</span>
     <h1>External Displays for Karaoke: HDMI, AirPlay, and Wireless Options</h1>
-    <div class="article-meta"><time datetime="2026-10-04">2026-10-04</time><span class="author">By KANTA Team</span><span class="read-time">11 min read</span></div>
+    <div class="article-meta"><time datetime="2026-10-04">2026-10-04</time><span class="author">By KANTA Team</span><span class="read-time">3 min read</span></div>
   </header>
   <div class="article-content">
       <section id="why-a-dedicated-karaoke-stage">
@@ -50,8 +51,8 @@
       </section>
 
       <section id="kanta's-dual-screen-mode">
-        <h2>KANTA's Dual-Screen Mode</h2>
-<p>When you connect an external display, KANTA detects it automatically:</p><ol><li><strong>Phone screen:</strong> Song list, queue, pitch display, tempo/key controls, microphone monitor</li><li><strong>External screen:</strong> Full-screen lyrics, large enough to read across the room, background visuals, current song progress</li><li><strong>Audio:</strong> Routes to external speakers (HDMI) or stays on phone (headphones for monitoring)</li></ol><p>The external display shows only what an audience should see — lyrics and visuals. Your phone keeps the controls private.</p>
+        <h2>KANTA's Dual-Screen Stage</h2>
+<p>KANTA separates the stage from the controls: on a device or connection that provides an external display, the stage view shows lyrics and visuals while your phone keeps the controls, queue and monitor. Two honest limits as of this preview:</p><ul><li><strong>Hardware acceptance is pending.</strong> HDMI and AirPlay setups have not been verified on physical devices yet, so treat this section as how the feature is designed to behave, not a tested configuration guide.</li><li><strong>Audio routing follows the operating system.</strong> KANTA does not manage a separate "route to external speakers" setting; whatever output the phone or tablet exposes is what playback uses.</li></ul>
       </section>
 
       <section id="latency:-the-real-challenge">
@@ -66,7 +67,7 @@
 
       <section id="kanta-settings-for-external-displays">
         <h2>KANTA Settings for External Displays</h2>
-<p>Go to <strong>More → Settings → Stage & Display</strong>:</p><ul><li><strong>External display:</strong> Enable dual-screen mode</li><li><strong>Lyrics font size:</strong> Increase for TV viewing (24–32 pt)</li><li><strong>Background visuals:</strong> Enable for stage ambiance</li><li><strong>Audio routing:</strong> Choose output device</li><li><strong>Microphone monitor:</strong> Enable if using headphones, disable if using PA (avoid feedback)</li></ul>
+<p>There is no dedicated "dual-screen mode" toggle in KANTA today. What you can adjust on the device itself:</p><ul><li><strong>Stage visuals:</strong> Choose scenic presets, bundled background clips or your own photo/video for the stage</li><li><strong>Lyrics readability:</strong> Tempo, key and fullscreen controls stay on the phone screen</li><li><strong>Audio output:</strong> Pick the output the phone exposes in system settings (wired or HDMI); Bluetooth monitoring is a poor fit for singing because of its latency</li><li><strong>Microphone monitor:</strong> If you use monitoring, wired/USB routes are the verified path; disable monitoring through speakers to avoid feedback</li></ul><p>See the <a href="/features">feature matrix</a> for the current testing status of external-display support.</p>
       </section>
 
   </div>
