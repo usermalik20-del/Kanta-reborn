@@ -173,6 +173,10 @@
       "dest": "/api/page?route=%2Fsupport"
     },
     {
+      "src": "^/about$",
+      "dest": "/api/page?route=%2Fabout"
+    },
+    {
       "src": "^/songbook$",
       "dest": "/api/page?route=%2Fsongbook"
     },
@@ -183,7 +187,7 @@
   ],
   "functions": {
     "api/page.js": {
-      "includeFiles": "*.html"
+      "includeFiles": "**/*.html"
     }
   }
 }
