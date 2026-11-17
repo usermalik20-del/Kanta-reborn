@@ -884,6 +884,16 @@ Android companion implementation, automated acceptance, original-byte packaging 
 
 This milestone is iPhone/iPad controller → Android host only. The recovered Bonjour/PIN iOS host remains separate, plaintext, explicitly labeled legacy and incompatible. It is not upgraded by this client. Android public 0.10 bytes/website and current unsigned iOS download remain unchanged pending changed-source acceptance and separately verified packaging. Protocol lacks forward secrecy and independent review; physical cross-device behavior remains unverified. Tests include independent fixed Python vectors, adversarial records and a real TCP Swift client exchange with the unmodified production Java codec and a synthetic peer queue. That peer is not Android runtime/device acceptance.
 
+### Legacy Bonjour host admission hardening (2026-11-16)
+
+The native Bonjour host now admits at most four concurrent sessions, including
+unpaired peers. A connection that has not completed the six-digit PIN exchange is
+closed after 20 seconds; successful pairing cancels the deadline. Stop and PIN
+rotation cancel sessions and reset admission state. This bounds unauthenticated idle
+socket retention, but it does not add confidentiality or a global failed-PIN rate
+limit. Keep the native protocol on trusted LANs only.
+
+
 
 ## Fullscreen stage presentation-gate wiring (PR #36 repair)
 

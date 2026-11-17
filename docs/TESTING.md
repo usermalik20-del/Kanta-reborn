@@ -854,6 +854,19 @@ Android emulator startup uses an explicit shared AVD directory for avdmanager an
 
 `ios-validation.yml` runs the full iOS package/app gate without rerunning unchanged Android native tests. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
 
+## iOS legacy Bonjour remote admission and pairing deadline — 2026-11-16
+
+- `RemoteHostConnectionAdmission` unit coverage verifies the four-session capacity
+  policy, duplicate rejection, slot release and reset.
+- A macOS loopback Network.framework regression leaves a native host connection
+  unpaired and verifies `HostRemoteConnection` closes it at an injected 100 ms test
+  deadline. Production uses a 20-second deadline and cancels it after successful
+  pairing.
+- Existing Remote frame decoding, session-gate, invalid-PIN and replay-cache tests
+  remain required. The new checks bound resource retention; they do not establish
+  encryption, failed-PIN rate limiting, physical LAN behavior or independent security
+  review.
+
 ## iOS walkthrough runner diagnostics and suite timeout
 
 `tools/capture-ios-runtime.py` executes the complete `KantaVisualWalkthroughUITests` suite for the requested simulator and requires every name in its `EXPECTED_TESTS` manifest to have a clean passing result. The current manifest contains 13 cases: the prior eight cases, with the six-destination menu coverage split into six independently budgeted tests instead of one aggregate case.
