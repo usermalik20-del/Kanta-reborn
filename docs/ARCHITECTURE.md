@@ -1621,3 +1621,8 @@ remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+**Publisher tag-race fix (2026-11-18):** `platform-download-publishing.yml` now passes
+`--target ${SOURCE_SHA}` to `gh release create`. Without it, the tag defaults to the
+runner's checkout head, which can be a descendant of the claimed source SHA when main
+advances between build and publish — making the tag object disagree with its
+`-preview-<sha>` suffix and tripping the release-notes guard.
