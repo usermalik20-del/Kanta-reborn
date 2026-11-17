@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.*;
 
@@ -13,6 +15,14 @@ import javax.net.ssl.*;
 public final class BrowserRemoteRegressionTests {
   private static int checks;
   private static void check(boolean value,String message){checks++;if(!value)throw new AssertionError(message);}
+  private static void rejectedTransportDispatchChecks(){
+    AtomicBoolean busy=new AtomicBoolean(true),ran=new AtomicBoolean();
+    boolean submitted=SafeExecutorSubmission.execute(command->{throw new RejectedExecutionException("transport closed");},()->ran.set(true),busy);
+    check(!submitted&&!busy.get()&&!ran.get(),"Rejected browser transport dispatch retained its busy latch or ran after close");
+    AtomicBoolean acceptedBusy=new AtomicBoolean(true);
+    boolean accepted=SafeExecutorSubmission.execute(Runnable::run,()->{ran.set(true);acceptedBusy.set(false);},acceptedBusy);
+    check(accepted&&ran.get()&&!acceptedBusy.get(),"Accepted browser transport dispatch did not execute normally");
+  }
   private static String exchange(BrowserRemoteServer host,String method,String path,String origin,String token,byte[] body)throws Exception {
     SSLContext tls=SSLContext.getInstance("TLS");
     tls.init(null,new TrustManager[]{new X509TrustManager(){
@@ -43,7 +53,7 @@ public final class BrowserRemoteRegressionTests {
     BrowserRemoteServer server=new BrowserRemoteServer("127.0.0.1",0,"<h1>Remote</h1>".getBytes(StandardCharsets.UTF_8),new byte[0],new byte[0],artwork,request->{effects.incrementAndGet();return ("{\"request\":\""+request.id+"\"}").getBytes(StandardCharsets.UTF_8);},true);server.start();return server;
   }
   public static int run()throws Exception{
-    checks=0;AtomicInteger effects=new AtomicInteger();
+    checks=0;rejectedTransportDispatchChecks();AtomicInteger effects=new AtomicInteger();
     try(BrowserRemoteServer host=host(effects)){
       String shell=exchange(host,"GET","/",null,null,new byte[0]);
       check(shell.startsWith("HTTP/1.1 200"),"Shell did not load over TLS");

@@ -97,7 +97,6 @@
   function validatePublishedEntry(manifest) {
     if (!manifest
         || manifest.repository !== "usermalik20-del/Kanta-reborn"
-        || manifest.signInRequired !== true
         || typeof manifest.verifiedAt !== "string"
         || !Number.isFinite(Date.parse(manifest.verifiedAt))) {
       throw new Error("Invalid download manifest");
@@ -113,20 +112,54 @@
         || !isHex(entry.source, 40)
         || !isHex(entry.sha256, 64)
         || !isHex(entry[cfg.digestKey], 64)
-        || typeof entry.downloadUrl !== "string") {
+        || typeof entry.downloadUrl !== "string"
+        || typeof entry.signInRequired !== "boolean") {
       throw new Error("Invalid platform artifact record");
     }
 
     var artifactURL = new URL(entry.downloadUrl, location.origin);
-    var expectedPath = "/usermalik20-del/Kanta-reborn/actions/runs/"
-      + entry.packagingRun + "/artifacts/" + entry.packagingArtifact;
     if (artifactURL.origin !== "https://github.com"
-        || artifactURL.pathname !== expectedPath
         || artifactURL.search
         || artifactURL.hash
         || artifactURL.username
         || artifactURL.password) {
       throw new Error("Unexpected artifact URL");
+    }
+
+    var expectedArtifactPath = "/usermalik20-del/Kanta-reborn/actions/runs/"
+      + entry.packagingRun + "/artifacts/" + entry.packagingArtifact;
+    var isActionsArtifact = artifactURL.pathname === expectedArtifactPath;
+    var isReleaseAsset = false;
+
+    if (typeof entry.releaseUrl === "string") {
+      var releaseURL = new URL(entry.releaseUrl, location.origin);
+      var releasePrefix = "/usermalik20-del/Kanta-reborn/releases/tag/";
+      var releaseTag = releaseURL.pathname.indexOf(releasePrefix) === 0
+        ? releaseURL.pathname.slice(releasePrefix.length)
+        : "";
+      var expectedSuffix = "-preview-" + entry.source.slice(0, 8);
+      var assetName = cfg.platform === "android"
+        ? "KANTA-Android-preview-" + entry.source.slice(0, 8) + ".apk"
+        : "KANTA-iOS-personal-unsigned-" + entry.source.slice(0, 8) + ".ipa";
+      var expectedReleasePath = "/usermalik20-del/Kanta-reborn/releases/download/"
+        + releaseTag + "/" + assetName;
+      isReleaseAsset = artifactURL.pathname === expectedReleasePath;
+      if (releaseURL.origin !== "https://github.com"
+          || !releaseTag
+          || releaseTag.indexOf("/") !== -1
+          || !releaseTag.endsWith(expectedSuffix)
+          || releaseURL.search
+          || releaseURL.hash
+          || releaseURL.username
+          || releaseURL.password
+          || !isReleaseAsset) {
+        throw new Error("Release asset does not match its source revision");
+      }
+    }
+
+    if ((!isActionsArtifact && !isReleaseAsset)
+        || entry.signInRequired !== isActionsArtifact) {
+      throw new Error("Download access does not match its publication URL");
     }
 
     var downloadLink = document.querySelector("#download a.button.primary");
@@ -137,7 +170,8 @@
     return {
       source: entry.source,
       artifactDigest: entry.sha256,
-      applicationDigest: entry[cfg.digestKey]
+      applicationDigest: entry[cfg.digestKey],
+      requiresSignIn: entry.signInRequired
     };
   }
 
@@ -158,7 +192,10 @@
     .then(function (manifest) {
       var record = validatePublishedEntry(manifest);
       var readyMessage = cfg.label
-        + " publication record is current · GitHub sign-in required";
+        + " publication record is current · "
+        + (record.requiresSignIn
+          ? "GitHub sign-in required"
+          : "public GitHub Release · no sign-in required");
       bar.title = "Source: " + record.source
         + "\nArtifact ZIP SHA-256: " + record.artifactDigest
         + "\n" + cfg.digestLabel + " SHA-256: " + record.applicationDigest;

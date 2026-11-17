@@ -29,6 +29,7 @@ public final class BonjourHostAdvertiser: ObservableObject {
     private var lifecycleGeneration = UUID()
     private var listener: NWListener?
     private var sessions: [UUID: HostRemoteConnection] = [:]
+    private var admission = RemoteHostConnectionAdmission()
     private var snapshotTask: Task<Void, Never>?
     private let queue = DispatchQueue(
         label: "com.gelo.karaoke.bonjour.host"
@@ -123,6 +124,7 @@ public final class BonjourHostAdvertiser: ObservableObject {
 
         let activeSessions = Array(sessions.values)
         sessions.removeAll(keepingCapacity: false)
+        admission.reset()
         pairedControllerCount = 0
 
         for session in activeSessions {
@@ -142,6 +144,7 @@ public final class BonjourHostAdvertiser: ObservableObject {
         // Existing remote sessions must authenticate again.
         let activeSessions = Array(sessions.values)
         sessions.removeAll(keepingCapacity: false)
+        admission.reset()
         pairedControllerCount = 0
 
         for session in activeSessions {
@@ -163,10 +166,16 @@ public final class BonjourHostAdvertiser: ObservableObject {
             expectedPairingCode: pairingCode,
             queue: queue
         )
+        guard admission.admit(session.id) else {
+            session.cancel()
+            return
+        }
 
         session.onClose = { [weak self] id in
-            self?.sessions.removeValue(forKey: id)
-            self?.refreshPairedControllerCount()
+            guard let self else { return }
+            self.sessions.removeValue(forKey: id)
+            self.admission.release(id)
+            self.refreshPairedControllerCount()
         }
         session.onSnapshot = { [weak self] snapshot in
             self?.broadcast(snapshot)

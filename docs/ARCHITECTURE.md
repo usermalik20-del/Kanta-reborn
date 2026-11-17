@@ -1,3 +1,35 @@
+## Android legacy MKMD decompression boundary (2026-11-16)
+
+Both direct MKMD decoding and the paired legacy-container importer use raw DEFLATE.
+The legacy importer now checks every zero-output result: dictionary requests,
+truncated input and any other no-progress state become bounded import errors. The
+native `Inflater` is always ended in `finally`, even when output exceeds the
+declared size or the compressed stream is malformed. Record-level errors remain
+isolated so one bad indexed record does not prevent later valid records from importing.
+
+## Android pinned browser transport lifecycle (2026-11-16)
+
+The native pinned WebView client owns a single-thread executor for bridge requests.
+Its JavaScript interface runs on a WebView background thread, so `closed` can become
+true after the bridge's initial check but before executor submission. The submission
+boundary catches only `RejectedExecutionException`, releases the busy latch and drops
+the late request. Closing the transport clears the latch, disconnects active HTTPS
+connections and shuts down the worker. Certificate pinning, origin/path restrictions,
+session authorization and bounded payloads remain independent security gates.
+
+## Website download manifest and status boundary (2026-11-16)
+
+The website's download manifest is platform-owned. Each `platforms.android` and
+`platforms.ios` record carries its own `signInRequired` value because one platform
+uses a public GitHub Release asset for Android while iOS still uses its retained
+Actions artifact. The current workflow uploads the Android APK to a Release; it does
+not upload the unsigned iOS IPA there. The status bar validates the Release tag and source-derived asset
+name, or the exact Actions run/artifact path, and verifies that the page link matches
+the selected record. It does not fetch or re-hash the download. The publisher writes
+only the selected platform entry and page; it must not rewrite the peer's provenance.
+The publisher must keep iOS on its exact Actions run/artifact URL and mark it
+`signInRequired: true` until a verified immutable IPA Release asset is actually uploaded.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
@@ -871,6 +903,16 @@ Android companion implementation, automated acceptance, original-byte packaging 
 
 This milestone is iPhone/iPad controller → Android host only. The recovered Bonjour/PIN iOS host remains separate, plaintext, explicitly labeled legacy and incompatible. It is not upgraded by this client. Android public 0.10 bytes/website and current unsigned iOS download remain unchanged pending changed-source acceptance and separately verified packaging. Protocol lacks forward secrecy and independent review; physical cross-device behavior remains unverified. Tests include independent fixed Python vectors, adversarial records and a real TCP Swift client exchange with the unmodified production Java codec and a synthetic peer queue. That peer is not Android runtime/device acceptance.
 
+### Legacy Bonjour host admission hardening (2026-11-16)
+
+The native Bonjour host now admits at most four concurrent sessions, including
+unpaired peers. A connection that has not completed the six-digit PIN exchange is
+closed after 20 seconds; successful pairing cancels the deadline. Stop and PIN
+rotation cancel sessions and reset admission state. This bounds unauthenticated idle
+socket retention, but it does not add confidentiality or a global failed-PIN rate
+limit. Keep the native protocol on trusted LANs only.
+
+
 
 ## Fullscreen stage presentation-gate wiring (PR #36 repair)
 
@@ -1626,3 +1668,34 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 runner's checkout head, which can be a descendant of the claimed source SHA when main
 advances between build and publish — making the tag object disagree with its
 `-preview-<sha>` suffix and tripping the release-notes guard.
+
+
+
+## Android legacy MKMD decoder failure contract (2026-11-16)
+
+The encrypted MKMD envelope is size-checked before raw-DEFLATE expansion. During
+expansion, `MkmdDecoder` now treats exhausted input as truncation, preset-dictionary
+requests as unsupported, and any other zero-output/no-progress result as malformed.
+`Inflater.end()` is guaranteed through `finally`, so invalid input and decoded-size
+cap failures release native zlib state. Valid MIDI/WAVE/MP3 payload classification and
+the existing decoded-output ceiling are unchanged.
+
+## Private Songbook CSV trust boundary (2026-11-16)
+
+Authenticated Songbook plaintext is still untrusted catalog data. Browser CSV export
+must serialize parsed fields rather than return the decrypted source string, quote all
+cells, double embedded quotes and neutralize spreadsheet formula sigils after leading
+whitespace/control characters. The four exported columns are all untrusted. The
+browser's AES-GCM envelope, domain-separated SHA-256 key derivation and decrypt
+routine remain byte-identical to the archived reader reference; parser/export changes
+are covered separately by the website regression suite.
+
+## Private Songbook interaction ownership (2026-11-16)
+
+The private browser Songbook has one state owner: `songbook.js`. It controls unlock
+success/failure, locking and plaintext cleanup, filtering, page indexes, keyboard
+navigation, print and CSV export. `songbook-fx.js` is decorative-only; duplicate
+click/keyboard handlers or list DOM swaps there can reveal the reader before AES-GCM
+decryption succeeds and can desynchronize page contents from page numbers. The core
+script toggles `.physical-book.next` / `.prev`; `songbook.css` owns the corresponding
+flip-sheet animation. `theme.css` must not hide the flip sheet.

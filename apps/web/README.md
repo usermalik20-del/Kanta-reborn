@@ -1,3 +1,17 @@
+## Platform-specific download status (2026-11-16)
+
+The sticky download status bar reads the selected platform entry in
+`apps/web/downloads.json`. Access is per platform, not a shared manifest flag:
+the Android GitHub Release asset is marked `signInRequired: false`, while the iOS
+retained Actions-artifact link is marked `true`. The browser validates a Release URL against
+its tag suffix and source-derived APK/IPA filename, or validates an Actions URL against
+the exact packaging run and artifact IDs. It also requires the page's primary link to
+match the manifest. The status bar reports metadata and checksums; it does not download
+or independently hash the package bytes. The active publisher creates a public Release link for Android. iOS remains on its
+retained Actions artifact because the workflow does not upload an IPA Release asset.
+Publishing one platform leaves the peer entry untouched until that platform is
+republished.
+
 ## AdSense policy truthfulness pass (2026-11-17)
 
 Fixed public-site trust and content-quality issues ahead of AdSense re-review:
@@ -380,3 +394,20 @@ or download manifest changes are part of this local work.
 ## Validation fixes (2026-11-12)
 
 Fixed verify-website.py entry-point, link validator (static assets, directory indexes), sitemap/CSP validation for blog routes. Added blog/all.html and blog.css to resolve missing assets.
+## Private Songbook CSV export
+
+Songbook CSV downloads are rebuilt from parsed song objects rather than copying the
+decrypted source text. Every field is quoted, embedded quotes are doubled, and cells
+whose first non-whitespace/control character is `=`, `+`, `-` or `@` are prefixed with
+an apostrophe so spreadsheet software treats them as text. Keep all four fields
+(code, title, artist and availability) on the same safe serializer.
+
+## Private Songbook interaction ownership (2026-11-16)
+
+`apps/web/songbook.js` is the sole owner of unlock/lock state, search, page navigation,
+keyboard navigation, print and CSV actions. `songbook-fx.js` is decorative only and may
+add the particle canvas; it must not attach reader controls, swap song-list HTML or
+toggle the reader's visibility. Page turns are driven by the core script's
+`.physical-book.next` / `.prev` classes and the `songbook.css` flip-sheet animation.
+`theme.css` must not hide that flip sheet. Keep the core script before the FX script
+in `songbook.html`.

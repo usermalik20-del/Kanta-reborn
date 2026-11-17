@@ -1,3 +1,38 @@
+## Android legacy MKMD inflater regression (2026-11-16)
+
+`:app:coreRegression` runs `LegacyFileContainerImporterRegressionTests` alongside
+the direct `MkmdDecoderRegressionTests`. The paired importer test injects a
+dictionary-required inflater that returns zero bytes without requesting more input;
+the operation must fail within two seconds and call `Inflater.end()`. Valid paired
+records, title/address mapping, wrong-key rejection and credential zeroization remain
+covered. Malformed record failures are isolated and reported as skipped entries. Cancellation is tested
+inside a running inflate loop and between indexed records; a cancelled pair must remove
+all staged outputs and zero its owned key and IV.
+
+## Android pinned browser transport close race (2026-11-16)
+
+The Java `:app:coreRegression` suite exercises `SafeExecutorSubmission` with a
+rejecting executor and a normal executor. A WebView JavaScript bridge call may pass
+the transport's open check just before screen teardown shuts down its worker; a
+rejected submission must release the busy latch and must not run the request.
+Transport teardown still disconnects active HTTPS requests. TLS pinning, origin and
+path allowlists, token checks and body/response bounds remain unchanged.
+
+## Platform-specific download status contract (2026-11-16)
+
+The website status bar reads `downloads.json` per platform. There is no authoritative
+global sign-in flag: each platform entry records whether its current link is a public
+GitHub Release asset (`signInRequired: false`) or a retained Actions artifact
+(`signInRequired: true`). Release URLs must match the entry's source-SHA tag suffix
+and source-derived APK/IPA filename. Actions artifact URLs must match that entry's
+packaging run and artifact IDs. The page anchor must exactly match the manifest URL.
+The status bar checks publication metadata and displayed checksums; it does not fetch
+or independently re-hash the downloadable bytes. The active publisher emits a public Release link for Android, whose workflow uploads
+the APK to that Release. iOS remains a retained Actions artifact with
+`signInRequired: true` because the workflow does not upload the IPA as a Release asset.
+Its URL must match the exact packaging run and artifact ID. Publishing one platform
+preserves the peer entry until that platform is separately republished.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
@@ -839,6 +874,19 @@ Android emulator startup uses an explicit shared AVD directory for avdmanager an
 
 `ios-validation.yml` runs the full iOS package/app gate without rerunning unchanged Android native tests. The job pins Java 17 and compiles the unmodified Android CompanionProtocol with a synthetic Java TCP peer. LocalNetworkControlTests requires that peer via KANTA_KCP_TEST_CLASSES; absence is a failure, never a silent skip on macOS. Fixed independent Python crypto vectors check exact handshake, request and bidirectional record bytes. Live Java/Swift socket checks exercise the actual iOS client, bounded busy behavior, Unicode, distinct repeated reservations, cancellation and revocation. This is automated interoperability evidence, not a physical Android/iOS pair or iOS-host acceptance.
 
+## iOS legacy Bonjour remote admission and pairing deadline — 2026-11-16
+
+- `RemoteHostConnectionAdmission` unit coverage verifies the four-session capacity
+  policy, duplicate rejection, slot release and reset.
+- A macOS loopback Network.framework regression leaves a native host connection
+  unpaired and verifies `HostRemoteConnection` closes it at an injected 100 ms test
+  deadline. Production uses a 20-second deadline and cancels it after successful
+  pairing.
+- Existing Remote frame decoding, session-gate, invalid-PIN and replay-cache tests
+  remain required. The new checks bound resource retention; they do not establish
+  encryption, failed-PIN rate limiting, physical LAN behavior or independent security
+  review.
+
 ## iOS walkthrough runner diagnostics and suite timeout
 
 `tools/capture-ios-runtime.py` executes the complete `KantaVisualWalkthroughUITests` suite for the requested simulator and requires every name in its `EXPECTED_TESTS` manifest to have a clean passing result. The current manifest contains 13 cases: the prior eight cases, with the six-destination menu coverage split into six independently budgeted tests instead of one aggregate case.
@@ -1346,11 +1394,9 @@ pass; preflight passes, including 149-file structure and 59 workspace checks.
 Java tests/build/lint, emulator prompt/picker/cancel/background/busy/error acceptance
 and real-device playback are NOT verified: local JVM fails on `getcpu(2)`.
 See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
-<<<<<<< Updated upstream
-=======
+
 
 Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path (tools/tests/test_party_assets.py). Physical listening, device decoding and SoundPool playback remain separate acceptance.
->>>>>>> Stashed changes
 
 ## Local Android B1/B2/D5/D8 validation
 
@@ -1531,3 +1577,31 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 runner's checkout head, which can be a descendant of the claimed source SHA when main
 advances between build and publish — making the tag object disagree with its
 `-preview-<sha>` suffix and tripping the release-notes guard.
+
+
+
+## Android legacy MKMD malformed-stream regression (2026-11-16)
+
+`MkmdDecoderRegressionTests.rejectsEmptyDeflateWithoutHanging` builds a valid encrypted
+MKMD envelope whose compressed section is empty while the decoded-size field is
+non-zero. It executes decode in a daemon `FutureTask` with a two-second deadline and
+requires a `DecodeException`; a timeout fails the regression. The class is registered
+in `CoreRegressionTests` and therefore runs in Gradle `:app:coreRegression`. Existing
+MIDI, WAVE, and MP3 round-trip fixtures remain required. Exact-head Android CI is the
+build/runtime evidence; no local Gradle execution is claimed for this cloud-only run.
+
+## Private Songbook CSV security
+
+`python -m unittest tools.tests.test_songbook_csv_security` checks the formula-neutralizing
+cell serializer, all four exported fields, raw-plaintext non-retention, final-row bounds
+and text-only DOM rendering. `tools/verify-website.py` keeps the `async function decrypt`
+body byte-identical to `docs/evidence/website/2026-10-15/songbook.js` and keeps
+`songbook.css` byte-identical; only parser/export logic is allowed to evolve under
+explicit regression tests.
+
+## Private Songbook interaction ownership
+
+`python -m unittest tools.tests.test_songbook_ui_contract` verifies that the FX script
+does not attach unlock/lock/page/keyboard handlers or mutate song-list HTML, that the
+core script owns those controls, that the flip-sheet remains visible to the core CSS
+animation, and that `songbook.html` loads the core before the decorative FX script.

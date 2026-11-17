@@ -1,26 +1,26 @@
 {
   "repository": "usermalik20-del/Kanta-reborn",
-  "verifiedAt": "2026-11-15",
+  "verifiedAt": "2026-11-17",
   "retentionDays": 30,
-  "signInRequired": false,
-  "source": "8177c15fdae45cfc0a21670e5ba7be0257375ef9",
-  "packagingRun": 43745774806,
-  "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43745774806",
+  "source": "a4b479e40c4b34c5698c78f28c5730b6e89a5a21",
+  "packagingRun": 44133856798,
+  "packagingRunUrl": "https://github.com/usermalik20-del/Kanta-reborn/actions/runs/44133856798",
   "walkthroughRun": 41280807337,
   "android": {
-    "source": "8177c15fdae45cfc0a21670e5ba7be0257375ef9",
-    "run": 43745009049,
-    "artifact": 14174560584,
-    "packagingRun": 43745774806,
-    "packagingArtifact": 14174755601,
-    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0.878-preview-8177c15f/KANTA-Android-preview-8177c15f.apk",
-    "releaseUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.878-preview-8177c15f",
+    "source": "a4b479e40c4b34c5698c78f28c5730b6e89a5a21",
+    "run": 44132625134,
+    "artifact": 14350038852,
+    "packagingRun": 44133856798,
+    "packagingArtifact": 14350569582,
+    "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0.896-preview-a4b479e4/KANTA-Android-preview-a4b479e4.apk",
     "retentionDays": 30,
+    "signInRequired": false,
     "artifactName": "KANTA-Android-preview-download",
     "signed": "release",
-    "sha256": "edaf5bff3fda719fb36a072ec7a25c04080f577d302b06281a1ca1c842be1355",
-    "apkSha256": "b9023a6003187a827ff4e1b4c944dfa67fb16c5267b379beaa3bd91756c21ab6",
-    "bytes": 118204875
+    "sha256": "59b09fe62feb996a898dcb3ea466abf177684bf56c41608f9c8d65b195a37a9a",
+    "apkSha256": "6412454df3f6aa8f9a9aab4043a3ac5b7807fcc0dc3f6a33b16cd23a7afdbadf",
+    "bytes": 118205143,
+    "releaseUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.896-preview-a4b479e4"
   },
   "ios": {
     "source": "49d92657d67e88c38a9327acaa7c5d9e6aea1472",
@@ -37,23 +37,25 @@
     "bytes": 25979163,
     "personalSigningRequired": true,
     "icloudAvailable": false,
-    "walkthroughRun": 41473591538
+    "walkthroughRun": 41473591538,
+    "signInRequired": true
   },
   "platforms": {
     "android": {
-      "source": "8177c15fdae45cfc0a21670e5ba7be0257375ef9",
-      "run": 43745009049,
-      "artifact": 14174560584,
-      "packagingRun": 43745774806,
-      "packagingArtifact": 14174755601,
-      "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0.878-preview-8177c15f/KANTA-Android-preview-8177c15f.apk",
-      "releaseUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.878-preview-8177c15f",
+      "source": "a4b479e40c4b34c5698c78f28c5730b6e89a5a21",
+      "run": 44132625134,
+      "artifact": 14350038852,
+      "packagingRun": 44133856798,
+      "packagingArtifact": 14350569582,
+      "downloadUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/download/v0.10.0.896-preview-a4b479e4/KANTA-Android-preview-a4b479e4.apk",
       "retentionDays": 30,
+      "signInRequired": false,
       "artifactName": "KANTA-Android-preview-download",
       "signed": "release",
-      "sha256": "edaf5bff3fda719fb36a072ec7a25c04080f577d302b06281a1ca1c842be1355",
-      "apkSha256": "b9023a6003187a827ff4e1b4c944dfa67fb16c5267b379beaa3bd91756c21ab6",
-      "bytes": 118204875
+      "sha256": "59b09fe62feb996a898dcb3ea466abf177684bf56c41608f9c8d65b195a37a9a",
+      "apkSha256": "6412454df3f6aa8f9a9aab4043a3ac5b7807fcc0dc3f6a33b16cd23a7afdbadf",
+      "bytes": 118205143,
+      "releaseUrl": "https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.896-preview-a4b479e4"
     },
     "ios": {
       "source": "49d92657d67e88c38a9327acaa7c5d9e6aea1472",
@@ -70,7 +72,8 @@
       "bytes": 25979163,
       "personalSigningRequired": true,
       "icloudAvailable": false,
-      "walkthroughRun": 41473591538
+      "walkthroughRun": 41473591538,
+      "signInRequired": true
     }
   }
 }

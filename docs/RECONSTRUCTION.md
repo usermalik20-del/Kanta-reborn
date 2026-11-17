@@ -1,3 +1,38 @@
+## Android paired legacy importer inflater repair — 2026-11-16
+
+The paired-container path had a second inline raw-DEFLATE loop separate from
+`MkmdDecoder`. It broke only when `needsInput()` became true. A stream that
+requested a preset dictionary or otherwise returned zero without needing input could
+loop forever; exceptions and size-overrun failures also skipped `Inflater.end()`.
+The path now rejects every no-progress state and releases native inflater state in
+`finally`. The regression injects a dictionary-required stalled inflater, enforces a
+two-second completion bound, and checks that cleanup ran. No accepted format, index
+mapping, key handling or valid payload behavior changed.
+
+## Android pinned browser transport close-race repair — 2026-11-16
+
+A bridge request could pass the initial `closed` check, then race with screen teardown
+calling `shutdownNow()`. The executor could reject the later submission. The repair
+centralizes submission in a pure-Java helper, catches the expected rejection, releases
+the busy latch and discards the late request. Teardown also clears the latch while
+disconnecting active connections. Regression coverage exercises both rejected and
+accepted executor submissions through the framework-free core runner. No pairing
+protocol, TLS trust, permission or public command behavior changed.
+
+## Website download status contract repair — 2026-11-16
+
+The previous status-bar validator still required the legacy global
+`signInRequired: true` flag and Actions-artifact URLs. The active publisher had moved
+new downloads to public GitHub Release assets and set the shared flag false, while the
+older iOS entry still used an Actions artifact. Both status bars therefore failed
+closed even though the visible page links were valid. The contract is now per platform:
+Release URLs must match the record's source-SHA tag suffix and expected APK/IPA
+filename; Actions URLs must match that platform's packaging run and artifact IDs.
+The current manifest records Android as public and the iOS Actions artifact as
+sign-in protected. The publisher must keep the iOS URL on the exact packaging run and
+artifact ID; the workflow does not upload an IPA Release asset. No package bytes or
+production release were changed by this repair.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
@@ -611,6 +646,16 @@ Pending CI: the feature will be validated by the next main-branch Android valida
 
 `apps/android/app/src/main/cpp/vendor/tsf.h` moved from the bare upstream v0.9 header to fork `usermalik20-del/tinysoundfont` revision `a272fe30` (GitHub release `kanta-vendor-a272fe30`): hardening patch, Catmull-Rom interpolation (default; the linear path is still selectable at compile time), ramped low-pass, the full SF2 modulator model, chorus/reverb effect stages, the SF3 odd-chunk pad fix and the published `tsf_playback.h` single-owner wrapper. `PROVENANCE.json` pins the fork revision and sha256 of all four shipped files; no CMake or JNI edit was required because the new app-facing engine APIs are present but unwired. The stale boundary line in `apps/android/README.md` "modulators and effects are not implemented by the selected renderer" was rewritten: the engine implements them, KANTA has not exposed them, and poly (key) pressure remains untracked. Engine-level suites live in the fork CI (all seven lanes green on the pinned commit, audio-hash baselines strictly compared); KANTA re-runs the pinned header through its existing `-Werror` native regression. Not claimed: no user-listened audio comparison on a real device and no new KANTA app controls.
 
+## Legacy MKMD malformed DEFLATE handling (2026-11-16)
+
+`MkmdDecoder` now fails closed when raw DEFLATE cannot make progress: exhausted
+input is reported as truncated, preset-dictionary streams are rejected, and any other
+zero-output/no-state-change result is rejected instead of spinning. `Inflater.end()`
+runs in `finally` so malformed payloads and output-cap failures also release native
+zlib state. The framework-free Android regression builds an encrypted MKMD envelope
+with an empty compressed section and bounds the decode attempt; it must return a
+`DecodeException` promptly. Existing MIDI/WAVE/MP3 round trips remain required.
+
 ## Android library import discoverability — active repair candidate (2026-11-02)
 
 User testing of the latest preview found that SF2 copy progress reaches 100% but the UI offers no discoverable way to apply the bank; the same post-import visibility concern applies to MIDI/KAR and legacy ShubBlob files. Source review confirmed that LibraryRepository already persisted songs and only one active SF2 reference, while My Set rendered neither imported-song rows nor a SoundFont inventory/selector. The legacy Meg/ShubBlob path is separate from the active LibraryRepository and SessionController: SqliteSongCatalog.importFromLegacyContainer(...) is not wired into the UI, and its decoder has only synthetic-fixture evidence. This repair adds a persisted SoundFont inventory and explicit next-song bank selection, exposes imported catalog songs with Reserve actions in My Set, and explained, at the time of that repair, that legacy containers were not supported by the preview rather than misclassifying a raw copy as a successful import. Paired `kantidx`/`kantablob` import landed afterwards (`MainActivity.java:2110`, `SessionController.importLegacyPair`); real-container decoding on a device is still unverified. The safe branch is fix/android-library-import-discoverability-20261102; The first exact-head Android run passed build, lint, core regressions, native sanitizers, Chrome and browser interoperability. The emulator then passed the new My Set/SoundFont UI interactions and failed a later pre-existing audio-import assertion because its expected catalog count did not include the two new imported test fixtures; the first correction to six still over-counted because the fixture folder already contains the same WAV later imported by the controller test; the expected total is now five, matching the three starters plus the imported KAR and WAV. The final count correction is five (three starters, one KAR and one WAV). The next emulator run then exposed a separate test-harness state leak: the My Set navigation test left the activity on My Set, so a later voice-settings assertion dereferenced a missing Control-only view. The instrumentation now restores Control immediately after the My Set assertions, and the Android validation artifact retains dedicated My Set/import and active-SoundFont screenshots. Both fixture-count and tab-state failures are recorded in the CI repair ledger. Re-run exact-head Android emulator checks and documentation validation before merge or preview publication.
@@ -1013,6 +1058,16 @@ Current-main audit found that the SF2 post-copy check compared the copied file s
 Current-main review found that user-initiated controller commands could resume after cancellation of an awaited library lookup or native preparation and still start/commit the next song. The controller now rechecks cancellation at those suspension boundaries, retires an uncommitted backend asset only after loading begins, and preserves the previous current song and FIFO reservation for recovery. Audio-session configuration failure before `engine.load` leaves current playback untouched. Natural-completion auto-advance remains independent of view-poll cancellation. Deterministic Swift regressions cover canceled enqueue, canceled Next during library resolution, canceled Next during native load/recovery, canceled snapshot polling during natural auto-advance, pre-load cancellation preserving the current playing asset, and audio-session setup failure preserving playback. The reconciled candidate requires fresh hosted package, smoke, unsigned archive and iPhone/iPad acceptance on its exact SHA.
 
 
+## iOS legacy Bonjour remote session bounds — 2026-11-16
+
+The native Bonjour host previously retained every accepted TCP connection without a
+concurrent-session cap or a deadline for completing PIN pairing. A local-network peer
+could open idle connections and hold sockets/session objects indefinitely. The host
+now admits at most four sessions and closes unpaired connections after 20 seconds.
+Pairing cancels the deadline; disconnect, host stop and PIN rotation release admission
+slots. The legacy protocol remains plaintext and still has no global failed-PIN rate
+limit, so these resource bounds do not change its trusted-LAN-only security boundary.
+
 ## Android reference-led UI integration — 2026-11-02
 
 The reference-led Android UI work is being reconciled from draft PR #134 onto a branch based on current `main`, rather than merging its 94-commit mixed-platform history. The native presentation slice mounts Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing while retaining the latest main-branch `SessionController`, `LibraryRepository`, My Set import discoverability and SoundFont inventory/storage safety. The current PR #134 branch's latest source head `c039c1d` had a successful Android validation run (`41369103980`); the screenshot-capture compiler error recorded for earlier head `9255c24` was already corrected there. That historical green run does not validate the new reconciled branch. The browser companion markup, mirrored iOS resources and iOS host changes are deliberately held for a separate shared-contract review so this native UI PR does not trigger unrelated iOS workflows. Fresh exact-head Android runtime, screenshots, documentation sync and APK packaging checks are required before merge or publication.
@@ -1285,3 +1340,22 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 Keypad key-press tones: 12 MP3 assets in `assets/keypad/`, played via `KeypadSounds` (SoundPool) gated on `!isPlaying()`. Standby interlude: `BundledInterlude` catalog copies `assets/interlude/standby-loop.mp3` to cache; `SessionController` uses it as default between-song source (loopEnabled=true), with user override in Party Mode.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook CSV export hardening (2026-11-16)
+
+The browser reader continues to use the same AES-GCM envelope and key derivation.
+Export now reconstructs CSV from parsed catalog rows, quotes every cell, doubles
+embedded quotes and prefixes formula-leading values (including whitespace/control
+prefixed values) so spreadsheet applications import them as text. The parser also
+enforces its 150,000-song bound on the final row when the source has no trailing
+newline. The archived reader snapshot remains unchanged; verification pins the
+authenticated decrypt function byte-for-byte rather than freezing safe export logic.
+
+## Private Songbook interaction ownership (2026-11-16)
+
+The Songbook reader had duplicate event handlers in its decorative effects script.
+The unlock handler could reveal the reader before authenticated decryption completed,
+and the second page-flip handler could swap song lists without updating page labels.
+The FX script is now decorative-only; the core reader owns unlock/lock, search,
+navigation and keyboard state. The core CSS flip-sheet is visible again and provides
+the page animation. The AES-GCM reader and encrypted file format were not changed.

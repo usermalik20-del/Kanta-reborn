@@ -74,3 +74,14 @@ RootView now tracks navigation dismissal until the SwiftUI sheet's `onDismiss` c
 ## Verified CI and presentation reconciliation — 2026-10-18
 
 PR #36 final-head hosted validation passed and merged as `59258ee`; PR #42's focused iPhone smoke test passed and merged as `714bfd6`; PR #43's CI cost controls passed and merged as `ad95e8b`. The post-merge reconstruction run `39051661330` succeeded. The presentation-coordinator architecture above remains a design contract, not proof of every lifecycle or real-device scenario. See `docs/TESTING.md` for current trigger and release-gate definitions. Older candidate descriptions are historical checkpoints and must not be interpreted as current CI failures.
+
+
+## Private Songbook CSV export safety
+
+Decrypted songbook fields are untrusted data even when AES-GCM authentication succeeds.
+Never download the decrypted source CSV verbatim. Re-serialize every exported cell with
+CSV quoting/quote escaping and neutralize leading spreadsheet formula sigils (=, +, -,
+@) even when preceded by whitespace/control characters. Apply the rule to all four
+fields (code, title, artist and availability). The CSV parser must enforce its row
+limit after processing the final unterminated row as well as newline-terminated rows.
+Do not keep a second raw plaintext CSV copy after parsing.

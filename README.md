@@ -47,7 +47,7 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 ---
 ## What you can do
 
-- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Party sounds are now bundled recordings. This is experimental and may not work with every library or play every song.
+- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Malformed or truncated MKMD data in either direct decoding or paired legacy import is rejected promptly; a damaged legacy record is skipped without stalling the import. Party sounds are bundled recordings. Legacy-library compatibility is experimental and may not work with every library or play every song.
 - **Plan your session:** search your library, line up songs and keep saved song sets. The Android preview now shows reserved songs above the keypad, accepts exact song codes with RES, and displays an Up next hint on stage. Playback controls have more room.
 - **Personalize the screen:** choose backgrounds or use your own photos and videos. Android also lets you choose a lyric font from a folder you grant read access to.
 - **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
@@ -66,9 +66,11 @@ The stray `|` divider between Key and Tempo columns in the Now Playing header wa
 ## Before you install
 
 - **Back up your music and saved work.** Switching Android test versions may require uninstalling the old app, which can erase its saved data.
-- **Some downloads require a GitHub account** and are available for a limited time. Follow the current download page rather than an old build link.
+- **Download access varies by platform and build.** Each download page shows whether a GitHub account is required and any expiry limits; always use the current page rather than an old build link.
 - **Real-device testing is not complete.** Voice quality, microphone delay, camera use and external displays still need testing on physical devices. Passing automated tests does not guarantee they work on your device.
-- **Remote control is experimental.** Compatibility and setup differ between platforms; use a trusted private network and share pairing codes only with people you trust.
+- **Remote control is experimental.** Compatibility and setup differ between platforms; use a trusted private network and share pairing codes only with people you trust. Closing the host screen or leaving the app disconnects the session; commands are not replayed after reconnect.
+
+- **Remote control is experimental.** The legacy iOS Bonjour remote is plaintext and intended only for a trusted local network; its new connection cap and pairing timeout limit idle sessions but do not encrypt traffic or rate-limit PIN guesses. Browser Remote and the encrypted Android companion are separate paths, not upgrades to that legacy channel. Share pairing codes only with people you trust.
 - **YouTube playback is not available.**
 
 ## Privacy
@@ -140,3 +142,20 @@ Fixed trusted_main check in Android validation workflow by updating tracking bra
 runner's checkout head, which can be a descendant of the claimed source SHA when main
 advances between build and publish — making the tag object disagree with its
 `-preview-<sha>` suffix and tripping the release-notes guard.
+
+
+## Private Songbook CSV safety
+
+The browser Songbook keeps its AES-GCM envelope, key derivation and decrypt routine
+byte-identical to the archived reader reference. After authenticated decryption, the
+four catalog fields are parsed and re-serialized for export; formula-leading cells
+(including values with leading whitespace/control characters) are forced to text.
+Exports do not reuse the raw decrypted CSV string, and the parser enforces the song
+count limit even when the final row has no trailing newline.
+
+## Private Songbook interaction safety
+
+The browser Songbook keeps unlock/lock, page navigation and keyboard controls in its
+core reader script. Decorative effects must not reveal the reader before decryption
+succeeds or replace the core page-navigation state. The existing CSS flip-sheet
+animation is driven by the core page state; decorative JavaScript only owns effects.

@@ -1,16 +1,16 @@
 # KANTA engineering instructions
 
-**Current merged source baseline (October 10, 2026):** `kanta-ph/Gelo-Karaoke-iOS` `main`, merge commit [`6dcdf5f`](https://github.com/kanta-ph/Gelo-Karaoke-iOS/commit/6dcdf5f675572771f0377fe2197c2cee41b4bf5c), PR #44 merged and PR #40 closed as superseded. The last green Core CI ([run #38003895381](https://github.com/kanta-ph/Gelo-Karaoke-iOS/actions/runs/38003895381)) validated **173 Swift tests**, an unsigned Release iOS Simulator build, and live Host/CONTROL simulator startup on an earlier PR head; it **did not rebuild the final in-app Legal & Privacy edit or this merge commit**. KANTA has **no verified signed TestFlight upload or physical-device acceptance** for this merged batch. Website `/legal` and `/privacy` are live and were checked on production. Historical draft/pending paragraphs below record their original dates and must not supersede this status.
+**Current repository baseline (November 16, 2026):** this file governs the iOS subtree of `usermalik20-del/Kanta-reborn` `main` at `11e6710b1cd0b6417315423b90bb9097fb2af18c`. The October 10 standalone-repository baseline and CI links below are historical, not current validation evidence. No signed TestFlight upload or physical-device acceptance is implied by the current source state.
 
-**Documentation rule:** Treat `Docs/PROJECT_STATUS_2026-10-10.md` as the present-state ledger; do not copy old Oct 7/8 draft language into customer docs. Documentation-only commits must include `[skip ci]` and may not run macOS Actions; real implementation/merge code requires explicit owner consent for testing.
+**Documentation rule:** Treat `Docs/HARDENING_HANDOVER.md` as the current iOS change ledger; `Docs/PROJECT_STATUS_2026-10-10.md` is not present in this monorepo and must not be treated as current. Documentation-only commits should include `[skip ci]` and must not allocate macOS Actions. Real implementation/merge code requires explicit owner consent for testing.
 
 
-## Current source and verified baseline — 2026-10-08
+## Historical source and verified baseline — 2026-10-08 (archived)
 
 - Main now includes KANTA Songbook codes/search and local CSV export (#36), saved session Favorites and manual artist corrections (#37), and optional wired/USB Vocal Soundcard (#38). The corresponding Swift Core CI + Release iOS Simulator runs #176, #179 and #182 passed before merge.
 - **DO NOT** infer TestFlight signing, physical input/output testing, actual 47,998-title hardware import, playable protected media or encrypted LAN from those results.
-- Latest source-of-truth feature inventory: `Docs/FEATURE_PARITY.md`; public docs: `PublicSite/`.
-- This current note supersedes the dated PR #25 baseline below for the most recent feature scope.
+- Current iOS source-of-truth documents: `Docs/ARCHITECTURE.md`, `Docs/ROADMAP.md`, and `Docs/HARDENING_HANDOVER.md`. The historical `Docs/FEATURE_PARITY.md` and standalone `PublicSite/` references are not current monorepo paths.
+- This archived note supersedes the dated PR #25 baseline only within the historical October notes; the repository baseline above is current.
 
 ## Archived 2026-10-07 baseline
 
@@ -43,7 +43,7 @@ Read `Docs/ARCHITECTURE.md` before changing system boundaries. Update it in the 
 
 The current manual workflow is INTERNAL TestFlight only. Its export settings must retain `testFlightInternalTestingOnly=true` until a separately reviewed release batch closes device, public-contact/legal, and LAN confidentiality gates. It does not invite testers or approve external release.
 
-The current remote is PIN-authorized plaintext TCP for trusted LANs. Do not describe it as encrypted, expose it over the internet, or treat a PIN as confidentiality. No `Docs/LAN_SECURITY_DECISION.md` exists in this repository: while the decision is open, treat the release decision and its acceptance criteria as unrecorded rather than following a missing file. TLS/secure pairing implementation is still outstanding.
+The legacy Bonjour Companion Remote remains six-digit-PIN plaintext TCP for trusted LANs. It is bounded to four concurrent sessions and unpaired connections expire after 20 seconds, but it still has no transport confidentiality or global failed-PIN rate limit. Do not expose it over the internet or describe it as encrypted. The separate Browser Remote uses HTTPS with certificate-fingerprint verification, and the separate Android Companion client uses KCP1 AES-GCM; neither path upgrades the legacy Bonjour channel. No `Docs/LAN_SECURITY_DECISION.md` exists in this repository, so the release decision and its acceptance criteria remain unrecorded.
 
 Signing inputs belong in GitHub Actions secrets, never chat, source, logs, or artifacts. The temporary keychain password is generated per job and no longer needs a repository secret. The manual workflow must fail its Linux preflight before allocating macOS when signing inputs are missing.
 
@@ -64,7 +64,7 @@ Signing inputs belong in GitHub Actions secrets, never chat, source, logs, or ar
 - Every coherent change appends files/behavior, actual checks, blockers, and exact next steps to `Docs/HARDENING_HANDOVER.md`.
 - Report written, pushed, CI-passed, merged, deployed, and device-tested as separate states. Never report plans or an empty hosting project as delivered work.
 
-## Private Songbook architecture (draft branch)
+## Private Songbook architecture (implemented, local-only)
 
 PublicSite/songbook.* must never include user catalog rows or transmit an
 imported .kanta-book, access code or searches. The page is only an encrypted-file

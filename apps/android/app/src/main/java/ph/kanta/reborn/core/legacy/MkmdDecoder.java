@@ -91,30 +91,43 @@ public final class MkmdDecoder {
             "MKMD trailing padding exceeds one AES block: " + trailingPadding);
       }
       Inflater inflater = new Inflater(true);
-      inflater.setInput(decrypted, headerSize, (int) compressedBytes);
+      try {
+        inflater.setInput(decrypted, headerSize, (int) compressedBytes);
 
-      ByteArrayOutputStream output =
-          new ByteArrayOutputStream((int) Math.min(decodedBytes, 1 << 20));
-      byte[] buffer = new byte[8192];
-      while (!inflater.finished()) {
-        int read = inflater.inflate(buffer);
-        if (read > 0) {
-          output.write(buffer, 0, read);
-          if (output.size() > MAX_DECODED_BYTES) {
-            throw new DecodeException("MKMD inflated output exceeds 64 MB cap");
+        ByteArrayOutputStream output =
+            new ByteArrayOutputStream((int) Math.min(decodedBytes, 1 << 20));
+        byte[] buffer = new byte[8192];
+        while (!inflater.finished()) {
+          int read = inflater.inflate(buffer);
+          if (read > 0) {
+            output.write(buffer, 0, read);
+            if (output.size() > MAX_DECODED_BYTES) {
+              throw new DecodeException("MKMD inflated output exceeds 64 MB cap");
+            }
+            continue;
           }
+          if (inflater.finished()) break;
+          if (inflater.needsDictionary()) {
+            throw new DecodeException("MKMD compressed stream requires an unsupported dictionary");
+          }
+          if (inflater.needsInput()) {
+            throw new DecodeException("MKMD compressed stream is truncated");
+          }
+          throw new DecodeException("MKMD inflater made no progress");
         }
-      }
-      inflater.end();
 
-      byte[] inflated = output.toByteArray();
-      if (inflated.length != decodedBytes) {
-        throw new DecodeException("MKMD inflated size mismatch: declared="
-            + decodedBytes + " actual=" + inflated.length);
-      }
+        byte[] inflated = output.toByteArray();
+        if (inflated.length != decodedBytes) {
+          throw new DecodeException("MKMD inflated size mismatch: declared="
+              + decodedBytes + " actual=" + inflated.length);
+        }
 
-      Signature signature = classifyPayload(inflated);
-      return new DecodedPayload(inflated, signature);
+        Signature signature = classifyPayload(inflated);
+        return new DecodedPayload(inflated, signature);
+      } finally {
+        // Inflater owns native zlib state and must be retired on every failure path.
+        inflater.end();
+      }
     } catch (DecodeException e) {
       throw e;
     } catch (Exception e) {
