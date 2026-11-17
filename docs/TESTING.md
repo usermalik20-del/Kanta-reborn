@@ -1,3 +1,14 @@
+## Android legacy MKMD inflater regression (2026-11-16)
+
+`:app:coreRegression` runs `LegacyFileContainerImporterRegressionTests` alongside
+the direct `MkmdDecoderRegressionTests`. The paired importer test injects a
+dictionary-required inflater that returns zero bytes without requesting more input;
+the operation must fail within two seconds and call `Inflater.end()`. Valid paired
+records, title/address mapping, wrong-key rejection and credential zeroization remain
+covered. Malformed record failures are isolated and reported as skipped entries. Cancellation is tested
+inside a running inflate loop and between indexed records; a cancelled pair must remove
+all staged outputs and zero its owned key and IV.
+
 ## Android pinned browser transport close race (2026-11-16)
 
 The Java `:app:coreRegression` suite exercises `SafeExecutorSubmission` with a
@@ -1561,6 +1572,17 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 <!-- artifact limit raised 256MB->512MB: 2026-11-14 -->
 
+
+
+## Android legacy MKMD malformed-stream regression (2026-11-16)
+
+`MkmdDecoderRegressionTests.rejectsEmptyDeflateWithoutHanging` builds a valid encrypted
+MKMD envelope whose compressed section is empty while the decoded-size field is
+non-zero. It executes decode in a daemon `FutureTask` with a two-second deadline and
+requires a `DecodeException`; a timeout fails the regression. The class is registered
+in `CoreRegressionTests` and therefore runs in Gradle `:app:coreRegression`. Existing
+MIDI, WAVE, and MP3 round-trip fixtures remain required. Exact-head Android CI is the
+build/runtime evidence; no local Gradle execution is claimed for this cloud-only run.
 
 ## Private Songbook CSV security
 

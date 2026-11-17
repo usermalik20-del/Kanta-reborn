@@ -1,3 +1,14 @@
+## Android paired legacy importer inflater repair — 2026-11-16
+
+The paired-container path had a second inline raw-DEFLATE loop separate from
+`MkmdDecoder`. It broke only when `needsInput()` became true. A stream that
+requested a preset dictionary or otherwise returned zero without needing input could
+loop forever; exceptions and size-overrun failures also skipped `Inflater.end()`.
+The path now rejects every no-progress state and releases native inflater state in
+`finally`. The regression injects a dictionary-required stalled inflater, enforces a
+two-second completion bound, and checks that cleanup ran. No accepted format, index
+mapping, key handling or valid payload behavior changed.
+
 ## Android pinned browser transport close-race repair — 2026-11-16
 
 A bridge request could pass the initial `closed` check, then race with screen teardown
@@ -634,6 +645,16 @@ Pending CI: the feature will be validated by the next main-branch Android valida
 ## Android TinySoundFont vendor sync — pinned fork release a272fe30 (2026-11-03)
 
 `apps/android/app/src/main/cpp/vendor/tsf.h` moved from the bare upstream v0.9 header to fork `usermalik20-del/tinysoundfont` revision `a272fe30` (GitHub release `kanta-vendor-a272fe30`): hardening patch, Catmull-Rom interpolation (default; the linear path is still selectable at compile time), ramped low-pass, the full SF2 modulator model, chorus/reverb effect stages, the SF3 odd-chunk pad fix and the published `tsf_playback.h` single-owner wrapper. `PROVENANCE.json` pins the fork revision and sha256 of all four shipped files; no CMake or JNI edit was required because the new app-facing engine APIs are present but unwired. The stale boundary line in `apps/android/README.md` "modulators and effects are not implemented by the selected renderer" was rewritten: the engine implements them, KANTA has not exposed them, and poly (key) pressure remains untracked. Engine-level suites live in the fork CI (all seven lanes green on the pinned commit, audio-hash baselines strictly compared); KANTA re-runs the pinned header through its existing `-Werror` native regression. Not claimed: no user-listened audio comparison on a real device and no new KANTA app controls.
+
+## Legacy MKMD malformed DEFLATE handling (2026-11-16)
+
+`MkmdDecoder` now fails closed when raw DEFLATE cannot make progress: exhausted
+input is reported as truncated, preset-dictionary streams are rejected, and any other
+zero-output/no-state-change result is rejected instead of spinning. `Inflater.end()`
+runs in `finally` so malformed payloads and output-cap failures also release native
+zlib state. The framework-free Android regression builds an encrypted MKMD envelope
+with an empty compressed section and bounds the decode attempt; it must return a
+`DecodeException` promptly. Existing MIDI/WAVE/MP3 round trips remain required.
 
 ## Android library import discoverability — active repair candidate (2026-11-02)
 

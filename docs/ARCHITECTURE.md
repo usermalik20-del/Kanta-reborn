@@ -1,3 +1,12 @@
+## Android legacy MKMD decompression boundary (2026-11-16)
+
+Both direct MKMD decoding and the paired legacy-container importer use raw DEFLATE.
+The legacy importer now checks every zero-output result: dictionary requests,
+truncated input and any other no-progress state become bounded import errors. The
+native `Inflater` is always ended in `finally`, even when output exceeds the
+declared size or the compressed stream is malformed. Record-level errors remain
+isolated so one bad indexed record does not prevent later valid records from importing.
+
 ## Android pinned browser transport lifecycle (2026-11-16)
 
 The native pinned WebView client owns a single-thread executor for bridge requests.
@@ -1654,6 +1663,16 @@ remains empty; only narrowly documented design exceptions are annotated.
 See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+
+## Android legacy MKMD decoder failure contract (2026-11-16)
+
+The encrypted MKMD envelope is size-checked before raw-DEFLATE expansion. During
+expansion, `MkmdDecoder` now treats exhausted input as truncation, preset-dictionary
+requests as unsupported, and any other zero-output/no-progress result as malformed.
+`Inflater.end()` is guaranteed through `finally`, so invalid input and decoded-size
+cap failures release native zlib state. Valid MIDI/WAVE/MP3 payload classification and
+the existing decoded-output ceiling are unchanged.
 
 ## Private Songbook CSV trust boundary (2026-11-16)
 
