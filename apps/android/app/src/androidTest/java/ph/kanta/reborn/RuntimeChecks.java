@@ -1027,6 +1027,14 @@ public final class RuntimeChecks extends Instrumentation {
           "Front camera did not render on the fullscreen stage");
       runOnMainSync(activity::closeFullscreen);
       stableStage.set(currentPrimary.get());
+      // The synthetic orientation round-trips above rebuilt the primary stage and returned
+      // lastOrientation to its launch value, so assertPersistentStage's orientation-change
+      // refresh will not fire. Re-baseline the persistent stage to the current primary now;
+      // navigation checks from here on must compare against this rebuilt view.
+      runOnMainSync(() -> {
+        persistentPrimaryStage = currentPrimary.get();
+        persistentStageOrientation = (Integer) field(activity, "lastOrientation");
+      });
       await(
           () ->
               activity.cameraStreaming()
