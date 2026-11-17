@@ -39,3 +39,16 @@ Source 339b8f6 passed hosted Android APK/instrumentation assembly, lint, native 
 ### Guest-capacity recovery regression — 2026-11-02
 
 The server counts only incorrect pairing codes toward the three-attempt lockout. A correct code rejected because four guest slots are occupied is a temporary capacity response, not an authentication failure. `BrowserRemoteRegressionTests` verifies three capacity denials do not prevent a new pairing after an existing guest leaves, while the independent three-wrong-code lockout remains enforced. Hosted changed-head Android validation is required before accepting this repair.
+
+
+### Native pinned transport close/post race — November 16, 2026
+
+The WebView JavaScript bridge runs on a background thread. A bridge call can pass
+its initial open-state check just before the owning screen closes the transport and
+shuts down its single-thread executor. The later `execute` then rejects the task.
+The transport now treats that expected close race as a dropped request, releases its
+busy latch, and never dispatches the command after close. Closing also clears the
+latch while disconnecting active sockets. TLS pinning, endpoint allowlists, request
+bounds and server authorization are unchanged. The Java regression exercises both a
+rejecting executor and a normal direct executor; Android CI's `:app:coreRegression`
+runs it.

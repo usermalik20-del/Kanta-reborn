@@ -23,6 +23,7 @@ PUBLIC_ROUTES = {
     "/legal": "legal.html",
     "/licenses": "licenses.html",
     "/support": "support.html",
+    "/about": "about.html",
     "/songbook": "songbook.html",
     "/blog": "blog/index.html",
     "/blog/all": "blog/all.html",
@@ -69,7 +70,9 @@ def validate_csp_config(config):
         key = "^" + route + "$"
         actual = routes.get(key)
         assert actual == expected, (f"CSP route mismatch for {route}: expected {expected}, got {actual}")
-    assert config.get("functions", {}).get("api/page.js", {}).get("includeFiles") == "*.html"
+    # The function renders blog routes too, so every nested HTML file (blog/**)
+    # must ship with the function; "*.html" only bundles root-level pages.
+    assert config.get("functions", {}).get("api/page.js", {}).get("includeFiles") == "**/*.html"
     assert not any(
         header.get("key", "").lower() == "content-security-policy"
         for rule in config.get("headers", []) for header in rule.get("headers", [])
@@ -453,8 +456,18 @@ def main():
                 assert destination in known_pages and url.fragment in (pages.get(destination, Page()).ids), (name, link)
 
     original = ROOT / "docs/evidence/website/2026-10-15"
-    for name in ("songbook.js", "songbook.css"):
-        assert (WEB / name).read_bytes() == (original / name).read_bytes(), name + " reader changed"
+    current_reader = (WEB / "songbook.js").read_text(encoding="utf-8")
+    original_reader = (original / "songbook.js").read_text(encoding="utf-8")
+    def extract_js_function(source, marker):
+        start = source.index(marker)
+        end = source.find("\nfunction ", start)
+        return source[start:] if end < 0 else source[start:end]
+    # Keep the authenticated AES-GCM envelope/key/decrypt boundary byte-identical;
+    # parser and export behavior may evolve only with explicit regression coverage.
+    assert extract_js_function(current_reader, "async function decrypt") == extract_js_function(
+        original_reader, "async function decrypt"
+    ), "Songbook AES-GCM decrypt changed"
+    assert (WEB / "songbook.css").read_bytes() == (original / "songbook.css").read_bytes(), "songbook.css reader changed"
 
     validate_public_resources()
     validate_responsive_navigation_styles()

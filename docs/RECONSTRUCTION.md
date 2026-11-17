@@ -9,6 +9,30 @@ The path now rejects every no-progress state and releases native inflater state 
 two-second completion bound, and checks that cleanup ran. No accepted format, index
 mapping, key handling or valid payload behavior changed.
 
+## Android pinned browser transport close-race repair — 2026-11-16
+
+A bridge request could pass the initial `closed` check, then race with screen teardown
+calling `shutdownNow()`. The executor could reject the later submission. The repair
+centralizes submission in a pure-Java helper, catches the expected rejection, releases
+the busy latch and discards the late request. Teardown also clears the latch while
+disconnecting active connections. Regression coverage exercises both rejected and
+accepted executor submissions through the framework-free core runner. No pairing
+protocol, TLS trust, permission or public command behavior changed.
+
+## Website download status contract repair — 2026-11-16
+
+The previous status-bar validator still required the legacy global
+`signInRequired: true` flag and Actions-artifact URLs. The active publisher had moved
+new downloads to public GitHub Release assets and set the shared flag false, while the
+older iOS entry still used an Actions artifact. Both status bars therefore failed
+closed even though the visible page links were valid. The contract is now per platform:
+Release URLs must match the record's source-SHA tag suffix and expected APK/IPA
+filename; Actions URLs must match that platform's packaging run and artifact IDs.
+The current manifest records Android as public and the iOS Actions artifact as
+sign-in protected. The publisher must keep the iOS URL on the exact packaging run and
+artifact ID; the workflow does not upload an IPA Release asset. No package bytes or
+production release were changed by this repair.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
@@ -1034,6 +1058,16 @@ Current-main audit found that the SF2 post-copy check compared the copied file s
 Current-main review found that user-initiated controller commands could resume after cancellation of an awaited library lookup or native preparation and still start/commit the next song. The controller now rechecks cancellation at those suspension boundaries, retires an uncommitted backend asset only after loading begins, and preserves the previous current song and FIFO reservation for recovery. Audio-session configuration failure before `engine.load` leaves current playback untouched. Natural-completion auto-advance remains independent of view-poll cancellation. Deterministic Swift regressions cover canceled enqueue, canceled Next during library resolution, canceled Next during native load/recovery, canceled snapshot polling during natural auto-advance, pre-load cancellation preserving the current playing asset, and audio-session setup failure preserving playback. The reconciled candidate requires fresh hosted package, smoke, unsigned archive and iPhone/iPad acceptance on its exact SHA.
 
 
+## iOS legacy Bonjour remote session bounds — 2026-11-16
+
+The native Bonjour host previously retained every accepted TCP connection without a
+concurrent-session cap or a deadline for completing PIN pairing. A local-network peer
+could open idle connections and hold sockets/session objects indefinitely. The host
+now admits at most four sessions and closes unpaired connections after 20 seconds.
+Pairing cancels the deadline; disconnect, host stop and PIN rotation release admission
+slots. The legacy protocol remains plaintext and still has no global failed-PIN rate
+limit, so these resource bounds do not change its trusted-LAN-only security boundary.
+
 ## Android reference-led UI integration — 2026-11-02
 
 The reference-led Android UI work is being reconciled from draft PR #134 onto a branch based on current `main`, rather than merging its 94-commit mixed-platform history. The native presentation slice mounts Home, Search, Queue, Pitch & Tempo, Mic & Voice, Visuals and Now Playing while retaining the latest main-branch `SessionController`, `LibraryRepository`, My Set import discoverability and SoundFont inventory/storage safety. The current PR #134 branch's latest source head `c039c1d` had a successful Android validation run (`41369103980`); the screenshot-capture compiler error recorded for earlier head `9255c24` was already corrected there. That historical green run does not validate the new reconciled branch. The browser companion markup, mirrored iOS resources and iOS host changes are deliberately held for a separate shared-contract review so this native UI PR does not trigger unrelated iOS workflows. Fresh exact-head Android runtime, screenshots, documentation sync and APK packaging checks are required before merge or publication.
@@ -1201,6 +1235,44 @@ Android validation run 43211938789 failed `lintDebug` with `WrongConstant` at th
 
 The first repair run (43237289035) passed build/lint but exposed malformed-font acceptance in the emulator: `Typeface.createFromFile` silently returned a default face. Font loading now uses API-26 `Typeface.Builder(File).build()`, which returns null for decode failure, preserving the existing malformed-font fallback assertion and selection-clearing behavior. Hosted revalidation is required.
 
+## AdSense policy truthfulness pass (2026-11-17)
+
+Fixed public-site trust and content-quality issues ahead of AdSense re-review:
+- Removed inflated reading times: all 15 blog articles now show estimates matching their
+  actual word counts and the `blog.js` values (previously 8–18 min claims on 2–7 min pages).
+- Added self-referential `rel="canonical"` links to every main page and blog article
+  (category pages already had them).
+- Removed the unsupported "ultimate karaoke app" superlative from the home description.
+- Added `/about` (factual site-identity page: what KANTA is, what is tested vs open,
+  how the site is maintained, GitHub issue tracker as the contact path); registered in
+  `vercel.json` routes, `api/page.js` PAGES, `sitemap.xml` and `tools/verify-website.py`
+  PUBLIC_ROUTES; linked from every footer.
+- Corrected blog claims that contradicted the verified feature copy: party pad list and
+  intermission behaviors (party-effects article), companion pairing/session/security facts
+  (companion article, matches support.html), external-display settings path and
+  dual-screen status, microphone setup flow (no calibration routine exists), SPICE
+  accuracy wording and mic-capture phrasing, `.kanta-book` scope in two articles
+  (metadata-only catalog; browser reader; no in-app import/restore flow).
+
+Validation: `python3 tools/verify-website.py` passes; website security, Vercel workflow,
+documentation-sync, customer-legal-copy and site-page-handler suites pass locally.
+Node `--check` runs are unreliable in this iSH environment (intermittent hangs), so the
+Node steps in `website-validation.yml` remain the authoritative gate for those files.
+No ad code, consent gating, or ads.txt changes; no claims of AdSense approval.
+
+**Production 404 fix (same pass):** all 15 blog articles, `/blog/all` and the six blog
+category pages returned 404 in production: `vercel.json` dispatches those routes to
+`/api/page`, but `PAGES` in `api/page.js` contained no blog entries (pre-existing since
+the blog routes were added). Added the 22 missing `PAGES` entries, exported `PAGES`, and
+added two regression tests: every `/api/page` route in `vercel.json` must resolve to a
+`PAGES` entry, and every blog entry must point at an existing file.
+
+**Function bundle fix (follow-up):** after adding blog `PAGES` entries, production
+returned 500 on those routes because `functions["api/page.js"].includeFiles` was `*.html`,
+which bundles only root-level HTML — the function never received `blog/*.html`. Changed
+to `**/*.html` and updated both guards (`tools/verify-website.py`,
+`tools/tests/test_website_security_contract.py`).
+
 ## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
 
 - **Keypad sounds**: Fixed `SoundPool.OnLoadCompleteListener` to use anonymous class for D8 desugaring compatibility; keypad tones now load on IO thread for faster readiness.
@@ -1268,3 +1340,22 @@ See [the complete lint evidence and device limits](ANDROID_LINT_HARDENING.md).
 Keypad key-press tones: 12 MP3 assets in `assets/keypad/`, played via `KeypadSounds` (SoundPool) gated on `!isPlaying()`. Standby interlude: `BundledInterlude` catalog copies `assets/interlude/standby-loop.mp3` to cache; `SessionController` uses it as default between-song source (loopEnabled=true), with user override in Party Mode.
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
+
+## Private Songbook CSV export hardening (2026-11-16)
+
+The browser reader continues to use the same AES-GCM envelope and key derivation.
+Export now reconstructs CSV from parsed catalog rows, quotes every cell, doubles
+embedded quotes and prefixes formula-leading values (including whitespace/control
+prefixed values) so spreadsheet applications import them as text. The parser also
+enforces its 150,000-song bound on the final row when the source has no trailing
+newline. The archived reader snapshot remains unchanged; verification pins the
+authenticated decrypt function byte-for-byte rather than freezing safe export logic.
+
+## Private Songbook interaction ownership (2026-11-16)
+
+The Songbook reader had duplicate event handlers in its decorative effects script.
+The unlock handler could reveal the reader before authenticated decryption completed,
+and the second page-flip handler could swap song lists without updating page labels.
+The FX script is now decorative-only; the core reader owns unlock/lock, search,
+navigation and keyboard state. The core CSS flip-sheet is visible again and provides
+the page animation. The AES-GCM reader and encrypted file format were not changed.

@@ -1,3 +1,13 @@
+## AdSense policy truthfulness pass (2026-11-17)
+
+Corrected public blog claims that contradicted verified product behavior, including the
+Songbook export article: .kanta-book is a metadata-only catalog export (no audio, no
+playlists/settings restore flow), it opens in the browser Songbook reader with the
+separate 32-character code, and there is no in-app import/restore of a .kanta-book.
+Privacy-relevant statements in the article now match this file: local browser decryption,
+no upload of file/code/searches, code does not expire, CSV/print copies are plaintext.
+No data collection, consent, or advertising behavior changed.
+
 ## Blog Expansion: 15 Substantial Articles + Fixed 404 (2026-11-08)
 
 Fixed 404 on `/blog/converting-karaoke-files-ffmpeg-tools` — the article was defined in blog.js but the HTML file was never created. Now all 15 blog posts have actual HTML files.

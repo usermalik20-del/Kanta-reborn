@@ -10,6 +10,17 @@ and cleanup through the existing `:app:coreRegression` gate. Import cancellation
 checked during index validation, each record and every DEFLATE iteration; any files
 staged earlier in a cancelled pair are deleted.
 
+## Pinned browser transport teardown (2026-11-16)
+
+The WebView JavaScript bridge and native screen lifecycle can overlap: a bridge call
+may pass its open-state check just before the owning screen shuts down the transport's
+single-thread executor. `SafeExecutorSubmission` treats the resulting
+`RejectedExecutionException` as a revoked late request and releases the busy latch.
+Transport close also clears that latch and disconnects active HTTPS connections.
+This does not expand commands or destinations and does not change certificate pinning,
+origin checks, token validation or request-size limits. The regression is part of
+`BrowserRemoteRegressionTests`, which the existing `:app:coreRegression` task runs.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)
