@@ -1,3 +1,20 @@
+## Daily CI health sweep (2026-11-18)
+
+`.github/workflows/daily-ci.yml` runs `KANTA Daily CI` on `schedule` (03:17 UTC /
+11:17 AM Philippines, deliberately off the top of the hour) and `workflow_dispatch`.
+It is a health orchestrator, not a release pipeline: it calls the existing
+`website-validation`, `verified-downloads`, `android-validation` and `ios-validation`
+workflows as reusable (`workflow_call`) gates, all in parallel, and any failing
+deterministic gate turns the run red with no automatic rerun. The Android call
+passes `daily_health: true`; the owner-signing and BLA-hardening steps require that
+input to be absent, so daily runs build unsigned material only and never sign or
+publish. Reusable calls execute inside the caller's run, so the
+`platform-download-publishing.yml` `workflow_run` filter never matches a
+`KANTA Daily CI` run: daily CI answers "is main healthy?" while publishing CI alone
+answers "should users download this?". The four called workflows now embed
+`github.event_name` in their concurrency groups so scheduled runs can never cancel,
+or be cancelled by, push-triggered validation runs. All existing `if: always()`
+diagnostic and artifact uploads are unchanged.
 ## User-facing wording and README scope
 
 Follow [the plain-language writing guide](docs/USER_FACING_LANGUAGE.md) for app labels,

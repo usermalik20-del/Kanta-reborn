@@ -1,3 +1,20 @@
+## Daily CI health sweep (2026-11-18)
+
+`KANTA Daily CI` (`daily-ci.yml`; cron `17 3 * * *` = 03:17 UTC / 11:17 AM
+Philippines, plus manual dispatch) is the nightly orchestrator. Rather than
+duplicating commands, it reuses the four existing validators as `workflow_call`
+jobs — website fast gate, download/release contract gate, Android deep gate,
+iOS simulator gate — running in parallel with no chaining, so one slow native
+gate never delays another. The run is red if any gate fails, and there is no
+automatic rerun: a flaky failure is itself signal. The Android gate receives the
+new `workflow_call` input `daily_health`, which gates owner signing and BLA
+candidate generation, so the sweep proves `main` remains buildable and testable
+without producing release material. Because a reusable call runs inside the
+caller's workflow run, the `workflow_run` publisher
+(`platform-download-publishing.yml`) never fires from the sweep; scheduled Daily
+CI and release/publishing CI stay separate concerns (health vs. download
+readiness). Concurrency groups of the reused workflows now include
+`github.event_name`, keeping daily runs disjoint from push validation runs.
 ## Android legacy MKMD decompression boundary (2026-11-16)
 
 Both direct MKMD decoding and the paired legacy-container importer use raw DEFLATE.

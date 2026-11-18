@@ -80,7 +80,7 @@ Read the [privacy information](https://kanta-public.vercel.app/privacy) before u
 
 ## For contributors
 
-Build instructions, test results and engineering details live in the developer documentation—not on this front page.
+Build instructions, test results and engineering details live in the developer documentation—not on this front page. A daily automated check re-verifies the website, download contracts, and Android/iOS builds; see [testing and release requirements](docs/TESTING.md).
 
 - [Android development](apps/android/README.md) · [iOS development](apps/ios/AGENTS.md) · [Website development](apps/web/README.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Engineering rules](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md)

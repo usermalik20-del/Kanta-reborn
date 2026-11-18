@@ -1,3 +1,35 @@
+## KANTA Daily CI health sweep (2026-11-18)
+
+`daily-ci.yml` runs daily at 03:17 UTC (11:17 AM Philippines) plus manual
+dispatch, and reuses the existing workflows as parallel reusable gates instead of
+copying their commands:
+
+- Website fast gate → `website-validation.yml` (verify-website, workflow and
+  website-security contracts, customer legal copy, node syntax checks,
+  page-handler tests).
+- Download/release contracts gate → `verified-downloads.yml` (verified
+  downloads, publish, platform publishing, workflow ownership, doc sync).
+- Android deep gate → `android-validation.yml` with `daily_health: true`
+  (branding, prompt bank, runtime runner, OTA and companion contracts, lint
+  gates, native SoundFont sanitizer, debug + unsigned release build, core
+  regression, AndroidTest APK, runtime-package and browser checks, emulator
+  runtime checks). Owner signing and BLA candidate steps are skipped.
+- iOS simulator gate → `ios-validation.yml` (source/presentation guards, release
+  tooling, starter resources, `swift build --build-tests`,
+  `swift test --skip-build --no-parallel`, unsigned simulator build).
+
+Policy: any failing deterministic gate means a red run; no automatic rerun. The
+reused workflows keep their existing `if: always()` log, lint, APK and
+screenshot artifact uploads. Concurrency groups of the four reused workflows now
+embed `github.event_name` so scheduled sweeps and push validation runs never
+cancel each other. The sweep never signs, never publishes, and never triggers
+the verified-download publisher.
+
+Local evidence: actionlint 1.7.7 clean across all workflows; 100 contract tests
+pass (workflow ownership + doc sync 28, verified downloads 24, publish 6,
+platform publishing 16, website security/vercel 26). The first scheduled or
+dispatched GitHub run is the remaining acceptance step; no emulator, simulator
+or runtime result is claimed by this change yet.
 ## Android camera-rotation instrumentation access repair (2026-11-16)
 
 The rotation runtime check inspects the Activity's private CameraStage through the
