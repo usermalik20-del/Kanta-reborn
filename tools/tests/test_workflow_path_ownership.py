@@ -54,6 +54,18 @@ class WorkflowOwnershipTests(unittest.TestCase):
         for event in ("push", "pull_request"):
             self.assertIn("'tools/tests/test_companion_*.py'", event_section(source, event))
 
+    def test_android_version_code_allocation_is_bounded_for_every_caller(self):
+        # A reusable caller's first runs have github.run_number below the build's
+        # bounded release range; the build step must fall back to the documented
+        # baseline instead of failing the whole gate.
+        source = workflow("android-validation.yml")
+        build = step_block(
+            source,
+            "Build debug and unsigned release, lint and domain regression tests",
+        )
+        self.assertIn('if [ "$version_code" -lt 10 ]; then version_code=10; fi', build)
+        self.assertIn('-PkantaVersionCode="$version_code"', build)
+
     def test_android_release_signing_is_limited_to_trusted_main_history(self):
         source = workflow("android-validation.yml")
         checkout = source.split("      - uses: actions/checkout@", 1)[1].split("\n      - ", 1)[0]

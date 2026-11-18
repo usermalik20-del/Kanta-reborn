@@ -77,6 +77,8 @@ the APK to that Release. iOS remains a retained Actions artifact with
 Its URL must match the exact packaging run and artifact ID. Publishing one platform
 preserves the peer entry until that platform is separately republished.
 
+First-run repair (same day): a new caller's `github.run_number` starts at 1, below the Android build's bounded release range, so the first health run failed with `kantaVersionCode outside bounded release range`; the build step now floors any allocation below the documented baseline (10), guarded by a workflow-ownership regression test. Local baseline builds are unaffected.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

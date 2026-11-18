@@ -15,6 +15,8 @@ answers "should users download this?". The four called workflows now embed
 `github.event_name` in their concurrency groups so scheduled runs can never cancel,
 or be cancelled by, push-triggered validation runs. All existing `if: always()`
 diagnostic and artifact uploads are unchanged.
+First-run repair (same day): a new caller's `github.run_number` starts at 1, below the Android build's bounded release range, so the first health run failed with `kantaVersionCode outside bounded release range`; the build step now floors any allocation below the documented baseline (10), guarded by a workflow-ownership regression test. Local baseline builds are unaffected.
+
 ## User-facing wording and README scope
 
 Follow [the plain-language writing guide](docs/USER_FACING_LANGUAGE.md) for app labels,
