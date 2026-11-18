@@ -5,6 +5,13 @@ on:
       ref:
         description: 'Optional branch, tag or commit SHA; defaults to the event commit'
         required: false
+  workflow_call:
+    inputs:
+      daily_health:
+        description: 'Daily health run: validation only; never signs or generates release material'
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -44,7 +51,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: android-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
+  group: android-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.run_attempt }}
   cancel-in-progress: true
 jobs:
   android:
@@ -137,7 +144,7 @@ jobs:
       - name: Verify companion private IPv4 interface selection
         run: python3 tools/verify-android-companion-interface.py
       - name: Build owner-signed release APK
-        if: steps.release-source.outputs.trusted_main == 'true' && github.event_name != 'pull_request'
+        if: steps.release-source.outputs.trusted_main == 'true' && github.event_name != 'pull_request' && inputs.daily_health != true
         working-directory: apps/android
         env:
           KANTA_SIGNING_KEYSTORE_BASE64: ${{ secrets.KANTA_ANDROID_SIGNING_KEYSTORE_BASE64 }}
@@ -157,7 +164,7 @@ jobs:
           export KANTA_ANDROID_SIGNING_PASSWORD="${KANTA_SIGNING_PASSWORD}"
           ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:assembleRelease 2>&1 | tee -a build.log
       - name: Generate Android DEX hardening candidate with BLA
-        if: steps.release-source.outputs.trusted_main == 'true' && github.event_name != 'pull_request'
+        if: steps.release-source.outputs.trusted_main == 'true' && github.event_name != 'pull_request' && inputs.daily_health != true
         continue-on-error: true
         run: |
           # This candidate is generated after APK assembly and is not repackaged into the release APK.
