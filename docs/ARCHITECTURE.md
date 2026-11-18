@@ -47,6 +47,8 @@ only the selected platform entry and page; it must not rewrite the peer's proven
 The publisher must keep iOS on its exact Actions run/artifact URL and mark it
 `signInRequired: true` until a verified immutable IPA Release asset is actually uploaded.
 
+First-run repair (same day): a new caller's `github.run_number` starts at 1, below the Android build's bounded release range, so the first health run failed with `kantaVersionCode outside bounded release range`; the build step now floors any allocation below the documented baseline (10), guarded by a workflow-ownership regression test. Local baseline builds are unaffected.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

@@ -120,7 +120,13 @@ jobs:
         working-directory: apps/android
         run: |
           set -o pipefail
-          ./gradlew --no-daemon -PkantaVersionCode=${{ github.run_number }} :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:assembleRelease :app:lintRelease :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
+          # github.run_number belongs to whichever workflow triggered the run. A new
+          # reusable caller starts at run number 1, below the build's bounded release
+          # range floor, so fall back to build.gradle's documented local baseline (10)
+          # instead of failing the allocation. This workflow's own runs always exceed it.
+          version_code="${{ github.run_number }}"
+          if [ "$version_code" -lt 10 ]; then version_code=10; fi
+          ./gradlew --no-daemon -PkantaVersionCode="$version_code" :app:dependencies --configuration debugRuntimeClasspath :app:assembleDebug :app:lintDebug :app:assembleRelease :app:lintRelease :app:coreRegression :app:assembleDebugAndroidTest 2>&1 | tee build.log
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
