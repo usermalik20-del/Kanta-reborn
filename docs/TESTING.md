@@ -1459,7 +1459,10 @@ the instrumented walkthrough requires an Android build and runtime.
 The host download regression covers redirects, truncated responses, the Fluid ZIP
 member, validation before publishing, and cleanup after failure. The native host
 loader opened complete upstream copies of FluidR3 GM, MuseScore General, and SGM
-with the fix. This is not Android download, memory-pressure, or playback acceptance.
+with the fix. The OSUOSL TLS regression checks the exact public root fingerprint,
+exact hostname scope, and continued cleartext denial. OpenSSL also validated the
+live mirror's chain and hostname using only that root. Retest both downloads on
+Android 12; the host checks do not prove device download or playback acceptance.
 See [legacy key ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
 
 

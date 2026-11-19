@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">ftp.osuosl.org</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/osuosl_tls_rsa_root_2022" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

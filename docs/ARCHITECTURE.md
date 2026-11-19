@@ -1445,6 +1445,10 @@ This is a presentation boundary only. `MainActivity` owns the destination and it
 `SessionController` serializes the three My Set downloads. `SoundFontDownload`
 stages files in app-private media storage, checks response and ZIP integrity,
 and verifies that the native synth opens the bank before publication.
+For older Android system trust stores, only `ftp.osuosl.org` additionally trusts
+SSL.com TLS RSA Root CA 2022. The bundled public certificate is from the Alpine
+CA bundle (DER SHA-256 `8faf7d2e2cb4709bb8e0b33666bf75a5dd45b5de480f8ea8d4bfe6bebc17f2ed`).
+HTTPS hostname and certificate validation remain enabled; all other hosts keep system trust.
 `LibraryRepository` owns registration; downloading does not change the active bank.
 Validated PCM banks use the in-place converter even when Vorbis support is enabled;
 SF3 retains its separate decode path.
