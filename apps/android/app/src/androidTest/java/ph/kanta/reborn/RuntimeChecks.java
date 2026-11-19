@@ -535,8 +535,11 @@ public final class RuntimeChecks extends Instrumentation {
         checkIconBack(back, "Now Playing");
         back.performClick();
       });
-      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
-          "Now Playing did not return to Home");
+      await(() -> visibleOnScreen("kanta.control-deck"),
+          "Now Playing did not return to the control deck that opened it");
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(() -> visibleOnScreen("kanta.home.search"),
+          "Back from the control deck did not return to Home");
       runOnMainSync(() -> {
         View more = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
         check(more != null, "Home More destination missing after Now Playing");
