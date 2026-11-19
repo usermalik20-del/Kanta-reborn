@@ -30,7 +30,7 @@ public final class GroupScreen extends LinearLayout {
   }
   private int dp(int value) { return (int) (value * density + 0.5f); }
   private void build(String title, String purpose, Item[] items) {
-    addView(new KantaScreenHeader(context, title, "Back to Home", "kanta.group.back",
+    addView(new KantaScreenHeader(context, title, "Back", "kanta.group.back",
         v -> { if (listener != null) listener.onBack(); }));
     TextView description = KantaTheme.bodyText(context, purpose, 14); description.setTextColor(KantaTheme.TEXT_SECONDARY);
     description.setPadding(dp(24), dp(2), dp(24), dp(14)); addView(description);

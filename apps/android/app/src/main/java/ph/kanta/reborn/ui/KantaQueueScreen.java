@@ -35,7 +35,7 @@ public class KantaQueueScreen extends LinearLayout {
     build();
   }
   private void build() {
-    header = new KantaScreenHeader(context, "Queue (0)", "Back to Home", "kanta.screen.queue.back",
+    header = new KantaScreenHeader(context, "Queue (0)", "Back", "kanta.screen.queue.back",
         v -> { if (listener != null) listener.onBack(); });
     header.addAction("Clear", "kanta.queue.clear",
         v -> { if (listener != null) listener.onClear(); });
@@ -133,6 +133,7 @@ public class KantaQueueScreen extends LinearLayout {
   public void showAddSongsCTA() {
     Button add = new Button(context);
     add.setText(ph.kanta.reborn.R.string.label_add_songs_to_queue);
+    add.setTag("kanta.queue.add-songs");
     add.setTextSize(16);
     add.setTypeface(null, Typeface.BOLD);
     add.setTextColor(ph.kanta.reborn.ui.KantaTheme.TEXT_PRIMARY);

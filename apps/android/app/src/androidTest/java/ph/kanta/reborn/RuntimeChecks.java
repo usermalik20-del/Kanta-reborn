@@ -269,6 +269,13 @@ public final class RuntimeChecks extends Instrumentation {
       assertPersistentStage("kanta.control-deck");
       check(visibleOnScreen("kanta.control-deck.volume"),
           "Special control deck did not expose the master-volume dial");
+      runOnMainSync(() -> {
+        View search = activity.getWindow().getDecorView().findViewWithTag("kanta.control-deck.search");
+        check(search != null && search.performClick(), "Control deck could not open Search");
+      });
+      await(() -> visibleOnScreen("kanta.utility.search-input"), "Control deck Search did not open");
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(() -> visibleOnScreen("kanta.control-deck"), "Back from Search did not restore the control deck");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
       await(() -> !visibleOnScreen("kanta.control-deck"),
           "Android Back did not close the special control deck");
@@ -297,9 +304,12 @@ public final class RuntimeChecks extends Instrumentation {
         checkIconBack(back, "Search");
         back.performClick();
       });
-      await(
-          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
-          "Search did not return to Home");
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.find-song") != null,
+          "Search did not return to its parent menu");
+      assertPersistentStage("kanta.group.find-song");
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
+          "Back from a top-level menu did not return to Home");
       capture("home_dashboard_restored.png");
       runOnMainSync(() -> {
         View sing = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Sing");
@@ -320,14 +330,23 @@ public final class RuntimeChecks extends Instrumentation {
           "Home Queue did not open the reference Queue destination");
       capture("queue_screen.png", "kanta.screen.queue");
       runOnMainSync(() -> {
+        View add = activity.getWindow().getDecorView().findViewWithTag("kanta.queue.add-songs");
+        check(add != null && add.performClick(), "Queue could not open Search");
+      });
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.search") != null,
+          "Queue Search did not open");
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue") != null,
+          "Back from Search did not return to Queue");
+      runOnMainSync(() -> {
         View back = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.queue.back");
         check(back != null, "Queue back control missing");
         checkIconBack(back, "Queue");
         back.performClick();
       });
-      await(
-          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
-          "Queue did not return to Home");
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.queue") != null,
+          "Queue did not return to its parent menu");
+      assertPersistentStage("kanta.group.queue");
       runOnMainSync(() -> {
         View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Performance");
         check(performance != null, "Home Performance destination missing");
@@ -365,9 +384,9 @@ public final class RuntimeChecks extends Instrumentation {
         checkIconBack(back, "Pitch & Tempo");
         back.performClick();
       });
-      await(
-          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
-          "Pitch & Tempo did not return to Home");
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.key-tempo") != null,
+          "Pitch & Tempo did not return to its parent menu");
+      assertPersistentStage("kanta.group.key-tempo");
       runOnMainSync(() -> {
         View experience = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Experience");
         check(experience != null, "Home Experience destination missing");
@@ -405,9 +424,9 @@ public final class RuntimeChecks extends Instrumentation {
       }, "Background selection did not update the visible primary stage bitmap in place");
       assertPersistentStage("kanta.screen.visuals");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-      await(
-          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
-          "Visuals did not return to Home");
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.background") != null,
+          "Visuals did not return to its parent menu");
+      assertPersistentStage("kanta.group.background");
       runOnMainSync(() -> {
         View performance = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Performance");
         check(performance != null, "Home Performance destination missing");
@@ -449,9 +468,12 @@ public final class RuntimeChecks extends Instrumentation {
           activity.getOnBackPressedDispatcher().onBackPressed();
         }
       });
-      await(
-          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
-          "Mic & Voice did not return to Home");
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.voice") != null,
+          "Mic & Voice did not return to its parent menu");
+      assertPersistentStage("kanta.group.voice");
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.home.search") != null,
+          "Back from a top-level menu did not return to Home");
       runOnMainSync(() -> {
         View logo = activity.getWindow().getDecorView().findViewWithTag("kanta.header.logo");
         check(logo != null && logo.performClick(), "KANTA logo did not open the control deck");

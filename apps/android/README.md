@@ -793,11 +793,24 @@ The Home/Search utility uses an app-owned persistent keyboard with a working num
 
 ## Android runtime-only legacy import key — local candidate
 
-After selecting the index and blob in My Set, enter the 64-hex-digit key and
-32-hex-digit IV provided for your files. KANTA has no built-in default and does not
-save these details; each import asks again. Cancel or background the entry dialog
-to clear it. Only import content you are authorized to use. This local candidate
-still needs Android build/emulator and real-device import/playback checks.
+In the public build, My Set asks for the key and IV after you select the index
+and blob. It does not save them. Cancel or background the prompt to clear it.
+Only import files you are authorized to use.
+
+For personal use, **KANTA Private** starts importing as soon as you select both
+files. On a local host with the pinned Android toolchain, run from `apps/android`:
+
+```sh
+./gradlew --no-daemon --no-build-cache \
+  -PkantaPrivateLegacyAssets="$HOME/.kanta-private-legacy" :app:assemblePrivateLegacy
+```
+
+The directory must be outside the checkout and contain only `legacy-import-key.bin`
+(32 raw key bytes followed by 16 raw IV bytes). The APK is under
+`app/build/outputs/apk/privateLegacy/`. It installs alongside public KANTA with a
+separate library. **Do not share the APK or asset: the key can be extracted from
+both.** The private variant is not built in CI and does not use the public updater.
+Android packaging, picker execution, library installation and playback still need validation.
 See [runtime ownership details](../../docs/ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
 
 ## Local B1/B2/D5/D8 work (not the published build)

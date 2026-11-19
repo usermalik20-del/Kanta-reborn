@@ -96,8 +96,8 @@ check(
     and "workspace.addPersistentLayer(stagePresenter)" in activity,
     "Android MainActivity mounts the workspace and installs the stage as the persistent layer",
 )
-routing = activity[activity.find("private void presentAccessory("):]
-routing = routing[:routing.find("\n  }")]
+routing = activity.split("private void presentAccessory(String accessoryId, boolean returnToDeck)", 1)[1]
+routing = routing.split("\n  }", 1)[0]
 check(
     "workspace.activateAccessory(" not in routing
     and "lowerUtilityAccessory = accessoryId;" in routing and "render();" in routing,
@@ -105,9 +105,9 @@ check(
 )
 check(
     "stagePane.setVisibility(View.VISIBLE)" in activity
-    and "main.setOrientation(LinearLayout.VERTICAL)" in activity
+    and "main.setOrientation(landscape ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL)" in activity
     and "hideStage" not in activity,
-    "Android stage remains visible above utility panels at every width",
+    "Android stage remains visible beside or above utility panels",
 )
 check(
     "nowPlayingStage" not in activity and 'new StageSurface(this, session)' not in

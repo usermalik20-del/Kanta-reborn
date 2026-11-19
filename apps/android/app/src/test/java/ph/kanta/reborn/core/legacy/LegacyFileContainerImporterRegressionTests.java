@@ -23,6 +23,23 @@ public final class LegacyFileContainerImporterRegressionTests {
     if (!yes) throw new AssertionError(message);
   }
 
+  private static void privateAssetKey() throws IOException {
+    byte[] asset = new byte[48];
+    for (int i = 0; i < asset.length; i++) asset[i] = (byte) (i + 1);
+    try (LegacyImportKey key = LegacyImportKey.fromPrivateAsset(new java.io.ByteArrayInputStream(asset))) {
+      check(Arrays.equals(key.key(), Arrays.copyOfRange(asset, 0, 32)), "Private asset key order");
+      check(Arrays.equals(key.iv(), Arrays.copyOfRange(asset, 32, 48)), "Private asset IV order");
+    }
+    for (int size : new int[] {0, 31, 32, 47, 49}) {
+      try (LegacyImportKey ignored = LegacyImportKey.fromPrivateAsset(
+          new java.io.ByteArrayInputStream(new byte[size]))) {
+        check(false, "Wrong-sized private asset accepted: " + size);
+      } catch (IOException expected) {
+        check(true, "Wrong-sized private asset rejected");
+      }
+    }
+  }
+
   private static void u32(RandomAccessFile out, long value) throws IOException {
     for (int i = 0; i < 4; i++) out.write((int) (value >>> (8 * i)) & 255);
   }
@@ -283,6 +300,7 @@ public final class LegacyFileContainerImporterRegressionTests {
 
   public static int run() throws Exception {
     checks = 0;
+    privateAssetKey();
     File blob = Files.createTempFile("legacy-record-locator-", ".blob").toFile();
     try {
       try (RandomAccessFile out = new RandomAccessFile(blob, "rw")) {

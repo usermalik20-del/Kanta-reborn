@@ -299,6 +299,19 @@ final class LibraryRepository {
     return Collections.unmodifiableList(new ArrayList<>(soundFonts));
   }
 
+  void registerDownloadedSoundFont(SoundFontDownload.Bank bank) throws Exception {
+    if (soundFonts.stream().anyMatch(entry -> entry.fileName.equals(bank.fileName))) return;
+    if (!new File(media, bank.fileName).isFile()) throw new IOException("Downloaded SoundFont is missing");
+    SoundFontEntry entry = new SoundFontEntry(bank.fileName, bank.label);
+    soundFonts.add(entry);
+    try {
+      persist();
+    } catch (Exception failure) {
+      soundFonts.remove(entry);
+      throw failure;
+    }
+  }
+
   void selectSoundFont(String fileName) throws Exception {
     SoundFontEntry selected = null;
     for (SoundFontEntry entry : soundFonts)

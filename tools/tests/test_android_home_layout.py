@@ -64,7 +64,7 @@ class HomeLayoutTests(unittest.TestCase):
         self.assertIn('library == session.songs', submit)
         self.assertIn('!entered.equals(source.getSearchText())', submit)
         self.assertIn('session.reserve(match, singer)', submit)
-        self.assertIn('tab = "Search"', submit)
+        self.assertIn('openPage("Search")', submit)
         song = (JAVA / 'core/Song.java').read_text()
         self.assertIn('code.equals(song.code)', song)
         self.assertIn('!found.id.equals(song.id)', song)
@@ -102,7 +102,7 @@ class HomeLayoutTests(unittest.TestCase):
         self.assertIn('Superseded primary stage retained the camera preview', runtime)
         self.assertIn('persistentStageOrientation', runtime)
         self.assertIn('Primary rotation stole the camera preview from a non-primary stage', runtime)
-        self.assertIn('camera.ownsSurface(nonPrimaryStage)', runtime)
+        self.assertIn('cameraStage().ownsSurface(nonPrimaryStage)', runtime)
 
     def test_runtime_covers_sizes_and_typed_entry(self):
         source = (ROOT / 'apps/android/app/src/androidTest/java/ph/kanta/reborn/RuntimeChecks.java').read_text()

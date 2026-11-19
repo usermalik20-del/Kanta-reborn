@@ -1,10 +1,29 @@
 plugins { id 'com.android.application' }
+
+// Only a local opt-in build can package this asset. Never use it in public CI.
+def privateLegacyAssets = providers.gradleProperty('kantaPrivateLegacyAssets').orNull
+if (privateLegacyAssets != null) {
+    if (System.getenv('CI') || System.getenv('GITHUB_ACTIONS')) {
+        throw new GradleException('Private legacy builds must not run in CI')
+    }
+    def directory = file(privateLegacyAssets).canonicalFile
+    def asset = new File(directory, 'legacy-import-key.bin')
+    if (directory.toPath().startsWith(rootProject.projectDir.parentFile.parentFile.canonicalFile.toPath()) ||
+            !asset.isFile() || asset.length() != 48 || directory.list().toList() != ['legacy-import-key.bin']) {
+        throw new GradleException('Use an external private asset directory containing only a 48-byte legacy-import-key.bin')
+    }
+    privateLegacyAssets = directory
+}
+
 android {
+    buildFeatures { buildConfig = true }
     namespace 'ph.kanta.reborn'
     compileSdk 36
     ndkVersion "27.2.12479018"
     externalNativeBuild { cmake { path file("src/main/cpp/CMakeLists.txt"); version "3.22.1" } }
     defaultConfig {
+        manifestPlaceholders.kantaAppLabel = '@string/app_name'
+        buildConfigField 'boolean', 'PRIVATE_LEGACY_IMPORT', 'false'
         applicationId 'ph.kanta.reborn'
         minSdk 26
         targetSdk 36
@@ -44,6 +63,17 @@ android {
         }
     }
     buildTypes {
+        if (privateLegacyAssets != null) {
+            privateLegacy {
+                initWith debug
+                applicationIdSuffix '.privatelegacy'
+                versionNameSuffix '-private'
+                matchingFallbacks = ['debug']
+                buildConfigField 'boolean', 'PRIVATE_LEGACY_IMPORT', 'true'
+                resValue 'string', 'private_legacy_app_name', 'KANTA Private'
+                manifestPlaceholders.kantaAppLabel = '@string/private_legacy_app_name'
+            }
+        }
         release {
             minifyEnabled false
             // CI PR builds remain unsigned; trusted main builds inject the owner key.
@@ -51,6 +81,9 @@ android {
                 signingConfig signingConfigs.releaseOwner
             }
         }
+    }
+    if (privateLegacyAssets != null) {
+        sourceSets.getByName('privateLegacy').assets.srcDir(privateLegacyAssets)
     }
 }
 
@@ -127,8 +160,9 @@ def lintContracts = tasks.register('verifyAndroidLintContracts', Exec) {
     workingDir repositoryRoot
     commandLine 'python3', '-m', 'unittest', 'discover', '-s', 'tools/tests', '-p', 'test_android_lint*.py'
 }
-['Debug', 'Release'].each { variant ->
-    def reportName = variant.toLowerCase(java.util.Locale.ROOT)
+def gatedVariants = [Debug: 'debug', Release: 'release']
+if (privateLegacyAssets != null) gatedVariants.PrivateLegacy = 'privateLegacy'
+gatedVariants.each { variant, reportName ->
     def lintGate = tasks.register("verify${variant}LintDebt", Exec) {
         dependsOn "lint${variant}"
         dependsOn lintContracts

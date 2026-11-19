@@ -64,7 +64,7 @@ public final class KantaVisualsScreen extends LinearLayout {
 
   private void build() {
     addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
-        context, "Visuals", "Back to Home", "kanta.screen.visuals.back",
+        context, "Visuals", "Back", "kanta.screen.visuals.back",
         v -> { if (listener != null) listener.onBack(); }));
 
     LinearLayout tabs = new LinearLayout(context);

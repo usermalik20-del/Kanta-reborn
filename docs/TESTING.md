@@ -1436,12 +1436,31 @@ fixtures, without reflecting application constants. Coverage adds strict hex/len
 validation, defensive ownership, idempotent clearing, missing-file cleanup, correct
 and wrong supplied keys, and refusal to reuse cleared keys. Run
 `cd apps/android && ./gradlew --no-daemon :app:coreRegression` on Java 17.
-`python3 -m unittest tools.tests.test_runtime_import_key` covers four source contracts
-for no embedded default and UI/controller cleanup. Full local Python suite: 170 tests
-pass; preflight passes, including 149-file structure and 59 workspace checks.
-Java tests/build/lint, emulator prompt/picker/cancel/background/busy/error acceptance
-and real-device playback are NOT verified: local JVM fails on `getcpu(2)`.
-See [ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
+`python3 -m unittest tools.tests.test_runtime_import_key` checks public/manual and
+private/automatic routing, scoped asset wiring and credential cleanup. The synthetic
+JVM suite now checks the exact 48-byte private asset layout and rejects truncated or
+oversized input. Direct JDK 17 execution passed 55,756 core checks. A separate read-only
+probe mapped 47,998 attached records, including 47,997 MIDI signatures and one
+unsupported signature; it did not export songs. On an Android build host, verify
+the private APK contains the asset and ordinary debug/release APKs do not, then
+exercise picker, progress, cancellation, catalog persistence and playback on device.
+APK build, Android lint and device acceptance remain unverified for this variant.
+
+### Android Back navigation regression
+
+`RuntimeChecks` exercises both Android Back and in-app Back: Search → Queue → Sing,
+Key & Tempo and Mic & Voice → Performance, Visuals → Experience, and a Search
+accessory → Control Deck → underlying page. These checks also guard against
+replacing the persistent stage during navigation. The source contracts run locally;
+the instrumented walkthrough requires an Android build and runtime.
+
+### Android SoundFont download regression
+
+The host download regression covers redirects, truncated responses, the Fluid ZIP
+member, validation before publishing, and cleanup after failure. The native host
+loader opened complete upstream copies of FluidR3 GM, MuseScore General, and SGM
+with the fix. This is not Android download, memory-pressure, or playback acceptance.
+See [legacy key ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
 
 
 Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path (tools/tests/test_party_assets.py). Physical listening, device decoding and SoundPool playback remain separate acceptance.
