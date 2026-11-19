@@ -87,7 +87,7 @@ Build instructions, test results and engineering details live in the developer d
 - [Testing and release requirements](docs/TESTING.md) · [Download verification](docs/VERIFIED_DOWNLOADS.md)
 - [Outstanding work](docs/UNFINISHED_WORK.md) · [Android engineering records and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
-- [Android lint validation and release evidence](docs/ANDROID_LINT_HARDENING.md)
+- [Android lint validation and release evidence](docs/ANDROID_LINT_HARDENING.md) · [Private Android legacy import build](apps/android/README.md#android-runtime-only-legacy-import-key--local-candidate)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.
 ## AdSense policy truthfulness pass (2026-11-17)
 

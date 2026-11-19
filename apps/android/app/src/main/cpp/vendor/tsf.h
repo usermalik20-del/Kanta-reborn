@@ -1238,6 +1238,26 @@ static int tsf_decode_sf3_samples(const void* rawBuffer, float** pFloatBuffer, u
 }
 #endif
 
+static int tsf_load_pcm_samples(float** pFloatBuffer, unsigned int* pSmplCount, struct tsf_riffchunk *chunkSmpl, struct tsf_stream* stream)
+{
+	// Inline convert the samples from short to float
+	float *res, *out; const short *in;
+	*pSmplCount = chunkSmpl->size / (unsigned int)sizeof(short);
+	#if defined(__SIZEOF_SIZE_T__) && __SIZEOF_SIZE_T__ == 4
+	if ((size_t)*pSmplCount > (size_t)-1 / sizeof(float) - 1) return 0; //size computation would overflow (32-bit hosts)
+	#endif
+	// one extra zero sample at the end so linear interpolation never reads past the buffer
+	*pFloatBuffer = (float*)TSF_MALLOC(((size_t)*pSmplCount + 1) * sizeof(float));
+	if (!*pFloatBuffer) return 0;
+	// the raw 16 bit data is read into the front of the (larger) float buffer and widened in place, back to front
+	if ((tsf_u32)stream->read(stream->data, *pFloatBuffer, *pSmplCount * (unsigned int)sizeof(short)) != *pSmplCount * (unsigned int)sizeof(short)) return 0;
+	if (chunkSmpl->size & 1) { if (!stream->skip(stream->data, 1)) return 0; } //odd sized chunks have a trailing byte we did not read
+	for (res = *pFloatBuffer, out = res + *pSmplCount, in = (short*)res + *pSmplCount; out != res;)
+		*(--out) = (float)(*(--in) / 32767.0);
+	(*pFloatBuffer)[*pSmplCount] = 0.0f;
+	return 1;
+}
+
 static int tsf_load_samples(void** pRawBuffer, float** pFloatBuffer, unsigned int* pSmplCount, struct tsf_riffchunk *chunkSmpl, struct tsf_stream* stream)
 {
 	#ifdef STB_VORBIS_INCLUDE_STB_VORBIS_H
@@ -1260,23 +1280,8 @@ static int tsf_load_samples(void** pRawBuffer, float** pFloatBuffer, unsigned in
 	*pSmplCount = resNum;
 	return 1;
 	#else
-	// Inline convert the samples from short to float
-	float *res, *out; const short *in;
 	(void)pRawBuffer;
-	*pSmplCount = chunkSmpl->size / (unsigned int)sizeof(short);
-	#if defined(__SIZEOF_SIZE_T__) && __SIZEOF_SIZE_T__ == 4
-	if ((size_t)*pSmplCount > (size_t)-1 / sizeof(float) - 1) return 0; //size computation would overflow (32-bit hosts)
-	#endif
-	// one extra zero sample at the end so linear interpolation never reads past the buffer
-	*pFloatBuffer = (float*)TSF_MALLOC(((size_t)*pSmplCount + 1) * sizeof(float));
-	if (!*pFloatBuffer) return 0;
-	// the raw 16 bit data is read into the front of the (larger) float buffer and widened in place, back to front
-	if ((tsf_u32)stream->read(stream->data, *pFloatBuffer, *pSmplCount * (unsigned int)sizeof(short)) != *pSmplCount * (unsigned int)sizeof(short)) return 0;
-	if (chunkSmpl->size & 1) { if (!stream->skip(stream->data, 1)) return 0; } //odd sized chunks have a trailing byte we did not read
-	for (res = *pFloatBuffer, out = res + *pSmplCount, in = (short*)res + *pSmplCount; out != res;)
-		*(--out) = (float)(*(--in) / 32767.0);
-	(*pFloatBuffer)[*pSmplCount] = 0.0f;
-	return 1;
+	return tsf_load_pcm_samples(pFloatBuffer, pSmplCount, chunkSmpl, stream);
 	#endif
 }
 
@@ -1864,7 +1869,8 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, float* outputBuffer, i
 	if (tmpLowpass.active || dynamicLowpass) v->lowpass = tmpLowpass;
 }
 
-TSFDEF tsf* tsf_load(struct tsf_stream* stream)
+// KANTA: the caller may select the in-place PCM path only after sample-header validation.
+static tsf* tsf_load_internal(struct tsf_stream* stream, int validated_pcm)
 {
 	tsf* res = TSF_NULL;
 	struct tsf_riffchunk chunkHead;
@@ -1926,7 +1932,11 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 						#endif
 					) && !rawBuffer && !floatBuffer && chunk.size >= sizeof(short))
 				{
-					if (!tsf_load_samples(&rawBuffer, &floatBuffer, &smplCount, &chunk, stream)) goto out_of_memory;
+					if (validated_pcm && TSF_FourCCEquals(chunk.id, "smpl"))
+					{
+						if (!tsf_load_pcm_samples(&floatBuffer, &smplCount, &chunk, stream)) goto out_of_memory;
+					}
+					else if (!tsf_load_samples(&rawBuffer, &floatBuffer, &smplCount, &chunk, stream)) goto out_of_memory;
 				}
 				else stream->skip(stream->data, chunk.size);
 			}
@@ -1970,6 +1980,11 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 	TSF_FREE(hydra.imods); TSF_FREE(hydra.igens); TSF_FREE(hydra.shdrs);
 	TSF_FREE(rawBuffer);   TSF_FREE(floatBuffer);
 	return res;
+}
+
+TSFDEF tsf* tsf_load(struct tsf_stream* stream)
+{
+	return tsf_load_internal(stream, 0);
 }
 
 TSFDEF tsf* tsf_copy(tsf* f)

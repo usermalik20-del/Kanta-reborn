@@ -30,11 +30,25 @@ class RuntimeImportKeyContractTests(unittest.TestCase):
         self.assertLess(submit.index('clearLegacyKeyInput(keyInput)'),
                         submit.index('dialog.dismiss()'))
         self.assertLess(submit.index('clearLegacyKeyInput(ivInput)'),
-                        submit.index('session.importLegacyPair('))
+                        submit.index('submitLegacyPair('))
         self.assertNotIn('getText().toString()', prompt)
         self.assertIn('if (legacyKeyDialog != null) legacyKeyDialog.dismiss();',
                       source.split('protected void onStop()', 1)[1].split(
                           'protected void onDestroy()', 1)[0])
+
+    def test_private_build_uses_asset_after_pair_selection(self):
+        gradle = (ROOT / 'apps/android/app/build.gradle').read_text()
+        for requirement in ("'PRIVATE_LEGACY_IMPORT', 'false'", "'PRIVATE_LEGACY_IMPORT', 'true'",
+                            "sourceSets.getByName('privateLegacy').assets.srcDir(privateLegacyAssets)",
+                            "applicationIdSuffix '.privatelegacy'", 'Private legacy builds must not run in CI'):
+            self.assertIn(requirement, gradle)
+        self.assertFalse((ROOT / 'apps/android/app/src/main/assets/legacy-import-key.bin').exists())
+        activity = (JAVA / 'MainActivity.java').read_text()
+        self.assertIn('startLegacyPair(index, data.getData())', activity)
+        flow = activity.split('private void startLegacyPair(', 1)[1].split('private void submitLegacyPair(', 1)[0]
+        self.assertLess(flow.index('requestLegacyKey(index, blob)'), flow.index('getAssets().open('))
+        self.assertIn('fromPrivateAsset(asset)', flow)
+        self.assertIn('submitLegacyPair(index, blob, credentials)', flow)
 
     def test_controller_clears_rejected_and_failed_imports(self):
         source = (JAVA / 'SessionController.java').read_text()
@@ -43,7 +57,7 @@ class RuntimeImportKeyContractTests(unittest.TestCase):
         self.assertIn('credentials.close();\n      return false;', flow)
         self.assertIn('LegacyImportKey owned = credentials)', flow)
         self.assertIn('RejectedExecutionException', flow)
-        self.assertIn('"legacy-import"), owned)', flow)
+        self.assertIn('"legacy-import"), owned, importCancelled::get)', flow)
         for forbidden in ('SharedPreferences', 'Log.', 'println', 'getBytes(', 'toString('):
             self.assertNotIn(forbidden, flow)
 

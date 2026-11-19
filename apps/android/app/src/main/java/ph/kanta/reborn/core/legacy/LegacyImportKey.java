@@ -1,5 +1,8 @@
 package ph.kanta.reborn.core.legacy;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 
 /** One import's caller-supplied AES-256 material. Never persist or log this object. */
@@ -27,6 +30,22 @@ public final class LegacyImportKey implements AutoCloseable {
     } finally {
       if (key != null) Arrays.fill(key, (byte) 0);
       if (iv != null) Arrays.fill(iv, (byte) 0);
+    }
+  }
+
+  /** Reads exactly 32 key bytes and 16 IV bytes; the caller owns the stream. */
+  public static LegacyImportKey fromPrivateAsset(InputStream input) throws IOException {
+    byte[] key = new byte[32];
+    byte[] iv = new byte[16];
+    try {
+      DataInputStream data = new DataInputStream(input);
+      data.readFully(key);
+      data.readFully(iv);
+      if (data.read() != -1) throw new IOException("Invalid private legacy key file length.");
+      return new LegacyImportKey(key, iv);
+    } finally {
+      Arrays.fill(key, (byte) 0);
+      Arrays.fill(iv, (byte) 0);
     }
   }
 

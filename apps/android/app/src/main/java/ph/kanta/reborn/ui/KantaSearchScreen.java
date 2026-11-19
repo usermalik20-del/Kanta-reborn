@@ -44,7 +44,7 @@ public class KantaSearchScreen extends LinearLayout {
     build();
   }
   private void build() {
-    addView(new KantaScreenHeader(context, "Search", "Back to Home", "kanta.screen.search.back",
+    addView(new KantaScreenHeader(context, "Search", "Back", "kanta.screen.search.back",
         v -> { if (listener != null) listener.onBack(); }));
     tabSelector = new KantaTabSelector(context);
     tabSelector.setTabs(new String[]{"All", "KANTA", "YouTube", "Local"}, 0,

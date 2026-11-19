@@ -1438,7 +1438,16 @@ The merged karaoke-stage implementation keeps Home as the launch composition bou
 
 The Android reference-led presentation is being grouped into five user-facing destinations: Home, Sing, Performance, Experience and More. Sing is the entry point for Search, KANTA/YouTube/Local sources, Favorites, Recent, My Set/playlists and Queue. Performance groups Now Playing/lyrics, Key & Tempo, Voice and Singing Coach. Experience groups backgrounds, camera, effects, Scenic/Realm presentation, Party Mode and display/fullscreen. More owns advanced settings, companion, diagnostics and help.
 
-This is a presentation boundary only. `MainActivity` selects destinations, `GroupScreen` renders group actions, and existing screens continue to issue commands to the authoritative `SessionController`, stage presenter, catalog and microphone/monitor owners. Search uses a bounded embedded keypad with numeric and letter layouts; it suppresses the system IME and does not change search ownership or persistence.
+This is a presentation boundary only. `MainActivity` owns the destination and its Back history; `GroupScreen` renders group actions. The screen header and Android's dispatcher use the same Back handler. A child returns to the page that opened it (for example, Search → Queue → Sing), while tapping a bottom tab starts a new top-level path. Dialogs and the control deck close before the underlying page, and destination changes do not replace the mounted stage. Screens continue to issue commands to the authoritative `SessionController`, stage presenter, catalog and microphone/monitor owners. Search uses a bounded embedded keypad with numeric and letter layouts; it suppresses the system IME and does not change search ownership or persistence.
+
+## Android downloadable SoundFonts
+
+`SessionController` serializes the three My Set downloads. `SoundFontDownload`
+stages files in app-private media storage, checks response and ZIP integrity,
+and verifies that the native synth opens the bank before publication.
+`LibraryRepository` owns registration; downloading does not change the active bank.
+Validated PCM banks use the in-place converter even when Vorbis support is enabled;
+SF3 retains its separate decode path.
 
 ## Android supplied UI and SoundFont assets — 2026-11-03
 
@@ -1531,10 +1540,14 @@ Repository-level security controls are separate from this workflow boundary. On 
 
 ## Android runtime-only legacy import key — local candidate
 
-The My Set paired-file flow asks for a 64-hex-digit AES-256 key and a
-32-hex-digit IV after both files are selected. There is no bundled default or
-automatic extraction. Users must have authorization for their files and obtain
-the material independently. Other imports are unchanged.
+Public builds ask for a 64-hex-digit AES-256 key and a 32-hex-digit IV after
+both files are selected in My Set. There is no public bundled default.
+The opt-in `privateLegacy` build sources a 48-byte asset from outside the checkout,
+uses a separate application ID, and disables the public updater. Gradle rejects
+private provisioning in CI; only that build type packages the asset. After the
+blob picker returns, the private build loads the asset into the same per-import
+credential object used by the manual flow. The private APK itself contains
+extractable key material and must not be shared. Other imports and iOS are unchanged.
 
 `LegacyImportKey` owns defensive copies and supports idempotent clearing. The
 controller takes ownership even for busy/invalid requests and executor rejection;
@@ -1542,17 +1555,17 @@ the worker closes it on copy/decode/install failure. The synchronous paired impo
 also consumes it with try-with-resources, including mapping failures and success.
 The entry dialog is masked, excluded from saved state and autofill, requests no
 personalized keyboard learning or extract UI, and uses a secure window. Dismissal,
-cancel and backgrounding clear its fields. Nothing writes keys to files, settings,
-logs, intents or saved instance state. Byte/field clearing is best effort: Java,
-cryptographic providers and third-party keyboards can retain internal copies.
+cancel and backgrounding clear its fields. The app does not write runtime keys to
+settings, logs, intents or saved instance state. The private build input, Gradle
+intermediates/caches and APK must be kept private. Byte/field clearing is best
+effort: Java, cryptographic providers and keyboards can retain internal copies.
 
 The existing synthetic importer suite now supplies unrelated fixture material and
 tests valid/wrong keys, strict hex/length validation, defensive copying, idempotent
 clearing, closed-key reuse and cleanup after failed input validation. Python source
 contracts guard the UI/controller wiring. These source checks do not execute Android.
-Run `cd apps/android && ./gradlew --no-daemon :app:coreRegression`, build/lint and
-emulator UI acceptance on a working toolchain. Local JVM startup fails on unsupported
-`getcpu(2)`, so no local Java execution, APK build or device acceptance is claimed.
+Direct JDK 17 regression checks ran in the ARM64 sandbox. Gradle APK packaging,
+Android lint and emulator/device UI acceptance still need the pinned Android toolchain.
 D2/D4 remain open for real paired import/playback, semantic title verification and
 storage/cancellation. iOS behavior is unchanged; this candidate is not a release.
 

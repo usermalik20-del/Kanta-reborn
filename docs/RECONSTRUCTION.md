@@ -1198,11 +1198,12 @@ The redesign is implemented as modular JS files loaded by all pages:
 <!-- party-sounds-assets-committed -->
 ## Android runtime-only legacy import key — local candidate
 
-Android paired import no longer embeds key/IV constants: the caller supplies them
-for one import, with explicit ownership/clearing across prompt, controller and
-synchronous importer. No automatic extraction or persistent key storage was added.
-Local Python/source checks pass; Java compilation/regressions, emulator acceptance
-and real-device playback remain pending because the local JVM cannot start.
+Public Android builds do not bundle key/IV material; the caller supplies it for one
+import. An opt-in private build loads a local build asset after pair selection and
+transfers ownership to the same controller and synchronous importer. This is
+provisioning, not key derivation from the files. The attached pair resolved 47,998
+records in a read-only JVM probe: 47,997 MIDI signatures and one unsupported
+signature. This does not prove title/audio identity, device import or playback.
 D2/D4 remain open; iOS is unchanged.
 See [ownership contract](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate)
 and [validation scope](TESTING.md#android-runtime-only-legacy-import-key--local-candidate).

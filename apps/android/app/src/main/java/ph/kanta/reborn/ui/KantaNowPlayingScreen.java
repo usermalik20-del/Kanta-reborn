@@ -71,7 +71,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
   }
   private void build() {
     KantaScreenHeader header = new KantaScreenHeader(
-        context, "Now Playing", "Back to Home", "kanta.screen.now-playing.back",
+        context, "Now Playing", "Back", "kanta.screen.now-playing.back",
         v -> { if (listener != null) listener.onBack(); });
     header.addAction("Full screen", "kanta.now-playing.fullscreen",
         v -> { if (listener != null) listener.onFullscreen(); });

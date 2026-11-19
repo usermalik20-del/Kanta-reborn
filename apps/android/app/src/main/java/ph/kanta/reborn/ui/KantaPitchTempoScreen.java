@@ -41,7 +41,7 @@ public class KantaPitchTempoScreen extends LinearLayout {
   }
   private void build() {
     KantaScreenHeader header = new KantaScreenHeader(
-        context, "Pitch & Tempo", "Back to Home", "kanta.screen.pitch-tempo.back",
+        context, "Pitch & Tempo", "Back", "kanta.screen.pitch-tempo.back",
         v -> { if (listener != null) listener.onBack(); });
     header.addAction("Reset", "kanta.pitch.reset",
         v -> { if (listener != null) listener.onReset(); });

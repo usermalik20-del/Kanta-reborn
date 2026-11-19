@@ -22,6 +22,9 @@ static int sf_indices(sf_table source, size_t stride, size_t offset, size_t limi
 static size_t sf_validate(const unsigned char* data, size_t size) {
     static const char names[9][5] = {"phdr", "pbag", "pmod", "pgen", "inst", "ibag", "imod", "igen", "shdr"};
     static const size_t strides[9] = {38, 4, 10, 4, 22, 4, 10, 4, 46};
+    // The full-tail SGM bank has 29,744 instrument generators and 27,746
+    // expanded sample regions. Keep finite caps without rejecting stock banks.
+    static const size_t max_instrument_generators = 32768, max_regions = 32768;
     sf_table tables[9] = {{0}};
     size_t samples = 0, compressedBytes = 0;
     int pdta = 0, sdta = 0;
@@ -45,7 +48,8 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
                 if ((length & 1) || length > end - body) return 0;
                 if (kind == 1) for (int i = 0; i < 9; ++i) {
                     if (memcmp(data + child, names[i], 4)) continue;
-                    if (tables[i].data || !length || length % strides[i] || length / strides[i] > 16384) return 0;
+                    size_t limit = i == 7 ? max_instrument_generators : 16384;
+                    if (tables[i].data || !length || length % strides[i] || length / strides[i] > limit) return 0;
                     tables[i].data = data + body;
                     tables[i].count = length / strides[i];
                 }
@@ -134,7 +138,7 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
                     unsigned i0 = sf_u16(tables[5].data + ib * 4), i1 = sf_u16(tables[5].data + (ib + 1) * 4);
                     for (unsigned ig = i0; ig < i1; ++ig) {
                         if (++work > 1000000) return 0;
-                        if (sf_u16(tables[7].data + ig * 4) == 53 && ++regions > 8192) return 0;
+                        if (sf_u16(tables[7].data + ig * 4) == 53 && ++regions > max_regions) return 0;
                     }
                 }
             }

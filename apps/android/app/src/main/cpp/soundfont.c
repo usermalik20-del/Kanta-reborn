@@ -96,7 +96,9 @@ kanta_soundfont* kanta_sf_open(const char* path) {
         .read = (int(*)(void*, void*, unsigned int))&tsf_stream_stdio_read,
         .skip = (int(*)(void*, unsigned int))&tsf_stream_stdio_skip
     };
-    tsf* synth = tsf_load(&stream);
+    // sf_validate returns the frame count for PCM or the sentinel 1 for SF3.
+    // Reuse the in-place PCM converter even when Vorbis support is compiled in.
+    tsf* synth = tsf_load_internal(&stream, sample_count > 1);
     fclose(file);
 
     if (!synth || tsf_get_presetcount(synth) == 0) { if (synth) tsf_close(synth); return NULL; }

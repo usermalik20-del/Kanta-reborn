@@ -3,7 +3,7 @@
   "revision": "a272fe309c13b79b78e79c71b058cabf8d45ce7c",
   "license": "MIT",
   "files": {
-    "tsf.h": "f0aacb00676183e1f61592cc1e53a44d23b8a974120c8c341be154aca0f941c0",
+    "tsf.h": "8949461edad4b7c5090240e105ed40321600112d6eade95b7f2fe96597563e7c",
     "LICENSE": "ef10cb839de73fb6d5d32ea7151979e87809a6df70dc7e7ee8457ae1c9e7aa7e",
     "tsf_playback.h": "7acefcd052e74e6bb76dc720c1119a0b3652508163ae865c86260ffdebebe207",
     "HARDENING.md": "23be1385c4dcd6e24463fa0397d6a6c1e4d8cc83bce8a08c0d5d870cfc274d59",
@@ -19,7 +19,7 @@
     "note": "Ogg Vorbis decoder that enables SF3/Ogg banks; compiled inside soundfont.c behind STB_VORBIS_INCLUDE_STB_VORBIS_H."
   },
   "localDelta": {
-    "tsf.h": "Added `unsigned int sampleTotal` to `struct tsf` and set it after `tsf_load_samples` so the native wrapper can bound decoded regions against the real post-decode frame count (SF3/Ogg banks expand far beyond their on-disk size). The odd-sized smpl pad handling is the fork revision's own fix.",
+    "tsf.h": "Added `unsigned int sampleTotal` to `struct tsf` and set it after `tsf_load_samples` so the native wrapper can bound decoded regions against the real post-decode frame count (SF3/Ogg banks expand far beyond their on-disk size). Added an internal validated-PCM load path that reuses the existing in-place converter in SF3-enabled builds, avoiding simultaneous raw PCM and float allocations. The odd-sized smpl pad handling is the fork revision's own fix.",
     "note": "vendor/tsf.h hashes above reflect the KANTA local delta; the fork and upstream revision fields record the unmodified base."
   }
 }

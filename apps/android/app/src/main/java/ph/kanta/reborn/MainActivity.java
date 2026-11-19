@@ -57,7 +57,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private SessionController session;
   private LinearLayout root, body, results, stagePane, navigationTabs;
   private View appHeader;
-  private boolean returnToHomeAfterAccessory;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -108,7 +107,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private String searchSource = "All";
   private String lowerUtilityAccessory;
   private boolean controlDeckVisible;
-  private String controlDeckReturnTab = "Home";
+  private final ArrayList<String> navigationParents = new ArrayList<>();
+  private static final String DECK_PARENT = "deck:";
   private boolean preparingExport = false;
   private byte[] exportBytes;
   private String exportCode;
@@ -150,16 +150,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new OnBackPressedCallback(false) {
           @Override
           public void handleOnBackPressed() {
-            if (controlDeckVisible) {
-              closeControlDeck();
-            } else if (lowerUtilityAccessory != null
-                || (workspace != null && workspace.activeAccessory() != null)) {
-              dismissAccessory();
-            } else if (isReferenceDestination(tab)) {
-              navigateHome();
-            } else {
-              setEnabled(false);
-            }
+            navigateBack();
           }
         };
     getOnBackPressedDispatcher().addCallback(this, workspaceBackCallback);
@@ -167,6 +158,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     camera = new CameraStage(this, session);
     if (saved != null) {
       tab = saved.getString("tab", "Home");
+      ArrayList<String> parents = saved.getStringArrayList("navigationParents");
+      if (parents != null) navigationParents.addAll(parents);
+      controlDeckVisible = saved.getBoolean("controlDeckVisible");
+      lowerUtilityAccessory = saved.getString("lowerUtilityAccessory");
+      accessoryReturnsToDeck = saved.getBoolean("accessoryReturnsToDeck");
       query = saved.getString("query", "");
       singer = saved.getString("singer", "");
     }
@@ -286,6 +282,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   protected void onSaveInstanceState(Bundle out) {
     super.onSaveInstanceState(out);
     out.putString("tab", tab);
+    out.putStringArrayList("navigationParents", new ArrayList<>(navigationParents));
+    out.putBoolean("controlDeckVisible", controlDeckVisible);
+    out.putString("lowerUtilityAccessory", lowerUtilityAccessory);
+    out.putBoolean("accessoryReturnsToDeck", accessoryReturnsToDeck);
     out.putString("query", query);
     out.putString("singer", singer);
   }
@@ -370,7 +370,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     results = null;
     if (root == null) buildWindow();
     refreshLowerUtilityState();
-    boolean destination = controlDeckVisible || !"Home".equals(tab) || lowerUtilityAccessory != null;
+    boolean destination = controlDeckVisible || !navigationParents.isEmpty()
+        || !"Home".equals(tab) || lowerUtilityAccessory != null;
     if (workspaceBackCallback != null
         && (workspace == null || workspace.activeAccessory() == null))
       workspaceBackCallback.setEnabled(destination);
@@ -401,7 +402,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // Now Playing is a live projection. Keep its view tree stable while the
     // clock/session publishes; rebuilding it every 100ms drops focus and is
     // needlessly expensive. Navigation into it still builds once below.
-    if ("Now Playing".equals(tab) && lowerUtilityAccessory == null
+    if ("Now Playing".equals(tab) && lowerUtilityAccessory == null && !controlDeckVisible
         && nowPlayingScreen != null && body != null) {
       refreshNowPlayingScreen();
       if (stagePresenter != null) stagePresenter.refresh();
@@ -491,11 +492,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 stagePresenter.hideQueue();
               }
             }
-            if (returnToHomeAfterAccessory) {
-              returnToHomeAfterAccessory = false;
-              tab = "Home";
-              handler.post(MainActivity.this::render);
-            }
           }
         });
     // Create StagePresenterImpl with all stage overlays. Stage search must find the songs the
@@ -509,7 +505,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             new ph.kanta.reborn.core.catalog.LibrarySongCatalog(() -> session.songs));
     stagePresenter = new StagePresenterImpl(this, session, catalog, session.queue);
     stagePresenter.setTag("kanta.stage.primary");
-    stagePresenter.setOnClickListener(v -> { controlDeckVisible = false; tab = "Now Playing"; render(); });
+    stagePresenter.setOnClickListener(v -> openPage("Now Playing"));
     stagePresenter.setContentDescription("Karaoke stage. Tap to open Now Playing.");
     workspace.addPersistentLayer(stagePresenter);
     // Register as ScoreSink
@@ -563,12 +559,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       Button b =
           button(
               name,
-              () -> {
-                controlDeckVisible = false;
-                lowerUtilityAccessory = null;
-                tab = name;
-                render();
-              });
+              () -> selectMainMenu(name));
       b.setMinWidth(0);
       b.setMinimumWidth(0);
       b.setPadding(dp(2), dp(4), dp(2), dp(4));
@@ -602,15 +593,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       closeControlDeck();
       return;
     }
-    controlDeckReturnTab = tab;
-    lowerUtilityAccessory = null;
     controlDeckVisible = true;
     render();
   }
 
   private void closeControlDeck() {
     controlDeckVisible = false;
-    tab = controlDeckReturnTab == null ? "Home" : controlDeckReturnTab;
     render();
   }
 
@@ -629,7 +617,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       else if ("Controls".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_MORE);
       else if ("Pitch".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_PITCH_GAME);
       else if ("Coach".equals(label)) presentAccessory(KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT);
-      else { lowerUtilityAccessory = null; tab = "More"; render(); }
+      else selectMainMenu("More");
       return true;
     });
     menu.show();
@@ -653,12 +641,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void handleControlDeckAction(String action) {
     switch (action) {
-      case "search": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_SEARCH); break;
-      case "queue": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_QUEUE); break;
-      case "visuals": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_VISUALS); break;
-      case "controls": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_MORE); break;
-      case "pitch": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_PITCH_GAME); break;
-      case "coach": controlDeckVisible = false; presentAccessory(KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT); break;
+      case "search": openDeckAccessory(KantaWorkspace.ACCESSORY_SEARCH); break;
+      case "queue": openDeckAccessory(KantaWorkspace.ACCESSORY_QUEUE); break;
+      case "visuals": openDeckAccessory(KantaWorkspace.ACCESSORY_VISUALS); break;
+      case "controls": openDeckAccessory(KantaWorkspace.ACCESSORY_MORE); break;
+      case "pitch": openDeckAccessory(KantaWorkspace.ACCESSORY_PITCH_GAME); break;
+      case "coach": openDeckAccessory(KantaWorkspace.ACCESSORY_LEARNING_ASSISTANT); break;
       case "play": playWithCountdown(); break;
       case "restart": session.restartCurrent(); break;
       case "next": session.next(); break;
@@ -671,8 +659,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       case "key_up": session.controls(session.volume, session.tempo, Math.min(12, session.pitch + 1)); break;
       case "tempo_down": session.controls(session.volume, Math.max(.5f, session.tempo - .05f), session.pitch); break;
       case "tempo_up": session.controls(session.volume, Math.min(2f, session.tempo + .05f), session.pitch); break;
-      case "now_playing": controlDeckVisible = false; tab = "Now Playing"; render(); break;
-      case "my_set": controlDeckVisible = false; tab = "My Set"; render(); break;
+      case "now_playing": openPage("Now Playing"); break;
+      case "my_set": openPage("My Set"); break;
       case "youtube": openYouTubeVideo(); break;
       case "help": help(); break;
       default: break;
@@ -680,10 +668,22 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   /** Routes a workspace action into the lower utility panel. */
+  private boolean accessoryReturnsToDeck;
+
+  private void openDeckAccessory(String accessoryId) {
+    controlDeckVisible = false;
+    presentAccessory(accessoryId, true);
+  }
+
   private void presentAccessory(String accessoryId) {
+    controlDeckVisible = false;
+    presentAccessory(accessoryId, false);
+  }
+
+  private void presentAccessory(String accessoryId, boolean returnToDeck) {
     if (accessoryId == null) return;
     if (workspace != null && workspace.activeAccessory() != null) workspace.deactivateAccessory();
-    returnToHomeAfterAccessory = false;
+    accessoryReturnsToDeck = returnToDeck;
     lowerUtilityAccessory = accessoryId;
     render();
   }
@@ -692,6 +692,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void dismissAccessory() {
     workspaceSearchGeneration++;
     lowerUtilityAccessory = null;
+    controlDeckVisible = accessoryReturnsToDeck;
+    accessoryReturnsToDeck = false;
     if (workspace != null) workspace.deactivateAccessory();
     render();
   }
@@ -1180,7 +1182,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (legacyTitle != null) {
       String tag = "kanta.legacy." + tab.toLowerCase(Locale.ROOT).replace(' ', '-') + ".back";
       body.addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
-          this, legacyTitle, "Back to Home", tag, v -> navigateHome()));
+          this, legacyTitle, "Back", tag, v -> navigateBack()));
     }
     if (!"Home".equals(tab) && !isReferenceDestination(tab)) {
       body.addView(text(session.message, 13, CYAN));
@@ -1278,10 +1280,43 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         || "Control".equals(destination);
   }
 
-  private void navigateHome() {
-    boolean wasVisuals = "Visuals".equals(tab);
-    tab = "Home";
-    if (wasVisuals) visualsSelectedTab = 0;
+  private void selectMainMenu(String destination) {
+    navigationParents.clear();
+    controlDeckVisible = false;
+    lowerUtilityAccessory = null;
+    accessoryReturnsToDeck = false;
+    if (workspace != null) workspace.deactivateAccessory();
+    showPage(destination);
+  }
+
+  private void openPage(String destination) {
+    if (!tab.equals(destination) || controlDeckVisible) {
+      navigationParents.add(controlDeckVisible ? DECK_PARENT + tab : tab);
+    }
+    controlDeckVisible = false;
+    lowerUtilityAccessory = null;
+    accessoryReturnsToDeck = false;
+    showPage(destination);
+  }
+
+  private void navigateBack() {
+    if (controlDeckVisible) {
+      closeControlDeck();
+    } else if (lowerUtilityAccessory != null
+        || (workspace != null && workspace.activeAccessory() != null)) {
+      dismissAccessory();
+    } else if (!navigationParents.isEmpty()) {
+      String parent = navigationParents.remove(navigationParents.size() - 1);
+      controlDeckVisible = parent.startsWith(DECK_PARENT);
+      showPage(controlDeckVisible ? parent.substring(DECK_PARENT.length()) : parent);
+    } else if (!"Home".equals(tab)) {
+      showPage("Home");
+    }
+  }
+
+  private void showPage(String destination) {
+    if (!tab.equals(destination) && "Visuals".equals(tab)) visualsSelectedTab = 0;
+    tab = destination;
     micVoiceScreen = null;
     nowPlayingScreen = null;
     render();
@@ -1290,7 +1325,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   /** Now Playing is a utility projection below the persistent live stage. */
   private void nowPlayingScreen() {
     nowPlayingScreen=new ph.kanta.reborn.ui.KantaNowPlayingScreen(this,new ph.kanta.reborn.ui.KantaNowPlayingScreen.Listener(){
-      @Override public void onBack(){navigateHome();}
+      @Override public void onBack(){navigateBack();}
       @Override public void onFullscreen(){fullscreen();}
       @Override public void onPlayPause(){session.toggle();}
       @Override public void onPrevious(){ session.restartCurrent(); }
@@ -1413,7 +1448,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new ph.kanta.reborn.ui.KantaVisualsScreen(
             this,
             new ph.kanta.reborn.ui.KantaVisualsScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
+              @Override public void onBack() { navigateBack(); }
               @Override public void onTabSelected(int index, String label) {
                 visualsSelectedTab = index;
               }
@@ -1472,7 +1507,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new ph.kanta.reborn.ui.KantaMicVoiceScreen(
             this,
             new ph.kanta.reborn.ui.KantaMicVoiceScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
+              @Override public void onBack() { navigateBack(); }
               @Override public void onMicToggle(boolean enabled) {
                 if (enabled) toggleMicrophone();
                 else session.stopMicrophone();
@@ -1551,7 +1586,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new ph.kanta.reborn.ui.KantaSearchScreen(
             this,
             new ph.kanta.reborn.ui.KantaSearchScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
+              @Override public void onBack() { navigateBack(); }
               @Override public void onSearchTextChanged(String value) {
                 query = value == null ? "" : value;
                 renderSearchResults(screenRef[0], visibleSongs);
@@ -1654,7 +1689,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new ph.kanta.reborn.ui.KantaQueueScreen(
             this,
             new ph.kanta.reborn.ui.KantaQueueScreen.Listener() {
-              @Override public void onBack() { navigateHome(); }
+              @Override public void onBack() { navigateBack(); }
               @Override public void onClear() {
                 session.queue.clear();
                 session.saveQueue();
@@ -1662,9 +1697,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 render();
               }
               @Override public void onAddSongs() {
-                tab = "Search";
                 searchSource = "All";
-                render();
+                openPage("Search");
               }
               @Override public void onRemove(int position) {
                 java.util.List<ReservationQueue.Entry> current = session.queue.snapshot();
@@ -1708,7 +1742,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                   screenRef[0].setTempo(session.effectiveTempo());
                 }
               }
-              @Override public void onBack() { navigateHome(); }
+              @Override public void onBack() { navigateBack(); }
               @Override public void onReset() {
                 if (session.currentSongHasOverride()) session.clearCurrentSongOverride();
                 else session.controls(session.volume, 1.0f, 0);
@@ -1748,30 +1782,29 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             this,
             new ph.kanta.reborn.ui.HomeScreen.Listener() {
               @Override public void onHome() {
-                tab = "Home";
-                render();
+                selectMainMenu("Home");
               }
-              @Override public void onSing() { tab = "Sing"; render(); }
-              @Override public void onPerformance() { tab = "Performance"; render(); }
-              @Override public void onExperience() { tab = "Experience"; render(); }
-              @Override public void onSettings() { tab = "More"; render(); }
-              @Override public void onSearch() { tab = "Search"; searchSource = "All"; render(); }
+              @Override public void onSing() { openPage("Sing"); }
+              @Override public void onPerformance() { openPage("Performance"); }
+              @Override public void onExperience() { openPage("Experience"); }
+              @Override public void onSettings() { openPage("More"); }
+              @Override public void onSearch() { searchSource = "All"; openPage("Search"); }
               @Override public void onSearchQueryChanged(String typed) {
                 // Cancel pending RES work even if the user edits back to the same text.
                 homeSubmitGeneration++;
               }
               @Override public void onSearchSubmitted(String typed) { submitHomeEntry(typed); }
-              @Override public void onQueue() { tab = "Queue"; render(); }
+              @Override public void onQueue() { openPage("Queue"); }
               @Override public void onYouTube() { openYouTubeVideo(); }
-              @Override public void onVisuals() { tab = "Visuals"; render(); }
-              @Override public void onMicVoice() { tab = "Mic & Voice"; render(); }
-              @Override public void onPitchTempo() { tab = "Pitch & Tempo"; render(); }
-              @Override public void onMySet() { tab = "My Set"; render(); }
-              @Override public void onFavorites() { tab = "My Set"; render(); }
-              @Override public void onRecent() { tab = "My Set"; render(); }
-              @Override public void onMore() { tab = "More"; render(); }
-              @Override public void onScenic() { tab = "Scenic"; render(); }
-              @Override public void onRealm() { tab = "Realm"; render(); }
+              @Override public void onVisuals() { openPage("Visuals"); }
+              @Override public void onMicVoice() { openPage("Mic & Voice"); }
+              @Override public void onPitchTempo() { openPage("Pitch & Tempo"); }
+              @Override public void onMySet() { openPage("My Set"); }
+              @Override public void onFavorites() { openPage("My Set"); }
+              @Override public void onRecent() { openPage("My Set"); }
+              @Override public void onMore() { openPage("More"); }
+              @Override public void onScenic() { openPage("Scenic"); }
+              @Override public void onRealm() { openPage("Realm"); }
             });
     refreshHomeReservations();
     body.addView(homeScreen, new LinearLayout.LayoutParams(-1, -1));
@@ -1802,8 +1835,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         } else {
           query = requested;
           searchSource = "All";
-          tab = "Search";
-          render();
+          openPage("Search");
         }
       });
     });
@@ -1828,7 +1860,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         purpose,
         items,
         new ph.kanta.reborn.ui.GroupScreen.Listener() {
-          @Override public void onBack() { navigateHome(); }
+          @Override public void onBack() { navigateBack(); }
           @Override public void onAction(String action) { handleGroupAction(action); }
         });
   }
@@ -1836,64 +1868,53 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void handleGroupAction(String action) {
     switch (action) {
       case "find-song":
-        tab = "Search";
         searchSource = "All";
-        render();
+        openPage("Search");
         break;
       case "my-songs":
       case "favorites":
       case "recent":
-        tab = "My Set";
-        render();
+        openPage("My Set");
         break;
       case "queue":
-        tab = "Queue";
-        render();
+        openPage("Queue");
         break;
       case "youtube":
         openYouTubeVideo();
         break;
       case "now-playing":
       case "lyrics":
-        tab = "Now Playing";
-        render();
+        openPage("Now Playing");
         break;
       case "voice":
-        tab = "Mic & Voice";
-        render();
+        openPage("Mic & Voice");
         break;
       case "key-tempo":
-        tab = "Pitch & Tempo";
-        render();
+        openPage("Pitch & Tempo");
         break;
       case "coach":
-        tab = "Mic & Voice";
         voiceExpanded = true;
-        render();
+        openPage("Mic & Voice");
         break;
       case "background":
       case "camera":
       case "effects":
-        tab = "Visuals";
-        render();
+        openPage("Visuals");
         break;
       case "bgv":
         openBackgroundVideoLibrary();
         break;
       case "scenic":
-        tab = "Scenic";
-        render();
+        openPage("Scenic");
         break;
       case "party":
-        tab = "Loop";
-        render();
+        openPage("Loop");
         break;
       case "display":
         fullscreen();
         break;
       case "settings":
-        tab = "Control";
-        render();
+        openPage("Control");
         break;
       case "companion":
         companionDialog = CompanionDialog.show(this, session);
@@ -1953,8 +1974,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void openBackgroundVideoLibrary() {
-    tab = "Scenic";
-    render();
+    openPage("Scenic");
   }
 
   private void openYouTubeVideo() {
@@ -2945,6 +2965,32 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     text.clear();
   }
 
+  private void startLegacyPair(Uri index, Uri blob) {
+    if (!BuildConfig.PRIVATE_LEGACY_IMPORT) {
+      requestLegacyKey(index, blob);
+      return;
+    }
+    ph.kanta.reborn.core.legacy.LegacyImportKey credentials;
+    try (java.io.InputStream asset = getAssets().open("legacy-import-key.bin")) {
+      credentials = ph.kanta.reborn.core.legacy.LegacyImportKey.fromPrivateAsset(asset);
+    } catch (IOException unavailable) {
+      Toast.makeText(this, "This private build cannot unlock legacy files. Rebuild it with the correct key file.",
+          Toast.LENGTH_LONG).show();
+      return;
+    }
+    submitLegacyPair(index, blob, credentials);
+  }
+
+  private void submitLegacyPair(Uri index, Uri blob,
+      ph.kanta.reborn.core.legacy.LegacyImportKey credentials) {
+    if (session.importLegacyPair(index, blob, credentials)) {
+      showImportProgress();
+      attachImportProgressListener();
+    } else {
+      Toast.makeText(this, "Import could not start. Please try again.", Toast.LENGTH_LONG).show();
+    }
+  }
+
   private void requestLegacyKey(Uri index, Uri blob) {
     if (legacyKeyDialog != null) legacyKeyDialog.dismiss();
     EditText keyInput = legacyKeyInput("Key: 64 hexadecimal digits", 64);
@@ -2985,12 +3031,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       clearLegacyKeyInput(keyInput);
       clearLegacyKeyInput(ivInput);
       dialog.dismiss();
-      if (session.importLegacyPair(index, blob, credentials)) {
-        showImportProgress();
-        attachImportProgressListener();
-      } else {
-        Toast.makeText(this, "Import could not start. Please try again.", Toast.LENGTH_LONG).show();
-      }
+      submitLegacyPair(index, blob, credentials);
     });
   }
 
@@ -3320,7 +3361,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       if (pendingLegacyIndex == null) { Toast.makeText(this, "Choose the index file first.", Toast.LENGTH_LONG).show(); return; }
       Uri index = pendingLegacyIndex;
       pendingLegacyIndex = null;
-      requestLegacyKey(index, data.getData());
+      startLegacyPair(index, data.getData());
       return;
     }
     if (request == MUSIC) {
@@ -3355,8 +3396,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       ArrayList<String> values = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
       if (values != null && !values.isEmpty()) {
         query = values.get(0);
-        tab = "Control";
-        render();
+        openPage("Control");
       }
     } else if (request == EXPORT) {
       Uri uri = data.getData();
@@ -3498,6 +3538,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
    * active — so the report is safe to copy and share.
    */
   private void showUpdatePanel() {
+    if (BuildConfig.PRIVATE_LEGACY_IMPORT) {
+      new AlertDialog.Builder(this).setTitle("Private build")
+          .setMessage("Install a newer private build to update this app.")
+          .setPositiveButton("OK", null).show();
+      return;
+    }
     if (updateManager == null) {
       File staging = new File(getFilesDir(), "update");
       updateManager =

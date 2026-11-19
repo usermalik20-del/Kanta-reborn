@@ -54,7 +54,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
 
   private void build() {
     addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
-        context, "Mic & Voice", "Back to Home", "kanta.screen.mic-voice.back",
+        context, "Mic & Voice", "Back", "kanta.screen.mic-voice.back",
         v -> { if (listener != null) listener.onBack(); }));
 
     android.widget.ScrollView scroll = new android.widget.ScrollView(context);
