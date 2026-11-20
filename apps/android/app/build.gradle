@@ -22,7 +22,6 @@ android {
     ndkVersion "27.2.12479018"
     externalNativeBuild { cmake { path file("src/main/cpp/CMakeLists.txt"); version "3.22.1" } }
     defaultConfig {
-        manifestPlaceholders.kantaAppLabel = '@string/app_name'
         buildConfigField 'boolean', 'PRIVATE_LEGACY_IMPORT', 'false'
         applicationId 'ph.kanta.reborn'
         minSdk 26
@@ -70,8 +69,7 @@ android {
                 versionNameSuffix '-private'
                 matchingFallbacks = ['debug']
                 buildConfigField 'boolean', 'PRIVATE_LEGACY_IMPORT', 'true'
-                resValue 'string', 'private_legacy_app_name', 'KANTA Private'
-                manifestPlaceholders.kantaAppLabel = '@string/private_legacy_app_name'
+                // app/src/privateLegacy/res overrides the launcher label for this variant.
             }
         }
         release {

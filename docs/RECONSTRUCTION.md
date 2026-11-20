@@ -1203,8 +1203,9 @@ The redesign is implemented as modular JS files loaded by all pages:
 ## Android runtime-only legacy import key — local candidate
 
 Public Android builds do not bundle key/IV material; the caller supplies it for one
-import. An opt-in private build loads a local build asset after pair selection and
-transfers ownership to the same controller and synchronous importer. This is
+import. An opt-in private build loads a local build asset after pair selection,
+overrides the launcher label from its own resource source set, and transfers
+ownership to the same controller and synchronous importer. This is
 provisioning, not key derivation from the files. The attached pair resolved 47,998
 records in a read-only JVM probe: 47,997 MIDI signatures and one unsupported
 signature. This does not prove title/audio identity, device import or playback.
