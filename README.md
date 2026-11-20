@@ -1,3 +1,11 @@
+## Android private-variant launcher label (2026-11-20)
+
+The opt-in **KANTA Private** Android build now gets its launcher label from the
+variant resource source set (`apps/android/app/src/privateLegacy/res`) instead of a
+manifest placeholder. Public builds keep the same `app_name` string, ID, and
+behavior; the change resolves an unused-resource lint finding in the private
+variant and keeps the manifest reference statically visible to lint.
+
 ## Mobile-first responsive enhancements (2026-11-16)
 
 - **Header**: Sticky with blur backdrop (rgba(8,11,20,0.92) + 16px blur)

@@ -1547,7 +1547,8 @@ Repository-level security controls are separate from this workflow boundary. On 
 Public builds ask for a 64-hex-digit AES-256 key and a 32-hex-digit IV after
 both files are selected in My Set. There is no public bundled default.
 The opt-in `privateLegacy` build sources a 48-byte asset from outside the checkout,
-uses a separate application ID, and disables the public updater. Gradle rejects
+uses a separate application ID, overrides the launcher label through its own
+`app/src/privateLegacy/res` source set, and disables the public updater. Gradle rejects
 private provisioning in CI; only that build type packages the asset. After the
 blob picker returns, the private build loads the asset into the same per-import
 credential object used by the manual flow. The private APK itself contains

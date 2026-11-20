@@ -814,8 +814,11 @@ files. On a local host with the pinned Android toolchain, run from `apps/android
 The directory must be outside the checkout and contain only `legacy-import-key.bin`
 (32 raw key bytes followed by 16 raw IV bytes). The APK is under
 `app/build/outputs/apk/privateLegacy/`. It installs alongside public KANTA with a
-separate library. **Do not share the APK or asset: the key can be extracted from
-both.** The private variant is not built in CI and does not use the public updater.
+separate library. The launcher label is the standard `app_name` string, overridden
+to “KANTA Private” by the variant resource source set
+(`app/src/privateLegacy/res`), so the manifest reference stays statically visible
+to lint. **Do not share the APK or asset: the key can be extracted from both.**
+The private variant is not built in CI and does not use the public updater.
 Android packaging, picker execution, library installation and playback still need validation.
 See [runtime ownership details](../../docs/ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
 

@@ -1437,7 +1437,9 @@ validation, defensive ownership, idempotent clearing, missing-file cleanup, corr
 and wrong supplied keys, and refusal to reuse cleared keys. Run
 `cd apps/android && ./gradlew --no-daemon :app:coreRegression` on Java 17.
 `python3 -m unittest tools.tests.test_runtime_import_key` checks public/manual and
-private/automatic routing, scoped asset wiring and credential cleanup. The synthetic
+private/automatic routing, scoped asset wiring and credential cleanup. The private
+launcher label resolves from the `app/src/privateLegacy/res` override instead of a
+manifest placeholder, keeping the manifest reference statically visible to lint. The synthetic
 JVM suite now checks the exact 48-byte private asset layout and rejects truncated or
 oversized input. Direct JDK 17 execution passed 55,756 core checks. A separate read-only
 probe mapped 47,998 attached records, including 47,997 MIDI signatures and one
