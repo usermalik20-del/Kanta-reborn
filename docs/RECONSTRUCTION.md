@@ -355,6 +355,10 @@ Added downloadFluidR3GM() method to SessionController:
 - Delegated from MainActivity via session.downloadFluidR3GM()
 
 This refactoring fixes 'cannot find symbol' errors by moving download logic to SessionController where io, repository, and main are accessible.
+The Android 12 download report showed a certificate trust failure before either
+OSUOSL file could be read. The candidate adds only the OSUOSL chain’s public root
+for that exact host, without changing download sources or weakening HTTPS.
+
 ## Android: Move FluidR3 GM Download to SessionController (2026-11-09)
   * **MuseScore General** (~216 MB) – richer orchestral tones, direct download
   * **SGM-v2.01 Yamaha Grand** (~528 MB) – studio-grade piano, bass, guitar

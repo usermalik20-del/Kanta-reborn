@@ -359,6 +359,12 @@ Both include license files (musescore-license.txt, sgm-license.txt) and are vali
 - Delegated from MainActivity via session.downloadFluidR3GM()
 
 This refactoring fixes 'cannot find symbol' errors by moving download logic to SessionController where io, repository, and main are accessible.
+## Android SoundFont download compatibility
+
+FluidR3 GM and MuseScore General use the same HTTPS mirror. On older Android
+versions the app can validate the mirror using its bundled public root; other
+sites still use only Android’s built-in trust. No device settings changes are needed.
+
 ## Android: Move FluidR3 GM Download to SessionController (2026-11-09)
 
 ### Additional SoundFont Downloads (2026-11-11)
