@@ -82,7 +82,7 @@ public class KantaPitchTempoScreen extends LinearLayout {
           }
         });
     addView(tempoCard);
-    tempoSlider = new SeekBar(context);
+    tempoSlider = ph.kanta.reborn.ui.KantaTheme.adjustmentSlider(context);
     tempoSlider.setTag("kanta.pitch.tempo.slider");
     tempoSlider.setMax(150);
     tempoSlider.setProgress(Math.round((tempo - 0.5f) * 100));

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pdf_songbooks_title">PDF Songbooks</string>
+    <string name="pdf_songbooks_add">Add a PDF</string>
+    <string name="pdf_songbooks_intro">Keep PDF songbooks on this device for reference. They won’t add playable songs to your library.</string>
+    <string name="pdf_songbooks_empty">No PDF songbooks yet.</string>
+    <string name="pdf_songbooks_loading">Loading saved PDFs…</string>
+    <string name="pdf_songbooks_importing">Saving a copy…</string>
+    <string name="pdf_songbooks_opening">Opening page…</string>
+    <string name="pdf_songbooks_picker_unavailable">The file picker couldn’t open on this device.</string>
+    <string name="pdf_songbooks_no_document">No PDF came back from the file picker. Try choosing it again.</string>
+    <string name="pdf_songbooks_import_failed">Couldn’t save this PDF. Check that the file is available and there’s space on your device.</string>
+    <string name="pdf_songbooks_import_interrupted">Saving was interrupted. If your PDF isn’t listed, try adding it again.</string>
+    <string name="pdf_songbooks_unreadable">This PDF couldn’t be opened. It may be damaged or password-protected.</string>
+    <string name="pdf_songbooks_too_large">Choose a PDF that’s 100 MB or smaller.</string>
+    <string name="pdf_songbooks_list_failed">Couldn’t load saved PDFs.</string>
+    <string name="pdf_songbooks_page_failed">Couldn’t show this page. Try again or go back to your saved PDFs.</string>
+    <string name="pdf_songbooks_page">Page %1$d of %2$d</string>
+    <string name="pdf_songbooks_previous">Previous page</string>
+    <string name="pdf_songbooks_next">Next page</string>
+    <string name="pdf_songbooks_zoom_out">Zoom out</string>
+    <string name="pdf_songbooks_zoom_in">Zoom in</string>
+    <string name="pdf_songbooks_zoom_fit">Fit</string>
+    <string name="pdf_songbooks_zoom_fit_page">Fit whole page</string>
+    <string name="pdf_songbooks_page_short" translatable="false">%1$d / %2$d</string>
+    <string name="pdf_songbooks_retry">Try again</string>
+    <string name="pdf_songbooks_back">Back</string>
+    <string name="pdf_songbooks_remove_name">Remove %1$s</string>
+    <string name="pdf_songbooks_remove_title">Remove saved PDF?</string>
+    <string name="pdf_songbooks_remove_detail">Remove %1$s from KANTA? Your original file stays unchanged.</string>
+    <string name="pdf_songbooks_removing">Removing saved copy…</string>
+    <string name="pdf_songbooks_removed">PDF removed from KANTA.</string>
+    <string name="pdf_songbooks_remove_failed">Couldn’t remove this PDF. Try again.</string>
+</resources>

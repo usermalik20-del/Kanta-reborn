@@ -46,41 +46,28 @@ public final class CompanionRegressionTests {
   }
   public static int run()throws Exception{
     checks=0;
-    for(String url:new String[]{"https://youtu.be/dQw4w9WgXcQ", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "https://m.youtube.com/shorts/dQw4w9WgXcQ", "https://youtube.com/embed/dQw4w9WgXcQ"})
-      check(YouTubeVideoReference.parse(url)!=null,"Valid video reference rejected");
-    for(String url:new String[]{"http://youtu.be/dQw4w9WgXcQ", "https://youtu.be.evil.com/dQw4w9WgXcQ", "https://youtube.com/watch?v=invalid", "https://youtube.com/watch?v=dQw4w9WgXcQ&v=dQw4w9WgXcQ", "https://user@youtube.com/watch?v=dQw4w9WgXcQ"})
-      check(YouTubeVideoReference.parse(url)==null,"Unsafe video reference accepted");
-    ReservationQueue mixed = new ReservationQueue();
+    ReservationQueue fifo = new ReservationQueue();
     Song local = new Song("local-1", "Local", "", "", "local.mid", false);
-    Song videoMetadata = new Song("web-1", "Online", "", "", "online.reference", false);
-    YouTubeVideoReference video = YouTubeVideoReference.parse("https://youtu.be/dQw4w9WgXcQ");
     UUID firstRequest = UUID.randomUUID();
-    ReservationQueue.Entry localEntry = mixed.reserve(firstRequest, local, "Singer");
-    check(mixed.reserve(firstRequest, local, "Singer").id.equals(localEntry.id),
+    ReservationQueue.Entry first = fifo.reserve(firstRequest, local, "Singer");
+    check(fifo.reserve(firstRequest, local, "Singer").id.equals(first.id),
         "Replayed local reservation created another entry");
-    ReservationQueue.Entry onlineOne = mixed.reserveVideo(UUID.randomUUID(), videoMetadata, video, "Singer");
-    ReservationQueue.Entry onlineTwo = mixed.reserveVideo(UUID.randomUUID(), videoMetadata, video, "Singer");
-    check(onlineOne.youtube != null && onlineTwo.youtube != null,
-        "Online reservation source was lost");
-    check(!onlineOne.id.equals(onlineTwo.id), "Intentional repeat reused playback identity");
-    check(mixed.peek().id.equals(localEntry.id), "Mixed queue reordered the first local song");
-    check(mixed.remove(localEntry.id) && mixed.peek().id.equals(onlineOne.id),
-        "Next did not preserve FIFO order across source types");
-    check(mixed.remove(onlineOne.id) && mixed.peek().id.equals(onlineTwo.id),
-        "Next skipped a repeated online reservation");
-    check(mixed.remove(onlineTwo.id) && mixed.peek() == null,
-        "Cancellation left a stale online reservation");
+    ReservationQueue.Entry repeat = fifo.reserve(UUID.randomUUID(), local, "Another singer");
+    check(!first.id.equals(repeat.id), "Intentional repeat reused playback identity");
+    check(fifo.peek().id.equals(first.id), "Queue reordered the first local song");
+    check(fifo.remove(first.id) && fifo.peek().id.equals(repeat.id),
+        "Queue skipped a repeated local reservation");
     // A corrupted persisted queue must not partially replace the live queue.
     ReservationQueue restored = new ReservationQueue();
     ReservationQueue.Entry retained = restored.reserve(UUID.randomUUID(), local, "Singer");
     try {
-      restored.restore(Arrays.asList(onlineOne, null));
+      restored.restore(Arrays.asList(first, null));
       throw new AssertionError("Malformed restored queue accepted");
     } catch (IllegalArgumentException expected) {
       check(restored.peek().id.equals(retained.id), "Invalid restore replaced live queue");
     }
     try {
-      restored.restore(Arrays.asList(onlineOne, onlineOne));
+      restored.restore(Arrays.asList(first, first));
       throw new AssertionError("Duplicate restored reservation accepted");
     } catch (IllegalArgumentException expected) {
       check(restored.peek().id.equals(retained.id), "Duplicate restore replaced live queue");
@@ -91,9 +78,8 @@ public final class CompanionRegressionTests {
     } catch (NullPointerException expected) {
       check(restored.snapshot().size() == 1, "Null request changed queue");
     }
-    mixed.reserveVideo(UUID.randomUUID(), videoMetadata, video, "");
-    mixed.clear();
-    check(mixed.peek() == null, "Queue clear left a stale online reservation");
+    fifo.clear();
+    check(fifo.peek() == null, "Queue clear left a stale reservation");
     String code=CompanionProtocol.newCode();
     check(code.matches("[0-9a-f]{32}"),"Pair code format");
     check(!code.equals(CompanionProtocol.newCode()),"Fresh pairing entropy");

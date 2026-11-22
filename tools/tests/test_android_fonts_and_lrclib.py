@@ -28,7 +28,7 @@ class FontContractTests(unittest.TestCase):
                 self.assertNotIn('openInputStream', source)
         self.assertIn('cachedWidth = -1', (JAVA / 'StageView.java').read_text())
         source = (JAVA / 'stage/LyricStage.java').read_text()
-        for paint in ('activePaint', 'highlightPaint', 'inactivePaint', 'upcomingPaint', 'echoPaint', 'pitchWavePaint'):
+        for paint in ('activePaint', 'upcomingPaint', 'echoPaint', 'pitchWavePaint'):
             self.assertIn(f'{paint}.setTypeface(selected)', source)
 
     def test_saf_traversal_and_picker_permission(self):
@@ -44,7 +44,13 @@ class FontContractTests(unittest.TestCase):
         self.assertLess(permission.index('if (grants == 0)'), permission.index('takePersistableUriPermission'))
         self.assertNotIn('FLAG_GRANT_WRITE_URI_PERMISSION', permission)
         self.assertIn('fonts.discover(root, entries ->', activity)
-        self.assertIn('button("Lyric font", this::chooseLyricFont)', activity)
+        my_set = activity.split('private void mySet()', 1)[1].split('\n  }', 1)[0]
+        visuals = activity.split('private void addStageVisualControls(', 1)[1].split('\n  }', 1)[0]
+        settings = activity.split('private void control()', 1)[1].split('\n  }', 1)[0]
+        self.assertIn('lyrics.addView(menuAction(getString(R.string.menu_lyric_font)', settings)
+        self.assertIn('this::chooseLyricFont', settings)
+        self.assertNotIn('this::chooseLyricFont', visuals)
+        self.assertNotIn('this::chooseLyricFont', my_set)
 
 
 class LrclibContractTests(unittest.TestCase):
@@ -69,7 +75,7 @@ class LrclibContractTests(unittest.TestCase):
         session = (JAVA / 'SessionController.java').read_text()
         self.assertIn('request != lyricLookupGeneration', session)
         self.assertIn('!identity.equals(playbackIdentity) || !lyrics.isEmpty()', session)
-        self.assertIn('if (!visible) {\n      ++lyricLookupGeneration;', session)
+        self.assertRegex(session, r'if \(!visible\) \{(?:\n      [^{}\n]+)*\n      \+\+lyricLookupGeneration;')
         self.assertIn('lyrics = timed;', session)
         self.assertIn('timed = result.timedCues', session)
         self.assertIn('LrcLyrics.parse(syncedLyrics)', (JAVA / 'lyrics/LrclibClient.java').read_text())

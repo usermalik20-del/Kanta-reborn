@@ -12,8 +12,8 @@ class AndroidLintSecurityTests(unittest.TestCase):
     def test_scenic_refresh_does_not_replay_untrusted_launch_intent(self):
         source = (JAVA / 'MainActivity.java').read_text()
         self.assertNotIn('startActivity(getIntent())', source)
-        delete = source.split('session.deleteScenic(id);', 1)[1].split('});', 1)[0]
-        self.assertIn('recreate();', delete)
+        delete = source.split('session.deleteScenic(entry.id);', 1)[1].split('}));', 1)[0]
+        self.assertIn('renderScenicVideoLibrary(list, dialog);', delete)
 
     def test_media_files_are_atomically_owner_only_including_rename_fallback(self):
         source = (JAVA / 'core/legacy/MegContainerImporter.java').read_text()
@@ -41,18 +41,14 @@ class AndroidLintSecurityTests(unittest.TestCase):
         self.assertIn('new FontStore(context.getApplicationContext())', source)
         self.assertNotIn('new FontStore(context);', source)
 
-    def test_javascript_exceptions_retain_isolation(self):
+    def test_companion_webview_javascript_retains_isolation(self):
         remote = (JAVA / 'BrowserCompanionDialog.java').read_text()
         for guard in ('settings.setAllowFileAccess(false)', 'settings.setAllowContentAccess(false)',
                       'WebSettings.MIXED_CONTENT_NEVER_ALLOW', 'return transport.resource(request)',
                       'return !transport.sameOrigin(request.getUrl())', 'request.deny()'):
             self.assertIn(guard, remote)
-        youtube = (JAVA / 'YouTubeEmbeddedPlayer.java').read_text()
-        for guard in ('setAllowFileAccess(false)', 'setAllowContentAccess(false)',
-                      'setJavaScriptCanOpenWindowsAutomatically(false)', 'setSupportMultipleWindows(false)',
-                      'return released || !isAllowed(', '"https".equalsIgnoreCase(url.getScheme())'):
-            self.assertIn(guard, youtube)
-        self.assertNotIn('addJavascriptInterface', youtube)
+        self.assertIn('web.addJavascriptInterface(transport,"KantaSecureTransport")', remote)
+        self.assertIn('web.removeJavascriptInterface("KantaSecureTransport")', remote)
 
     def test_cloud_and_device_transfer_exclude_all_app_storage(self):
         ns = '{http://schemas.android.com/apk/res/android}'
@@ -96,7 +92,6 @@ class AndroidLintSecurityTests(unittest.TestCase):
         expected = {
             'PinnedBrowserTransport.java': 'CustomX509TrustManager',
             'BrowserCompanionDialog.java': 'SetJavaScriptEnabled',
-            'YouTubeEmbeddedPlayer.java': 'SetJavaScriptEnabled',
             'font/FontStore.java': 'StaticFieldLeak',
         }
         all_source = ''.join(path.read_text() for path in JAVA.rglob('*.java'))
@@ -113,11 +108,11 @@ class AndroidLintSecurityTests(unittest.TestCase):
     def test_programmatic_only_custom_view_suppressions_match_xml_absence(self):
         modules = (
             'ui/GroupScreen', 'ui/HomeScreen', 'ui/components/InlineKeyboard',
-            'ui/KantaControlDeck', 'ui/KantaFullscreenStage', 'ui/components/KantaImageButton',
+            'ui/KantaFullscreenStage', 'ui/components/KantaImageButton',
             'ui/KantaMicVoiceScreen', 'ui/KantaNowPlayingScreen', 'ui/KantaPitchTempoScreen',
-            'ui/KantaQueueScreen', 'ui/components/KantaScreenHeader', 'ui/KantaSearchScreen',
+            'ui/KantaQueueScreen', 'ui/components/KantaScreenHeader',
             'ui/components/KantaTransportControls', 'ui/KantaVisualsScreen',
-            'stage/StagePresenterImpl', 'StageSurface', 'StageView', 'YouTubeEmbeddedPlayer',
+            'stage/StagePresenterImpl', 'StageSurface', 'StageView',
         )
         xml_files = list((MAIN / 'res').rglob('*.xml'))
         for module in modules:

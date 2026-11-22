@@ -50,7 +50,7 @@ runtime-step description below; no signing, merge or publication authority is ch
 Three source-contract regression guards failed before this repair and pass afterward:
 first-launch activation order, actual-texture frame evidence, and CI failure propagation.
 Local static/Python checks are not emulator acceptance; exact-head CI must prove the
-standby assertion and all nineteen UI captures before claiming runtime verification.
+standby assertion and every required UI capture before claiming runtime verification.
 
 ## CI: Fix Trusted Main Branch Check (2026-11-09)
 

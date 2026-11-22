@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="android_companion_title">Android Companion</string>
+    <string name="android_companion_help">Use the same private Wi-Fi or Ethernet network. Enter the host address and 32-character code in Android Companion. This feature does not use a QR code. Share the code only with someone you trust: it allows song search, reservations, cancellation and playback control. One companion can pair within five minutes and stay connected for ten minutes. Leaving either app ends the connection. An iPhone or iPad can also control an Android host using encrypted companion pairing; iPhone hosting uses a separate feature.</string>
+    <string name="browser_remote_title">Browser Remote</string>
+    <string name="browser_remote_summary">Host a local HTTPS remote or connect in KANTA</string>
+    <string name="browser_remote_warning">Standard browsers do not trust KANTA’s self-signed local HTTPS certificate by default. Do not bypass certificate warnings. In KANTA, scan the host’s pairing QR or enter its address and certificate fingerprint.</string>
+    <string name="browser_remote_host_title">Host on this device</string>
+    <string name="browser_remote_start_host">Start HTTPS hosting</string>
+    <string name="browser_remote_stop_host">Stop hosting / revoke all guests</string>
+    <string name="browser_remote_qr_title">Pairing QR</string>
+    <string name="browser_remote_qr_help">On the other device, open Browser Remote in KANTA and tap Scan pairing QR. Use the same private network. Only show this QR to someone you trust.</string>
+    <string name="browser_remote_qr_description">Private Browser Remote pairing QR</string>
+    <string name="browser_remote_connection_details">HTTPS address\n%1$s\n\nPairing code (private)\n%2$s\n\nCertificate fingerprint (SHA-256)\n%3$s</string>
+    <string name="browser_remote_client_title">Connect in KANTA</string>
+    <string name="browser_remote_client_help">Can’t scan? Enter the host’s IPv4 address and certificate fingerprint, then enter the private pairing code when prompted.</string>
+    <string name="browser_remote_open_local">Open in-app remote</string>
+    <string name="browser_remote_expiry">Pairing closes after five minutes or three wrong codes. Up to four guests can pair for three hours each. Keep KANTA open on the host; stopping hosting or leaving the app disconnects every guest.</string>
+    <string name="browser_remote_scan">Scan pairing QR</string>
+    <string name="browser_remote_scan_help">Point the camera at the pairing QR shown in Browser Remote on the host. KANTA checks the host’s identity before sending the pairing code.</string>
+    <string name="browser_remote_scan_unavailable">Camera unavailable. Go back and enter the host details to connect without scanning.</string>
+</resources>

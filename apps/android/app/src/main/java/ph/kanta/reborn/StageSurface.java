@@ -24,8 +24,11 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
   private final ph.kanta.reborn.stage.StagePresenceOverlay presence;
   private android.widget.TextView standbyPrompt;
   private final UpNextTicker upNextTicker;
+  private int topOverlayInset, bottomOverlayInset;
 
-  StageSurface(Context context, SessionController session) {
+  StageSurface(Context context, SessionController session) { this(context, session, null); }
+
+  StageSurface(Context context, SessionController session, UpNextTicker suppliedTicker) {
     super(context);
     this.session = session;
     video = new TextureView(context);
@@ -34,6 +37,7 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     video.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
     addView(video, new FrameLayout.LayoutParams(-1, -1));
     lyrics = new StageView(context, session);
+    lyrics.setTag("kanta.fullscreen.lyrics");
     addView(lyrics, new FrameLayout.LayoutParams(-1, -1));
     // Fullscreen karaoke standby: the same code prompt the main stage shows when no song
     // is up, plus a live frame counter that proves the background video is really playing.
@@ -52,12 +56,12 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     promptParams.bottomMargin = (int) (16 * getResources().getDisplayMetrics().density);
     addView(standbyPrompt, promptParams);
 
-    // Up next ticker for fullscreen stage
-    upNextTicker = new UpNextTicker(context);
+    // Fullscreen places the ticker below its transport, while the normal Stage keeps its inset.
+    upNextTicker = suppliedTicker == null ? new UpNextTicker(context) : suppliedTicker;
     FrameLayout.LayoutParams tickerParams = new FrameLayout.LayoutParams(
         FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
     tickerParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-    addView(upNextTicker, tickerParams);
+    if (suppliedTicker == null) addView(upNextTicker, tickerParams);
     upNextTicker.addOnLayoutChangeListener((v, l, t, right, bottom, oldL, oldT, oldR, oldB) -> updateTickerInsets());
 
     setMinimumHeight((int) (220 * getResources().getDisplayMetrics().density));
@@ -86,7 +90,7 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     }
     lyrics.setStandbyMode(standby);
     File wanted =
-        active && session.foreground && !session.cameraPreviewEnabled ? session.stageVideo : null;
+        active && session.foreground && !session.cameraPreviewEnabled ? session.stageVideo() : null;
     if (generation != session.visualGeneration
         || (attempted != null && !attempted.equals(wanted))
         || wanted == null) {
@@ -105,12 +109,30 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     updateTickerInsets();
   }
 
+  void setOverlayInsets(int top, int bottom) {
+    top = Math.max(0, top);
+    bottom = Math.max(0, bottom);
+    if (topOverlayInset == top && bottomOverlayInset == bottom) return;
+    topOverlayInset = top;
+    bottomOverlayInset = bottom;
+    if (upNextTicker.getParent() == this) setVerticalMargins(upNextTicker, 0, bottom);
+    setVerticalMargins(standbyPrompt, 0, bottom + (int) (16 * getResources().getDisplayMetrics().density));
+    updateTickerInsets();
+  }
+
   private void updateTickerInsets() {
-    int inset = upNextTicker.getVisibility() == VISIBLE ? upNextTicker.getMeasuredHeight() : 0;
-    FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) lyrics.getLayoutParams();
-    if (params.bottomMargin != inset) {
-      params.bottomMargin = inset;
-      lyrics.setLayoutParams(params);
+    int ticker = upNextTicker.getParent() == this && upNextTicker.getVisibility() == VISIBLE
+        ? upNextTicker.getMeasuredHeight() : 0;
+    lyrics.setContentInsets(topOverlayInset, bottomOverlayInset + ticker);
+    setVerticalMargins(presence, topOverlayInset, bottomOverlayInset + ticker);
+  }
+
+  private void setVerticalMargins(android.view.View view, int top, int bottom) {
+    FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
+    if (params.topMargin != top || params.bottomMargin != bottom) {
+      params.topMargin = top;
+      params.bottomMargin = bottom;
+      view.setLayoutParams(params);
     }
   }
 

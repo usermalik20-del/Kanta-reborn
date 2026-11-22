@@ -23,7 +23,7 @@ public final class RenderedPlaybackClock {
     this.sampleRate = sampleRate;
   }
 
-  public void append(long frame, double milliseconds, double tempo) {
+  public synchronized void append(long frame, double milliseconds, double tempo) {
     if (frame < 0
         || !Double.isFinite(milliseconds)
         || milliseconds < 0
@@ -35,14 +35,14 @@ public final class RenderedPlaybackClock {
   }
 
   /** Drops every span; used after a seek restarts the audible timeline. */
-  public void reset() {
+  public synchronized void reset() {
     spans.clear();
   }
 
-  public long position(long playedFrames) {
+  public synchronized long position(long playedFrames) {
     while (spans.size() > 1) {
       Span first = spans.removeFirst();
-      if (spans.getFirst().frame > playedFrames) {
+      if (spans.isEmpty() || spans.getFirst().frame > playedFrames) {
         spans.addFirst(first);
         break;
       }

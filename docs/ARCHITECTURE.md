@@ -1,3 +1,18 @@
+## Android v35 Stage controls and Menu (2026-11-23)
+
+The v35 Stage and Menu follow-up lands on main as a public port of the retained
+private candidate. `MainActivity` owns the inline `StageControlsPanel` and the
+Menu routing. The panel is a bounded translucent container beneath the Stage:
+embedded and fullscreen modes each build their own instance, all eight Party Pads
+are visible without a second dialog, and the remaining controls (microphone,
+monitor, scoring, queue, Browser Remote, stop party) get labeled icon rows.
+The Menu uses `MenuSurface` for a shared card/header/row treatment across
+top-level pages and submenus, with original Android vectors for each action.
+`Stage & Visual` owns Background photos and Background videos as separate
+spaces. `Party Pads` is a first-class Menu page with pad triggers, clip
+assignment, reset and volume; Intermission no longer owns the pads. Settings no
+longer duplicates Stage, Intermission, Party, Voice or Scoring controls.
+The landscape startup artwork replaces the letterboxed portrait variant.
 ## Daily CI health sweep (2026-11-18)
 
 `KANTA Daily CI` (`daily-ci.yml`; cron `17 3 * * *` = 03:17 UTC / 11:17 AM

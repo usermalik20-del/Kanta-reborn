@@ -57,9 +57,27 @@ class RuntimeImportKeyContractTests(unittest.TestCase):
         self.assertIn('credentials.close();\n      return false;', flow)
         self.assertIn('LegacyImportKey owned = credentials)', flow)
         self.assertIn('RejectedExecutionException', flow)
-        self.assertIn('"legacy-import"), owned, importCancelled::get)', flow)
+        self.assertIn('"legacy-import"), owned, importCancelled::get,', flow)
+        self.assertIn('importProgressDispatcher.onProgress(total, done,', flow)
+        self.assertIn('Adding songs to your library', flow)
+        self.assertIn('Reading legacy songs: ', source)
         for forbidden in ('SharedPreferences', 'Log.', 'println', 'getBytes(', 'toString('):
             self.assertNotIn(forbidden, flow)
+
+    def test_large_import_reports_progress_and_validates_file_roles(self):
+        importer = (JAVA / 'core/legacy/LegacyFileContainerImporter.java').read_text()
+        for requirement in ('BiConsumer<Integer, Integer>', 'progress.accept(i, titles.size())',
+                            'progress.accept(titles.size(), titles.size())'):
+            self.assertIn(requirement, importer)
+        controller = (JAVA / 'SessionController.java').read_text()
+        for requirement in ('copyLegacyUri(indexUri, index, 16L * 1024 * 1024, "IDX", "16 MiB", "first")',
+                            'copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024L, "BLOB", "1 GiB", "second")',
+                            'That looks like the BLOB file. Select the IDX file first.',
+                            'if ("IDX".equals(role) && in.read()'):
+            self.assertIn(requirement, controller)
+        activity = (JAVA / 'MainActivity.java').read_text()
+        self.assertIn('Legacy import — step 1 of 2', activity)
+        self.assertIn('launchLegacyIndexPicker()', activity)
 
     def test_synthetic_regressions_do_not_reflect_real_constants(self):
         source = (ROOT / 'apps/android/app/src/test/java/ph/kanta/reborn/core/legacy/'

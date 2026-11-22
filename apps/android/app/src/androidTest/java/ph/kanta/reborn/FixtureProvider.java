@@ -112,11 +112,9 @@ public final class FixtureProvider extends ContentProvider {
       } else if (document.equals("song") || document.equals("bank")) {
         Context app = getContext().createPackageContext("ph.kanta.reborn", 0);
         try (InputStream input =
-            app.getAssets()
-                .open(
-                    document.equals("song")
-                        ? "starter/morning-light.kar"
-                        : "starter/kanta-tone.sf2")) {
+            document.equals("song")
+                ? getContext().getAssets().open("song-fixtures/morning-light.kar")
+                : app.getAssets().open("starter/kanta-tone.sf2")) {
           byte[] bytes = new byte[4096];
           int count;
           while ((count = input.read(bytes)) != -1) stream.write(bytes, 0, count);

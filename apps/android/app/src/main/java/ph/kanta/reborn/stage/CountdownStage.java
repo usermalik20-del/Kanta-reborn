@@ -17,19 +17,21 @@ import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
 /**
- * Full-screen fun countdown: "Ready ⏱️" -> 1 -> 2 -> ... -> N -> "Kanta 🎤".
+ * Compact countdown: "Ready ⏱️" -> 1 -> 2 -> ... -> N -> "Kanta 🎤".
  *
- * <p>The count is source-free presentation only; playback still starts exactly when the owner
- * reports the last cue complete. Reduced-motion shows the same sequence without the pop/orbit.
+ * <p>Completion requests playback; the final cue stays visible until the owner dismisses it on
+ * start acknowledgement, failure, or cancellation.
  */
 public final class CountdownStage extends View {
 
-  private static final int RING_STROKE_DP = 10;
+  public static final int BADGE_SIZE_DP = 152;
+  private static final int RING_STROKE_DP = 3;
   private static final int STEP_DURATION_MS = 800;
   private static final int REDUCED_STEP_MS = 500;
   private static final int ORBIT_DOTS = 12;
 
   private final RectF ring = new RectF();
+  private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint ringTrackPaint;
   private final Paint ringProgressPaint;
   private final Paint textPaint;
@@ -44,10 +46,9 @@ public final class CountdownStage extends View {
   private CountdownListener listener;
   private boolean reducedMotion = false;
   private boolean running = false;
-  private boolean completed = false;
 
   private int maxSeconds = 4;
-  private int currentStep = 0; // 0 = Ready, 1..N = numbers, N+1 = Kanta
+  private int currentStep = 0; // counts down: maxSeconds..1, then 0 = "Go"
   private float stepProgress = 0f;
 
   private final Runnable reducedStep =
@@ -55,7 +56,7 @@ public final class CountdownStage extends View {
         @Override
         public void run() {
           if (!running) return;
-          currentStep++;
+          currentStep--; // count down
           stepProgress = 0f;
           scheduleStep();
         }
@@ -116,10 +117,9 @@ public final class CountdownStage extends View {
     this.listener = listener;
     this.maxSeconds =
         countdownSeconds <= 0 ? 4 : Math.min(9, Math.max(1, countdownSeconds));
-    this.currentStep = 0;
+    this.currentStep = this.maxSeconds; // start counting down from maxSeconds
     this.stepProgress = 0f;
     this.running = true;
-    this.completed = false;
     setVisibility(VISIBLE);
     invalidate();
     scheduleStep();
@@ -127,13 +127,13 @@ public final class CountdownStage extends View {
 
   private void scheduleStep() {
     if (!running) return;
-    if (currentStep > maxSeconds + 1) {
+    if (currentStep < 0) {
       finish();
       return;
     }
     if (currentStep >= 1 && currentStep <= maxSeconds && listener != null) {
-      // Contract keeps "remaining" semantics while the visible label counts up 1..N.
-      listener.onTick(maxSeconds - currentStep + 1);
+      // Contract keeps "remaining" semantics: countdown ticks report remaining seconds.
+      listener.onTick(currentStep);
     }
     if (reducedMotion) {
       invalidate();
@@ -159,7 +159,7 @@ public final class CountdownStage extends View {
           public void onAnimationEnd(Animator animation) {
             if (!running) return;
             currentAnimator = null;
-            currentStep++;
+            currentStep--; // count down
             stepProgress = 0f;
             scheduleStep();
           }
@@ -169,11 +169,12 @@ public final class CountdownStage extends View {
 
   private void finish() {
     running = false;
-    setVisibility(GONE);
-    if (!completed && listener != null) {
-      completed = true;
-      listener.onComplete();
-    }
+    currentStep = -1; // final "Go" step
+    stepProgress = 1f;
+    invalidate();
+    CountdownListener finished = listener;
+    listener = null;
+    if (finished != null) finished.onComplete();
   }
 
   @Override
@@ -181,7 +182,9 @@ public final class CountdownStage extends View {
     super.onSizeChanged(w, h, oldw, oldh);
     if (w <= 0 || h <= 0) return;
     float cx = w / 2f, cy = h / 2f;
-    float radius = Math.min(w, h) * 0.28f;
+    float density = getResources().getDisplayMetrics().density;
+    float radius = Math.min(46f * density, Math.min(w, h) * 0.30f);
+    badgePaint.setColor(0xF00A0614);
     ring.set(cx - radius, cy - radius, cx + radius, cy + radius);
     glowPaint.setShader(
         new LinearGradient(
@@ -211,49 +214,50 @@ public final class CountdownStage extends View {
     int h = getHeight();
     if (w <= 0 || h <= 0) return;
 
-    float density = getResources().getDisplayMetrics().density;
     float cx = w / 2f;
     float cy = h / 2f;
-    float radius = Math.min(w, h) * 0.28f;
+    float radius = ring.width() / 2f;
+    float scale = radius / 46f;
+    float total = maxSeconds + 1f;
+    // overall goes from 0 to 1 as we count down from maxSeconds to 0
+    float overall = 1f - Math.max(0f, Math.min(1f, (currentStep + 1f - stepProgress) / total));
+    float pop = reducedMotion ? 1f : 0.62f + 0.38f * stepProgress;
+    boolean finalStep = currentStep < 0;
 
-    canvas.drawColor(0xF00A0614);
-
-
-    float total = maxSeconds + 2f;
-    float overall = Math.min(1f, (currentStep + stepProgress) / total);
-    float pop = 0.62f + 0.38f * stepProgress;
-    boolean finalStep = currentStep > maxSeconds;
-
+    canvas.drawCircle(cx, cy, radius * 1.49f, badgePaint);
     canvas.drawCircle(cx, cy, radius * 1.12f, glowPaint);
 
     canvas.drawArc(ring, 0f, 360f, false, ringTrackPaint);
 
     canvas.drawArc(ring, -90f, overall * 360f, false, ringProgressPaint);
 
-    drawOrbitDots(canvas, cx, cy, radius, overall, density);
-    if (finalStep) drawConfetti(canvas, cx, cy, radius, stepProgress, density);
+    if (!reducedMotion) {
+      drawOrbitDots(canvas, cx, cy, radius, overall, scale);
+      if (finalStep && running) drawConfetti(canvas, cx, cy, radius, stepProgress, scale);
+    }
 
     String label;
     String sub;
     int color;
-    if (currentStep == 0) {
-      label = "Ready \u23F1\uFE0F";
-      sub = "GET SET";
-      color = 0xFFFFD24A;
-    } else if (currentStep <= maxSeconds) {
+    if (currentStep > 0) {
       label = String.valueOf(currentStep);
       sub = "GET READY";
       color = 0xFFFFFFFF;
+    } else if (currentStep == 0) {
+      label = "Go";
+      sub = "SING!";
+      color = 0xFF00F0FF;
     } else {
       label = "Kanta \uD83C\uDFA4";
-      sub = "SING!";
+      sub = "";
       color = 0xFF00F0FF;
     }
 
-    boolean glyphLabel = currentStep == 0 || finalStep;
+    boolean glyphLabel = currentStep <= 0;
     textPaint.setTypeface(glyphLabel ? labelTypeface : numberTypeface);
-    textPaint.setTextSize((glyphLabel ? 58f : 96f) * density);
+    textPaint.setTextSize((glyphLabel ? 20f : 37f) * scale);
     textPaint.setColor(color);
+    subTextPaint.setTextSize(9f * scale);
     subTextPaint.setColor(finalStep ? 0xFF00F0FF : 0xFFE9FFFF);
 
     Paint.FontMetrics metrics = textPaint.getFontMetrics();
@@ -263,9 +267,7 @@ public final class CountdownStage extends View {
     canvas.translate(cx, baseline);
     canvas.scale(pop, pop);
     canvas.drawText(label, 0f, 0f, textPaint);
-    if (currentStep == 0 || currentStep <= maxSeconds || finalStep) {
-      canvas.drawText(sub, 0f, 46f * density, subTextPaint);
-    }
+    canvas.drawText(sub, 0f, 19f * scale, subTextPaint);
     canvas.restore();
   }
 
@@ -300,13 +302,18 @@ public final class CountdownStage extends View {
   /** Cancels any running animation. */
   public void cancel() {
     running = false;
-    completed = false;
+    listener = null;
     removeCallbacks(reducedStep);
     if (currentAnimator != null) {
       currentAnimator.cancel();
       currentAnimator = null;
     }
     setVisibility(GONE);
+  }
+
+  /** Hides the final cue when the count finished but the owner has not dismissed it yet. */
+  public void dismissFinalCue() {
+    if (!running && getVisibility() == VISIBLE) setVisibility(GONE);
   }
 
   @Override

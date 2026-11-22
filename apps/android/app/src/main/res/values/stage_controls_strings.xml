@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stage_controls_expand">Show Stage Controls</string>
+    <string name="stage_controls_collapse">Hide Stage Controls</string>
+    <string name="stage_stop_party_audio">Stop party audio</string>
+</resources>

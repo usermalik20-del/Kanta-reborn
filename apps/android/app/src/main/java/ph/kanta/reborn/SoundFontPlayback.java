@@ -3,6 +3,7 @@ package ph.kanta.reborn;
 import android.media.*;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import java.io.File;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.MidiLyrics;
@@ -11,6 +12,7 @@ import ph.kanta.reborn.core.RenderedPlaybackClock;
 /** One worker owns synthesis, AudioTrack, MIDI scheduling and the audible clock. */
 final class SoundFontPlayback implements PlaybackBackend {
   private static final int RATE = 44100, FRAMES = 512;
+  private static final int BUFFER_BLOCKS = 8, MAX_WRITES_PER_PUMP = BUFFER_BLOCKS + 1;
   private final ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor();
   private final Handler main = new Handler(Looper.getMainLooper());
   private final Callback callback;
@@ -22,8 +24,9 @@ final class SoundFontPlayback implements PlaybackBackend {
   private int event, buffered = buffer.length;
   private double sourceTime;
   private float tempo = 1;
-  private boolean playing, completed, pumpQueued, seekRequested;
-  private long seekTarget, headBias;
+  private boolean playing, completed, pumpQueued, seekRequested, awaitingStart;
+  private long seekTarget, headBias, startHead, startDeadline, workerStart;
+  private volatile long startRequest;
   private volatile boolean disposed;
   private volatile long audiblePosition;
   private final ph.kanta.reborn.core.AudibleControlFence controlFence =
@@ -39,6 +42,8 @@ final class SoundFontPlayback implements PlaybackBackend {
           try {
             bank = NativeSoundFont.open(file.getAbsolutePath());
             if (bank == 0) throw new IllegalArgumentException("Unsupported SoundFont");
+            if (disposed) return; // release is already queued on the owner thread.
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO);
             int min =
                 AudioTrack.getMinBufferSize(
                     RATE, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_FLOAT);
@@ -56,7 +61,7 @@ final class SoundFontPlayback implements PlaybackBackend {
                             .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                             .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                             .build())
-                    .setBufferSizeInBytes(Math.max(min, FRAMES * 2 * 4 * 4))
+                    .setBufferSizeInBytes(Math.max(min, FRAMES * 2 * Float.BYTES * BUFFER_BLOCKS))
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build();
             if (output.getState() != AudioTrack.STATE_INITIALIZED)
@@ -84,15 +89,19 @@ final class SoundFontPlayback implements PlaybackBackend {
   }
 
   public void start() {
+    long request = ++startRequest;
     enqueue(
         () -> {
+          if (playing || request != startRequest) return;
+          workerStart = request;
           try {
-            playing = true;
+            startHead = audibleHead();
+            fillOutput();
+            if (disposed || request != startRequest) return;
             output.play();
-            main.post(
-                () -> {
-                  if (!disposed) callback.started(this);
-                });
+            playing = true;
+            awaitingStart = true;
+            startDeadline = SystemClock.uptimeMillis() + START_ACK_TIMEOUT_MS;
             schedule();
           } catch (Exception e) {
             fail();
@@ -101,9 +110,11 @@ final class SoundFontPlayback implements PlaybackBackend {
   }
 
   public void pause() {
+    ++startRequest;
     enqueue(
         () -> {
           playing = false;
+          awaitingStart = false;
           if (output != null) {
             output.pause();
             audiblePosition = clock.position(audibleHead());
@@ -170,11 +181,11 @@ final class SoundFontPlayback implements PlaybackBackend {
     sourceTime = target;
     framesRendered = 0;
     framesWritten = 0;
-    buffered = 0;
+    controlFence.rebased();
+    buffered = buffer.length; // The scratch block from silent seek replay is not song output.
     completed = false;
-    clock.reset();
-    clock.append(framesRendered, sourceTime, tempo);
-    audiblePosition = Math.min(document.durationMilliseconds, target);
+    clock.reset(); // The first new PCM block anchors frame zero at the seek target.
+    audiblePosition = target;
   }
 
   /** Silences every channel (all-notes-off plus sustain clear). */
@@ -249,11 +260,26 @@ final class SoundFontPlayback implements PlaybackBackend {
     try {
       if (seekRequested) {
         seekRequested = false;
+        output.pause(); // flush() does not discard a playing AudioTrack's PCM.
         applySeek(seekTarget);
+        fillOutput();
+        output.play();
       }
       long head = audibleHead();
       audiblePosition = clock.position(head);
-      controlFence.heard(Integer.toUnsignedLong(output.getPlaybackHeadPosition()));
+      controlFence.heard(head);
+      if (awaitingStart) {
+        if (head > startHead) {
+          awaitingStart = false;
+          long acknowledged = workerStart;
+          main.post(() -> {
+            if (!disposed && acknowledged == startRequest) callback.started(this);
+          });
+        } else if (SystemClock.uptimeMillis() >= startDeadline) {
+          fail();
+          return;
+        }
+      }
       if (sourceTime >= document.durationMilliseconds + 800 && buffered == buffer.length) {
         if (head >= framesWritten && !completed) {
           completed = true;
@@ -268,7 +294,19 @@ final class SoundFontPlayback implements PlaybackBackend {
         schedule();
         return;
       }
+      fillOutput();
+      schedule();
+    } catch (Exception e) {
+      fail();
+    }
+  }
+
+  private void fillOutput() {
+    // Refill multiple blocks when there is space. The old one-block-per-poll policy
+    // took several scheduling turns to rebuild headroom after a long worker wake-up.
+    for (int writes = 0; writes < MAX_WRITES_PER_PUMP && !disposed; writes++) {
       if (buffered == buffer.length) {
+        if (sourceTime >= document.durationMilliseconds + 800) return;
         clock.append(framesRendered, sourceTime, tempo);
         int offset = 0;
         while (offset < FRAMES) {
@@ -293,11 +331,9 @@ final class SoundFontPlayback implements PlaybackBackend {
       int written =
           output.write(buffer, buffered, buffer.length - buffered, AudioTrack.WRITE_NON_BLOCKING);
       if (written < 0) throw new IllegalStateException("Audio output stopped");
+      if (written == 0) return;
       buffered += written;
       framesWritten += written / 2;
-      schedule();
-    } catch (Exception e) {
-      fail();
     }
   }
 }

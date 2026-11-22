@@ -49,6 +49,7 @@ public final class RemoteStatusView extends FrameLayout {
     addView(container, params);
 
     iconView = new ImageView(context);
+    iconView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
     iconView.setLayoutParams(new LinearLayout.LayoutParams(
         (int)(20 * density), (int)(20 * density)));
     container.addView(iconView);
@@ -82,8 +83,9 @@ public final class RemoteStatusView extends FrameLayout {
   private void updateDisplay() {
     switch (currentState) {
       case DISCONNECTED:
-        iconView.setColorFilter(0xFF999999); // textTertiary
-        iconView.setImageResource(android.R.drawable.ic_menu_close_clear_cancel); // placeholder
+        iconView.setImageResource(ph.kanta.reborn.R.drawable.kanta_stage_offline_status);
+        iconView.setColorFilter(0xFF999999);
+        stopPulse();
         labelView.setText(ph.kanta.reborn.R.string.label_offline);
         labelView.setTextColor(0xFF999999);
         break;

@@ -20,13 +20,13 @@ Run from the repository root:
 
 import io
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(ROOT, "apps", "android", "app", "src", "main", "java", "ph", "kanta", "reborn")
 WORKSPACE = os.path.join(ANDROID, "KantaWorkspace.java")
 ACTIVITY = os.path.join(ANDROID, "MainActivity.java")
-CONTROL_DECK = os.path.join(ANDROID, "ui", "KantaControlDeck.java")
 RUNTIME_CHECKS = os.path.join(
     ROOT, "apps", "android", "app", "src", "androidTest", "java", "ph", "kanta", "reborn", "RuntimeChecks.java"
 )
@@ -56,7 +56,6 @@ STAGE_PRESENTER = os.path.join(ANDROID, "stage", "StagePresenterImpl.java")
 
 workspace = read(WORKSPACE)
 activity = read(ACTIVITY)
-control_deck = read(CONTROL_DECK)
 runtime = read(RUNTIME_CHECKS)
 stage_presenter = read(STAGE_PRESENTER)
 
@@ -96,7 +95,7 @@ check(
     and "workspace.addPersistentLayer(stagePresenter)" in activity,
     "Android MainActivity mounts the workspace and installs the stage as the persistent layer",
 )
-routing = activity.split("private void presentAccessory(String accessoryId, boolean returnToDeck)", 1)[1]
+routing = activity.split("private void presentAccessory(String accessoryId)", 1)[1]
 routing = routing.split("\n  }", 1)[0]
 check(
     "workspace.activateAccessory(" not in routing
@@ -104,10 +103,10 @@ check(
     "Android workspace actions open lower utility destinations without covering the stage",
 )
 check(
-    "stagePane.setVisibility(View.VISIBLE)" in activity
+    "stagePane.setVisibility(visible ? View.VISIBLE : View.GONE)" in activity
     and "main.setOrientation(landscape ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL)" in activity
     and "hideStage" not in activity,
-    "Android stage remains visible beside or above utility panels",
+    "Android stage visibility follows the active destination",
 )
 check(
     "nowPlayingStage" not in activity and 'new StageSurface(this, session)' not in
@@ -120,33 +119,34 @@ check(
     "Android runtime checks stage visibility and uninterrupted playback while navigating",
 )
 
-# --- Kanta-Connect pairing surface -------------------------------------------------
-# The pairing surface is now the persistent stage overlay (not an AlertDialog).
-# It must offer a scannable QR and the typed address/code, and the single-session
-# code must never be written into the shareable diagnostics report.
+# --- Local remote surfaces ---------------------------------------------------------
 
+native_companion = read(os.path.join(ANDROID, "CompanionDialog.java"))
+browser_remote = read(os.path.join(ANDROID, "BrowserCompanionDialog.java"))
 check(
-    "QrCodeView" in stage_presenter and "QrEncoder.encode(info.link)" in stage_presenter,
-    "Android pairing surface renders a QR of the Kanta-Connect link on stage",
+    "BrowserCompanionDialog" not in native_companion and "QrEncoder" not in native_companion
+    and '"kanta.companion.host"' in native_companion,
+    "Android Companion retains typed native pairing and its host automation tag",
 )
 check(
-    "KantaConnectInfo.of(" in activity and "chooseHost(localPrivateAddresses())" in activity,
-    "Android pairing surface picks a reachable local address for the link",
+    re.findall(r"QrEncoder\.encode\(([^)]+)\)", browser_remote) == ["payload"]
+    and "BrowserPairingQr.encode(hostAddress,c.fingerprint,c.code)" in browser_remote
+    and "boolean hasAddress=c.pairingOpen()&&!c.address.isEmpty();" in browser_remote
+    and "hostDetails.setVisibility(hasAddress ? View.VISIBLE : View.GONE)" in browser_remote
+    and "addressQr.setSymbol(null);" in browser_remote,
+    "Browser Remote shows its private pairing QR only while pairing is open",
 )
 check(
-    "info.endpoint()" in activity and "KantaConnectInfo.groupedCode" in stage_presenter,
-    "Android pairing surface shows the typed address and grouped pairing code",
+    '"kanta.browser.host"' in browser_remote
+    and "FLAG_SECURE" in native_companion and browser_remote.count("FLAG_SECURE") == 2,
+    "Native and browser dialogs retain secure windows and the browser host automation tag",
 )
 check(
-    "info.code" in activity and "KantaConnectQRInfo" in stage_presenter,
-    "Android pairing surface includes the pairing code in stage overlay",
-)
-check(
-    "KantaConnectInfo.chooseHost(hosts)" not in activity,
-    "Android pairing surface does not fabricate a host without enumerating interfaces",
+    all(marker not in activity for marker in ("startKantaConnectHost(", "showKantaConnectQR(", "kantaConnect()")),
+    "Android does not launch the separate Kanta-Connect smart link from its controls",
 )
 
-diagnostics_body = activity[activity.find("private void diagnostics()") :]
+diagnostics_body = activity[activity.find("private void diagnostics(boolean inMenu)") :]
 diagnostics_body = diagnostics_body[: diagnostics_body.find("\n  }")]
 check(
     "pairingCode(" not in diagnostics_body,
@@ -176,42 +176,142 @@ check(
     "Android accessory dismiss action owns its own identity",
 )
 check(
-    'button.setContentDescription(label)' in control_deck,
-    "Android control-deck buttons own their accessible identities",
-)
-check(
-    'button.setTag("kanta.control-deck." + action)' in control_deck,
-    "Android control-deck buttons carry stable test identities",
-)
-check(
-    'String[] labels = {"Search", "Queue", "Visuals", "Controls", "Pitch", "Coach"' in activity,
+    'String[] labels = {"Search", "Queue", "Stage Visuals", "Controls", "Pitch", "Coach", "Menu"}' in activity,
     'Android More menu integrates the six workspace actions',
+)
+check(
+    all(route in activity for route in (
+        '"Search".equals(label)) openStageSearch();',
+    ))
+    and 'openPage("Search")' not in activity
+    and 'presentAccessory(KantaWorkspace.ACCESSORY_SEARCH' not in activity
+    and 'openDeckAccessory(KantaWorkspace.ACCESSORY_SEARCH' not in activity
+    and 'kanta.utility.search-input' not in activity
+    and 'kanta.screen.search' not in activity,
+    'Android song-search shortcuts focus Stage instead of opening another page or accessory',
+)
+menu_group = activity.split('private void moreGroup()', 1)[1].split('\n  }', 1)[0]
+check(
+    re.findall(r'addMenuRow\(\w+, "([^"]+)"', menu_group) == [
+        'my-songs', 'import-pdf', 'stage-visual', 'intermission', 'party-pads', 'voice-scoring', 'settings',
+        'browser-remote', 'backup', 'legal', 'help',
+    ] and 'MenuSurface.header(' in menu_group and menu_group.count('MenuSurface.section(') == 3,
+    'Android Menu has single Stage & Visual and Voice & Scoring destinations plus Intermission and Party Pads',
+)
+stage_controls = activity.split('private StageControlsPanel makeStageControls(', 1)[1].split('private Button addStageControl(', 1)[0]
+check(
+    all(f'case "{entry}":\n        {launcher}();' in activity and f'{launcher}();' in stage_controls
+        for entry, launcher in (('browser-remote', 'openBrowserRemote'),))
+    and 'browserRemoteDialog = BrowserCompanionDialog.show(this, session)' in activity,
+    'Menu and Stage Controls launch the browser remote dialog directly',
+)
+settings = activity.split('private void control()', 1)[1].split('\n  }', 1)[0]
+check(
+    '"kanta.settings.intermission"' not in settings and 'menu_visuals_summary' not in settings
+    and 'case "stage-visual":' in activity and 'openPage(MENU_STAGE_VISUAL);' in activity
+    and 'case "intermission":' in activity and 'openPage(MENU_INTERMISSION);' in activity
+    and 'partyPadTrigger(slot, result.tagPrefix + ".pad.")' in stage_controls
+    and 'case "party-pads":\n        openPage(MENU_PARTY_PADS);' in activity
+    and 'MenuSurface.actionStyle(legacyFolder, true)' in activity
+    and 'Intent.ACTION_OPEN_DOCUMENT_TREE), LEGACY_FOLDER' in activity,
+    'Android keeps Stage & Visual and Intermission in Menu, Party Pads in Stage Controls, and the folder importer in Presets',
+)
+check(
+    '"kanta.companion.settings"' not in settings and 'this::openAndroidCompanion' not in settings
+    and 'this::openBrowserRemote' not in settings
+    and '() -> diagnostics(true)' in settings,
+    'Android Settings avoids duplicate remote links and retains diagnostics',
+)
+check(
+    'menu_voice_scoring' not in settings and 'case "voice-scoring":\n        openPage(MENU_VOICE_SCORING);' in activity
+    and 'case MENU_VOICE_SCORING:\n        micVoiceScreen();' in activity
+    and 'new ph.kanta.reborn.ui.KantaMicVoiceScreen(' in activity
+    and 'voiceControls()' not in activity and 'voiceExpanded' not in activity,
+    'Android Menu opens the shared Voice & Scoring destination without a copy in Settings',
+)
+check(
+    'addMicVoiceOptions();' in activity
+    and 'session.monitor.correction(!session.monitor.correctionEnabled())' in activity
+    and 'micCorrection.setEnabled(session.monitor.correctionAvailable())' in activity
+    and 'session.scoreLatency(bar.getProgress() * 10 - 500)' in activity
+    and 'SessionController.CompletedScore completed = session.lastScore;' in activity
+    and 'completed == null || !session.scoringEnabled' in activity
+    and all(tag not in settings for tag in ('kanta.pitchcorrection.toggle', 'kanta.score.timing', 'kanta.score.last')),
+    'Android shared Mic & Voice retains verified pitch correction, score timing and completed scores',
+)
+check(
+    'volume.setContentDescription("Music volume");' in settings and 'session.setVolume(value / 100f)' in settings
+    and not any(token in settings for token in ('session.controls(', 'session.pitch', 'session.tempo'))
+    and 'pitchTempoScreen' not in activity
+    and 'onTempoChanged(float value)' not in activity,
+    'Android Settings keeps music volume; key and tempo moved to Stage',
 )
 check(
     'body.addView(workspaceToolbar())' not in activity,
     'Android removes the redundant always-visible workspace toolbar',
 )
 check(
-    'mark.setOnClickListener(v -> toggleControlDeck())' in activity,
-    'Android KANTA logo toggles the special control deck',
+    'toggleControlDeck' not in activity and 'renderControlDeck' not in activity,
+    'Android removes the Control Deck and leaves the KANTA logo passive',
 )
+
 check(
-    'setTag("kanta.control-deck")' in control_deck and 'MASTER VOLUME' in control_deck,
-    'Android special control deck exposes its root and dominant master-volume dial',
+    all(re.search(r'youtube|youtu\.be', source, re.IGNORECASE) is None for source in (
+        activity, read(os.path.join(ANDROID, 'ui', 'HomeScreen.java')),
+        read(os.path.join(ROOT, 'apps', 'android', 'app', 'src', 'main',
+                          'assets', 'companion', 'index.html')),
+    )),
+    'Android Stage, menus, and bundled companion offer no YouTube entry point',
 )
 
 # --- Regression guard: the redesign must not delete shipped functionality ----
 
+visuals = read(os.path.join(ANDROID, "ui", "KantaVisualsScreen.java"))
+bundled_bgv = read(os.path.join(ANDROID, "BundledBgvCatalog.java"))
+main = os.path.join(ROOT, "apps", "android", "app", "src", "main")
+aliases = activity.split('private String resolvePageRoute(', 1)[1].split('private void showPage(', 1)[0]
+check(
+    all(token in aliases for token in ('"Scenic".equals(destination)', '"Realm".equals(destination)',
+                                      'KantaVisualsScreen.VIDEOS', 'return MENU_STAGE_VISUAL;'))
+    and 'tab = resolvePageRoute(tab);' in activity
+    and 'destination = resolvePageRoute(destination);' in activity
+    and 'private void navigateBack()' in activity,
+    'Android old Background Video and Realm routes resolve to Stage & Visual’s Background videos tab',
+)
+posters = re.findall(r'"(bgv_\w+)",\s*"[^"]+",\s*"(video_\w+\.mp4)",\s*\d+L,\s*R\.drawable\.(kanta_bgv_\w+)', bundled_bgv)
+check(
+    len(posters) == bundled_bgv.count('new Clip(') > 0
+    and len({poster for _, _, poster in posters}) == len(posters)
+    and all(os.path.isfile(os.path.join(main, 'assets', 'bgv', video))
+            and os.path.isfile(os.path.join(main, 'res', 'drawable-nodpi', poster + '.webp'))
+            for _, video, poster in posters)
+    and 'thumbnail(clip.title, clip.thumbnail, "kanta.realm.video." + clip.id' in visuals
+    and 'image.setImageResource(artwork);' in visuals
+    and 'session.selectScenicClip(id);' in activity,
+    'Android Realm tiles render distinct bundled clip thumbnails and select the same clip IDs',
+)
+check(
+    all(token in activity for token in ('this::showScenicVideoLibrary', 'chooseStageMedia(video)',
+                                       'session.chooseStageImport(entry.file, video)',
+                                       'startActivityForResult(picker, video ? VIDEO : PHOTO);'))
+    and '.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);' in activity.split(
+        'private void chooseStageMedia(boolean video)', 1)[1].split('private void ', 1)[0]
+    and 'Use still background' not in activity
+    and visuals.count('new Still("bayanDawn"') == 1
+    and 'addStillGrid(content, SCENIC_BACKGROUNDS, true);' in visuals
+    and 'if (drawableResource == 0) session.scene(id);' in activity,
+    'Android Stage Visuals retains video management and one canonical Bayan Dawn still',
+)
+
 for method in (
     "private void control()",
-    "private void search()",
+    "private void openStageSearch()",
     "private void queue()",
     "private void mySet()",
-    "private void scenic()",
+    "private void visualsScreen()",
     "private void loop()",
-    "private void realm()",
-    "private void openYouTubeVideo()",
-    "private void voiceControls()",
+    "private void showScenicVideoLibrary()",
+    "private void micVoiceScreen()",
     "private void voiceSearch()",
     "private void export(boolean encrypted)",
     "void toggleCamera()",
@@ -224,8 +324,8 @@ for method in (
     check(method in activity, "Android retains %s" % method)
 
 check(
-    'for (String name : new String[] {"Home", "Sing", "Performance", "Experience", "More"})' in activity,
-    "Android retains the five user-facing navigation destinations",
+    'for (String name : new String[] {"Home", "More"})' in activity,
+    "Android exposes Stage and Menu as the two top-level tabs",
 )
 check(
     "new OnBackPressedCallback(false)" in activity

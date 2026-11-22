@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_backup_title">Settings backup</string>
+    <string name="settings_backup_details">Save music volume and default key and tempo to a file. Choose Google Drive if it appears in the Android file picker, or save on this device. KANTA does not sign in or sync automatically. The file is not encrypted and does not contain songs, your library, or account details.</string>
+    <string name="settings_backup_save">Save backup</string>
+    <string name="settings_backup_restore">Restore backup</string>
+    <string name="settings_backup_confirm_title">Restore these settings?</string>
+    <string name="settings_backup_confirm_details">This replaces your music volume and default key and tempo. It does not change your songs, queue, or settings saved for individual songs.</string>
+    <string name="settings_backup_stop_song">Finish or stop the current song before using settings backup. Pausing is not enough.</string>
+    <string name="settings_backup_no_picker">The Android file picker is not available.</string>
+    <string name="settings_backup_saved">Settings backup saved to the selected location.</string>
+    <string name="settings_backup_save_failed">Could not save the settings backup. Try another location.</string>
+    <string name="settings_backup_read_failed">Could not open the settings backup. Check that the file is available and try again.</string>
+    <string name="settings_backup_invalid">This is not a supported KANTA settings backup. No settings were changed.</string>
+    <string name="settings_backup_restored">Music volume, default key and tempo restored.</string>
+</resources>

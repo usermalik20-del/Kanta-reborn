@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="keyboard_delete_short">DEL</string>
+    <string name="keyboard_delete">Delete one character</string>
+    <string name="keyboard_space">Space</string>
+</resources>

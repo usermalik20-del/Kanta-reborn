@@ -130,18 +130,51 @@ final class CompanionControl {
     throw new IOException("Session expired");
   }
   private byte[] execute(Run run,CompanionProtocol.Request request)throws Exception {
+    java.util.function.BooleanSupplier authorized=()->active==run&&run.valid()&&session.foreground;
     CompletableFuture<byte[]> completed=new CompletableFuture<>();
-    session.main.post(()->{
-      if(active!=run||!run.valid()||!session.foreground||completed.isCancelled()){
-        completed.completeExceptionally(new IOException("Revoked"));return;
-      }
-      try{completed.complete(apply(request).toString().getBytes(StandardCharsets.UTF_8));}
-      catch(Exception e){completed.completeExceptionally(e);}
-    });
-    try{return completed.get(3,TimeUnit.SECONDS);}
-    catch(Exception e){completed.cancel(false);run.revoke();throw e;}
+    try {
+      Search search=prepareSearch(request,authorized);
+      session.main.post(()->{
+        if(!authorized.getAsBoolean()||completed.isCancelled()){
+          completed.completeExceptionally(new IOException("Revoked"));return;
+        }
+        try{
+          byte[] reply=apply(request,search).toString().getBytes(StandardCharsets.UTF_8);
+          completed.complete(reply);
+        }catch(Exception e){completed.completeExceptionally(e);}
+      });
+      return completed.get(3,TimeUnit.SECONDS);
+    }catch(Exception e){completed.cancel(false);run.revoke();throw e;}
   }
+  static final class Search {
+    final List<Song> matches;
+    Search(List<Song> matches){this.matches=matches;}
+  }
+  /**
+   * Applies a request that already runs on the main thread, where the catalog snapshot and
+   * matching are cheap enough to evaluate inline.
+   */
   JSONObject apply(CompanionProtocol.Request request)throws Exception {
+    List<Song> matches=request.action.equals("search")
+        ? CompanionSongSearch.find(session.songs,request.argument) : null;
+    return apply(request,matches==null?null:new Search(matches));
+  }
+  Search prepareSearch(CompanionProtocol.Request request,java.util.function.BooleanSupplier authorized)throws Exception {
+    if(!request.action.equals("search"))return null;
+    if(request.argument.trim().isEmpty())throw new IOException("Empty companion search");
+    CompletableFuture<List<Song>> catalog=new CompletableFuture<>();
+    session.main.post(()->{
+      if(!authorized.getAsBoolean()||!session.ready||catalog.isCancelled())
+        catalog.completeExceptionally(new IOException("Host unavailable"));
+      else catalog.complete(session.songs);
+    });
+    List<Song> snapshot;
+    try{snapshot=catalog.get(3,TimeUnit.SECONDS);}
+    catch(Exception e){catalog.cancel(false);throw e;}
+    // LibraryRepository publishes immutable snapshots. Scan off the playback/UI thread.
+    return new Search(CompanionSongSearch.find(snapshot,request.argument));
+  }
+  JSONObject apply(CompanionProtocol.Request request,Search search)throws Exception {
     if(!session.foreground||!session.ready)throw new IOException("Host unavailable");
     switch(request.action){
       case "reserve": {
@@ -155,6 +188,12 @@ final class CompanionControl {
       case "next": session.next();break;
       case "search":
         if(request.argument.trim().isEmpty())throw new IOException("Empty companion search");
+        // Project the search query to the host Stage so the user sees what the remote typed.
+        session.main.post(() -> {
+          if (session.companionSearchListener != null) {
+            session.companionSearchListener.onCompanionSearchQuery(request.argument);
+          }
+        });
         break;
       case "snapshot":break;
       default:throw new IOException("Unsupported companion command");
@@ -163,14 +202,9 @@ final class CompanionControl {
     reply.put("playing",session.playing);reply.put("current",shortText(session.current==null?"No song playing":session.current.title,128));
     JSONArray songs=new JSONArray();
     if(request.action.equals("search")){
-      int examined=0;
-      String[] terms=Song.searchTerms(request.argument);
-      for(Song song:session.songs){
-        if(++examined>10000||songs.length()>=10)break;
-        if(song.matchesTerms(terms)){
-          JSONObject value=new JSONObject();value.put("id",song.id);value.put("title",shortText(song.title,128));
-          value.put("artist",shortText(song.artist,80));value.put("code",shortText(song.code,32));songs.put(value);
-        }
+      for(Song song:search.matches){
+        JSONObject value=new JSONObject();value.put("id",song.id);value.put("title",shortText(song.title,128));
+        value.put("artist",shortText(song.artist,80));value.put("code",shortText(song.code,32));songs.put(value);
       }
     }
     reply.put("songs",songs);

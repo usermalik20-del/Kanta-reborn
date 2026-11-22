@@ -16,8 +16,8 @@ import ph.kanta.reborn.R;
 public final class KantaMicVoiceScreen extends LinearLayout {
   public interface Listener {
     void onBack();
-    void onMicToggle(boolean enabled);
-    void onMonitorToggle(boolean enabled);
+    void onMicToggle();
+    void onMonitorToggle();
     void onMonitorGainChanged(float value);
     void onMonitorModeSelected(String mode);
     void onScoringToggle(boolean enabled);
@@ -26,6 +26,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
   private final Context context;
   private final float density;
   private final Listener listener;
+  private final boolean menuSurface;
   private TextView micStatus, monitorStatus, levelLabel, gainValue, scoreStatus;
   private Button micToggle, monitorToggle, scoringToggle;
   private SeekBar gainSlider;
@@ -39,23 +40,33 @@ public final class KantaMicVoiceScreen extends LinearLayout {
   private final Button[] modeButtons = new Button[MODES.length];
   private float inputLevel;
   private int lastActiveBars = -1;
-  private String lastInputMessage;
   private String selectedMode;
 
   public KantaMicVoiceScreen(Context context, Listener listener) {
+    this(context, listener, false);
+  }
+
+  public KantaMicVoiceScreen(Context context, Listener listener, boolean menuSurface) {
     super(context);
     this.context = context;
     this.density = context.getResources().getDisplayMetrics().density;
     this.listener = listener;
+    this.menuSurface = menuSurface;
     setOrientation(VERTICAL);
-    setBackgroundColor(KantaTheme.BG_MAIN);
-    build();
+    if (!menuSurface) setBackgroundColor(KantaTheme.BG_MAIN);
+    build(menuSurface);
   }
 
-  private void build() {
-    addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
-        context, "Mic & Voice", "Back", "kanta.screen.mic-voice.back",
-        v -> { if (listener != null) listener.onBack(); }));
+  private void build(boolean menuSurface) {
+    Runnable onBack = () -> { if (listener != null) listener.onBack(); };
+    String title = context.getString(R.string.menu_voice_scoring);
+    if (menuSurface) {
+      addView(MenuSurface.header(context, title, context.getString(R.string.menu_back),
+          "kanta.screen.mic-voice.back", onBack));
+    } else {
+      addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
+          context, title, context.getString(R.string.menu_back), "kanta.screen.mic-voice.back", v -> onBack.run()));
+    }
 
     android.widget.ScrollView scroll = new android.widget.ScrollView(context);
     scroll.setFillViewport(false);
@@ -68,14 +79,11 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     LinearLayout micCard = card();
     LinearLayout micHeader = new LinearLayout(context);
     micHeader.setGravity(Gravity.CENTER_VERTICAL);
-    TextView micTitle = KantaTheme.titleText(context, "Mic Input", 16);
+    TextView micTitle = sectionTitle("Mic Input", R.drawable.kanta_submenu_mic);
     micHeader.addView(micTitle, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     micToggle = actionButton("Turn on");
     micToggle.setTag("kanta.mic.toggle");
-    micToggle.setOnClickListener(v -> {
-      if (listener != null) listener.onMicToggle(micStatus != null
-          && micStatus.getText().toString().startsWith("Microphone off"));
-    });
+    micToggle.setOnClickListener(v -> { if (listener != null) listener.onMicToggle(); });
     micHeader.addView(micToggle);
     micCard.addView(micHeader);
     micStatus = bodyText("Microphone off");
@@ -96,21 +104,23 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     }
     meter.setTag("kanta.mic.level-meter");
     micCard.addView(meter);
+    TextView inputNote = bodyText("Android chooses the microphone. Speak and check the input "
+        + "meter. If it does not move, check microphone access in Android Settings.");
+    inputNote.setTextSize(12);
+    micCard.addView(inputNote);
     addViewCard(content, micCard);
 
     LinearLayout monitorCard = card();
-    TextView monitorTitle = KantaTheme.titleText(context, "Hear My Voice", 16);
+    TextView monitorTitle = sectionTitle("Hear My Voice", R.drawable.kanta_submenu_waveform);
     monitorCard.addView(monitorTitle);
-    monitorStatus = bodyText("Monitoring off · connect wired, USB or Bluetooth headphones");
+    monitorStatus = bodyText("Voice playback is off");
+    monitorStatus.setTag("kanta.monitor.status");
     monitorStatus.setPadding(0, dp(6), 0, dp(8));
     monitorCard.addView(monitorStatus);
     monitorToggle = actionButton("Choose output");
+    if (menuSurface) MenuSurface.setLeadingIcon(monitorToggle, R.drawable.kanta_submenu_headphones);
     monitorToggle.setTag("kanta.monitor.toggle");
-    monitorToggle.setOnClickListener(v -> {
-      boolean enabled = monitorStatus != null
-          && monitorStatus.getText().toString().startsWith("Monitoring off");
-      if (listener != null) listener.onMonitorToggle(enabled);
-    });
+    monitorToggle.setOnClickListener(v -> { if (listener != null) listener.onMonitorToggle(); });
     monitorCard.addView(monitorToggle);
     TextView gainTitle = bodyText("Voice output level");
     monitorCard.addView(gainTitle);
@@ -119,7 +129,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     gainValue = bodyText("10%");
     gainHeader.addView(gainValue);
     monitorCard.addView(gainHeader);
-    gainSlider = new SeekBar(context);
+    gainSlider = ph.kanta.reborn.ui.KantaTheme.adjustmentSlider(context);
     gainSlider.setTag("kanta.monitor.gain");
     gainSlider.setMax(35);
     gainSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -156,26 +166,32 @@ public final class KantaMicVoiceScreen extends LinearLayout {
         selectMode(name);
       });
       modeButtons[i] = chip;
-      LinearLayout.LayoutParams p = new LayoutParams(0, dp(44), 1);
+      LinearLayout.LayoutParams p = new LayoutParams(0, menuSurface ? LayoutParams.WRAP_CONTENT : dp(44), 1);
       p.leftMargin = dp(3);
       p.rightMargin = dp(3);
       modes.addView(chip, p);
     }
     TextView monitorNote = bodyText(
-        "Turn this on when you want to hear your voice through headphones. "
-            + "Advanced output choices are available in More settings.");
+        "Connect wired headphones, USB headphones, or headphones plugged into an audio "
+            + "interface. Wear them and start at a low volume. Do not connect speakers to the "
+            + "interface or line output. If you do not hear yourself, speak while checking the "
+            + "input meter, then check both volume controls and choose the output again. "
+            + "Bluetooth headsets may work between songs on Android 12 or later, with "
+            + "call-like sound and a delay. Use wired or USB headphones to hear yourself "
+            + "during songs. Phone and Bluetooth speakers are not supported.");
     monitorNote.setTextSize(12);
     monitorCard.addView(monitorNote);
     addViewCard(content, monitorCard);
 
     LinearLayout coachCard = card();
-    TextView coachTitle = KantaTheme.titleText(context, "Vocal Coach", 16);
+    TextView coachTitle = sectionTitle("Vocal Coach", R.drawable.kanta_submenu_score);
     coachCard.addView(coachTitle);
     scoreStatus = bodyText("Song scoring is off");
     scoreStatus.setTag("kanta.score.status");
     scoreStatus.setPadding(0, dp(8), 0, dp(8));
     coachCard.addView(scoreStatus);
     scoringToggle = actionButton("Enable song scoring");
+    if (menuSurface) MenuSurface.setLeadingIcon(scoringToggle, R.drawable.kanta_submenu_score);
     scoringToggle.setTag("kanta.score.toggle");
     scoringToggle.setOnClickListener(v -> {
       boolean enabled = scoringToggle.getText().toString().startsWith("Enable");
@@ -204,6 +220,11 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     return engineName;
   }
 
+  private TextView sectionTitle(String title, int icon) {
+    return menuSurface ? MenuSurface.heading(context, title, 16, icon)
+        : KantaTheme.titleText(context, title, 16);
+  }
+
   private LinearLayout card() {
     LinearLayout card = new LinearLayout(context);
     card.setOrientation(VERTICAL);
@@ -227,6 +248,7 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     button.setTextColor(KantaTheme.TEXT_PRIMARY);
     button.setBackgroundResource(R.drawable.kanta_button_secondary);
     button.setMinHeight(dp(44));
+    if (menuSurface) MenuSurface.actionStyle(button, false);
     return button;
   }
 
@@ -241,24 +263,21 @@ public final class KantaMicVoiceScreen extends LinearLayout {
 
   private int dp(int value) { return (int) (value * density); }
 
-  public void setState(
-      boolean micEnabled, boolean micCapturing, boolean monitorEnabled, boolean monitorAudible,
-      float gain, String mode, boolean scoringEnabled, String scoringMessage) {
-    if (micStatus != null) {
-      micStatus.setText(!micEnabled ? "Microphone off"
-          : micCapturing ? "Microphone input active" : "Starting microphone…");
-      micToggle.setText(micEnabled ? "Turn off" : micCapturing ? "Starting…" : "Turn on");
-      micToggle.setEnabled(!micEnabled || micCapturing);
-    }
-    setMonitorState(monitorEnabled, monitorAudible, gain, mode);
-    setScoreState(scoringEnabled, scoringMessage);
+  public void setMicrophoneState(boolean enabled, boolean capturing, boolean permissionPending,
+      String notice) {
+    String status = permissionPending ? "Waiting for microphone permission…"
+        : capturing ? "Microphone input active" : enabled ? "Starting microphone…"
+        : notice != null ? notice : "Microphone off";
+    if (!String.valueOf(micStatus.getText()).equals(status)) micStatus.setText(status);
+    String toggle = enabled ? "Turn off" : "Turn on";
+    if (!String.valueOf(micToggle.getText()).equals(toggle)) micToggle.setText(toggle);
+    micToggle.setEnabled(!permissionPending);
   }
 
   public void setInputLevel(float rms, String message) {
     inputLevel = Float.isFinite(rms) ? Math.max(0f, Math.min(1f, rms * 8f)) : 0f;
     if (levelLabel != null && !String.valueOf(levelLabel.getText()).equals(message)) {
       levelLabel.setText(message);
-      lastInputMessage = message;
     }
     if (getChildCount() < 2) return;
     android.view.ViewGroup scrollContent = (android.view.ViewGroup) ((android.widget.ScrollView) getChildAt(1)).getChildAt(0);
@@ -276,17 +295,23 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     }
   }
 
-  public void setMonitorState(boolean enabled, boolean audible, float gain, String mode) {
-    if (monitorStatus == null) return;
-    String status = !enabled ? "Monitoring off · connect a supported headset"
-        : audible ? "Monitoring active · route verified" : "Monitoring muted · verifying output";
+  public void setMonitorState(boolean starting, boolean enabled, boolean ready, boolean audible,
+      float gain, float maxGain, String mode, String notice) {
+    String status = starting ? "Starting the microphone for voice playback…"
+        : audible ? "Voice playback is on"
+        : enabled && !ready ? "Checking your headphones. Voice playback is muted."
+        : enabled && gain == 0 ? "Voice volume is at 0%. Turn it up slowly."
+        : enabled ? "Headphones connected. Waiting for microphone sound…"
+        : notice != null ? notice : "Voice playback is off";
     if (!String.valueOf(monitorStatus.getText()).equals(status)) monitorStatus.setText(status);
-    String toggle = enabled ? "Turn off monitoring" : "Choose output";
+    String toggle = starting ? "Cancel setup" : enabled ? "Turn off voice playback" : "Choose output";
     if (!String.valueOf(monitorToggle.getText()).equals(toggle)) monitorToggle.setText(toggle);
-    boolean canToggle = enabled || micStatus.getText().toString().equals("Microphone input active");
-    if (monitorToggle.isEnabled() != canToggle) monitorToggle.setEnabled(canToggle);
-    int progress = Math.round(Math.max(0f, Math.min(.35f, gain)) * 100);
-    if (gainSlider != null && !gainSlider.isPressed() && gainSlider.getProgress() != progress) gainSlider.setProgress(progress);
+    int progress = Math.round(Math.max(0f, Math.min(maxGain, gain)) * 100);
+    if (gainSlider != null) {
+      int ceiling = Math.round(maxGain * 100);
+      if (gainSlider.getMax() != ceiling) gainSlider.setMax(ceiling);
+      if (!gainSlider.isPressed() && gainSlider.getProgress() != progress) gainSlider.setProgress(progress);
+    }
     String gainText = progress + "%";
     if (gainValue != null && !String.valueOf(gainValue.getText()).equals(gainText)) gainValue.setText(gainText);
     selectMode(mode);
@@ -299,6 +324,10 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     for (int i = 0; i < modeButtons.length; i++) {
       if (modeButtons[i] == null) continue;
       boolean active = MODES[i].name().equals(selected);
+      if (menuSurface) {
+        modeButtons[i].setSelected(active);
+        continue;
+      }
       modeButtons[i].setTextColor(active ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_SECONDARY);
       modeButtons[i].setBackground(KantaTheme.backgroundDrawable(
           active ? KantaTheme.SURFACE_ELEVATED : KantaTheme.SURFACE, 10,

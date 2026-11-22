@@ -173,9 +173,12 @@ final class MicrophoneInput {
       input.startRecording();
       if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
         throw new IllegalStateException();
-      // SPICE is an optional DSP adapter. If the model cannot be loaded the pitch features
-      // keep using the frame detector, so this must never stop the capture.
-      run.spice = SpicePitchEstimator.create(context);
+      // Optional native DSP may be missing on a device. Keep dry capture and frame analysis.
+      try {
+        run.spice = SpicePitchEstimator.create(context);
+      } catch (LinkageError unavailable) {
+        run.spice = null;
+      }
       long lastData = SystemClock.elapsedRealtime(), lastAnalysis = 0, lastConfig = 0;
       int filled = 0;
       while (current(run)) {
@@ -244,7 +247,13 @@ final class MicrophoneInput {
             double energy = 0;
             for (float value : run.analysisFrame) energy += value * value;
             SpicePitchEstimator estimator = run.spice;
-            if (estimator != null) estimator.poll();
+            if (estimator != null) {
+              try {
+                estimator.poll();
+              } catch (RuntimeException | LinkageError unavailable) {
+                run.spice = null;
+              }
+            }
             DryPitchDetector.Pitch pitch = detector.detect(run.analysisFrame, RATE);
             SpectrumAnalyzer.Spectrum spectrum = spectrumAnalyzer.analyze(run.analysisFrame);
             Reading value =

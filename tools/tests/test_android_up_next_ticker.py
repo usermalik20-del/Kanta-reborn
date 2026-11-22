@@ -34,7 +34,10 @@ class UpNextTickerTests(unittest.TestCase):
                 self.assertIn('upNextTicker.updateFromSnapshot(' + snapshot + ')', source)
                 self.assertIn('tickerParams.gravity = ', source)
                 self.assertIn('Gravity.BOTTOM', source)
-                self.assertIn('params.bottomMargin = inset', source)
+                if filename == 'StageSurface.java':
+                    self.assertIn('lyrics.setContentInsets(topOverlayInset, bottomOverlayInset + ticker)', source)
+                else:
+                    self.assertIn('params.bottomMargin = inset', source)
                 self.assertIn('upNextTicker.setVisualActive(', source)
                 self.assertNotIn('queueSnapshot.subList(1', source)
                 self.assertNotIn('first.song.equals(session.current', source)

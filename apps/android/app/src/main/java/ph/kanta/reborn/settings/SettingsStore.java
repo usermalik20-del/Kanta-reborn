@@ -2,6 +2,7 @@ package ph.kanta.reborn.settings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import ph.kanta.reborn.core.PlaybackSettingsBackup;
 
 /**
  * Grouped settings store for KANTA Karaoke.
@@ -58,13 +59,22 @@ public final class SettingsStore {
   public static final String KEY_BGV_LOOP = "bgv.loop";
   public static final String KEY_BGV_SCRIM_OPACITY = "bgv.scrimOpacity";
   public static final String KEY_BGV_AUTO_SHUFFLE = "bgv.autoShuffle";
-  public static final String KEY_BGV_SHUFFLE_INTERVAL = "bgv.shuffleInterval";
+  public static final String KEY_BGP_AUTO_SHUFFLE = "bgp.autoShuffle";
   public static final String KEY_BGV_DEFAULT_SELECTED = "bgv.defaultSelected";
 
   private final SharedPreferences prefs;
 
   public SettingsStore(Context context) {
     this.prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+  }
+
+  /** Replaces only the portable playback defaults in a single preference edit. */
+  public void restorePlaybackDefaults(PlaybackSettingsBackup backup) {
+    prefs.edit()
+        .putFloat(KEY_MASTER_VOLUME, backup.volume)
+        .putFloat(KEY_TEMPO, backup.tempo)
+        .putInt(KEY_PITCH, backup.pitch)
+        .apply();
   }
 
   // Audio
@@ -194,11 +204,11 @@ public final class SettingsStore {
 
   public float getBgvScrimOpacity() { return prefs.getFloat(KEY_BGV_SCRIM_OPACITY, 0.8f); }
 
-  public boolean getBgvAutoShuffle() { return prefs.getBoolean(KEY_BGV_AUTO_SHUFFLE, true); }
+  public boolean getBgvAutoShuffle() { return prefs.getBoolean(KEY_BGV_AUTO_SHUFFLE, false); }
   public void setBgvAutoShuffle(boolean v) { prefs.edit().putBoolean(KEY_BGV_AUTO_SHUFFLE, v).apply(); }
 
-  public int getBgvShuffleInterval() { return prefs.getInt(KEY_BGV_SHUFFLE_INTERVAL, 300); }
-  public void setBgvShuffleInterval(int v) { prefs.edit().putInt(KEY_BGV_SHUFFLE_INTERVAL, v).apply(); }
+  public boolean getBgpAutoShuffle() { return prefs.getBoolean(KEY_BGP_AUTO_SHUFFLE, false); }
+  public void setBgpAutoShuffle(boolean v) { prefs.edit().putBoolean(KEY_BGP_AUTO_SHUFFLE, v).apply(); }
 
   public boolean getBgvDefaultSelected() { return prefs.getBoolean(KEY_BGV_DEFAULT_SELECTED, false); }
   public void setBgvDefaultSelected(boolean v) { prefs.edit().putBoolean(KEY_BGV_DEFAULT_SELECTED, v).apply(); }
