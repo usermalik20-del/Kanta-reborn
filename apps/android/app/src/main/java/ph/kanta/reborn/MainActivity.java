@@ -1499,6 +1499,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       case MENU_HELP:
         helpPage();
         break;
+      case "LyricFont":
+        lyricFontPage();
+        break;
       default:
         control();
     }
@@ -2596,7 +2599,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     lyrics.addView(autoLyrics[0]);
     lyrics.addView(MenuSurface.detail(this, getString(R.string.auto_lyrics_details)));
     lyrics.addView(menuAction(getString(R.string.menu_lyric_font), R.drawable.kanta_submenu_type,
-        this::chooseLyricFont));
+        () -> openPage("LyricFont")));
     LinearLayout support = MenuSurface.section(body, getString(R.string.menu_diagnostics));
     support.addView(menuAction("Diagnostics", R.drawable.kanta_submenu_check,
         () -> diagnostics(true)));
@@ -4505,6 +4508,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     addHelpSection(R.string.menu_help_singing, R.string.menu_help_singing_details);
     addHelpSection(R.string.menu_help_voice, R.string.menu_help_voice_details);
     addHelpSection(R.string.menu_help_remote, R.string.menu_help_remote_details);
+  }
+
+  private void lyricFontPage() {
+    LyricFontPage page = new LyricFontPage(this, MenuSurface.this);
+    pageScroll.removeAllViews();
+    pageScroll.addView(page);
+    tab = "LyricFont";
   }
 
   private void addHelpSection(int title, int detail) {
