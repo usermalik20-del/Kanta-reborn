@@ -58,6 +58,8 @@ public final class ScoreCelebrationPlan {
     public final int confettiCount;
     public final int balloonCount;
     public final int starCount;
+    public final int fireworksCount;
+    public final int petalCount;
     public final int durationMillis;
     public final List<Particle> particles;
 
@@ -66,12 +68,16 @@ public final class ScoreCelebrationPlan {
         int confettiCount,
         int balloonCount,
         int starCount,
+        int fireworksCount,
+        int petalCount,
         int durationMillis,
         List<Particle> particles) {
       this.tier = tier;
       this.confettiCount = confettiCount;
       this.balloonCount = balloonCount;
       this.starCount = starCount;
+      this.fireworksCount = fireworksCount;
+      this.petalCount = petalCount;
       this.durationMillis = durationMillis;
       this.particles = Collections.unmodifiableList(particles);
     }
@@ -101,25 +107,69 @@ public final class ScoreCelebrationPlan {
     int confetti = confettiFor(tier);
     int balloons = balloonsFor(tier);
     int stars = starsFor(tier);
+    int fireworks = fireworksFor(tier);
+    int petals = petalsFor(tier);
     int duration = durationFor(tier);
 
-    List<Particle> particles = new ArrayList<>(confetti + stars);
+    List<Particle> particles = new ArrayList<>(confetti + stars + fireworks + petals);
     Random random = new Random(seed);
     float baseHue = baseHueFor(tier);
-    for (int index = 0; index < confetti + stars; index++) {
-      boolean star = index >= confetti;
-      // Confetti falls from the top edge; stars burst from the score card centre.
-      float originX = star ? 0.5f : random.nextFloat();
-      float originY = star ? 0.5f : 0f;
-      float velocityX = star ? (random.nextFloat() - 0.5f) * 1.6f : (random.nextFloat() - 0.5f) * 0.5f;
-      float velocityY = star ? (random.nextFloat() - 0.5f) * 1.6f : 0.4f + random.nextFloat() * 0.6f;
-      float radius = star ? 0.010f + random.nextFloat() * 0.014f : 0.004f + random.nextFloat() * 0.010f;
+
+    // Confetti falls from the top edge
+    for (int index = 0; index < confetti; index++) {
+      float originX = random.nextFloat();
+      float originY = 0f;
+      float velocityX = (random.nextFloat() - 0.5f) * 0.5f;
+      float velocityY = 0.4f + random.nextFloat() * 0.6f;
+      float radius = 0.004f + random.nextFloat() * 0.010f;
       float spin = (random.nextFloat() - 0.5f) * 2f;
       float hue = (baseHue + random.nextFloat() * 40f) % 360f;
       particles.add(new Particle(originX, originY, velocityX, velocityY, radius, spin, hue));
     }
 
-    return new Plan(tier, confetti, balloons, stars, duration, particles);
+    // Stars burst from the score card centre
+    for (int index = 0; index < stars; index++) {
+      float originX = 0.5f;
+      float originY = 0.5f;
+      float velocityX = (random.nextFloat() - 0.5f) * 1.6f;
+      float velocityY = (random.nextFloat() - 0.5f) * 1.6f;
+      float radius = 0.010f + random.nextFloat() * 0.014f;
+      float spin = (random.nextFloat() - 0.5f) * 2f;
+      float hue = (baseHue + 60f + random.nextFloat() * 40f) % 360f;
+      particles.add(new Particle(originX, originY, velocityX, velocityY, radius, spin, hue));
+    }
+
+    // Fireworks: explosive bursts from center
+    for (int i = 0; i < fireworks; i++) {
+      float burstAngle = (float) (Math.PI * 2 * i / fireworks);
+      float burstSpeed = 0.8f + random.nextFloat() * 0.8f;
+      for (int j = 0; j < 8; j++) {
+        float angle = burstAngle + (float) (Math.PI * 2 * j / 8) + (random.nextFloat() - 0.5f) * 0.3f;
+        float speed = burstSpeed * (0.5f + random.nextFloat() * 0.5f);
+        float originX = 0.5f;
+        float originY = 0.5f;
+        float velocityX = (float) Math.cos(angle) * speed;
+        float velocityY = (float) Math.sin(angle) * speed;
+        float radius = 0.006f + random.nextFloat() * 0.008f;
+        float spin = (random.nextFloat() - 0.5f) * 4f;
+        float hue = (baseHue + 120f + random.nextFloat() * 60f) % 360f;
+        particles.add(new Particle(originX, originY, velocityX, velocityY, radius, spin, hue));
+      }
+    }
+
+    // Petals: falling petal shapes with gentle drift
+    for (int index = 0; index < petals; index++) {
+      float originX = random.nextFloat();
+      float originY = -0.1f; // start above screen
+      float velocityX = (random.nextFloat() - 0.5f) * 0.2f;
+      float velocityY = 0.2f + random.nextFloat() * 0.3f;
+      float radius = 0.015f + random.nextFloat() * 0.015f;
+      float spin = (random.nextFloat() - 0.5f) * 1f;
+      float hue = (340f + random.nextFloat() * 20f) % 360f; // pink range
+      particles.add(new Particle(originX, originY, velocityX, velocityY, radius, spin, hue));
+    }
+
+    return new Plan(tier, confetti, balloons, stars, fireworks, petals, duration, particles);
   }
 
   /** Horizontal position of a particle at normalised progress {@code t} (0..1). */
@@ -190,6 +240,36 @@ public final class ScoreCelebrationPlan {
         return 2200;
       case RISING_STAR:
         return 1600;
+      default:
+        return 0;
+    }
+  }
+
+  private static int fireworksFor(ScoreResultTier tier) {
+    switch (tier) {
+      case EXCELLENT_SINGER:
+        return 4;
+      case GREAT_SINGER:
+        return 2;
+      case GOOD_SINGER:
+        return 1;
+      case RISING_STAR:
+        return 0;
+      default:
+        return 0;
+    }
+  }
+
+  private static int petalsFor(ScoreResultTier tier) {
+    switch (tier) {
+      case EXCELLENT_SINGER:
+        return 20;
+      case GREAT_SINGER:
+        return 12;
+      case GOOD_SINGER:
+        return 6;
+      case RISING_STAR:
+        return 3;
       default:
         return 0;
     }

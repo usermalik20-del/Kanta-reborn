@@ -27,7 +27,9 @@ public final class ScoreCelebrationView extends View {
   private final Paint particlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint balloonPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint stringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+  private final Paint petalPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Path starPath = new Path();
+  private final Path petalPath = new Path();
 
   private ScoreCelebrationPlan.Plan plan;
   private float progress;

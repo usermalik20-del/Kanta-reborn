@@ -938,7 +938,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     result.monitor = addStageControl(toggles, result, "monitor", R.string.stage_monitor,
         R.drawable.kanta_stage_action_monitor, this::toggleMonitoring);
     result.scoring = addStageControl(toggles, result, "scoring", R.string.stage_scoring,
-        R.drawable.kanta_stage_action_scoring, () -> session.setScoring(!session.scoringEnabled));
+        R.drawable.kanta_stage_action_scoring, () -> {
+          boolean wasEnabled = session.scoringEnabled;
+          boolean willEnable = !wasEnabled;
+          session.setScoring(willEnable);
+          // Auto-enable microphone when scoring is turned on
+          if (willEnable && !session.microphone.enabled()) {
+            startMicrophoneWithPermission();
+            // Show a brief hint explaining the auto-enable
+            Toast.makeText(MainActivity.this,
+                "Microphone enabled for pitch detection",
+                Toast.LENGTH_SHORT).show();
+          }
+        });
     LinearLayout shortcuts = row();
     panel.addView(shortcuts);
     if (!full) {
