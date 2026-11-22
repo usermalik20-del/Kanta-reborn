@@ -165,8 +165,8 @@ public final class RuntimeChecks extends Instrumentation {
               "Transport control overflows at " + width);
           previous = button;
         }
-        View key = screen.findViewWithTag("kanta.now-playing.key");
-        View tempo = screen.findViewWithTag("kanta.now-playing.tempo");
+        View key = screen.// findViewWithTag("kanta.now-playing.key");
+        View tempo = screen.// findViewWithTag("kanta.now-playing.tempo");
         check(key != null && tempo != null, "Key/tempo layout identities missing");
         check(tempo.getTop() > key.getBottom() || tempo.getLeft() > key.getRight(),
             "Key and tempo controls are not separated at " + width);
@@ -199,7 +199,7 @@ public final class RuntimeChecks extends Instrumentation {
           scroll.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
               View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY));
           scroll.layout(0, 0, w, h);
-          View queue = sample.findViewWithTag("kanta.home.reservations");
+          View queue = sample.// findViewWithTag("kanta.home.reservations");
           View keyboard = sample.findViewWithTag("kanta.home.keyboard");
           View searchField = sample.findViewWithTag("kanta.home.search");
           check(queue.getWidth() == w && keyboard.getWidth() == w && searchField.getWidth() == w,
@@ -216,7 +216,7 @@ public final class RuntimeChecks extends Instrumentation {
           check(contains(sample, "1. First song") && contains(sample, "3. Third song")
               && contains(sample, "Reserved songs · 5"), "Home queue preview lost FIFO order or total");
           sample.setReservedSongs(java.util.Collections.emptyList(), 0);
-          check(sample.findViewWithTag("kanta.home.queue.empty") != null, "Home queue empty state missing");
+          check(sample.// findViewWithTag("kanta.home.queue.empty") != null, "Home queue empty state missing");
         }
       }
       View decor = activity.getWindow().getDecorView();
@@ -248,8 +248,8 @@ public final class RuntimeChecks extends Instrumentation {
           && decor.findViewWithTag("kanta.stage.song-action.next") != null
           && decor.findViewWithTag("kanta.stage.song-action.stop") != null,
           "Stage transport or camera/fullscreen shortcuts are missing");
-      check(decor.findViewWithTag("kanta.home.keyboard-toggle") == null
-          && decor.findViewWithTag("kanta.keyboard.digit.1") != null
+      check(decor.// findViewWithTag("kanta.home.keyboard-toggle") == null
+          && decor.// findViewWithTag("kanta.keyboard.digit.1") != null
           && decor.findViewWithTag("kanta.keyboard.letter.q") != null,
           "Number and letter keys must share the same keyboard");
       int originalPitch = session.pitch;
@@ -266,7 +266,7 @@ public final class RuntimeChecks extends Instrumentation {
           "Clear search did not empty and refocus the field");
       search.setText("1234");
       search.setSelection(4);
-      activity.getWindow().getDecorView().findViewWithTag("kanta.keyboard.delete").performClick();
+      activity.getWindow().getDecorView().// findViewWithTag("kanta.keyboard.delete").performClick();
       check("123".contentEquals(search.getText()), "DEL did not remove exactly one character");
       TextView stageCode = persistentPrimaryStage.findViewWithTag("kanta.stage.presence.code");
       check(stageCode != null && "123".contentEquals(stageCode.getText()),
@@ -369,7 +369,7 @@ public final class RuntimeChecks extends Instrumentation {
       });
       runOnMainSync(() -> {
         View decor = activity.getWindow().getDecorView();
-        decor.findViewWithTag("kanta.nav.More").performClick();
+        decor.// findViewWithTag("kanta.nav.More").performClick();
         for (String removed : new String[]{"sing-menu", "performance-menu", "experience-menu",
             "find-song", "key-tempo", "queue", "background", "party", "stage", "visual", "voice", "scoring"}) {
           check(decor.findViewWithTag("kanta.group." + removed) == null, "Redundant Menu row: " + removed);
@@ -391,7 +391,7 @@ public final class RuntimeChecks extends Instrumentation {
           check(location[1] > lastTop, "Menu order is wrong at " + action);
           lastTop = location[1];
         }
-        check(decor.findViewWithTag("kanta.group.import-pdf").performClick(), "KANTA Songbook did not open");
+        check(decor.// findViewWithTag("kanta.group.import-pdf").performClick(), "KANTA Songbook did not open");
       });
       await(() -> visibleOnScreen("kanta.screen.pdf-songbooks"), "Menu Songbook destination is missing");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
@@ -447,8 +447,8 @@ public final class RuntimeChecks extends Instrumentation {
       });
       runOnMainSync(() -> {
         View decor = activity.getWindow().getDecorView();
-        decor.findViewWithTag("kanta.nav.Home").performClick();
-        decor.findViewWithTag("kanta.nav.More").performClick();
+        decor.// findViewWithTag("kanta.nav.Home").performClick();
+        decor.// findViewWithTag("kanta.nav.More").performClick();
       });
       await(this::hasSettingsWithoutDuplicateControls, "Menu dock did not resume Settings");
       runOnMainSync(() -> openMenuGroup("stage-visual"));
@@ -487,7 +487,7 @@ public final class RuntimeChecks extends Instrumentation {
       }, "Background selection did not update the visible primary stage bitmap in place");
       assertPersistentStage("kanta.screen.visuals");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.stage-visual") != null,
+      await(() -> activity.getWindow().getDecorView().// findViewWithTag("kanta.group.stage-visual") != null,
           "Stage & Visual did not return to Menu");
       assertPersistentStage("kanta.group.stage-visual");
       runOnMainSync(this::openMenuVoiceScoring);
@@ -498,7 +498,7 @@ public final class RuntimeChecks extends Instrumentation {
           "Voice & Scoring did not expose the shared controls");
       capture("mic_voice_screen.png", "kanta.screen.mic-voice");
       runOnMainSync(() -> {
-        View room = activity.getWindow().getDecorView().findViewWithTag("kanta.monitor.mode.room");
+        View room = activity.getWindow().getDecorView().// findViewWithTag("kanta.monitor.mode.room");
         check(room != null, "Room monitor effect control missing");
         room.performClick();
       });
@@ -521,7 +521,7 @@ public final class RuntimeChecks extends Instrumentation {
         }
       });
       await(() -> visibleOnScreen("kanta.group.back"), "Voice & Scoring did not return to Menu");
-      runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Home").performClick());
+      runOnMainSync(() -> activity.getWindow().getDecorView().// findViewWithTag("kanta.nav.Home").performClick());
       runOnMainSync(() -> checkStagePartyPads(activity.getWindow().getDecorView(), "kanta.stage.controls"));
       runOnMainSync(() -> {
         View open = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.fullscreen");
@@ -530,27 +530,27 @@ public final class RuntimeChecks extends Instrumentation {
       Dialog fullscreenDialog = (Dialog) field(activity, "fullscreen");
       await(
           () -> fullscreenDialog != null && fullscreenDialog.isShowing()
-              && fullscreenDialog.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.stage") != null,
+              && fullscreenDialog.getWindow().getDecorView().// findViewWithTag("kanta.fullscreen.stage") != null,
           "Fullscreen StageSurface did not open");
       capture("fullscreen_stage.png");
       runOnMainSync(() -> checkStagePartyPads(fullscreenDialog.getWindow().getDecorView(),
           "kanta.fullscreen.controls"));
       runOnMainSync(() -> {
         View decor = fullscreenDialog.getWindow().getDecorView();
-        checkStageTextButton(decor.findViewWithTag("kanta.fullscreen.restart"), R.string.stage_restart);
+        checkStageTextButton(decor.// findViewWithTag("kanta.fullscreen.restart"), R.string.stage_restart);
         checkStageTextButton(decor.findViewWithTag("kanta.fullscreen.play-pause"), R.string.stage_play);
         checkStageTextButton(decor.findViewWithTag("kanta.fullscreen.next"), R.string.stage_next);
-        checkStageTextButton(decor.findViewWithTag("kanta.fullscreen.close"), R.string.stage_controls_close);
+        checkStageTextButton(decor.// findViewWithTag("kanta.fullscreen.close"), R.string.stage_controls_close);
         ViewGroup transport = (ViewGroup) decor.findViewWithTag("kanta.fullscreen.play-pause").getParent();
         check(transport.getChildCount() == 3, "Fullscreen has redundant transport actions");
-        check(decor.findViewWithTag("kanta.fullscreen.time") instanceof TextView
-                && decor.findViewWithTag("kanta.fullscreen.progress") == null,
+        check(decor.// findViewWithTag("kanta.fullscreen.time") instanceof TextView
+                && decor.// findViewWithTag("kanta.fullscreen.progress") == null,
             "Fullscreen should show elapsed time without a progress bar");
-        check(decor.findViewWithTag("kanta.fullscreen.key.increment") == null
-                && decor.findViewWithTag("kanta.fullscreen.tempo.increment") == null,
+        check(decor.// findViewWithTag("kanta.fullscreen.key.increment") == null
+                && decor.// findViewWithTag("kanta.fullscreen.tempo.increment") == null,
             "Pitch and tempo controls must remain in Controls");
         TextView docked = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.adjustments");
-        TextView expanded = decor.findViewWithTag("kanta.fullscreen.adjustments");
+        TextView expanded = decor.// findViewWithTag("kanta.fullscreen.adjustments");
         int pitch = session.effectivePitch();
         String expected = activity.getString(R.string.stage_adjustment_readout,
             pitch > 0 ? "+" + pitch : Integer.toString(pitch), session.effectiveTempo());
@@ -559,7 +559,7 @@ public final class RuntimeChecks extends Instrumentation {
             "Docked and fullscreen Stages must show the effective key and tempo even at rest");
       });
       runOnMainSync(() -> {
-        View close = fullscreenDialog.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.close");
+        View close = fullscreenDialog.getWindow().getDecorView().// findViewWithTag("kanta.fullscreen.close");
         check(close != null, "Fullscreen close control missing");
         close.performClick();
       });
@@ -580,7 +580,7 @@ public final class RuntimeChecks extends Instrumentation {
       assertPersistentStage("kanta.stage.transport");
       capture("now_playing_screen.png", "kanta.stage.transport");
       runOnMainSync(() -> {
-        View more = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
+        View more = activity.getWindow().getDecorView().// findViewWithTag("kanta.nav.More");
         check(more != null, "Home More destination missing after Now Playing");
         more.performClick();
       });
@@ -679,10 +679,10 @@ public final class RuntimeChecks extends Instrumentation {
           () -> !session.importing && session.songs.size() == 2 && session.soundFonts.size() == 4,
           "SessionController did not publish imported songs and SoundFonts");
       runOnMainSync(() -> openMenuGroup("intermission"));
-      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.intermission.back") != null,
+      await(() -> activity.getWindow().getDecorView().// findViewWithTag("kanta.legacy.intermission.back") != null,
           "Intermission did not expose its Back control");
       runOnMainSync(() -> checkIconBack(
-          activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.intermission.back"),
+          activity.getWindow().getDecorView().// findViewWithTag("kanta.legacy.intermission.back"),
           "Intermission"));
       runOnMainSync(() -> {
         check(activity.getWindow().getDecorView().findViewWithTag("kanta.party-pad.trigger.0") == null,
@@ -697,11 +697,11 @@ public final class RuntimeChecks extends Instrumentation {
               && contains(activity.getWindow().getDecorView(), "Use"),
           "Presets did not show imported songs and SoundFont actions");
       runOnMainSync(() -> {
-        View back = activity.getWindow().getDecorView().findViewWithTag("kanta.legacy.presets.back");
+        View back = activity.getWindow().getDecorView().// findViewWithTag("kanta.legacy.presets.back");
         checkIconBack(back, "Presets");
         check(!contains(activity.getWindow().getDecorView(), activity.getString(R.string.library_notices)),
             "Library notices belong in Menu, not Presets");
-        android.widget.Button add = activity.getWindow().getDecorView().findViewWithTag("kanta.library.add-folder");
+        android.widget.Button add = activity.getWindow().getDecorView().// findViewWithTag("kanta.library.add-folder");
         check(add != null && add.isEnabled() && add.getCompoundDrawablesRelative()[0] != null,
             "Presets folder CTA is missing or disabled");
       });
@@ -722,9 +722,9 @@ public final class RuntimeChecks extends Instrumentation {
           "SoundFont selector did not reactivate the imported bank");
       capture("my-set-active-soundfont.png");
       runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-      await(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings") != null,
+      await(() -> activity.getWindow().getDecorView().// findViewWithTag("kanta.group.settings") != null,
           "More group did not expose Settings");
-      runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings").performClick());
+      runOnMainSync(() -> activity.getWindow().getDecorView().// findViewWithTag("kanta.group.settings").performClick());
 
       AtomicBoolean progressSeen = new AtomicBoolean();
       AtomicBoolean progressOnMain = new AtomicBoolean(true);
@@ -885,7 +885,7 @@ public final class RuntimeChecks extends Instrumentation {
                           .getDecorView()
                           .findViewWithTag("kanta.stage.primary")),
           "Controller update detached the stage subtree");
-      runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Home").performClick());
+      runOnMainSync(() -> activity.getWindow().getDecorView().// findViewWithTag("kanta.nav.Home").performClick());
       await(() -> visibleOnScreen("kanta.stage.primary"), "Stage layout never became visible");
       workspaceBackNavigationChecks();
       check(
@@ -1183,7 +1183,7 @@ public final class RuntimeChecks extends Instrumentation {
           "Clean emulator unexpectedly exposes wired/USB hardware");
       runOnMainSync(() -> clickMicVoiceControl("kanta.monitor.toggle"));
       check(state(() -> !session.microphone.enabled() && !session.monitor.enabled()
-              && contains(activity.getWindow().getDecorView().findViewWithTag("kanta.monitor.status"),
+              && contains(activity.getWindow().getDecorView().// findViewWithTag("kanta.monitor.status"),
                   "Connect wired or USB headphones")),
           "Choose output with mic off did not show headset help without starting capture");
       shell("pm grant ph.kanta.reborn android.permission.RECORD_AUDIO");
@@ -1193,8 +1193,8 @@ public final class RuntimeChecks extends Instrumentation {
           "Opt-in AudioRecord did not produce input frames: " + session.message);
       await(() -> {
         View decor = activity.getWindow().getDecorView();
-        return contains(decor.findViewWithTag("kanta.mic.status"), "Microphone input active")
-            && decor.findViewWithTag("kanta.monitor.toggle").isEnabled();
+        return contains(decor.// findViewWithTag("kanta.mic.status"), "Microphone input active")
+            && decor.// findViewWithTag("kanta.monitor.toggle").isEnabled();
       }, "The shared microphone screen did not follow live capture");
       runOnMainSync(() -> session.startMonitor(rejectedSpeaker));
       check(
@@ -1335,7 +1335,7 @@ public final class RuntimeChecks extends Instrumentation {
           state(() -> session.party.activeVoices() == 0), "Party stop-all retained active voices");
       runOnMainSync(() -> {
         View decor = activity.getWindow().getDecorView();
-        decor.findViewWithTag("kanta.nav.Home").performClick();
+        decor.// findViewWithTag("kanta.nav.Home").performClick();
         decor.findViewWithTag("kanta.stage.song-action.cancel").performClick();
         check(decor.findViewWithTag("kanta.stage.song-action.play") == null,
             "Stage still has a redundant standalone Play");
@@ -1676,7 +1676,7 @@ public final class RuntimeChecks extends Instrumentation {
     View decor = activity.getWindow().getDecorView();
     return decor.findViewWithTag("kanta.voice.settings") == null
         && decor.findViewWithTag("kanta.settings.intermission") == null
-        && decor.findViewWithTag("kanta.group.background") == null
+        && decor.// findViewWithTag("kanta.group.background") == null
         && decor.findViewWithTag("kanta.settings.music-volume") instanceof SeekBar
         && decor.findViewWithTag("kanta.screen.mic-voice") == null
         && decor.findViewWithTag("kanta.pitchcorrection.toggle") == null
@@ -1690,9 +1690,9 @@ public final class RuntimeChecks extends Instrumentation {
   private boolean hasSharedMicVoiceControls() {
     View screen = activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice");
     return screen instanceof ph.kanta.reborn.ui.KantaMicVoiceScreen
-        && screen.findViewWithTag("kanta.mic.toggle") != null
-        && screen.findViewWithTag("kanta.monitor.toggle") != null
-        && screen.findViewWithTag("kanta.monitor.gain") instanceof SeekBar
+        && screen.// findViewWithTag("kanta.mic.toggle") != null
+        && screen.// findViewWithTag("kanta.monitor.toggle") != null
+        && screen.// findViewWithTag("kanta.monitor.gain") instanceof SeekBar
         && screen.findViewWithTag("kanta.pitchcorrection.toggle") != null
         && screen.findViewWithTag("kanta.score.toggle") != null
         && screen.findViewWithTag("kanta.score.timing") instanceof SeekBar
@@ -1752,7 +1752,7 @@ public final class RuntimeChecks extends Instrumentation {
         check(key != null && key.performClick(), "Stage numeric key did not respond");
       }
       check(song.code.contentEquals(entry.get().getText()), "Stage keys did not enter the exact song code");
-      View extraDigit = keyboard.findViewWithTag("kanta.keyboard.digit.7");
+      View extraDigit = keyboard.// findViewWithTag("kanta.keyboard.digit.7");
       check(extraDigit != null && extraDigit.performClick()
           && song.code.contentEquals(entry.get().getText()), "Stage accepted a seventh digit");
       entry.get().setText("1234567 Long Song Title");
@@ -2057,7 +2057,7 @@ public final class RuntimeChecks extends Instrumentation {
   /** Navigation must project the same mounted, visible presenter above every utility panel. */
   private void openStageQueueShortcut() {
     View decor = activity.getWindow().getDecorView();
-    decor.findViewWithTag("kanta.nav.Home").performClick();
+    decor.// findViewWithTag("kanta.nav.Home").performClick();
     View anchor = decor.findViewWithTag("kanta.stage.controls");
     check(anchor != null && anchor.performClick(), "Stage Controls did not open");
     View panel = decor.findViewWithTag("kanta.stage.controls.panel");
@@ -2105,10 +2105,10 @@ public final class RuntimeChecks extends Instrumentation {
   }
 
   private void openMenuGroup(String action) {
-    View menu = activity.getWindow().getDecorView().findViewWithTag("kanta.nav.More");
+    View menu = activity.getWindow().getDecorView().// findViewWithTag("kanta.nav.More");
     check(menu != null && menu.performClick(), "Menu tab could not be opened");
     View decor = activity.getWindow().getDecorView();
-    for (int hop = 0; hop < 5 && decor.findViewWithTag("kanta.group.settings") == null; hop++) {
+    for (int hop = 0; hop < 5 && decor.// findViewWithTag("kanta.group.settings") == null; hop++) {
       activity.getOnBackPressedDispatcher().onBackPressed();
       if (decor.findViewWithTag("kanta.home.search") != null) menu.performClick();
     }
