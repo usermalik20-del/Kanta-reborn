@@ -1,0 +1,4 @@
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/kanta_adaptive_background"/>
+    <foreground android:drawable="@drawable/kanta_launcher"/>
+</adaptive-icon>

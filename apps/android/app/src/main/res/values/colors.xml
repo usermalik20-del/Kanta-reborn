@@ -1,33 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generated from replica/design/tokens.json -->
 <resources>
-    <!-- KANTA Canvas -->
-    <color name="kanta_canvas">#FF0A0614</color>
-
-    <!-- KANTA Bloom -->
-
-    <!-- KANTA Surfaces -->
-    <color name="kanta_surface_high">#FF241540</color>
-    <color name="kanta_elevated">#FF2A1A47</color>
-
-    <!-- KANTA Brand -->
-    <color name="kanta_primary">#FFA24BFF</color>
-    <color name="kanta_primary_hot">#FFFF3D8B</color>
-    <color name="kanta_violet">#FF6D3BFF</color>
-
-    <!-- Semantic -->
-    <color name="kanta_destructive">#FFFF5A6E</color>
-
-    <!-- Text -->
-    <color name="kanta_hairline">#FF1A1A1A</color>
-
-    <!-- Accent -->
-    <color name="kanta_accent">#FFA24BFF</color>
-    <color name="kanta_on_accent">#FFFFFFFF</color>
-
-    <!-- Karaoke Stage -->
-    <color name="karaoke_adjustment_knob">#FFA24BFF</color>
-    <color name="karaoke_adjustment_track">#FF2A1A47</color>
-    <color name="karaoke_keypad_key">#FF1B1030</color>
-    <color name="karaoke_keypad_key_active">#FF241540</color>
+    <color name="kanta_adaptive_background">#3A1E5E</color>
 </resources>
