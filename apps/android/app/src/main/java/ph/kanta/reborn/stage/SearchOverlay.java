@@ -77,7 +77,7 @@ public final class SearchOverlay extends FrameLayout {
     searchField.setBackgroundResource(ph.kanta.reborn.R.drawable.karaoke_search_field_bg);
     searchField.setTextColor(0xFFFFFFFF);
     searchField.setHintTextColor(0xFF999999);
-    searchField.setHint("Search songs...");
+    searchField.setHint("Enter a song code to sing or find a song in Kanta Songbook");
     searchField.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
     searchField.setSingleLine(true);
     searchField.setOnEditorActionListener((v, actionId, event) -> {
