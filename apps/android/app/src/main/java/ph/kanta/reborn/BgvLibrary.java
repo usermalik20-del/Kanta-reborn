@@ -100,7 +100,7 @@ final class BgvLibrary {
   private volatile String activeId = "";
 
   /** True when a download is currently running. */
-  private synchronized boolean busy() {
+  synchronized boolean busy() {
     return !activeId.isEmpty();
   }
 
@@ -147,7 +147,7 @@ final class BgvLibrary {
 
   /** Starts a download. A second request while one is running is refused, not queued. */
   synchronized boolean download(final ScenicClip clip, final Listener listener) {
-    if (clip == null || !ScenicCatalog.isAllowed(clip) || busy()) return false;
+    if (clip == null || !ScenicCatalog.isAllowed(clip) || busy() || isDownloaded(clip.id)) return false;
     activeId = clip.id;
     status = "Starting download…";
     copied = 0;

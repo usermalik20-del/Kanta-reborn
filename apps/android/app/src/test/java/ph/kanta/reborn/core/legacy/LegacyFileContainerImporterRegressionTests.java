@@ -168,6 +168,47 @@ public final class LegacyFileContainerImporterRegressionTests {
       check(result.songs.get(1).title.equals("Synthetic A")
           && Arrays.equals(Files.readAllBytes(result.songs.get(1).file.toPath()), first),
           "Second title materializes its addressed payload");
+      check(result.songs.get(0).sourceCode.isEmpty(), "Untagged trailer supplied a source number");
+      try (RandomAccessFile out = new RandomAccessFile(index, "rw")) {
+        out.seek(out.length() - 8);
+        out.write(new byte[] {9, 1, 3, 2, 9, 0, 42, 0});
+      }
+      LegacyFileContainerImporter.ImportResult numbered = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("numbered").toFile(), new LegacyImportKey(TEST_KEY, TEST_IV));
+      check(numbered.decodedCount == 2 && numbered.errors.isEmpty(), "Numbered pair did not import");
+      LegacyFileContainerImporter.DecodedSong row = numbered.songs.get(0);
+      check(row.sourceCode.equals("066051") && row.titleOrdinal == 1 && Arrays.equals(Files.readAllBytes(row.file.toPath()), second),
+          "The packed keypad number and payload must both follow their title record");
+      check(numbered.songs.get(1).sourceCode.equals("000042"), "Second title must keep its printed number");
+      ph.kanta.reborn.core.Song imported = new ph.kanta.reborn.core.Song(
+          "legacy:" + row.id, row.title, "", row.sourceCode, "legacy-" + row.id + ".mid", false, true);
+      java.util.List<ph.kanta.reborn.core.Song> catalog = java.util.Collections.singletonList(imported);
+      for (String digits : new String[] {"66051", "066051"}) {
+        check(imported.numericPreviewRank(digits) == 0, "Legacy number did not rank as an exact match");
+        check(ph.kanta.reborn.core.Song.uniqueCodeMatch(catalog, digits) == imported,
+            "Legacy number did not resolve the same song for PLAY and RES");
+      }
+      check(imported.numericPreviewRank("066") >= 0
+              && ph.kanta.reborn.core.Song.uniqueCodeMatch(catalog, "066") == null,
+          "A partial code should preview but not submit");
+      check(imported.numericPreviewRank("0066051") == -1
+              && ph.kanta.reborn.core.Song.uniqueCodeMatch(catalog, "0066051") == null,
+          "An overlong alias must not match or submit");
+      check(imported.numericPreviewRank("1") == -1, "The title ordinal became a searchable code");
+      ph.kanta.reborn.core.Song literal = new ph.kanta.reborn.core.Song(
+          "literal", "Collision", "", "66051", "literal.mid", false);
+      check(ph.kanta.reborn.core.Song.uniqueCodeMatch(Arrays.asList(imported, literal), "66051") == null,
+          "Ambiguous alias submitted a different song");
+      try (RandomAccessFile out = new RandomAccessFile(blob, "rw")) {
+        encryptedRecord(out, 2048, new byte[] {1, 2, 3, 4, 5});
+      }
+      LegacyFileContainerImporter.ImportResult withSkip = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("with-skip").toFile(), new LegacyImportKey(TEST_KEY, TEST_IV));
+      check(withSkip.skippedCount == 1 && withSkip.songs.get(0).sourceCode.equals("000042"),
+          "Skipped payload shifted the remaining printed number");
+      check(ph.kanta.reborn.core.songbook.ShubIndexProbe.keypadNumbers(
+          new long[] {1, 0}, new long[] {0x002a0009L, 0x02030109L}).length == 0,
+          "Tagged but uncorrelated trailer supplied source numbers");
     } finally {
       try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(dir)) {
         for (java.nio.file.Path path : paths.sorted(java.util.Comparator.reverseOrder())

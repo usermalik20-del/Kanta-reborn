@@ -230,7 +230,29 @@ public final class ShubIndexProbe {
     return Collections.unmodifiableList(records);
   }
 
-  /** Returns the trailing offset table of the index. */
+  /** Decodes one kind-9 keypad number per title in the verified tagged layout. */
+  public static int[] keypadNumbers(long[] titleBlocks, long[] trailingWords) {
+    if (titleBlocks.length == 0 || titleBlocks.length != trailingWords.length) return new int[0];
+    Map<Long, Integer> byBlock = new java.util.TreeMap<>();
+    int[] numbers = new int[titleBlocks.length];
+    for (int i = 0; i < trailingWords.length; i++) {
+      long word = trailingWords[i];
+      if ((word & 0xff) != 9) return new int[0];
+      long packed = (word >>> 16) | ((word & 0xff00) << 8);
+      if (packed == 0 || packed > ph.kanta.reborn.core.SongCodes.MAX_NUMBER) return new int[0];
+      numbers[i] = (int) packed;
+      if (byBlock.put(titleBlocks[i], numbers[i]) != null) return new int[0];
+    }
+    // The validated layout has strictly increasing, unique keypad numbers in blob order.
+    int previous = -1;
+    for (int number : byBlock.values()) {
+      if (number <= previous) return new int[0];
+      previous = number;
+    }
+    return numbers;
+  }
+
+  /** Returns raw words only when there is one trailing word per title. */
   public static long[] trailingUInt32Values(byte[] data) {
     Result report = inspect(data, null, 0);
     if (report.trailingOffset == null) return new long[0];

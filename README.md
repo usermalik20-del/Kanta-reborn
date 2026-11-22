@@ -1,3 +1,28 @@
+## Android Stage, Menu and Browser Remote (2026-11-23)
+
+The Android Stage and Menu were overhauled. The Stage keeps one stateful
+Play/Pause plus per-result Play; **Controls**, **Camera** and **Fullscreen**
+each have their own icon and label, and Camera shows its state. Tapping
+**Stage → Controls** expands a translucent panel directly beneath the Stage:
+all eight Party Pads are visible at a glance, and the remaining controls
+(microphone, monitor, scoring, queue, Browser Remote, stop party audio) are
+labeled icon rows. **Menu → Party Pads** is a normal Menu page with clip
+assignment, reset and volume; Intermission no longer hosts the pads.
+
+Every Menu page and submenu now shares one card/row treatment with a
+consistent set of original Android icons. **Stage & Visual** provides
+separate Background photos and Background videos spaces, and **Intermission**,
+**Party Pads** and **Voice & Scoring** open directly from Menu; Settings no
+longer duplicates those controls. The embedded lyrics ticker now advances with
+playback, and the launch artwork uses a true landscape composition on
+landscape devices.
+
+Browser Remote adds in-app QR pairing on Android (manual pairing still works),
+and a paired browser can reconnect after a Wi-Fi loss until a hard three-hour
+deadline; Stop always revokes access. The standalone Control Deck and Search
+screen were removed in favour of the persistent Stage presenter. The
+score-celebration sound is owner-supplied and its license is recorded in the
+app assets.
 ## Android private-variant launcher label (2026-11-20)
 
 The opt-in **KANTA Private** Android build now gets its launcher label from the
@@ -56,7 +81,7 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 
 - **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Malformed or truncated MKMD data in either direct decoding or paired legacy import is rejected promptly; a damaged legacy record is skipped without stalling the import. Party sounds are bundled recordings. Legacy-library compatibility is experimental and may not work with every library or play every song.
 - **Plan your session:** search your library, line up songs and keep saved song sets. The Android preview now shows reserved songs above the keypad, accepts exact song codes with RES, and displays an Up next hint on stage. Playback controls have more room.
-- **Personalize the screen:** choose backgrounds or use your own photos and videos. Android also lets you choose a lyric font from a folder you grant read access to.
+- **Personalize the screen:** choose backgrounds or use your own photos and videos. On Android, open Menu → Stage & Visual to shuffle photos or videos. You can also choose a lyric font from a folder you grant read access to.
 - **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
 
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
@@ -93,7 +118,7 @@ Build instructions, test results and engineering details live in the developer d
 - [Android development](apps/android/README.md) · [iOS development](apps/ios/AGENTS.md) · [Website development](apps/web/README.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Engineering rules](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md)
 - [Testing and release requirements](docs/TESTING.md) · [Download verification](docs/VERIFIED_DOWNLOADS.md)
-- [Outstanding work](docs/UNFINISHED_WORK.md) · [Android engineering records and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
+- [Outstanding work](docs/UNFINISHED_WORK.md) · [Android engineering records and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md) · [Android Stage and Menu](apps/android/README.md#android-stage-and-menu-v35)
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
 - [Android lint validation and release evidence](docs/ANDROID_LINT_HARDENING.md) · [Android SoundFont downloads](apps/android/README.md#android-soundfont-download-compatibility) · [Private Android legacy import build](apps/android/README.md#android-runtime-only-legacy-import-key--local-candidate)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.

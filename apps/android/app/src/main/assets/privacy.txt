@@ -34,11 +34,13 @@ Fixed vercel.json to use clean static category pages (cleanUrls compatible).
 
 KANTA Android privacy — reconstruction preview
 
+Optional automatic diagnostics are not available in this build. Where offered, they start off and only send a daily active signal and a crash marker, if any, while KANTA is open and you have turned reporting on in Menu → Support & diagnostics. A random installation ID distinguishes app installations, not people. The HTTPS service and its network provider see the IP address needed to handle the connection. No song information, lyrics, recordings, library paths, hardware IDs, full-device logs or exception text are sent. Turning reporting off cancels pending sends and clears the local ID and pending marker. A report the server already received can finish processing and expires within 30 days. The separately reviewed manual issue report is only shared when you choose Copy report or Share.
+
 Your library stays under your control. Selected MIDI/KAR, MP3/WAV, SF2, photos and videos are copied into app-private storage without rewriting the originals. Copies retain their original metadata. Song titles, singer names, reservations, saved sets and visual selections are stored locally. Android backup is disabled for this preview.
 
 The app has no KANTA account, advertising SDK or analytics service. Google Analytics and Google AdSense are optional integrations on the public KANTA website only; they are not bundled with or executed by this Android app. Website visitors can reject those optional technologies. The private website Songbook excludes them. Its manifest requests INTERNET for explicitly enabled private companion sockets, and no broad shared-storage permission. Normal local playback and library search work offline.
 
-Front camera is optional. KANTA requests CAMERA permission only after you choose to turn on the front-camera stage. Only a live preview is bound: there is no capture, analysis or recording use case, and no camera frames are saved or uploaded. Leaving the foreground turns it off; returning does not turn it back on. You may revoke camera permission in Android Settings. The camera view can move between the primary and fullscreen stage; an external display uses a still background.
+Front camera is optional. KANTA requests camera permission only when you turn on the front-camera stage or choose to scan a Browser Remote pairing QR. The stage uses live preview only. The scanner reads the QR on your device; no camera frames are saved or uploaded. Leaving the foreground turns it off; returning does not turn it back on. You may revoke camera permission in Android Settings. The camera view can move between the primary and fullscreen stage; an external display uses a still background.
 
 Choosing a Scenic preset stops the personal visual but keeps your last private photo/video for reuse. Replacing a photo or video removes its previous same-kind private copy after the new selection commits. Clear KANTA's app storage or uninstall to remove the local library and visual copies; keep your original music and exports backed up elsewhere.
 
@@ -54,7 +56,7 @@ Song scoring is off by default for a new app session. It uses the existing dry p
 
 CSV exports contain unencrypted song metadata and no audio. Private .kanta-book exports contain encrypted metadata and require their separate access code. Anyone with both file and code can read the titles; CSV/print copies are not encrypted. Sharing is an explicit action through the system picker. The website reader decrypts in the browser without uploading your file, code or searches.
 
-Hardware camera, audio quality/latency and external-display acceptance remain open. This is a testing build, not a store release. Software notices are available in My Set. Support: https://kanta-public.vercel.app/support
+Hardware camera, audio quality/latency and external-display acceptance remain open. This is a testing build, not a store release. Software notices are available from the Menu. Support: https://kanta-public.vercel.app/support
 
 
 Optional Android self-update

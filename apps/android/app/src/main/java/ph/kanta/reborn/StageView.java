@@ -8,6 +8,7 @@ import android.view.*;
 import java.util.*;
 import ph.kanta.reborn.core.*;
 import ph.kanta.reborn.font.FontStore;
+import ph.kanta.reborn.stage.StageLyricLayout;
 
 /** Renders controller state without owning transport or timing. */
 // Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
@@ -23,12 +24,15 @@ final class StageView extends View {
   private final RectF target = new RectF();
   private final TextPaint lyricPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
   private final TextPaint wavePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-  private StaticLayout currentLayout, nextLayout, highlightLayout;
+  private StageLyricLayout visibleLyrics;
+  private int cachedHeight;
+  private boolean cachedEcho;
   private String cachedCurrent = "", cachedNext = "";
   private int cachedWidth = -1;
   private float cachedSize;
   private boolean externalMedia;
   private boolean fullscreenMode;
+  private int contentTop, contentBottom;
   private final Bitmap portraitArtwork;
   private final Bitmap landscapeArtwork;
   private final float[] stars = new float[192];
@@ -47,10 +51,12 @@ final class StageView extends View {
     setMinimumHeight(dp(220));
     Random random = new Random(0x4b414e54);
     for (int i = 0; i < stars.length; i++) stars[i] = random.nextFloat();
+    // Larger, legible lyrics with strong dark outline for contrast on any background
     lyricPaint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
-    lyricPaint.setShadowLayer(dp(2), 0, dp(2), Color.BLACK);
+    lyricPaint.setShadowLayer(dp(3), 0, dp(3), 0xFF000000);
+    // Gold timing highlight (no red/pink)
     wavePaint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
-    wavePaint.setShadowLayer(dp(3), 0, 0, 0x6600F0FF);
+    wavePaint.setShadowLayer(dp(3), 0, 0, 0x66FFD700);
     setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
   }
 
@@ -65,6 +71,13 @@ final class StageView extends View {
 
   void setFullscreenMode(boolean enabled) {
     fullscreenMode = enabled;
+    invalidate();
+  }
+
+  void setContentInsets(int top, int bottom) {
+    if (contentTop == top && contentBottom == bottom) return;
+    contentTop = top;
+    contentBottom = bottom;
     invalidate();
   }
 
@@ -117,114 +130,63 @@ final class StageView extends View {
       canvas.drawRect(0, 0, w, h, paint);
     }
     if (session.realm) realm(canvas, w, h);
-    paint.setTextAlign(Paint.Align.CENTER);
-    paint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
-    int index = MidiLyrics.activeIndex(session.lyrics, session.position());
-    MidiLyrics.Cue cue =
-        index >= 0 && index < session.lyrics.size() ? session.lyrics.get(index) : null;
-    float font = Math.min(dp(48), Math.max(dp(20), w / 18)) * session.lyricScale;
-    String current =
-        standbyMode
-            ? ""
-            : session.current == null
-            ? "Your music. Your stage."
-            : cue == null
-                ? (session.lyrics.isEmpty() ? session.current.title : "Get ready to sing\u2026")
-                : cue.line;
-    String next =
-        index + 1 < session.lyrics.size() ? session.lyrics.get(index + 1).line : "";
-    int width = Math.max(1, (int) w - dp(32));
-    if (!current.equals(cachedCurrent)
-        || !next.equals(cachedNext)
-        || width != cachedWidth
-        || font != cachedSize) {
-      cachedCurrent = current;
-      cachedNext = next;
-      cachedWidth = width;
-      cachedSize = font;
-      currentLayout = layout(current, width, font, Color.WHITE);
-      highlightLayout = cue == null ? null : layout(cue.line, width, font, 0xFFF6CE77);
-      nextLayout = layout(next, width, font * .7f, 0xFFB9D8E8);
+    int lyricHeight = getHeight() - contentTop - contentBottom;
+    if (lyricHeight < 1) return;
+    if (!standbyMode) {
+      long position = session.position();
+      int index = session.current == null ? -1 : MidiLyrics.activeIndex(session.lyrics, position);
+      MidiLyrics.Cue cue = index >= 0 ? session.lyrics.get(index) : null;
+      String current = session.current == null ? "Your music. Your stage." : cue != null ? cue.line
+          : session.lyrics.isEmpty() ? session.current.title : "Get ready to sing\u2026";
+      MidiLyrics.Cue nextCue = cue != null && index + 1 < session.lyrics.size()
+          ? session.lyrics.get(index + 1) : null;
+      String next = session.current == null ? "Reserve your next song in CONTROL"
+          : nextCue == null ? "" : nextCue.line;
+      float font = StageLyricLayout.preferredSize(getResources(), getWidth(), true)
+          * session.lyricScale;
+      boolean echo = nextCue != null && nextCue.echo;
+      int width = getWidth() - dp(36);
+      int padding = Math.min(dp(18), lyricHeight / 10);
+      int height = lyricHeight - 2 * padding;
+      if (width > 0) {
+        if (!current.equals(cachedCurrent) || !next.equals(cachedNext) || echo != cachedEcho
+            || width != cachedWidth || height != cachedHeight || font != cachedSize) {
+          cachedCurrent = current;
+          cachedNext = next;
+          cachedEcho = echo;
+          cachedWidth = width;
+          cachedHeight = height;
+          cachedSize = font;
+          lyricPaint.setTextSize(font);
+          lyricPaint.setColor(Color.WHITE);
+          TextPaint preview = new TextPaint(lyricPaint);
+          preview.setTextSize(font * .65f);
+          preview.setColor(echo ? 0x55FFFFFF : 0xFFB9D8E8);
+          visibleLyrics = StageLyricLayout.fit(current, lyricPaint, next, preview, width, height,
+              dp(12), dp(18));
+        }
+        float x = (w - width) / 2f;
+        float y = contentTop + padding + Math.max(0, height - visibleLyrics.height())
+            * (fullscreenMode ? .45f : .5f);
+        canvas.save();
+        canvas.clipRect(0, contentTop, w, h - contentBottom);
+        visibleLyrics.draw(canvas, x, y, LyricWordAnimation.highlightedCharacters(cue, position),
+            0xFFFFD700);
+        if (cue != null) drawPitchWave(canvas, visibleLyrics.current, x, y, cue, position);
+        canvas.restore();
+      }
     }
-    float currentLyricY = h * (fullscreenMode ? (w >= h ? .24f : .32f) : .46f);
-    float nextLyricY = h * (fullscreenMode ? (w >= h ? .41f : .49f) : .70f);
-    drawLayout(canvas, currentLayout, w / 2, currentLyricY);
-    if (cue != null && highlightLayout != null) {
-      drawProgressiveHighlight(
-          canvas,
-          currentLayout,
-          highlightLayout,
-          w / 2,
-          currentLyricY,
-          LyricWordAnimation.highlightedCharacters(cue, session.position()));
-      drawPitchWave(canvas, currentLayout, w / 2, currentLyricY, cue, session.position());
-    }
-    if (!next.isEmpty()) drawLayout(canvas, nextLayout, w / 2, nextLyricY);
-    if (session.current == null && !standbyMode)
-      line(
-          canvas,
-          "Reserve your next song in CONTROL",
-          w / 2,
-          h * (fullscreenMode ? .48f : .68f),
-          w - dp(40),
-          font * 0.6f,
-          0xFFB9D8E8);
     paint.setTextSize(dp(11));
     paint.setTextAlign(Paint.Align.RIGHT);
     paint.setColor(0xBFF6CE77);
-    canvas.drawText("KANTA", w - dp(14), h - dp(14), paint);
-  }
-
-  private void drawProgressiveHighlight(
-      Canvas canvas,
-      StaticLayout base,
-      StaticLayout highlight,
-      float x,
-      float y,
-      float highlightedCharacters) {
-    if (base == null || highlight == null || highlightedCharacters <= 0f) return;
-    float originX = x - base.getWidth() / 2f;
-    float originY = y - base.getHeight() / 2f;
-    for (int line = 0; line < base.getLineCount(); line++) {
-      int lineStart = base.getLineStart(line);
-      int lineEnd = base.getLineEnd(line);
-      if (highlightedCharacters <= lineStart) continue;
-
-      float target = Math.min(highlightedCharacters, lineEnd);
-      int fullCharacters = (int) Math.floor(target);
-      float partial = target - fullCharacters;
-
-      float left = base.getPrimaryHorizontal(lineStart);
-      float right;
-      if (fullCharacters >= lineEnd) {
-        right = base.getPrimaryHorizontal(lineEnd);
-      } else {
-        float charLeft = base.getPrimaryHorizontal(fullCharacters);
-        float charRight =
-            fullCharacters + 1 <= lineEnd
-                ? base.getPrimaryHorizontal(fullCharacters + 1)
-                : charLeft;
-        right = charLeft + (charRight - charLeft) * partial;
-      }
-      if (right <= left) continue;
-
-      canvas.save();
-      canvas.clipRect(
-          originX + left,
-          originY + base.getLineTop(line),
-          originX + right,
-          originY + base.getLineBottom(line));
-      canvas.translate(originX, originY);
-      highlight.draw(canvas);
-      canvas.restore();
-    }
+    canvas.drawText("KANTA", w - dp(14), h - contentBottom - dp(8), paint);
   }
 
   private void drawPitchWave(
       Canvas canvas,
       StaticLayout layout,
-      float x,
-      float y,
+      float originX,
+      float originY,
       MidiLyrics.Cue cue,
       long positionMilliseconds) {
     if (layout == null) return;
@@ -238,13 +200,11 @@ final class StageView extends View {
     int end = fragment[1];
     if (start >= end) return;
 
-    float originX = x - layout.getWidth() / 2f;
-    float originY = y - layout.getHeight() / 2f;
     float density = getResources().getDisplayMetrics().density;
     float timeSeconds = SystemClock.elapsedRealtime() / 1000f;
     float amplitude = 4f * density * energy;
 
-    wavePaint.setTextSize(cachedSize);
+    wavePaint.setTextSize(layout.getPaint().getTextSize());
     wavePaint.setColor(0xFFE9FFFF);
 
     for (int i = start; i < end && i < cue.line.length(); i++) {
@@ -263,34 +223,18 @@ final class StageView extends View {
     }
   }
 
-  private StaticLayout layout(CharSequence text, int width, float size, int color) {
-    TextPaint style = new TextPaint(lyricPaint);
-    style.setTextSize(size);
-    style.setColor(color);
-    return StaticLayout.Builder.obtain(text, 0, text.length(), style, width)
-        .setAlignment(Layout.Alignment.ALIGN_CENTER)
-        .setIncludePad(false)
-        .setMaxLines(2)
-        .setEllipsize(TextUtils.TruncateAt.END)
-        .build();
-  }
-
-  private void drawLayout(Canvas canvas, StaticLayout layout, float x, float y) {
-    if (layout == null) return;
-    canvas.save();
-    canvas.translate(x - layout.getWidth() / 2f, y - layout.getHeight() / 2f);
-    layout.draw(canvas);
-    canvas.restore();
-  }
-
   private void realm(Canvas canvas, float width, float height) {
+    // Realm: animated starfield that responds to the music
     double travel = (SystemClock.elapsedRealtime() % 60000) / 60000.0;
-    paint.setColor(0x806FE5E8);
+    // Use session energy to drive particle intensity
+    float energy = 1f + (session.currentPitchHz() > 0 ? 0.5f : 0f);
     for (int i = 0; i < stars.length; i += 3) {
       double z = .15 + ((stars[i + 2] + travel) % 1.0) * 2;
-      float x = (float) (width / 2 + (stars[i] - .5) * width / z);
-      float y = (float) (height / 2 + (stars[i + 1] - .5) * height / z);
-      float radius = (float) Math.min(dp(4), dp(2) / z);
+      float x = (float) (width / 2 + (stars[i] - .5) * width / z * energy);
+      float y = (float) (height / 2 + (stars[i + 1] - .5) * height / z * energy);
+      float radius = (float) Math.min(dp(5), dp(3) / z);
+      int alpha = (int) (180 / z);
+      paint.setColor((alpha << 24) | 0x6FE5E8);
       if (x >= 0 && y >= 0 && x <= width && y <= height) canvas.drawCircle(x, y, radius, paint);
     }
   }
@@ -300,29 +244,4 @@ final class StageView extends View {
   /** Standby means the presence card owns the empty stage, so draw no placeholder text. */
   void setStandbyMode(boolean standby) { standbyMode = standby; }
 
-  private void line(
-      Canvas canvas, String text, float x, float y, float maxWidth, float size, int color) {
-    paint.setTextSize(size);
-    paint.setColor(color);
-    paint.setTextAlign(Paint.Align.CENTER);
-    String[] words = text.split("\\s+");
-    List<String> lines = new ArrayList<>();
-    String line = "";
-    for (String word : words) {
-      String candidate = line.isEmpty() ? word : line + " " + word;
-      if (paint.measureText(candidate) > maxWidth && !line.isEmpty()) {
-        lines.add(line);
-        line = word;
-      } else line = candidate;
-    }
-    if (!line.isEmpty()) lines.add(line);
-    int count = Math.min(2, lines.size());
-    for (int i = 0; i < count; i++) {
-      String value = lines.get(i);
-      if (i == 1 && lines.size() > 2) value += "\u2026";
-      while (paint.measureText(value) > maxWidth && value.length() > 1)
-        value = value.substring(0, value.length() - 1);
-      canvas.drawText(value, x, y + (i - (count - 1) / 2f) * size * 1.2f, paint);
-    }
-  }
 }

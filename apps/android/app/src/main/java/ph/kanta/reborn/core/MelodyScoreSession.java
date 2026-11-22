@@ -9,6 +9,11 @@ public final class MelodyScoreSession {
     public final int matchedSlots;
     public final boolean reportable;
 
+    /** Neutral breakdown for a completed song with no usable singing estimate. */
+    public static Estimate noSinging() {
+      return new Estimate(50, 50, 0);
+    }
+
     Estimate(double pitchAccuracy, double coverage, int matchedSlots) {
       this.pitchAccuracy = pitchAccuracy;
       this.coverage = coverage;

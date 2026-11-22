@@ -75,9 +75,12 @@ class AndroidRuntimeRunnerContractTests(unittest.TestCase):
     def test_first_launch_activates_the_newly_created_stage(self) -> None:
         source = (REPO_ROOT / "apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java").read_text()
         start = source.index("protected void onStart()")
-        body = source[start:source.index("protected void onPause()", start)]
+        body = source[start:source.index("protected void onStop()", start)]
         self.assertLess(body.index("session.listen(this::render);"),
-                        body.index("stagePresenter.setVisualActive("))
+                        body.index("updatePrimaryStageVisibility();"))
+        visibility = source.split("private void updatePrimaryStageVisibility()", 1)[1].split(
+            "private void buildWindow()", 1)[0]
+        self.assertIn("stagePresenter.setVisualActive(visible && session.foreground", visibility)
 
     def test_live_video_evidence_comes_from_texture_updates(self) -> None:
         base = REPO_ROOT / "apps/android/app/src/main/java/ph/kanta/reborn"

@@ -1,3 +1,29 @@
+## Android v35 Stage, Menu and Browser Remote (2026-11-23)
+
+The Android UI overhaul replaced the icon-only Stage chrome with labeled,
+icon-backed controls and moved Party Pads into a normal Menu page. Stage
+Controls now expands a translucent inline panel below the Stage showing all
+eight pads plus labeled icon controls, and every Menu page/submenu uses one
+shared card treatment with an original Android icon set. The persistent Stage
+presenter replaced the standalone Control Deck (`KantaControlDeck`), Search
+screen (`KantaSearchScreen`) and YouTube preview classes; the three bundled
+starter KAR files moved to the androidTest song fixtures, where the media
+library regression exercises them.
+
+Browser Remote gained in-app QR pairing and a bounded reconnect window with a
+hard three-hour deadline, dispatch-time authorization and Stop revocation; the
+legacy iOS/native companion paths are unchanged.
+
+The welcome artwork gains the landscape composition in `drawable-land-nodpi`,
+selected by live orientation, so landscape devices no longer letterbox the
+portrait art.
+
+The private `legacy-import-key.bin` asset is not part of this public port; the
+`privateLegacy` Gradle variant and its CI guards are unchanged and remain
+local-only. The owner-supplied `score-celebration.mp3` is recorded in
+`party/SOUND_LICENSES.txt` and `apps/android/THIRD_PARTY_NOTICES.md` as
+owner-licensed for public distribution.
+
 ## Android paired legacy importer inflater repair — 2026-11-16
 
 The paired-container path had a second inline raw-DEFLATE loop separate from

@@ -2,12 +2,9 @@ package ph.kanta.reborn.stage;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Typeface;
-import ph.kanta.reborn.font.FontStore;
 import android.graphics.Paint;
-import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.os.SystemClock;
-import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.AttributeSet;
@@ -17,54 +14,32 @@ import ph.kanta.reborn.core.LyricWordAnimation;
 import ph.kanta.reborn.core.MidiLyrics;
 import ph.kanta.reborn.core.PitchSource;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
+import ph.kanta.reborn.font.FontStore;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
-/**
- * Renders scrolling timed lyrics with active/inactive/upcoming states.
- *
- * <p>Synced to {@link RenderedPlaybackClock}. The scrolling window is unchanged; the active line
- * now fills smoothly across each source-timed lyric fragment instead of switching a whole word at
- * once, and the fragment being sung reacts to the live pitch estimate through a small per-letter
- * wave. Pitch is a visual energy signal only: it never changes cue timing, the playback clock or
- * scoring, and the stage still renders with the microphone off.
- */
+/** Draws the active cue and optional next cue, synced to the rendered playback clock. */
 public final class LyricStage extends View {
 
-  private static final int MAX_LINES_VISIBLE = 7;
-  private static final int LINE_SPACING_DP = 16;
-  private static final float ACTIVE_SIZE_SP = 24f;
-  private static final float INACTIVE_SIZE_SP = 20f;
-  private static final float UPCOMING_SIZE_SP = 16f;
-  private static final float PILL_PAD_DP = 12f;
+  private static final int HIGHLIGHT_COLOR = 0xFFF6CE77;
   private static final int PITCH_SPARKS = 8;
+  private static final MidiLyrics.Cue[] EMPTY_CUES = new MidiLyrics.Cue[0];
 
   private final TextPaint activePaint;
-  private final TextPaint highlightPaint;
-  private final TextPaint inactivePaint;
   private final TextPaint upcomingPaint;
   private final TextPaint echoPaint;
   private final TextPaint pitchWavePaint;
-  private final Paint pillPaint;
   private final Paint sparkPaint;
-  private final int lineSpacingPx;
-  private final int paddingHorizontalPx;
-  private final int paddingVerticalPx;
-
+  private final TextPaint placeholderPaint;
   private final FontStore fontStore;
   private Typeface appliedTypeface;
 
-  private MidiLyrics.Cue[] cues = new MidiLyrics.Cue[0];
+  private MidiLyrics.Cue[] cues = EMPTY_CUES;
   private RenderedPlaybackClock clock;
   private PitchSource pitchSource;
   private int currentLineIndex = -1;
   private long playedFrames;
-  private List<StaticLayout> layouts = new ArrayList<>();
-  private StaticLayout highlightLayout;
-  private int highlightLayoutLine = -1;
-  private int measuredWidth = 0;
-  private int measuredHeight = 0;
+  private StageLyricLayout visibleLyrics;
   private float pitchEnergy = 0f;
 
   public LyricStage(Context context) {
@@ -77,40 +52,27 @@ public final class LyricStage extends View {
     setWillNotDraw(false);
 
     float density = context.getResources().getDisplayMetrics().density;
-    lineSpacingPx = (int) (LINE_SPACING_DP * density);
-    paddingHorizontalPx = (int) (24 * density);
-    paddingVerticalPx = (int) (32 * density);
-
     activePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    activePaint.setTextSize(ACTIVE_SIZE_SP * density);
-    activePaint.setColor(0xFFFF3D8B); // karaoke_lyric_active
+    activePaint.setColor(0xFFFFFFFF);
     activePaint.setFakeBoldText(true);
-
-    highlightPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    highlightPaint.setTextSize(ACTIVE_SIZE_SP * density);
-    highlightPaint.setColor(0xFFF6CE77); // existing stage gold for sung characters
-    highlightPaint.setFakeBoldText(true);
-
-    inactivePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    inactivePaint.setTextSize(INACTIVE_SIZE_SP * density);
-    inactivePaint.setColor(0xFFFFFFFF); // karaoke_lyric_inactive
+    activePaint.setShadowLayer(3 * density, 0, density, 0xFF000000);
 
     upcomingPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    upcomingPaint.setTextSize(UPCOMING_SIZE_SP * density);
-    upcomingPaint.setColor(0xFFBBBBBB); // karaoke_lyric_upcoming
+    upcomingPaint.setColor(0xFFE8EEF4);
+    upcomingPaint.setShadowLayer(3 * density, 0, density, 0xFF000000);
 
     echoPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    echoPaint.setTextSize(UPCOMING_SIZE_SP * density);
     echoPaint.setColor(0x55FFFFFF); // dimmed KAR echo/backing line
 
     pitchWavePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    pitchWavePaint.setTextSize(ACTIVE_SIZE_SP * density);
     pitchWavePaint.setColor(0xCCE9FFFF);
     pitchWavePaint.setFakeBoldText(true);
 
-    pillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    pillPaint.setColor(0x33FF3D8B); // 20% accent
 
+    placeholderPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    placeholderPaint.setTextSize(16 * density);
+    placeholderPaint.setColor(0xFF999999);
+    placeholderPaint.setTextAlign(Paint.Align.CENTER);
     sparkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     sparkPaint.setStyle(Paint.Style.FILL);
   }
@@ -127,10 +89,11 @@ public final class LyricStage extends View {
 
   /** Sets the lyrics cues and clock. */
   public void setLyrics(MidiLyrics.Cue[] cues, RenderedPlaybackClock clock) {
-    this.cues = cues != null ? cues : new MidiLyrics.Cue[0];
+    MidiLyrics.Cue[] updated = cues != null ? cues : EMPTY_CUES;
+    if (this.clock == clock && Arrays.equals(this.cues, updated)) return;
+    this.cues = updated;
     this.clock = clock;
-    this.currentLineIndex = -1;
-    rebuildLayouts();
+    visibleLyrics = null;
     invalidate();
   }
 
@@ -151,180 +114,59 @@ public final class LyricStage extends View {
     invalidate();
   }
 
-  private void rebuildLayouts() {
-    layouts.clear();
-    highlightLayout = null;
-    highlightLayoutLine = -1;
-    if (cues.length == 0 || measuredWidth <= 0) return;
-
-    int availableWidth = Math.max(1, measuredWidth - 2 * paddingHorizontalPx);
-    for (int i = 0; i < cues.length; i++) {
-      layouts.add(buildLayout(cues[i].line, getPaintForLine(i), availableWidth));
-    }
-    if (currentLineIndex >= 0 && currentLineIndex < cues.length) {
-      highlightLayout = buildLayout(cues[currentLineIndex].line, highlightPaint, availableWidth);
-      highlightLayoutLine = currentLineIndex;
-    }
-  }
-
-  private StaticLayout buildLayout(String text, TextPaint paint, int width) {
-    return StaticLayout.Builder.obtain(text, 0, text.length(), paint, width)
-        .setAlignment(Layout.Alignment.ALIGN_CENTER)
-        .setLineSpacing(lineSpacingPx, 1.0f)
-        .setIncludePad(false)
-        .build();
-  }
-
-  private TextPaint getPaintForLine(int lineIndex) {
-    if (lineIndex == currentLineIndex) return activePaint;
-    if (lineIndex < currentLineIndex) return inactivePaint;
-    if (lineIndex < cues.length && cues[lineIndex].echo) return echoPaint;
-    return upcomingPaint;
-  }
-
   @Override
   protected void onSizeChanged(int w, int h, int oldw, int oldh) {
     super.onSizeChanged(w, h, oldw, oldh);
-    measuredWidth = w;
-    measuredHeight = h;
-    rebuildLayouts();
+    visibleLyrics = null;
   }
 
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
+    if (standby) return;
+    if (cues.length == 0) {
+      canvas.drawText("No timed lyrics for this song", getWidth() / 2f, getHeight() / 2f,
+          placeholderPaint);
+      return;
+    }
     Typeface selected = fontStore.typeface();
     if (selected != appliedTypeface) {
       appliedTypeface = selected;
       activePaint.setTypeface(selected);
-      highlightPaint.setTypeface(selected);
-      inactivePaint.setTypeface(selected);
       upcomingPaint.setTypeface(selected);
       echoPaint.setTypeface(selected);
       pitchWavePaint.setTypeface(selected);
-      rebuildLayouts();
+      visibleLyrics = null;
     }
-
-    if (standby) return;
-    if (cues.length == 0 || layouts.isEmpty()) {
-      drawPlaceholder(canvas);
-      return;
-    }
-
-    long positionMilliseconds = clock != null ? clock.position(playedFrames) : 0L;
-    pitchEnergy = currentPitchEnergy();
-
-    int nextLineIndex = findCurrentLine(positionMilliseconds);
-    if (nextLineIndex != currentLineIndex) {
-      currentLineIndex = nextLineIndex;
-      rebuildLayouts();
-    }
-
-    int startLine =
-        currentLineIndex >= 0 ? Math.max(0, currentLineIndex - MAX_LINES_VISIBLE / 2) : 0;
-    int endLine = Math.min(layouts.size(), startLine + MAX_LINES_VISIBLE);
-    int totalHeight = 0;
-    for (int i = startLine; i < endLine; i++) {
-      totalHeight += layouts.get(i).getHeight();
-      if (i + 1 < endLine) totalHeight += lineSpacingPx;
-    }
-
-    int y = Math.max(paddingVerticalPx, (measuredHeight - totalHeight) / 2);
-    int x = measuredWidth / 2;
-    for (int i = startLine; i < endLine; i++) {
-      StaticLayout layout = layouts.get(i);
-      if (i == currentLineIndex) {
-        drawActiveLine(canvas, layout, x, y, cues[i], positionMilliseconds);
-      } else {
-        canvas.save();
-        canvas.translate(x - layout.getWidth() / 2f, y);
-        layout.draw(canvas);
-        canvas.restore();
-      }
-      y += layout.getHeight() + lineSpacingPx;
-    }
-  }
-
-  private void drawActiveLine(
-      Canvas canvas,
-      StaticLayout layout,
-      float x,
-      float y,
-      MidiLyrics.Cue cue,
-      long positionMilliseconds) {
     float density = getResources().getDisplayMetrics().density;
-    float originX = x - layout.getWidth() / 2f;
-    float originY = y;
-    float pad = PILL_PAD_DP * density;
-
-    RectF pill =
-        new RectF(
-            Math.max(paddingHorizontalPx, originX - pad),
-            originY - pad / 3f,
-            Math.min(measuredWidth - paddingHorizontalPx, originX + layout.getWidth() + pad),
-            originY + layout.getHeight() + pad / 3f);
-    canvas.drawRoundRect(pill, pad, pad, pillPaint);
-
-    canvas.save();
-    canvas.translate(originX, originY);
-    layout.draw(canvas);
-    canvas.restore();
-
-    float highlighted = LyricWordAnimation.highlightedCharacters(cue, positionMilliseconds);
-    if (highlighted > 0f
-        && highlightLayout != null
-        && highlightLayoutLine == currentLineIndex
-        && highlightLayout.getLineCount() > 0) {
-      drawProgressiveHighlight(
-          canvas, layout, highlightLayout, originX, originY, highlighted);
+    int width = getWidth() - 2 * (int) (20 * density);
+    int padding = Math.min((int) (12 * density), getHeight() / 12);
+    int height = getHeight() - 2 * padding;
+    if (width < 1 || height < 1) return;
+    long position = clock != null ? clock.position(playedFrames) : 0L;
+    int index = findCurrentLine(position);
+    MidiLyrics.Cue cue = cues[Math.max(0, index)];
+    if (visibleLyrics == null || index != currentLineIndex) {
+      currentLineIndex = index;
+      MidiLyrics.Cue next = Math.max(0, index) + 1 < cues.length
+          ? cues[Math.max(0, index) + 1] : null;
+      float size = StageLyricLayout.preferredSize(getResources(), getWidth(), false);
+      activePaint.setTextSize(size);
+      TextPaint preview = next != null && next.echo ? echoPaint : upcomingPaint;
+      preview.setTextSize(size * .65f);
+      visibleLyrics = StageLyricLayout.fit(cue.line, activePaint, next == null ? "" : next.line,
+          preview, width, height, (int) (8 * density), 16 * density);
     }
-
-    if (pitchEnergy > 0.02f) {
-      drawPitchWave(canvas, layout, originX, originY, cue, positionMilliseconds, density);
-      drawPitchSparks(canvas, layout, originX, originY, density);
-    }
-  }
-
-  private void drawProgressiveHighlight(
-      Canvas canvas,
-      StaticLayout base,
-      StaticLayout highlight,
-      float originX,
-      float originY,
-      float highlightedCharacters) {
-    int lineCount = base.getLineCount();
-    for (int line = 0; line < lineCount; line++) {
-      int lineStart = base.getLineStart(line);
-      int lineEnd = base.getLineEnd(line);
-      if (highlightedCharacters <= lineStart) continue;
-
-      float target = Math.min(highlightedCharacters, lineEnd);
-      int fullCharacters = (int) Math.floor(target);
-      float partial = target - fullCharacters;
-
-      float left = base.getPrimaryHorizontal(lineStart);
-      float right;
-      if (fullCharacters >= lineEnd) {
-        right = base.getPrimaryHorizontal(lineEnd);
-      } else {
-        float charLeft = base.getPrimaryHorizontal(fullCharacters);
-        float charRight =
-            fullCharacters + 1 <= lineEnd
-                ? base.getPrimaryHorizontal(fullCharacters + 1)
-                : charLeft;
-        right = charLeft + (charRight - charLeft) * partial;
-      }
-      if (right <= left) continue;
-
-      canvas.save();
-      canvas.clipRect(
-          originX + left,
-          originY + base.getLineTop(line),
-          originX + right,
-          originY + base.getLineBottom(line));
-      canvas.translate(originX, originY);
-      highlight.draw(canvas);
-      canvas.restore();
+    float x = (getWidth() - width) / 2f;
+    float y = padding + Math.max(0, height - visibleLyrics.height()) / 2f;
+    visibleLyrics.draw(canvas, x, y,
+        index < 0 ? 0f : LyricWordAnimation.highlightedCharacters(cue, position), HIGHLIGHT_COLOR);
+    pitchEnergy = currentPitchEnergy();
+    if (index >= 0 && pitchEnergy > .02f) {
+      StaticLayout layout = visibleLyrics.current;
+      pitchWavePaint.setTextSize(layout.getPaint().getTextSize());
+      drawPitchWave(canvas, layout, x, y, cue, position, density);
+      drawPitchSparks(canvas, layout, x, y, density);
     }
   }
 
@@ -388,23 +230,13 @@ public final class LyricStage extends View {
         pitchSource.currentPitchHz(), pitchSource.measuredAtMs(), SystemClock.elapsedRealtime());
   }
 
-  private void drawPlaceholder(Canvas canvas) {
-    String text = "No timed lyrics for this song";
-    TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    paint.setTextSize(16 * getResources().getDisplayMetrics().density);
-    paint.setColor(0xFF999999);
-    paint.setTextAlign(Paint.Align.CENTER);
-    canvas.drawText(text, measuredWidth / 2f, measuredHeight / 2f, paint);
-  }
-
   private int findCurrentLine(long positionMilliseconds) {
-    for (int i = 0; i < cues.length; i++) {
-      long start = cues[i].milliseconds;
-      long end = (i + 1 < cues.length) ? cues[i + 1].milliseconds : Long.MAX_VALUE;
-      if (positionMilliseconds >= start && positionMilliseconds < end) {
-        return i;
-      }
+    int low = 0, high = cues.length;
+    while (low < high) {
+      int middle = (low + high) >>> 1;
+      if (cues[middle].milliseconds <= positionMilliseconds) low = middle + 1;
+      else high = middle;
     }
-    return -1;
+    return low - 1;
   }
 }

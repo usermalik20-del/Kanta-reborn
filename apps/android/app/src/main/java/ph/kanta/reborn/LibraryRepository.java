@@ -45,12 +45,25 @@ final class LibraryRepository {
     }
   }
 
-  static final String[] STARTERS = {"morning-light", "sing-together", "starlight-echo"};
-  static final String[] TITLES = {"Morning Light", "Sing Together", "Starlight Echo"};
   private static final String[][] BUNDLED_SOUNDFONTS = {
     {"kanta_reborn_karaokelive_gm_v3.sf2", "KANTA KaraokeLive GM v3"},
     {"kanta_reborn_livestage_gm_v2.sf2", "KANTA LiveStage GM v2"}
   };
+
+  static boolean removableSoundFont(String fileName) {
+    if (fileName == null) return false;
+    if (fileName.matches("[a-f0-9]{64}\\.sf2")) return true;
+    for (SoundFontDownload.Bank bank : SoundFontDownload.Bank.values())
+      if (bank.fileName.equals(fileName)) return true;
+    return false;
+  }
+
+  private static boolean knownSoundFont(String fileName) {
+    if ("kanta-tone.sf2".equals(fileName) || removableSoundFont(fileName)) return true;
+    for (String[] bundled : BUNDLED_SOUNDFONTS)
+      if (bundled[0].equals(fileName)) return true;
+    return false;
+  }
 
   static final class SoundFontEntry {
     final String fileName, name;
@@ -74,7 +87,6 @@ final class LibraryRepository {
   private final ArrayList<Song> songs = new ArrayList<>();
   private final ArrayList<SavedSet> sets = new ArrayList<>();
   private final ArrayList<SoundFontEntry> soundFonts = new ArrayList<>();
-  private final Set<String> removed = new HashSet<>();
   private List<ReservationQueue.Entry> queue = new ArrayList<>();
   private String selectedBank = "kanta-tone.sf2", bankName = "KANTA original tone";
   private boolean batching;
@@ -99,7 +111,7 @@ final class LibraryRepository {
           new JSONObject(new String(state.readFully(), java.nio.charset.StandardCharsets.UTF_8));
       if (root.getInt("version") != 1) throw new IOException("Unsupported library version");
       String bank = root.optString("soundfont", "kanta-tone.sf2");
-      if (bank.matches("[a-f0-9]{64}\\.sf2") && new File(media, bank).isFile()) {
+      if (knownSoundFont(bank) && new File(media, bank).isFile()) {
         selectedBank = bank;
         bankName = root.optString("soundfontName", "Imported SoundFont");
       }
@@ -110,7 +122,7 @@ final class LibraryRepository {
           JSONObject item = banks.getJSONObject(i);
           String file = item.optString("file", "");
           String name = item.optString("name", "Imported SoundFont");
-          if ((file.equals("kanta-tone.sf2") || file.matches("[a-f0-9]{64}\\.sf2"))
+          if (knownSoundFont(file)
               && new File(media, file).isFile()
               && soundFonts.stream().noneMatch(value -> value.fileName.equals(file)))
             soundFonts.add(new SoundFontEntry(file, name));
@@ -132,16 +144,13 @@ final class LibraryRepository {
                 o.optString("artist"),
                 o.optString("code"),
                 o.getString("file"),
-                o.optBoolean("starter"));
+                o.optBoolean("starter"), o.optBoolean("legacySourceNumber"));
         if (!ids.add(s.id)) throw new IOException("Duplicate song ID");
         // Imported rows whose private media copy is missing are dropped on load so a later
         // identical import recreates the pair instead of returning a permanently broken row.
-        if (!s.starter && !new File(media, s.fileName).isFile()) continue;
+        if (s.starter || s.id.startsWith("starter:") || !new File(media, s.fileName).isFile()) continue;
         songs.add(s);
       }
-      JSONArray hidden = root.optJSONArray("removed");
-      if (hidden != null)
-        for (int i = 0; i < hidden.length(); i++) removed.add(hidden.getString(i));
       JSONArray collections = root.optJSONArray("sets");
       if (collections != null) {
         if (collections.length() > 1000) throw new IOException("Too many saved sets");
@@ -150,7 +159,10 @@ final class LibraryRepository {
           ArrayList<String> idsInSet = new ArrayList<>();
           JSONArray a = o.getJSONArray("songs");
           if (a.length() > 10000) throw new IOException("Saved set too large");
-          for (int j = 0; j < a.length(); j++) idsInSet.add(a.getString(j));
+          for (int j = 0; j < a.length(); j++) {
+            String id = a.getString(j);
+            if (!id.startsWith("starter:")) idsInSet.add(id);
+          }
           sets.add(new SavedSet(o.getString("id"), o.getString("name"), idsInSet));
         }
       }
@@ -159,7 +171,10 @@ final class LibraryRepository {
         if (reservations.length() > 1000) throw new IOException("Queue too large");
         for (int i = 0; i < reservations.length(); i++) {
           JSONObject o = reservations.getJSONObject(i);
-          Song s = find(o.getString("song"));
+          // Old online rows may have a source marker but no local song or valid queue ID.
+          // Only restore reservations for songs present in the local catalog.
+          if (!"local".equals(o.optString("source", "local")) || !o.isNull("youtube")) continue;
+          Song s = find(o.optString("song", ""));
           if (s != null)
             queue.add(
                 new ReservationQueue.Entry(
@@ -193,26 +208,6 @@ final class LibraryRepository {
       selectedBank = "kanta-tone.sf2";
       bankName = "KANTA original tone";
     }
-    for (int i = 0; i < STARTERS.length; i++) {
-      String id = "starter:" + STARTERS[i], file = STARTERS[i] + ".mid";
-      File target = new File(media, file);
-      if (!target.exists()) {
-        File temp = File.createTempFile("starter-", ".tmp", media);
-        try (InputStream in = context.getAssets().open("starter/" + STARTERS[i] + ".kar");
-            FileOutputStream out = new FileOutputStream(temp)) {
-          byte[] b = new byte[8192];
-          int n;
-          while ((n = in.read(b)) != -1) out.write(b, 0, n);
-          out.getFD().sync();
-        }
-        if (!temp.renameTo(target)) {
-          temp.delete();
-          throw new IOException("Cannot install starter song");
-        }
-      }
-      if (!removed.contains(id) && find(id) == null)
-        songs.add(new Song(id, TITLES[i], "KANTA Originals", "S00" + (i + 1), file, true));
-    }
     persist();
   }
 
@@ -245,23 +240,90 @@ final class LibraryRepository {
 
   int importLegacyResult(ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result) throws IOException {
     if (result == null || result.songs.isEmpty()) return 0;
-    if (songs.size() + result.songs.size() > 150000) throw new IOException("Library capacity reached");
-    int code = 300000;
-    java.util.HashSet<String> codes = new java.util.HashSet<>();
-    for (Song song : songs) codes.add(song.code);
-    for (ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.DecodedSong decoded : result.songs) {
-      File source = decoded.file;
-      String suffix = decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".wav") ? ".wav"
-          : decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".mp3") ? ".mp3" : ".mid";
-      File destination = new File(media, "legacy-" + decoded.id + suffix);
-      if (!source.isFile() || !source.renameTo(destination)) throw new IOException("Cannot install decoded legacy song");
-      while (codes.contains(String.valueOf(code))) code++;
-      codes.add(String.valueOf(code));
-      songs.add(new Song("legacy:" + decoded.id, decoded.title, "", String.valueOf(code), destination.getName(), false));
+    var previous = new ArrayList<>(songs);
+    var installed = new ArrayList<File>();
+    var codes = new BitSet();
+    var existing = new HashMap<String, List<Integer>>();
+    int nextGenerated = SongCodes.FIRST_GENERATED, changed = 0;
+    try {
+      var incomingIdentities = new HashMap<File, String>();
+      var incomingCounts = new HashMap<String, Integer>();
+      for (var row : result.songs) {
+        if (row.sourceCode.isEmpty()) continue;
+        SongCodes.markUsed(codes, row.sourceCode);
+        String identity = legacyIdentity(row.title, row.file);
+        incomingIdentities.put(row.file, identity);
+        incomingCounts.merge(identity, 1, Integer::sum);
+      }
+      for (int i = 0; i < songs.size(); i++) {
+        Song song = songs.get(i);
+        SongCodes.markUsed(codes, song.code);
+        if (!incomingIdentities.isEmpty() && song.id.startsWith("legacy:")) {
+          File file = new File(media, song.fileName);
+          if (file.isFile()) existing.computeIfAbsent(legacyIdentity(song.title, file), key -> new ArrayList<>()).add(i);
+        }
+      }
+      for (var decoded : result.songs) {
+        File source = decoded.file;
+        String identity = incomingIdentities.get(source);
+        List<Integer> matches = identity == null ? null : existing.get(identity);
+        if (matches != null) {
+          if (matches.stream().anyMatch(index -> songs.get(index).legacySourceNumber
+              && songs.get(index).code.equals(decoded.sourceCode))) continue;
+          if (matches.size() == 1 && incomingCounts.get(identity) == 1) {
+            int index = matches.get(0);
+            Song old = songs.get(index);
+            // v28 wrote the one-based title ordinal; only repair a matching older identity.
+            if (!old.legacySourceNumber || (decoded.titleOrdinal <= SongCodes.MAX_NUMBER
+                && old.code.equals(SongCodes.format(decoded.titleOrdinal)))) {
+              songs.set(index, new Song(old.id, old.title, old.artist, decoded.sourceCode,
+                  old.fileName, old.starter, true));
+              changed++;
+              continue;
+            }
+          }
+          // Identical older copies cannot be assigned different source numbers safely by order.
+          if (matches.stream().anyMatch(index -> !songs.get(index).legacySourceNumber)) continue;
+        }
+        if (songs.size() >= 99999) throw new IOException("Library capacity reached");
+        boolean numbered = !decoded.sourceCode.isEmpty();
+        String number = decoded.sourceCode;
+        if (!numbered) {
+          int generated = SongCodes.claimGenerated(codes, nextGenerated);
+          number = SongCodes.format(generated);
+          nextGenerated = generated + 1;
+        }
+        String suffix = decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".wav") ? ".wav"
+            : decoded.fileName.toLowerCase(Locale.ROOT).endsWith(".mp3") ? ".mp3" : ".mid";
+        File destination = new File(media, "legacy-" + decoded.id + suffix);
+        if (!source.isFile() || !source.renameTo(destination)) throw new IOException("Cannot install decoded legacy song");
+        installed.add(destination);
+        if (identity != null) existing.computeIfAbsent(identity, key -> new ArrayList<>()).add(songs.size());
+        songs.add(new Song("legacy:" + decoded.id, decoded.title, "", number, destination.getName(), false, numbered));
+        changed++;
+      }
+      if (changed > 0) persist();
+      return changed;
+    } catch (Exception failure) {
+      songs.clear();
+      songs.addAll(previous);
+      for (File file : installed) file.delete();
+      throw new IOException("Cannot save legacy library", failure);
+    } finally {
+      for (var row : result.songs) row.file.delete();
     }
-    try { persist(); }
-    catch (Exception failure) { throw new IOException("Cannot persist legacy library", failure); }
-    return result.songs.size();
+  }
+
+  private static String legacyIdentity(String title, File file) throws IOException {
+    try (InputStream in = new FileInputStream(file)) {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] buffer = new byte[32768];
+      int n;
+      while ((n = in.read(buffer)) != -1) digest.update(buffer, 0, n);
+      return java.util.Base64.getEncoder().encodeToString(digest.digest()) + ':' + title;
+    } catch (NoSuchAlgorithmException unavailable) {
+      throw new IllegalStateException(unavailable);
+    }
   }
 
   List<SavedSet> sets() {
@@ -277,7 +339,10 @@ final class LibraryRepository {
   }
   void saveQueue(List<ReservationQueue.Entry> next) throws Exception {
     List<ReservationQueue.Entry> old = queue;
+    Set<String> available = new HashSet<>();
+    for (Song song : songs) available.add(song.id);
     queue = new ArrayList<>(next);
+    queue.removeIf(entry -> !available.contains(entry.song.id));
     try {
       persist();
     } catch (Exception e) {
@@ -330,7 +395,7 @@ final class LibraryRepository {
     notifyProgress(fileSize, 0, "Opening song...");
 
     String name = displayName(uri);
-    if (songs.size() >= 150000) throw new IOException("Library capacity reached");
+    if (songs.size() >= 99999) throw new IOException("Library capacity reached");
     String lower = name.toLowerCase(Locale.ROOT);
     if (lower.endsWith(".zip") || lower.endsWith(".rar") || lower.endsWith(".7z")
         || lower.endsWith(".tar") || lower.endsWith(".gz") || lower.endsWith(".tgz")
@@ -342,7 +407,7 @@ final class LibraryRepository {
             : lower.endsWith(".mp3") ? "mp3" : lower.endsWith(".wav") ? "wav" : null;
     if (lower.endsWith(".shubblob") || lower.endsWith(".kantablob")
         || lower.endsWith(".shubidx") || lower.endsWith(".kantidx"))
-      throw new IOException("Select “Import legacy idx + blob” in My Set and choose the paired files.");
+      throw new IOException("Open Menu → Presets and choose “Import legacy idx + blob” to select the paired files.");
     if (ext == null) throw new IOException("Choose MIDI, KAR, MP3 or WAV music, or a valid SF2 SoundFont.");
     File temp = File.createTempFile("import-", ".tmp", media);
     boolean installed = false;
@@ -394,13 +459,13 @@ final class LibraryRepository {
       for (byte b : digest.digest()) hex.append(String.format(Locale.ROOT, "%02x", b & 255));
       String id = hex.toString();
       Song existing = find(id);
-      if (existing != null) {
-        if (new File(media, existing.fileName).isFile())
-          return new ImportOutcome(existing, true, false);
-        // The private copy is gone while the row survived (for example after manual
-        // storage cleanup): recreate both below instead of returning a broken row.
-        songs.remove(existing);
-      }
+      if (existing != null && new File(media, existing.fileName).isFile())
+        return new ImportOutcome(existing, true, false);
+      var codes = new BitSet();
+      for (Song existingSong : songs) if (existingSong != existing) SongCodes.markUsed(codes, existingSong.code);
+      int previousNumber = existing == null ? -1 : SongCodes.number(existing.code);
+      String reference = previousNumber >= 0 && !codes.get(previousNumber) ? existing.code
+          : SongCodes.format(SongCodes.claimGenerated(codes, SongCodes.FIRST_GENERATED));
       File destination = new File(media, id + "." + ext);
       boolean created = !destination.exists();
       if (created) {
@@ -410,18 +475,18 @@ final class LibraryRepository {
       } else {
         verifyCopy(destination, id);
       }
-      Set<String> codes = new HashSet<>();
-      for (Song existingSong : songs) codes.add(existingSong.code);
-      int reference = 100000;
-      while (codes.contains(String.valueOf(reference))) reference++;
-      Song song = new Song(id, title, artist, String.valueOf(reference), destination.getName(), false);
-      songs.add(song);
+      // Replace a row with missing private media in place, without changing its identity.
+      Song song = new Song(id, title, artist, reference, destination.getName(), false);
+      int existingIndex = existing == null ? -1 : songs.indexOf(existing);
+      if (existingIndex < 0) songs.add(song);
+      else songs.set(existingIndex, song);
       if (!batching) {
         try {
           persist();
         } catch (Exception e) {
           notifyComplete(false, e.getMessage());
-          songs.remove(song);
+          if (existingIndex < 0) songs.remove(song);
+          else songs.set(existingIndex, existing);
           if (created) destination.delete();
           throw e;
         }
@@ -624,7 +689,7 @@ final class LibraryRepository {
       batching = false;
       persist();
       StringBuilder summary = new StringBuilder("Imported ").append(imported).append(" file(s)");
-      if (duplicates > 0) summary.append(", ").append(duplicates).append(" already in My Set");
+      if (duplicates > 0) summary.append(", ").append(duplicates).append(" already in your library");
       if (failed > 0) summary.append(", skipped ").append(failed);
       summary.append(".");
       notifyComplete(true, summary.toString());
@@ -648,96 +713,71 @@ final class LibraryRepository {
     }
   }
 
-  void setStarter(String id, boolean enabled) throws Exception {
-    int index = Arrays.asList(STARTERS).indexOf(id.replace("starter:", ""));
-    if (index < 0) throw new IOException("Unknown starter song");
-    ArrayList<Song> before = new ArrayList<>(songs);
-    Set<String> previous = new HashSet<>(removed);
-    if (enabled) {
-      removed.remove(id);
-      if (find(id) == null)
-        songs.add(
-            new Song(
-                id,
-                TITLES[index],
-                "KANTA Originals",
-                "S00" + (index + 1),
-                STARTERS[index] + ".mid",
-                true));
-    } else {
-      removed.add(id);
-      songs.removeIf(s -> s.id.equals(id));
-    }
-    try {
-      persist();
-    } catch (Exception e) {
-      notifyComplete(false, e.getMessage());
-      songs.clear();
-      songs.addAll(before);
-      removed.clear();
-      removed.addAll(previous);
-      throw e;
-    }
-  }
-
-  /** Removes an imported song row, its private copy and any queue reservations. */
-  void deleteSong(String id) throws Exception {
+  /** Removes an imported song and its references; an unsuccessful commit keeps the bytes. */
+  boolean deleteSong(String id) throws Exception {
     Song target = find(id);
     if (target == null) throw new IOException("That song is no longer listed.");
-    if (target.starter)
-      throw new IOException("Starter songs are hidden from the starter-pack settings instead.");
-    ArrayList<Song> before = new ArrayList<>(songs);
+    String stem = id.startsWith("legacy:") ? "legacy-" + id.substring(7) : id;
+    if (target.starter || id.startsWith("starter:")
+        || !target.fileName.matches(java.util.regex.Pattern.quote(stem) + "\\.(?:mid|mp3|wav)"))
+      throw new IOException("Only imported songs can be removed here.");
+    int index = songs.indexOf(target);
     List<ReservationQueue.Entry> queueBefore = new ArrayList<>(queue);
-    songs.remove(target);
+    ArrayList<SavedSet> setsBefore = new ArrayList<>(sets);
+    songs.remove(index);
     queue.removeIf(e -> e.song.id.equals(id));
-    // Rename-then-delete so a failed persist can restore the private copy.
-    File mediaFile = new File(media, target.fileName);
-    File tombstone = new File(media, target.fileName + ".removed");
-    boolean moved = mediaFile.renameTo(tombstone);
+    for (int i = 0; i < sets.size(); i++) {
+      SavedSet set = sets.get(i);
+      if (!set.songs.contains(id)) continue;
+      ArrayList<String> remaining = new ArrayList<>(set.songs);
+      remaining.removeIf(id::equals);
+      sets.set(i, new SavedSet(set.id, set.name, remaining));
+    }
     try {
       persist();
     } catch (Exception failure) {
-      if (moved) tombstone.renameTo(mediaFile);
-      songs.clear();
-      songs.addAll(before);
-      queue.clear();
-      queue.addAll(queueBefore);
+      songs.add(index, target);
+      queue = queueBefore;
+      sets.clear();
+      sets.addAll(setsBefore);
       throw failure;
     }
-    if (moved) tombstone.delete();
-    else if (mediaFile.exists()) mediaFile.delete();
+    // Do not leave a durable row pointing at missing bytes if the process dies before commit.
+    return songs.stream().anyMatch(song -> song.fileName.equals(target.fileName))
+        || deletePrivateCopy(target.fileName);
   }
 
-  /** Removes an imported (hash-named) SoundFont; bundled banks are starter-managed. */
-  void deleteSoundFont(String fileName) throws Exception {
-    if (!fileName.matches("[a-f0-9]{64}\\.sf2"))
-      throw new IOException("Bundled SoundFonts are managed by the starter pack.");
-    SoundFontEntry target = null;
-    for (SoundFontEntry entry : soundFonts)
-      if (entry.fileName.equals(fileName)) { target = entry; break; }
-    if (target == null) throw new IOException("That SoundFont is not in My Set.");
-    ArrayList<SoundFontEntry> before = new ArrayList<>(soundFonts);
+  /** Removes only imported or known downloaded SoundFonts, never bundled assets. */
+  boolean deleteSoundFont(String fileName) throws Exception {
+    if (!removableSoundFont(fileName))
+      throw new IOException("Only imported or downloaded SoundFonts can be removed here.");
+    int index = 0;
+    while (index < soundFonts.size() && !soundFonts.get(index).fileName.equals(fileName)) index++;
+    if (index == soundFonts.size()) throw new IOException("That SoundFont is not in your library.");
     String oldBank = selectedBank, oldName = bankName;
-    soundFonts.remove(target);
+    SoundFontEntry target = soundFonts.remove(index);
     if (selectedBank.equals(fileName)) {
       selectedBank = "kanta-tone.sf2";
       bankName = "KANTA original tone";
     }
-    File mediaFile = new File(media, fileName);
-    File tombstone = new File(media, fileName + ".removed");
-    boolean moved = mediaFile.renameTo(tombstone);
     try {
       persist();
     } catch (Exception failure) {
-      if (moved) tombstone.renameTo(mediaFile);
       selectedBank = oldBank;
       bankName = oldName;
-      soundFonts.clear();
-      soundFonts.addAll(before);
+      soundFonts.add(index, target);
       throw failure;
     }
-    if (moved) tombstone.delete();
-    else if (mediaFile.exists()) mediaFile.delete();
+    return deletePrivateCopy(fileName);
+  }
+
+  private boolean deletePrivateCopy(String name) {
+    try {
+      java.nio.file.Files.deleteIfExists(new File(media, name).toPath());
+      return true;
+    } catch (IOException | SecurityException failed) {
+      return false;
+    }
   }
 
   private String displayName(Uri uri) {
@@ -824,19 +864,53 @@ final class LibraryRepository {
   }
 
   void saveSet(String name, List<Song> values) throws Exception {
-    if (sets.size() >= 1000 || values.size() > 10000)
-      throw new IOException("Saved-set limit reached");
-    name = name.trim();
-    if (name.isEmpty() || name.length() > 120)
-      throw new IOException("Enter a set name under 120 characters");
     ArrayList<String> ids = new ArrayList<>();
     for (Song s : values) ids.add(s.id);
+    createSavedSet(name, ids);
+  }
+
+  void createPlaylist(String name, String firstSongId) throws Exception {
+    if (firstSongId != null && find(firstSongId) == null)
+      throw new IOException("Song is no longer in the library");
+    createSavedSet(name, firstSongId == null ? Collections.emptyList()
+        : Collections.singletonList(firstSongId));
+  }
+
+  /** Appends a library song by ID without changing the playlist ID, queue or legacy entries. */
+  boolean addToPlaylist(String playlistId, String songId) throws Exception {
+    if (find(songId) == null) throw new IOException("Song is no longer in the library");
+    for (int i = 0; i < sets.size(); i++) {
+      SavedSet current = sets.get(i);
+      if (!current.id.equals(playlistId)) continue;
+      if (current.songs.contains(songId)) return false;
+      if (current.songs.size() >= 10000) throw new IOException("Playlist is full");
+      ArrayList<String> ids = new ArrayList<>(current.songs);
+      ids.add(songId);
+      sets.set(i, new SavedSet(current.id, current.name, ids));
+      try {
+        persist();
+      } catch (Exception e) {
+        sets.set(i, current);
+        throw e;
+      }
+      return true;
+    }
+    throw new IOException("Playlist is no longer available");
+  }
+
+  static final int PLAYLIST_NAME_LIMIT = 120;
+
+  private void createSavedSet(String name, List<String> ids) throws Exception {
+    if (sets.size() >= 1000 || ids.size() > 10000)
+      throw new IOException("Saved-set limit reached");
+    name = name.trim();
+    if (name.isEmpty() || name.length() > PLAYLIST_NAME_LIMIT)
+      throw new IOException("Enter a set name of 1 to 120 characters");
     SavedSet set = new SavedSet(UUID.randomUUID().toString(), name, ids);
     sets.add(set);
     try {
       persist();
     } catch (Exception e) {
-      notifyComplete(false, e.getMessage());
       sets.remove(set);
       throw e;
     }
@@ -858,13 +932,13 @@ final class LibraryRepository {
               .put("artist", s.artist)
               .put("code", s.code)
               .put("file", s.fileName)
-              .put("starter", s.starter));
+              .put("starter", s.starter)
+              .put("legacySourceNumber", s.legacySourceNumber));
     root.put("songs", rows);
     JSONArray banks = new JSONArray();
     for (SoundFontEntry entry : soundFonts)
       banks.put(new JSONObject().put("file", entry.fileName).put("name", entry.name));
     root.put("soundfonts", banks);
-    root.put("removed", new JSONArray(removed));
     JSONArray q = new JSONArray();
     for (ReservationQueue.Entry e : queue)
       q.put(

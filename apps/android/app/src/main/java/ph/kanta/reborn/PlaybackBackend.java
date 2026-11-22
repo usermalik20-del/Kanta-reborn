@@ -3,9 +3,12 @@ package ph.kanta.reborn;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 
 interface PlaybackBackend {
+  long START_ACK_TIMEOUT_MS = 5_000L;
+
   interface Callback {
     void ready(PlaybackBackend player);
 
+    /** The backend observed playback progress, not merely a successful start request. */
     void started(PlaybackBackend player);
 
     void completed(PlaybackBackend player);

@@ -31,6 +31,18 @@ class InterludeAssetTests(unittest.TestCase):
         # The fallback must use the bundled file when no import is selected.
         self.assertIn('bundledInterludeFile', scc)
 
+    def test_bundled_welcome_is_one_shot_but_imported_track_repeats(self):
+        scc = SCC.read_text()
+        audio = SCC.with_name('PartyAudio.java').read_text()
+        self.assertIn('party.loop(customFile, allowed)', scc)
+        self.assertIn('party.welcome(bundledInterludeFile, allowed)', scc)
+        self.assertIn('playStandby(file, allowed, false)', audio)
+        self.assertIn('playStandby(file, allowed, true)', audio)
+        self.assertIn('candidate.setLooping(repeat)', audio)
+        self.assertIn('if (welcomeAttempted) return;', audio)
+        self.assertIn('if (!repeat) candidate.setOnCompletionListener', audio)
+        self.assertNotIn('welcomeAttempted = false', audio)
+
     def test_intermission_defaults_on_for_the_welcome(self):
         scc = SCC.read_text()
         # loopEnabled is initialised to true so the welcome plays without an import.

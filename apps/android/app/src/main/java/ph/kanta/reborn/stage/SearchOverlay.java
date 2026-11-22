@@ -4,6 +4,8 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
 import android.graphics.Rect;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.View;
@@ -35,7 +37,10 @@ public final class SearchOverlay extends FrameLayout {
 
   private static final int ANIM_DURATION_MS = 250;
   private static final int SHEET_HEIGHT_PERCENT = 70;
+  private static final long AUTO_HIDE_MILLIS = 8000L;
 
+  private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
+  private final Runnable autoHideRunnable = this::hide;
   private final EditText searchField;
   private final RecyclerView resultsList;
   private final ProgressBar loadingSpinner;
@@ -77,6 +82,7 @@ public final class SearchOverlay extends FrameLayout {
     searchField.setSingleLine(true);
     searchField.setOnEditorActionListener((v, actionId, event) -> {
       if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+        resetAutoHide();
         performSearch(searchField.getText().toString());
         return true;
       }
@@ -85,6 +91,8 @@ public final class SearchOverlay extends FrameLayout {
     searchField.addTextChangedListener(new android.text.TextWatcher() {
       @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
       @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+        if (s.length() == 0) autoHideHandler.removeCallbacks(autoHideRunnable);
+        else resetAutoHide();
         performSearch(s.toString());
       }
       @Override public void afterTextChanged(android.text.Editable s) {}
@@ -145,16 +153,23 @@ public final class SearchOverlay extends FrameLayout {
     animate().translationY(0).setDuration(ANIM_DURATION_MS).start();
     searchField.requestFocus();
     showKeyboard();
+    resetAutoHide();
   }
 
   /** Hides the overlay. */
   public void hide() {
+    autoHideHandler.removeCallbacks(autoHideRunnable);
     if (!isVisible) return;
     isVisible = false;
     hideKeyboard();
     animate().translationY(getHeight()).setDuration(ANIM_DURATION_MS)
         .withEndAction(() -> setVisibility(GONE))
         .start();
+  }
+
+  private void resetAutoHide() {
+    autoHideHandler.removeCallbacks(autoHideRunnable);
+    if (isVisible) autoHideHandler.postDelayed(autoHideRunnable, AUTO_HIDE_MILLIS);
   }
 
   private void performSearch(String query) {
@@ -302,6 +317,13 @@ public final class SearchOverlay extends FrameLayout {
           (int)(8 * getResources().getDisplayMetrics().density),
           (int)(20 * getResources().getDisplayMetrics().density),
           (int)(8 * getResources().getDisplayMetrics().density));
+      // Add leading icon (kanta_submenu_play)
+      android.graphics.drawable.Drawable playIcon = context.getDrawable(ph.kanta.reborn.R.drawable.kanta_submenu_play);
+      if (playIcon != null) {
+        playIcon.setBounds(0, 0, (int)(20 * getResources().getDisplayMetrics().density), (int)(20 * getResources().getDisplayMetrics().density));
+        reserveButton.setCompoundDrawablesRelative(playIcon, null, null, null);
+        reserveButton.setCompoundDrawablePadding((int)(8 * getResources().getDisplayMetrics().density));
+      }
       LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
           LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
       btnParams.gravity = android.view.Gravity.END;

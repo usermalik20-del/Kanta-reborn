@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="automatic_diagnostics">Share basic app diagnostics</string>
+    <string name="automatic_diagnostics_unavailable">Automatic reporting is not available in this build. You can still copy or share an issue report below.</string>
+    <string name="automatic_diagnostics_details">If you turn this on, KANTA sends a daily active signal and a crash marker, if any, with a random app installation ID. It does not send your songs, lyrics, recordings, names, or this issue report. Turning it off clears pending markers and resets the ID. Previously sent data expires within 30 days.</string>
+    <string name="automatic_diagnostics_save_failed">Could not turn on automatic reporting. No report was sent.</string>
+    <string name="manual_diagnostics_details">Reproduce the issue, then reopen this report. Copy or share it with the steps you took. This report is never sent automatically.</string>
+</resources>

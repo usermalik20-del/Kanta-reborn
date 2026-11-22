@@ -42,12 +42,18 @@
     return;
   }
   let token = "", epoch = 0, busy = false, state = null, timer = null, active = null;
+  let reconnect = false, online = false, uncertain = false, expires = null;
+  // The host is authoritative; this also retires an offline client that never receives a 401.
+  const maxSessionMs = 3 * 60 * 60 * 1000;
+  class Rejection extends Error {
+    constructor(status) { super("Host request rejected"); this.status = status; }
+  }
   const notice = message => { $("notice").textContent = message; };
   function controls() {
     for (const [id, action] of [["play-pause", state?.playing ? "pause" : "play"], ["next", "next"], ["stop", "stop"], ["lookup", "search"], ["refresh", "snapshot"]]) {
-      $(id).disabled = busy || !token || (state !== null && !state.capabilities.includes(action));
+      $(id).disabled = busy || !token || (!online && action !== "snapshot") || (state !== null && !state.capabilities.includes(action));
     }
-    for (const button of root.document.querySelectorAll("[data-command]")) button.disabled = busy || !token;
+    for (const button of root.document.querySelectorAll("[data-command]")) button.disabled = busy || !token || !online;
     $("play-pause").textContent = state?.playing ? "Pause" : "Play";
   }
   const nativePending = new Map();
@@ -65,40 +71,54 @@
         nativePending.set(id, value => {signal?.removeEventListener("abort", cleanup); resolve(value);});
         root.KantaSecureTransport.post(id, path, btoa(String.fromCharCode(...body)), credential);
       });
-      if (response.status !== 200 || typeof response.body !== "string" || response.body.length > 16384) throw Error("Pinned host rejected request");
-      return response.body;
+      if (response.status !== 200) throw new Rejection(response.status);
+      if (typeof response.body !== "string" || response.body.length > 16384) throw Error("Host response limit exceeded");
+      return response;
     }
     const headers = {"Content-Type": "application/octet-stream"};
     if (credential) headers.Authorization = "Bearer " + credential;
-    const response = await fetch(path, {method: "POST", headers, body, signal, credentials: "omit", cache: "no-store", redirect: "error"});
-    if (!response.ok) throw Error(response.status === 401 ? "Session expired or revoked. Pair again." : "Host rejected the request. Check pairing and host availability.");
+    const response = await fetch(path, {method: "POST", headers, body, signal, credentials: "omit", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer"});
+    if (!response.ok) throw new Rejection(response.status);
     const text = await response.text();
     if (text.length > 16384) throw Error("Host response limit exceeded");
-    return text;
+    return {body: text, reconnect: response.headers.get("X-Kanta-Remote-Reconnect") === "1"};
   }
-  function disconnect(message = "Remote disconnected. Host playback continues.") {
+  function disconnect(message = "Remote disconnected. Host playback continues.", revoke = true) {
     const previous = token;
-    epoch++; token = ""; busy = false; state = null;
-    active?.abort(); active = null; clearInterval(timer); timer = null;
-    if (previous) { const closing = new AbortController(); setTimeout(() => closing.abort(), 2500); post("/leave", new Uint8Array(), previous, closing.signal).catch(() => {}); }
+    epoch++; token = ""; busy = false; state = null; reconnect = online = uncertain = false;
+    active?.abort(); active = null; clearInterval(timer); timer = null; clearTimeout(expires); expires = null;
+    if (previous && revoke) { const closing = new AbortController(); setTimeout(() => closing.abort(), 2500); post("/leave", new Uint8Array(), previous, closing.signal).catch(() => {}); }
     $("controller").hidden = true; $("pairing").hidden = false; $("code").value = "";
     $("results").replaceChildren(); $("queue").replaceChildren(); $("status").textContent = "Not connected";
     notice(message); controls();
   }
   async function command(action, argument = "", singer = "") {
-    if (!token || busy || root.document.hidden) return;
+    if (!token || busy || root.document.hidden || (!online && action !== "snapshot")) return;
     const run = epoch, id = crypto.randomUUID();
     busy = true; controls(); const controller = new AbortController(); active = controller;
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const value = JSON.parse(await post("/command", encodeRequest(id, action, argument, singer), token, controller.signal));
+      const path = reconnect && action === "snapshot" ? "/status" : "/command";
+      const response = await post(path, encodeRequest(id, action, argument, singer), token, controller.signal);
       if (epoch !== run) return;
+      const value = JSON.parse(response.body);
       if (value.error) { notice(String(value.error).slice(0, 160)); return; }
       const next = snapshot(value, id);
       if (action !== "search" && state) next.songs = state.songs;
-      state = next; notice(""); render();
-    } catch (_) {
-      if (epoch === run) disconnect("Connection lost or response rejected. A command may have completed; pair again and inspect the host queue before repeating it.");
+      state = next; online = true; $("status").textContent = "Connected · encrypted host";
+      if (uncertain && action === "snapshot") notice("Reconnected. Check the queue and playback before repeating your last action.");
+      else { uncertain = false; notice(""); }
+      render();
+    } catch (e) {
+      if (epoch !== run) return;
+      if (e.status === 401) disconnect("Session expired or was revoked. Pair again.", false);
+      else if (reconnect && e.status === 429) notice("The host’s request limit was reached. Wait and refresh the queue before trying again.");
+      else if (reconnect) {
+        online = false;
+        if (!["snapshot", "search"].includes(action)) uncertain = true;
+        $("status").textContent = "Reconnecting to host…";
+        notice("Check Wi-Fi and keep this remote open. Commands are not repeated automatically.");
+      } else disconnect("Connection lost or response rejected. A command may have completed; pair again and inspect the host queue before repeating it.");
     } finally { clearTimeout(timeout); if (epoch === run) {busy = false; active = null; controls();} }
   }
   function coverPath(value) {
@@ -126,23 +146,37 @@
     if (!state.queue.length) $("queue").textContent = "No queued songs";
     controls();
   }
-  $("pair-form").addEventListener("submit", async event => {
-    event.preventDefault(); if (busy || root.document.hidden) return;
-    if (!$("verified").checked) {notice("Verify the host's certificate fingerprint before pairing."); return;}
-    const code = $("code").value; $("code").value = "";
-    if (!/^[a-f0-9]{32}$/i.test(code)) {notice("Enter the host's full 32-character pairing code."); return;}
-    const run = ++epoch; busy = true; const button = event.target.querySelector("button"); button.disabled = true;
+  async function pair(code, scanned = false) {
+    if (busy || token || root.document.hidden) return;
+    const run = ++epoch; busy = true;
+    const button = $("pair-form").querySelector("button"); button.disabled = true;
     const controller = new AbortController(); active = controller;
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const result = await post("/pair", encoder.encode(code.toLowerCase()), "", controller.signal);
+      // For a scan, the pinned native bridge consumes its in-memory code. JS never sees it.
+      const result = await post("/pair", encoder.encode(code), "", controller.signal);
       if (epoch !== run) return;
-      if (!/^[a-f0-9]{64}$/.test(result)) throw Error("Invalid session");
-      token = result; $("pairing").hidden = true; $("controller").hidden = false; $("status").textContent = "Connected · encrypted host";
+      if (!/^[a-f0-9]{64}$/.test(result.body)) throw Error("Invalid session");
+      token = result.body; reconnect = !!result.reconnect;
+      if (reconnect) expires = setTimeout(() => disconnect("Session ended. Pair again.", false), maxSessionMs);
+      $("pairing").hidden = true; $("controller").hidden = false;
       busy = false; notice(""); await command("snapshot");
       if (epoch === run && token) timer = setInterval(() => command("snapshot"), 10000);
-    } catch (_) { if (epoch === run) disconnect("Pairing failed. Check the code, certificate and shared Wi-Fi. Restart hosting if pairing has expired or was locked."); }
-    finally {clearTimeout(timeout); button.disabled = false; if (epoch === run) {busy = false; active = null; controls();}}
+    } catch (_) {
+      if (epoch === run) disconnect(scanned
+        ? "Could not pair from this scan. Check Wi-Fi and scan a current QR, or enter the host details manually."
+        : "Pairing failed. Check the code, certificate and shared Wi-Fi. Restart hosting if pairing has expired or was locked.");
+    } finally {
+      clearTimeout(timeout); button.disabled = false;
+      if (epoch === run) {busy = false; active = null; controls();}
+    }
+  }
+  $("pair-form").addEventListener("submit", event => {
+    event.preventDefault(); if (busy || token || root.document.hidden) return;
+    if (!$("verified").checked) {notice("Verify the host's certificate fingerprint before pairing."); return;}
+    const code = $("code").value; $("code").value = "";
+    if (!/^[a-f0-9]{32}$/i.test(code)) {notice("Enter the host's full 32-character pairing code."); return;}
+    pair(code.toLowerCase());
   });
   $("search-form").addEventListener("submit", event => {event.preventDefault(); const query = $("query").value.trim(); if (query) command("search", query); else notice("Enter a code, title or artist.");});
   for (const button of root.document.querySelectorAll("[data-digit]")) button.addEventListener("click", () => {if ($("query").value.length < 128) $("query").value += button.dataset.digit;});
@@ -152,6 +186,18 @@
   $("next").addEventListener("click", () => command("next")); $("stop").addEventListener("click", () => command("stop"));
   $("refresh").addEventListener("click", () => command("snapshot")); $("disconnect").addEventListener("click", () => disconnect());
   $("queue-shortcut").addEventListener("click", () => {$("queue-card").scrollIntoView({block:"start"}); $("queue-card").focus();});
-  root.document.addEventListener("visibilitychange", () => {if (root.document.hidden) disconnect("Remote closed when this page left the foreground. Pair again to continue.");});
-  root.addEventListener("pagehide", () => disconnect()); controls();
+  root.document.addEventListener("visibilitychange", () => {
+    if (root.document.hidden) {
+      if (!reconnect && token) disconnect("Remote closed when this page left the foreground. Pair again to continue.");
+    } else if (token && reconnect) command("snapshot");
+    else if (root.KantaSecureTransport?.hasPairingCode?.()) pair("", true);
+  });
+  root.addEventListener("online", () => {if (reconnect) command("snapshot");});
+  root.addEventListener("offline", () => {
+    if (!reconnect || !token) return;
+    online = false; $("status").textContent = "Reconnecting to host…"; controls();
+  });
+  root.addEventListener("pagehide", () => disconnect());
+  controls();
+  if (root.KantaSecureTransport?.hasPairingCode?.()) pair("", true);
 })(globalThis);

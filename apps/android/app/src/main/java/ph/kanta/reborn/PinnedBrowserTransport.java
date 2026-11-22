@@ -11,6 +11,7 @@ import java.security.cert.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.*;
 import org.json.*;
 import ph.kanta.reborn.core.SafeExecutorSubmission;
@@ -23,11 +24,15 @@ final class PinnedBrowserTransport implements AutoCloseable {
   private final ExecutorService worker=Executors.newSingleThreadExecutor();
   private final Set<HttpsURLConnection> connections=ConcurrentHashMap.newKeySet();
   private final AtomicBoolean busy=new AtomicBoolean();
+  private final AtomicReference<String> bootstrapCode;
+  private final AtomicBoolean disconnecting=new AtomicBoolean();
+  private String pairedToken=""; // Worker confined.
   private volatile boolean closed;
   // The user verifies this local host's self-signed leaf fingerprint out of band.
   // checkServerTrusted rejects expired/mismatched leaves; public CA trust is not the identity.
   @android.annotation.SuppressLint("CustomX509TrustManager")
-  PinnedBrowserTransport(WebView web,String address,String fingerprint)throws Exception{
+  PinnedBrowserTransport(WebView web,String address,String fingerprint,String code)throws Exception{
+    bootstrapCode=new AtomicReference<>(code);
     this.web=web;this.address=address;origin="https://"+address+":"+ph.kanta.reborn.core.BrowserRemoteServer.PORT;
     SSLContext context=SSLContext.getInstance("TLS");
     context.init(null,new TrustManager[]{new X509TrustManager(){
@@ -57,16 +62,27 @@ final class PinnedBrowserTransport implements AutoCloseable {
   }
   private static WebResourceResponse denied(){return new WebResourceResponse("text/plain","UTF-8",403,"Blocked",Collections.singletonMap("Cache-Control","no-store"),new ByteArrayInputStream("Host certificate or request rejected. Check the exact fingerprint and shared Wi-Fi.".getBytes(StandardCharsets.UTF_8)));}
   /** The bridge cannot read files, navigate, invoke sensors or address any endpoint except this pinned host. */
+  @JavascriptInterface public boolean hasPairingCode(){return !closed&&!bootstrapCode.get().isEmpty();}
   @JavascriptInterface public void post(String id,String path,String encoded,String token){
-    if(closed||id==null||!id.matches("[a-f0-9-]{36}")||path==null||!Arrays.asList("/pair","/command","/leave").contains(path)||encoded==null||encoded.length()>1400||token==null||!token.matches("([a-f0-9]{64})?")||!busy.compareAndSet(false,true))return;
+    if(closed||disconnecting.get()||id==null||!id.matches("[a-f0-9-]{36}")||path==null||!Arrays.asList("/pair","/status","/command","/leave").contains(path)||encoded==null||encoded.length()>1400||token==null||!token.matches("([a-f0-9]{64})?")||!busy.compareAndSet(false,true))return;
     if (!SafeExecutorSubmission.execute(worker, () -> {
-      int status=0;String body="";
-      try{byte[] bytes=Base64.decode(encoded,Base64.NO_WRAP);if(bytes.length>1024)throw new IOException("Body limit");Result response=fetch(path,bytes,token);status=response.status;body=new String(response.bytes,StandardCharsets.UTF_8);}catch(Exception ignored){}
+      int status=0;String body="";boolean reconnect=false;
+      try{
+        byte[] bytes=Base64.decode(encoded,Base64.NO_WRAP);if(bytes.length>1024)throw new IOException("Body limit");
+        if(path.equals("/pair")){
+          String code=bootstrapCode.getAndSet("");
+          if(bytes.length==0&&!code.isEmpty())bytes=code.getBytes(StandardCharsets.US_ASCII);
+        }
+        Result response=fetch(path,bytes,token);status=response.status;body=new String(response.bytes,StandardCharsets.UTF_8);
+        reconnect=response.headers.entrySet().stream().anyMatch(e->e.getKey().equalsIgnoreCase("X-Kanta-Remote-Reconnect")&&e.getValue().equals("1"));
+        if(path.equals("/pair")&&status==200&&body.matches("[a-f0-9]{64}"))pairedToken=body;
+        if((status==401||path.equals("/leave")&&status==200)&&token.equals(pairedToken))pairedToken="";
+      }catch(Exception ignored){}
       busy.set(false);
-      if(!closed){
-        int resultStatus=status;String resultBody=body;
-        web.post(()->{if(!closed){
-          try{JSONObject result=new JSONObject();result.put("id",id);result.put("status",resultStatus);result.put("body",resultBody);
+      if(!closed&&!disconnecting.get()){
+        int resultStatus=status;String resultBody=body;boolean canReconnect=reconnect;
+        web.post(()->{if(!closed&&!disconnecting.get()){
+          try{JSONObject result=new JSONObject();result.put("id",id);result.put("status",resultStatus);result.put("body",resultBody);result.put("reconnect",canReconnect);
             web.evaluateJavascript("window.dispatchEvent(new CustomEvent('kanta-response',{detail:"+result.toString()+"}))",null);
           }catch(JSONException ignored){}
         }});
@@ -76,7 +92,7 @@ final class PinnedBrowserTransport implements AutoCloseable {
   private static final class Result {int status;byte[] bytes;Map<String,String> headers=new HashMap<>();}
   private Result fetch(String path,byte[] body,String token)throws Exception{
     if(closed)throw new IOException("Closed");
-    HttpsURLConnection connection=(HttpsURLConnection)new URL(origin+path).openConnection();connections.add(connection);
+    HttpsURLConnection connection=(HttpsURLConnection)new URL(origin+path).openConnection(Proxy.NO_PROXY);connections.add(connection);
     try{
       if(closed)throw new IOException("Closed");
       connection.setSSLSocketFactory(tls);connection.setInstanceFollowRedirects(false);connection.setConnectTimeout(2500);connection.setReadTimeout(2500);connection.setUseCaches(false);
@@ -95,5 +111,13 @@ final class PinnedBrowserTransport implements AutoCloseable {
       return result;
     }finally{connections.remove(connection);connection.disconnect();}
   }
-  public void close(){closed=true;busy.set(false);for(HttpsURLConnection connection:connections)connection.disconnect();worker.shutdownNow();}
+  void disconnect(){
+    if(!disconnecting.compareAndSet(false,true))return;
+    bootstrapCode.set("");
+    try{worker.execute(()->{
+      try{if(!pairedToken.isEmpty())fetch("/leave",new byte[0],pairedToken);}catch(Exception ignored){}
+      finally{pairedToken="";close();}
+    });}catch(RejectedExecutionException e){close();}
+  }
+  public void close(){closed=true;bootstrapCode.set("");busy.set(false);for(HttpsURLConnection connection:connections)connection.disconnect();worker.shutdownNow();}
 }

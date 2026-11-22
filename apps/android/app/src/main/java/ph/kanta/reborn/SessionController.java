@@ -14,6 +14,8 @@ import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
 import ph.kanta.reborn.core.bgv.ScenicCatalog;
+import ph.kanta.reborn.core.score.ScoreResultTier;
+import ph.kanta.reborn.core.score.ScoreRevealPlan;
 import ph.kanta.reborn.BundledBgvCatalog;
 import ph.kanta.reborn.core.bgv.ScenicClip;
 import ph.kanta.reborn.BgvLibrary;
@@ -24,15 +26,24 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     void changed();
   }
 
+  interface CompanionSearchListener {
+    void onCompanionSearchQuery(String query);
+  }
+
   interface DownloadProgressListener {
     void onProgress(String message);
     void onComplete(boolean success, String message);
   }
 
   private DownloadProgressListener downloadProgressListener;
+  CompanionSearchListener companionSearchListener;
 
   void setDownloadProgressListener(DownloadProgressListener l) {
     downloadProgressListener = l;
+  }
+
+  void setCompanionSearchListener(CompanionSearchListener l) {
+    companionSearchListener = l;
   }
 
   final CompanionControl companion;
@@ -70,12 +81,27 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
       };
   private StageMediaStore stageStore;
   StageMediaStore.Selection stageSelection;
-  boolean stageReady;
+  boolean stageReady, startupAudioPrepared, startupLibraryFailed;
   boolean cameraPreviewEnabled;
   String stageKind = "scenic";
   File stageVideo;
   long visualGeneration;
   private long stageRequest;
+  private boolean choosingStage;
+  private final StageVisualShuffle<PreparedStageVisual> visualShuffle = new StageVisualShuffle<>();
+  private final Random visualRandom = new Random();
+  private PreparedStageVisual shuffledVisual;
+  private android.graphics.Bitmap manualStagePhoto;
+
+  private static final class PreparedStageVisual {
+    final File file;
+    final android.graphics.Bitmap photo;
+
+    PreparedStageVisual(File file, android.graphics.Bitmap photo) {
+      this.file = file;
+      this.photo = photo;
+    }
+  }
   long visualEpoch = android.os.SystemClock.elapsedRealtime();
   public List<Song> songs = Collections.emptyList();
   List<LibraryRepository.SavedSet> savedSets = Collections.emptyList();
@@ -86,9 +112,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   UUID playbackIdentity;
   boolean scoringEnabled;
   int scoreLatency;
+  long currentMelodyStart;
   MelodyScoreSession score;
   private MelodyTarget currentTarget;
   private long currentDuration;
+  private long currentMelodyStartMillis;
   private boolean currentKeyPresent, currentKeyMinor;
   private int currentKeySharpsFlats;
   private volatile long scoreRequest;
@@ -113,12 +141,35 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   public String singer = "", message = "Opening your library…";
   boolean ready = false, loading = false, playing = false, importing = false;
+  private boolean resuming;
 
   /** Read-only stage state for the presenter in the stage subpackage. */
   public synchronized String stageKind() { return stageKind; }
   public synchronized boolean cameraPreviewEnabled() { return cameraPreviewEnabled; }
   public synchronized android.graphics.Bitmap scenicBitmap() { return scenic; }
-  public synchronized File stageVideo() { return stageVideo; }
+  public synchronized File stageVideo() {
+    return "video".equals(stageKind) && shuffledVisual != null ? shuffledVisual.file : stageVideo;
+  }
+
+  File stagePhotoFile() {
+    return "photo".equals(stageKind)
+        ? (shuffledVisual != null ? shuffledVisual.file : stageSelection.photo) : null;
+  }
+
+  boolean stageShuffleEnabled(boolean video) {
+    return video ? settings.getBgvAutoShuffle() : settings.getBgpAutoShuffle();
+  }
+
+  void setStageShuffle(boolean video, boolean enabled) {
+    if (stageShuffleEnabled(video) == enabled) return;
+    if (video) settings.setBgvAutoShuffle(enabled);
+    else settings.setBgpAutoShuffle(enabled);
+    if ((video ? "video" : "photo").equals(stageKind)) {
+      visualShuffle.invalidate();
+      if (current == null && !loading) applyStageShuffleBoundary(false);
+    }
+    publish();
+  }
   public synchronized boolean isPlaying() { return playing; }
   /** Current song, or null when nothing is loaded. Read-only, for the stage subpackage. */
   public synchronized Song currentSong() { return current; }
@@ -139,8 +190,13 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   /** Scenic video library; null when its private storage cannot be opened. */
   final BgvLibrary bgvLibrary;
   final MicrophoneMonitor monitor;
+  String microphoneNotice, monitorNotice;
   public final android.content.SharedPreferences options;
   boolean foreground, loopEnabled = true, auxiliaryInterrupted, assigningPad;
+  private boolean hostLoopStateSaved, loopEnabledBeforeHidden = true;
+  private Runnable autoAdvance;
+  private UUID autoAdvanceEntryId;
+  private Runnable scheduledMelodyCountdown;
   String loopSongId = "";
   /** Cached copy of the bundled standby interlude; null until prepared on startup. */
   private File bundledInterludeFile;
@@ -148,6 +204,69 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private final long[] padGeneration = new long[8];
   String soundFontName = "KANTA original tone";
   private long generation = 0;
+  interface CountdownHost {
+    Runnable show(int seconds, Runnable complete);
+  }
+  private CountdownHost countdownHost;
+  private Runnable cancelCountdownView;
+  private ReservationQueue.Entry countingEntry;
+  private boolean countingQueued;
+  private boolean pendingHasFocus;
+
+  void setCountdownHost(CountdownHost host) {
+    cancelCountdown();
+    countdownHost = host;
+  }
+
+  void cancelCountdown() {
+    cancelScheduledMelodyCountdown();
+    if (countingEntry != null) discardPendingStart();
+    else clearCountdown();
+  }
+
+  private void cancelScheduledMelodyCountdown() {
+    if (scheduledMelodyCountdown != null) main.removeCallbacks(scheduledMelodyCountdown);
+    scheduledMelodyCountdown = null;
+  }
+
+  private void cancelAutoAdvance() {
+    if (autoAdvance != null) main.removeCallbacks(autoAdvance);
+    autoAdvance = null;
+    autoAdvanceEntryId = null;
+  }
+
+  private void discardPendingStart() {
+    cancelScheduledMelodyCountdown();
+    ++generation;
+    PlaybackBackend discarded = pending;
+    pending = null;
+    loading = false;
+    clearCountdown();
+    if (discarded != null) discarded.release();
+    if (pendingHasFocus && player == null && !microphone.enabled() && !monitor.enabled()) {
+      audio.abandonAudioFocusRequest(focus);
+    }
+    pendingHasFocus = false;
+  }
+
+  private void clearCountdown() {
+    countingEntry = null;
+    Runnable cancel = cancelCountdownView;
+    cancelCountdownView = null;
+    if (cancel != null) cancel.run();
+  }
+
+  private void startLocal(ReservationQueue.Entry entry, boolean queued) {
+    cancelAutoAdvance();
+    party.stopCelebration();
+    int seconds = countdownHost == null ? 0 : settings.getCountdownLength();
+    if (seconds > 0) {
+      // Track cancellation during decoding too; the view is only created in ready().
+      countingEntry = entry;
+      countingQueued = queued;
+    }
+    prepare(entry, queued, seconds);
+  }
   private final ExecutorService lyricWorker = Executors.newSingleThreadExecutor();
   private boolean lyricSearchBusy;
   private boolean autoLyricSearchBusy;
@@ -159,11 +278,12 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   private final AudioManager audio;
   private final AudioFocusRequest focus;
-  private UUID onlineAudioOwner;
-  private Runnable retireOnlineAudio;
 
-  SessionController(Context context) {
+  final DiagnosticEvents diagnostics;
+
+  SessionController(Context context, DiagnosticEvents diagnostics) {
     this.context = context;
+    this.diagnostics = diagnostics;
     BgvLibrary library = null;
     try {
       library = new BgvLibrary(context);
@@ -185,9 +305,9 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     });
     monitor =
         new MicrophoneMonitor(
-            context, this::publish, notice -> message = notice, this::inputReading);
+            context, this::publish, this::setMonitorNotice, this::inputReading);
     microphone =
-        new MicrophoneInput(context, this::publish, notice -> message = notice, monitor::offer);
+        new MicrophoneInput(context, this::publish, this::setMicrophoneNotice, monitor::offer);
     options = context.getSharedPreferences("stage-options-v1", Context.MODE_PRIVATE);
     settings = new SettingsStore(context);
     volume = Math.min(1f, Math.max(0f, settings.getMasterVolume()));
@@ -220,8 +340,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                     auxiliaryInterrupted = true;
                     loopEnabled = false;
                     party.stopAll();
-                    monitor.stop();
-                    microphone.stop();
+                    interruptMonitor("Voice playback stopped because another app took over audio.");
                     pause();
                     publish();
                   }
@@ -232,8 +351,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         new BroadcastReceiver() {
           @Override
           public void onReceive(Context c, Intent i) {
-            monitor.stop();
-            microphone.stop();
+            // Selecting a Bluetooth call route can itself retire A2DP. The muted monitor's
+            // exact-device guard, not this media-route broadcast, decides whether it can start.
+            if (!monitor.negotiatingCommunication()) {
+              interruptMonitor("Audio output changed. Choose your headphones again.");
+            }
             pause();
             publish();
           }
@@ -270,6 +392,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                   preparePads();
                   prepareInterlude();
                   prepareKeypadSounds();
+                  // This marker runs after the three startup audio I/O tasks on the serial executor.
+                  io.execute(() -> main.post(() -> {
+                    startupAudioPrepared = true;
+                    publish();
+                  }));
                   restoreStage();
                   message = "Your music. Your stage.";
                   publish();
@@ -277,6 +404,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
           } catch (Exception e) {
             main.post(
                 () -> {
+                  startupLibraryFailed = true;
                   message =
                       "Could not open saved library. Your original files have not been changed.";
                   publish();
@@ -295,9 +423,119 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void publish() {
+    if (autoAdvanceEntryId != null
+        && (queue.peek() == null || !autoAdvanceEntryId.equals(queue.peek().id)))
+      cancelAutoAdvance();
+    if (countingEntry != null && countingQueued && countingEntry != queue.peek()) cancelCountdown();
     if (!microphone.enabled()) monitor.stop();
     updateIntermission();
+    prepareStageShuffle();
     if (listener != null) listener.changed();
+  }
+
+  public void selectScenicClip(String clipId) {
+    BundledBgvCatalog.Clip clip = BundledBgvCatalog.byId(clipId);
+    if (clip == null || !canChangeStageMedia() || stageStore == null) return;
+    long request = ++stageRequest;
+    choosingStage = true;
+    visualShuffle.invalidate();
+    message = "Preparing " + clip.title + "…";
+    publish();
+    io.execute(() -> {
+      File destination = new File(stageStore.getRoot(), clip.id + ".video");
+      StageMediaStore.Selection saved = null;
+      if (prepareBundledStageVideo(destination, clip)) {
+        try { saved = stageStore.selectBundledVideo(destination.getName()); }
+        catch (Exception unavailable) { }
+      }
+      StageMediaStore.Selection selection = saved;
+      main.post(() -> {
+        if (request != stageRequest) return;
+        choosingStage = false;
+        message = selection == null ? "Could not load " + clip.title : "Background: " + clip.title;
+        if (selection == null) publish();
+        else applyStage(selection);
+      });
+    });
+  }
+
+  /** IO only; caching a bundled shuffle candidate never changes selection.json. */
+  private boolean prepareBundledStageVideo(File destination, BundledBgvCatalog.Clip clip) {
+    if (destination.length() == clip.sizeBytes) return true;
+    try {
+      File temp = File.createTempFile("bgv-", ".tmp", destination.getParentFile());
+      try {
+        return BundledBgvCatalog.copyTo(context, clip, temp)
+            && temp.length() == clip.sizeBytes && temp.renameTo(destination);
+      } finally {
+        temp.delete();
+      }
+    } catch (IOException unavailable) {
+      return false;
+    }
+  }
+
+  private void prepareStageShuffle() {
+    if (!foreground || !canChangeStageMedia() || choosingStage || stageSelection == null
+        || stageStore == null || !visualShuffle.needsPreparation()) return;
+    boolean video = "video".equals(stageKind);
+    if ((!video && !"photo".equals(stageKind)) || !stageShuffleEnabled(video)) return;
+    List<File> pool = new ArrayList<>();
+    Map<File, BundledBgvCatalog.Clip> bundled = new HashMap<>();
+    for (StageMediaStore.Entry entry : stageSelection.imports) {
+      if (entry.video == video) pool.add(entry.file);
+    }
+    if (video) {
+      for (BundledBgvCatalog.Clip clip : BundledBgvCatalog.BUILT_IN) {
+        File file = new File(stageStore.getRoot(), clip.id + ".video");
+        bundled.put(file, clip);
+        pool.add(file);
+      }
+    }
+    long request = visualShuffle.beginPreparation();
+    List<File> alternatives = StageVisualShuffle.alternatives(
+        pool, video ? stageVideo() : stagePhotoFile(), visualRandom);
+    if (alternatives.isEmpty()) return;
+    io.execute(() -> {
+      for (File candidate : alternatives) {
+        try {
+          BundledBgvCatalog.Clip clip = bundled.get(candidate);
+          if (clip != null ? !prepareBundledStageVideo(candidate, clip) : !candidate.isFile()) continue;
+          android.graphics.Bitmap photo = video ? null : StageMediaStore.displayPhoto(candidate);
+          PreparedStageVisual prepared = new PreparedStageVisual(candidate, photo);
+          main.post(() -> {
+            if (visualShuffle.isCurrent(request)) visualShuffle.prepared(request, prepared);
+            else if (photo != null) photo.recycle();
+          });
+          return;
+        } catch (Exception | OutOfMemoryError unavailable) {
+          // A missing or unreadable candidate must not displace the displayed one.
+        }
+      }
+    });
+  }
+
+  /** Only the successful new-song/standby transitions may project an automatic change. */
+  private void applyStageShuffleBoundary(boolean startingSong) {
+    if (!foreground) return;
+    boolean video = "video".equals(stageKind);
+    if (!video && !"photo".equals(stageKind)) return;
+    if (!stageShuffleEnabled(video)) {
+      if (shuffledVisual != null) {
+        shuffledVisual = null;
+        if (!video) scenic = manualStagePhoto;
+        visualGeneration++;
+        visualEpoch = SystemClock.elapsedRealtime();
+      }
+    } else if (startingSong && canChangeStageMedia() && !choosingStage && !cameraPreviewEnabled) {
+      PreparedStageVisual prepared = visualShuffle.takeAtSongBoundary();
+      if (prepared != null) {
+        shuffledVisual = prepared;
+        if (!video) scenic = prepared.photo;
+        visualGeneration++;
+        visualEpoch = SystemClock.elapsedRealtime();
+      }
+    }
   }
 
   private void restoreStage() {
@@ -309,15 +547,13 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
             // If no saved stage (default scenic with no video), initialize default BGV
             final StageMediaStore.Selection finalSelection;
-            if ("scenic".equals(selection.kind) && selection.video == null && !settings.getBgvDefaultSelected()) {
+            if (!stageStore.hasSavedSelection() && !settings.getBgvDefaultSelected()) {
               BundledBgvCatalog.Clip defaultClip = BundledBgvCatalog.defaultClip();
               if (defaultClip != null) {
                 File dest = new File(stageStore.getRoot(), defaultClip.id + ".video");
                 if (BundledBgvCatalog.copyTo(context, defaultClip, dest)) {
-                  stageStore.setVideo(dest.getName());
+                  finalSelection = stageStore.selectBundledVideo(dest.getName());
                   settings.setBgvDefaultSelected(true);
-                  // Reload selection
-                  finalSelection = stageStore.load();
                 } else {
                   finalSelection = selection;
                 }
@@ -330,12 +566,17 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
             main.post(
                 () -> {
-                  stageReady = true;
                   applyStage(finalSelection);
+                  // Photo decoding, if needed, is queued by applyStage before this marker.
+                  io.execute(() -> main.post(() -> {
+                    stageReady = true;
+                    publish();
+                  }));
                 });
           } catch (Exception failure) {
             main.post(
                 () -> {
+                  stageStore = null;
                   stageReady = true;
                   message =
                       "Saved stage media is unavailable. Scenic backgrounds remain available.";
@@ -346,26 +587,28 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void importStage(android.net.Uri uri, boolean video) {
-    if (!ready || !stageReady || importing) return;
+    if (!ready || !canChangeStageMedia() || stageStore == null) return;
     importing = true;
     importCancelled.set(false);
+    choosingStage = false;
+    visualShuffle.invalidate();
     long token = ++stageRequest;
     message = video ? "Copying your background video…" : "Copying your background photo…";
     publish();
     io.execute(
         () -> {
           try {
-            if (stageStore == null) stageStore = new StageMediaStore(context);
             StageMediaStore.Selection selection =
                 stageStore.importMedia(uri, video, importCancelled::get);
             main.post(
                 () -> {
                   importing = false;
-                  if (token == stageRequest) {
-                    applyStage(selection);
-                    message = "Your background is ready. The original file is unchanged.";
+                  message = "Your background is ready. The original file is unchanged.";
+                  if (token == stageRequest) applyStage(selection);
+                  else {
+                    stageSelection = selection;
+                    publish();
                   }
-                  publish();
                 });
           } catch (Exception failure) {
             main.post(
@@ -380,25 +623,113 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
+  void importStageBatch(List<Uri> uris, boolean video) {
+    if (!ready || !canChangeStageMedia() || stageStore == null || uris.isEmpty()) return;
+    List<Uri> sources = new ArrayList<>(uris);
+    importing = true;
+    importCancelled.set(false);
+    message = context.getString(R.string.media_library_copying);
+    publish();
+    io.execute(() -> {
+      try {
+        StageMediaStore.ImportResult result = stageStore.importBatch(sources, video, importCancelled::get);
+        StageMediaStore.Selection selection = stageStore.selection();
+        android.content.res.Resources resources = context.getResources();
+        StringBuilder status = new StringBuilder(resources.getQuantityString(
+            R.plurals.media_library_import_added, result.added, result.added));
+        if (result.duplicates > 0) status.append(' ').append(resources.getQuantityString(
+            R.plurals.media_library_import_duplicates, result.duplicates, result.duplicates));
+        if (result.skipped > 0) status.append(' ').append(resources.getQuantityString(
+            R.plurals.media_library_import_skipped, result.skipped, result.skipped));
+        if (result.cancelled) status.append(' ').append(context.getString(R.string.media_library_import_cancelled));
+        main.post(() -> {
+          stageSelection = selection;
+          visualShuffle.invalidate();
+          importing = false;
+          message = status.toString();
+          publish();
+        });
+      } catch (Exception failure) {
+        main.post(() -> {
+          importing = false;
+          message = context.getString(R.string.media_library_import_failed);
+          publish();
+        });
+      }
+    });
+  }
+
+  private boolean removingVisual;
+
+  boolean canChangeStageMedia() {
+    return stageReady && !importing && !removingVisual;
+  }
+
+  void removeStageImport(File file, boolean video, java.util.function.Consumer<String> completed) {
+    if (!canChangeStageMedia() || stageStore == null) {
+      completed.accept("Wait for Stage Visuals to finish, then try again.");
+      return;
+    }
+    if (file.equals(video ? stageVideo() : stagePhotoFile())) {
+      completed.accept(context.getString(R.string.media_library_visual_remove_blocked));
+      return;
+    }
+    // The store also protects the exact manual fallback, including a queued Use.
+    visualShuffle.invalidate();
+    removingVisual = true;
+    publish();
+    io.execute(() -> {
+      try {
+        boolean deleted = stageStore.removeImport(file.getName(), video);
+        StageMediaStore.Selection selection = stageStore.selection();
+        main.post(() -> {
+          stageSelection = selection;
+          visualShuffle.invalidate();
+          removingVisual = false;
+          publish();
+          completed.accept(deleted ? "Saved background removed."
+              : "Background removed from the list, but its stored copy could not be erased.");
+        });
+      } catch (Exception failure) {
+        main.post(() -> {
+          removingVisual = false;
+          publish();
+          completed.accept("Could not remove this background. Choose a different background and try again.");
+        });
+      }
+    });
+  }
+
   void chooseStage(String kind) {
-    if (!stageReady || stageStore == null || importing) return;
+    chooseStageMedia(() -> stageStore.select(kind));
+  }
+
+  void chooseStageImport(File file, boolean video) {
+    chooseStageMedia(() -> stageStore.selectImport(file.getName(), video));
+  }
+
+  private void chooseStageMedia(java.util.concurrent.Callable<StageMediaStore.Selection> select) {
+    if (!canChangeStageMedia() || stageStore == null) return;
     long token = ++stageRequest;
+    choosingStage = true;
+    visualShuffle.invalidate();
     io.execute(
         () -> {
           try {
-            StageMediaStore.Selection selection = stageStore.select(kind);
+            StageMediaStore.Selection selection = select.call();
             main.post(
                 () -> {
                   if (token == stageRequest) {
+                    choosingStage = false;
                     applyStage(selection);
-                    publish();
                   }
                 });
           } catch (Exception failure) {
             main.post(
                 () -> {
                   if (token == stageRequest) {
-                    message = "Choose a photo or video first.";
+                    choosingStage = false;
+                    message = "Could not use this background.";
                     publish();
                   }
                 });
@@ -407,6 +738,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   private void applyStage(StageMediaStore.Selection selection) {
+    visualShuffle.invalidate();
+    if (shuffledVisual != null && "photo".equals(stageKind)) scenic = manualStagePhoto;
+    shuffledVisual = null;
+    manualStagePhoto = null;
     stageSelection = selection;
     stageKind = selection.kind;
     stageVideo = stageKind.equals("video") ? selection.video : null;
@@ -420,7 +755,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
               main.post(
                   () -> {
                     if (token == visualGeneration && stageKind.equals("photo")) {
-                      scenic = photo;
+                      manualStagePhoto = photo;
+                      if (shuffledVisual == null) scenic = photo;
                       publish();
                     } else photo.recycle();
                   });
@@ -524,9 +860,17 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
               }
               padFiles.add(file);
             }
+            File celebration = new File(padRoot, "score-celebration.mp3");
+            try (InputStream input = context.getAssets().open("party/score-celebration.mp3");
+                FileOutputStream output = new FileOutputStream(celebration)) {
+              byte[] buffer = new byte[8192];
+              int count;
+              while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            }
             main.post(
                 () -> {
                   party.loadBuiltins(padFiles);
+                  party.loadCelebration(celebration);
                   for (int i = 0; i < 8; i++) {
                     final int slot = i;
                     Song clip =
@@ -700,94 +1044,97 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         reading.pitch.rms);
   }
 
-  private void finishScore() {
-    if (!scoringEnabled || score == null || current == null || playbackIdentity == null) return;
-    observeMicrophone();
-    MelodyScoreSession.Completion completed = score.finish(playbackIdentity);
-    if (completed != null) {
-      lastScore =
-          new CompletedScore(completed.playbackId, current.title, singer, completed.estimate);
-      if (scoreSink != null) {
-        ph.kanta.reborn.score.ScoreSink.CompletedScore sinkScore = new ph.kanta.reborn.score.ScoreSink.CompletedScore(
-            lastScore.playbackIdentity, lastScore.title, lastScore.singer, lastScore.estimate);
-        scoreSink.onScoreCompleted(sinkScore);
-      }
+  private ScoreResultTier finishScore(boolean applausePlayed) {
+    if (!scoringEnabled || current == null || playbackIdentity == null) return null;
+    if (score != null) observeMicrophone();
+    MelodyScoreSession.Completion completed =
+        score == null ? null : score.finish(playbackIdentity);
+    MelodyScoreSession.Estimate estimate =
+        completed == null ? MelodyScoreSession.Estimate.noSinging() : completed.estimate;
+    lastScore = new CompletedScore(playbackIdentity, current.title, singer, estimate);
+    if (scoreSink != null) {
+      ph.kanta.reborn.score.ScoreSink.CompletedScore sinkScore =
+          new ph.kanta.reborn.score.ScoreSink.CompletedScore(
+              lastScore.playbackIdentity, lastScore.title, lastScore.singer, lastScore.estimate,
+              applausePlayed);
+      scoreSink.onScoreCompleted(sinkScore);
     }
+    // The user's celebration track layers over the party cues until the next song or Stop.
+    if (foreground && !auxiliaryInterrupted
+        && audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+      party.playCelebration();
+    return ScoreResultTier.fromScore(ScoreResultTier.present(estimate.overall));
   }
 
-  boolean onlineAudioAllowed() {
-    return foreground && !playing && !loading && !microphone.enabled() && !monitor.enabled();
+  void setMicrophoneNotice(String notice) {
+    microphoneNotice = notice;
+    if (notice != null) message = notice;
   }
 
-  boolean onlineAudioActive() { return onlineAudioOwner != null; }
-
-  boolean claimOnlineAudio(UUID owner, Runnable retire) {
-    Objects.requireNonNull(owner);
-    Objects.requireNonNull(retire);
-    if (!onlineAudioAllowed()) return false;
-    revokeOnlineAudio();
-    onlineAudioOwner = owner;
-    retireOnlineAudio = retire;
-    // Online playback starts only through the visible player's own controls.
-    loopEnabled = false;
-    party.stopAll();
-    audio.abandonAudioFocusRequest(focus);
-    publish();
-    return true;
-  }
-
-  void releaseOnlineAudio(UUID owner) {
-    if (onlineAudioOwner == null || !onlineAudioOwner.equals(owner)) return;
-    onlineAudioOwner = null;
-    retireOnlineAudio = null;
-    publish();
-  }
-
-  private void revokeOnlineAudio() {
-    Runnable retire = retireOnlineAudio;
-    onlineAudioOwner = null;
-    retireOnlineAudio = null;
-    // Clear the token before synchronous native teardown can call back into this owner.
-    if (retire != null) retire.run();
-  }
-
-  private int requestLocalAudioFocus() {
-    revokeOnlineAudio();
-    return audio.requestAudioFocus(focus);
+  void setMonitorNotice(String notice) {
+    monitorNotice = notice;
+    if (notice != null) message = notice;
   }
 
   void startMicrophone() {
     if (!foreground
         || context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
             != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
-    if (requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-      message = "Microphone input needs audio focus. Try again when other audio has stopped.";
-      publish();
-      return;
-    }
+    // Audio focus is for audible output. Android governs input sharing via AudioRecord.
+    setMicrophoneNotice(null);
     microphone.start();
   }
 
   void startMonitor(AudioDeviceInfo output) {
     if (!foreground || !microphone.capturing()) {
-      message = "Turn on microphone input before enabling monitoring.";
+      setMonitorNotice("Turn on the microphone before starting voice playback.");
       publish();
       return;
     }
+    if (MicrophoneMonitor.communication(output) && !allowsBluetoothMonitoring()) {
+      setMonitorNotice("Bluetooth voice playback is only available between songs. Use wired or "
+          + "USB headphones during songs.");
+      publish();
+      return;
+    }
+    if (monitor.enabled()) return;
+    if (!MicrophoneMonitor.supported(output)) {
+      setMonitorNotice("Choose wired or USB headphones or a supported Bluetooth headset.");
+      publish();
+      return;
+    }
+    if (audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+      setMonitorNotice("Audio is busy. Try your headphones again when other audio stops.");
+      publish();
+      return;
+    }
+    setMonitorNotice(null);
     if (!monitor.start(output)) {
-      message =
-          "Connect wired, USB or Bluetooth headset audio, then select that output again. Speaker"
-              + " and Bluetooth-speaker monitoring are unavailable.";
+      setMonitorNotice("Your headphones are no longer available. Reconnect them and choose the "
+          + "output again.");
       publish();
     }
   }
 
+  private void interruptMonitor(String notice) {
+    if (!monitor.enabled()) return;
+    monitor.stop();
+    setMonitorNotice(notice);
+  }
+
+  boolean allowsBluetoothMonitoring() {
+    return !loading && current == null;
+  }
+
   void stopMonitor() {
+    setMonitorNotice(null);
     monitor.stop();
     publish();
   }
 
   void stopMicrophone() {
+    setMicrophoneNotice(null);
+    setMonitorNotice(null);
     monitor.stop();
     microphone.stop();
     if (current == null && !loopEnabled) audio.abandonAudioFocusRequest(focus);
@@ -797,16 +1144,30 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   void hostVisible(boolean visible) {
     scoreWaitingForControls = true;
     scoreFrameFloor = SystemClock.elapsedRealtime();
+    if (!visible && foreground) {
+      loopEnabledBeforeHidden = loopEnabled;
+      hostLoopStateSaved = true;
+    }
     foreground = visible;
     if (!visible) {
+      visualShuffle.invalidate();
+      cancelAutoAdvance();
+      cancelScheduledMelodyCountdown();
+      cancelCountdown();
       ++lyricLookupGeneration;
-      revokeOnlineAudio();
       companion.stop();
       browserCompanion.stop();
       monitor.stop();
       microphone.stop();
       party.stopAll();
       loopEnabled = false;
+    } else if (hostLoopStateSaved) {
+      loopEnabled = loopEnabledBeforeHidden;
+      hostLoopStateSaved = false;
+    }
+    if (visible) {
+      if (current == null && !loading) applyStageShuffleBoundary(false);
+      prepareStageShuffle();
     }
     updateIntermission();
   }
@@ -819,52 +1180,43 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             .orElse(null);
     boolean allowed =
         foreground
-            && !onlineAudioActive()
             && loopEnabled
             && !auxiliaryInterrupted
             && current == null
             && !loading
-            && queue.peek() == null;
-    if (allowed && requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+            && countingEntry == null;
+    if (allowed && audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       allowed = false;
     if (selected != null && repository != null) {
       File customFile = new File(repository.media, selected.fileName);
       party.loop(customFile, allowed); // custom intermission track loops
-    } else if (bundledInterludeFile != null) {
-      party.playWelcomeOnce(bundledInterludeFile, allowed); // bundled welcome plays once
     } else {
-      party.loop((File) null, false); // stop any looping custom track
+      party.welcome(bundledInterludeFile, allowed);
     }
   }
 
-  /** Clears any imported track so the bundled standby welcome plays again. */
+  /** Clears the selected loop track without replaying an already played welcome. */
   void useBundledInterlude() {
     loopSongId = "";
     options.edit().remove("loopSong").apply();
-    party.resetWelcomePlayed();
     publish();
   }
 
   void chooseIntermission(Song song) {
-    if (!isAudio(song)) return;
+    if (!isAudio(song) || song.id.equals(removingSong) || !songs.contains(song)) return;
     loopSongId = song.id;
     options.edit().putString("loopSong", loopSongId).apply();
-    party.resetWelcomePlayed();
     publish();
   }
 
   void toggleIntermission() {
     auxiliaryInterrupted = false;
     loopEnabled = !loopEnabled;
-    if (loopEnabled) {
-      revokeOnlineAudio();
-      party.resetWelcomePlayed();
-    }
     publish();
   }
 
   void triggerPad(int slot) {
-    if (!foreground || requestLocalAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+    if (!foreground || audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       return;
     auxiliaryInterrupted = false;
     if (!party.trigger(slot)) {
@@ -880,11 +1232,14 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   /** Downloads a built-in scenic clip. Returns true if the download was started. */
-  public boolean downloadScenic(String clipId) {
+  public boolean downloadScenic(String clipId, Runnable finished) {
     if (bgvLibrary == null) return false;
     ScenicClip clip = ScenicCatalog.byId(clipId);
     if (clip == null) return false;
-    return bgvLibrary.download(clip, (id, ok, status) -> publish());
+    return bgvLibrary.download(clip, (id, ok, status) -> main.post(() -> {
+      publish();
+      finished.run();
+    }));
   }
 
   /** Deletes a previously downloaded clip from the library. */
@@ -893,6 +1248,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   /** Returns the current download status line, or empty when the library is unavailable. */
+  boolean scenicDownloadInProgress() {
+    return bgvLibrary != null && bgvLibrary.busy();
+  }
+
   public String scenicDownloadStatus() {
     return bgvLibrary == null ? "" : bgvLibrary.progressLine();
   }
@@ -935,7 +1294,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void assignPad(int slot, Song song) {
-    if (assigningPad || !isAudio(song) || slot < 0 || slot >= 8) return;
+    if (assigningPad || !isAudio(song) || slot < 0 || slot >= 8
+        || song.id.equals(removingSong) || !songs.contains(song)) return;
     assigningPad = true;
     validatePad(slot, song, true);
   }
@@ -1021,7 +1381,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void reserve(Song song, String singer) {
-    if (!ready) return;
+    if (!ready || song.id.equals(removingSong) || !songs.contains(song)) return;
     try {
       queue.reserve(UUID.randomUUID(), song, singer);
       message = "Reserved " + song.title;
@@ -1063,27 +1423,28 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void next() {
+    cancelAutoAdvance();
     if (loading || !ready) return;
+    if (removingSong != null || removingBank) {
+      advanceAfterRemoval = true;
+      return;
+    }
     ReservationQueue.Entry entry = queue.peek();
     if (entry == null) {
       message = "Reserve a song first";
       publish();
       return;
     }
-    if (entry.youtube != null) {
-      // Never hand a web reservation to the local file decoder.
-      message = "Online video is reserved, but host-controlled YouTube playback is not ready. "
-          + "The reservation remains in Up Next.";
-      publish();
-      return;
-    }
-    prepare(entry);
+    startLocal(entry, true);
   }
 
-  private void prepare(ReservationQueue.Entry entry) {
-    if (entry.youtube != null) {
-      throw new IllegalArgumentException("Online media cannot enter the local decoder");
-    }
+  void playSearchResult(Song song, String singer) {
+    if (loading || !ready || !foreground || removingSong != null || removingBank
+        || !songs.contains(song)) return;
+    startLocal(new ReservationQueue.Entry(UUID.randomUUID(), song, singer), false);
+  }
+
+  private void prepare(ReservationQueue.Entry entry, boolean queued, int countdownSeconds) {
     loading = true;
     long token = ++generation;
     message = "Opening " + entry.song.title;
@@ -1103,6 +1464,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             boolean keyMinor = keyPresent && midi.keyMinor;
             File bank = selectedBank;
             List<MidiLyrics.Cue> cues = midi == null ? Collections.emptyList() : midi.cues;
+            long melodyStart = cues.isEmpty() ? 0 : cues.get(0).milliseconds;
             main.post(
                 () -> {
                   if (token != generation) return;
@@ -1113,22 +1475,74 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                             candidate.release();
                             return;
                           }
-                          if (queue.snapshot().stream().noneMatch(e -> e.id.equals(entry.id))) {
-                            pending = null;
-                            candidate.release();
-                            loading = false;
+                          Runnable afterRoute = () -> showReady(candidate);
+                          if (!monitor.stopCommunicationForMusic(afterRoute)) afterRoute.run();
+                          else {
+                            setMonitorNotice("Bluetooth voice playback stopped so the song can play.");
                             publish();
+                          }
+                        }
+
+                        private boolean stillPending(PlaybackBackend candidate) {
+                          if (token != generation || pending != candidate) return false;
+                          if (foreground && (!queued || queue.peek() == entry)) return true;
+                          discardPendingStart();
+                          publish();
+                          return false;
+                        }
+
+                        private void showReady(PlaybackBackend candidate) {
+                          if (!stillPending(candidate)) return;
+                          MelodyStartPlan.Schedule startPlan =
+                              MelodyStartPlan.at(melodyStart, countdownSeconds,
+                                  SystemClock.elapsedRealtime());
+                          if (countdownSeconds <= 0 || countdownHost == null) {
+                            startReady(candidate);
                             return;
                           }
-                          if (requestLocalAudioFocus()
+                          if (!startPlan.startAudioImmediately) {
+                            // Unknown melody (non-MIDI or no cues): legacy behavior counts
+                            // first and starts the audio when the count ends.
+                            Runnable dismiss = countdownHost.show(countdownSeconds,
+                                () -> startReady(candidate));
+                            if (token == generation && pending == candidate)
+                              cancelCountdownView = dismiss;
+                            else dismiss.run();
+                            return;
+                          }
+                          // A known intro plays immediately; GO must land on the first sung cue.
+                          startReady(candidate);
+                          if (startPlan.showCountdown) {
+                            long delay =
+                                Math.max(
+                                    0,
+                                    startPlan.countdownAtMillis - SystemClock.elapsedRealtime());
+                            long startToken = token;
+                            scheduledMelodyCountdown =
+                                () -> {
+                                  scheduledMelodyCountdown = null;
+                                  if (startToken != generation || !foreground
+                                      || (player != candidate && pending != candidate)) return;
+                                  Runnable showDismiss = countdownHost.show(countdownSeconds,
+                                      () -> {});
+                                  if (startToken == generation) cancelCountdownView = showDismiss;
+                                  else showDismiss.run();
+                                };
+                            main.removeCallbacks(scheduledMelodyCountdown);
+                            main.postDelayed(scheduledMelodyCountdown, delay);
+                          }
+                        }
+
+                        private void startReady(PlaybackBackend candidate) {
+                          if (!stillPending(candidate)) return;
+                          if (audio.requestAudioFocus(focus)
                               != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                            pending = null;
-                            candidate.release();
-                            loading = false;
+                            discardPendingStart();
                             message = "Audio is busy. Try Play again.";
                             publish();
                             return;
                           }
+                          pendingHasFocus = true;
                           try {
                             float applyTempo = tempo;
                             int applyPitch = pitch;
@@ -1145,31 +1559,27 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
                         public void started(PlaybackBackend candidate) {
                           if (player == candidate) {
+                            if (!resuming || !foreground) return;
+                            resuming = false;
                             scoreWaitingForControls = true;
                             scoreFrameFloor = SystemClock.elapsedRealtime();
                             playing = true;
                             publish();
                             return;
                           }
-                          if (token != generation
-                              || pending != candidate
-                              || queue.snapshot().stream().noneMatch(e -> e.id.equals(entry.id))) {
-                            candidate.release();
-                            if (pending == candidate) {
-                              pending = null;
-                              loading = false;
-                              publish();
-                            }
-                            return;
-                          }
+                          if (!stillPending(candidate)) return;
                           releaseCurrent();
                           player = candidate;
+                          currentClock = candidate.getClock();
                           pending = null;
-                          queue.remove(entry.id);
+                          pendingHasFocus = false;
+                          clearCountdown();
+                          if (queued) queue.remove(entry.id);
                           current = entry.song;
                           playbackIdentity = entry.id;
                           currentTarget = melody;
                           currentDuration = midi == null ? 0 : midi.durationMilliseconds;
+                          currentMelodyStart = melodyStart;
                           currentKeyPresent = keyPresent;
                           currentKeySharpsFlats = keySharpsFlats;
                           currentKeyMinor = keyMinor;
@@ -1178,29 +1588,33 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                           lyrics = cues;
                           playing = true;
                           loading = false;
+                          applyStageShuffleBoundary(true);
                           message = entry.song.title;
                           maybeAutoSearchLyrics();
-                          saveQueue();
+                          if (queued) saveQueue();
                           publish();
                         }
 
                         public void completed(PlaybackBackend completed) {
                           if (player != completed) return;
-                          finishScore();
+                          boolean applausePlayed = foreground && !auxiliaryInterrupted
+                              && party.customReady(PartySounds.APPLAUSE)
+                              && audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                              && party.trigger(PartySounds.APPLAUSE);
+                          ScoreResultTier completedTier = finishScore(applausePlayed);
                           played.add(current);
                           if (played.size() > 10000) played.remove(0);
                           releaseCurrent();
                           current = null;
+                          applyStageShuffleBoundary(false);
                           lyrics = Collections.emptyList();
                           publish();
-                          if (!loading) nextIfReserved();
+                          if (!loading) nextIfReserved(completedTier);
                         }
 
                         public void failed(PlaybackBackend failed) {
                           if (pending == failed) {
-                            pending = null;
-                            failed.release();
-                            loading = false;
+                            discardPendingStart();
                             message =
                                 "This song or SoundFont could not be played. The reservation"
                                     + " remains in Up Next.";
@@ -1220,9 +1634,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                             ? new FileAudioPlayback(file, callbacks)
                             : new SoundFontPlayback(bank, midi, callbacks);
                     pending = created;
-                    currentClock = created.getClock();
                   } catch (Exception | LinkageError e) {
+                    clearCountdown();
                     loading = false;
+                    diagnostics.record("Prepare song failed", e);
                     message = "Could not prepare this song. Your reservation remains in Up Next.";
                     publish();
                   }
@@ -1231,6 +1646,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             main.post(
                 () -> {
                   if (token != generation) return;
+                  clearCountdown();
                   loading = false;
                   message = "This music file is unreadable or exceeds supported MIDI limits.";
                   publish();
@@ -1241,7 +1657,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   void setVolume(float value) {
     if (!Float.isFinite(value)) return;
-    volume = Math.max(0, Math.min(1, value));
+    float adjusted = Math.max(0, Math.min(1, value));
+    if (volume == adjusted) return;
+    volume = adjusted;
+    settings.setMasterVolume(volume);
     try {
       if (player != null) player.controls(volume, effectiveTempo(), effectivePitch());
     } catch (Exception e) {
@@ -1289,27 +1708,64 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     controls(volume, Math.min(2, Math.max(0.5f, tempo)), pitch);
   }
 
-  private void nextIfReserved() {
-    if (queue.peek() != null) next();
-    else {
-      message = "Set finished. Save your played songs in My Set.";
+  PlaybackSettingsBackup snapshotPlaybackSettings() {
+    return new PlaybackSettingsBackup(volume, tempo, pitch);
+  }
+
+  boolean canRestorePlaybackSettings() {
+    return !playing && !loading && !resuming && current == null && player == null
+        && pending == null && countingEntry == null;
+  }
+
+  /** Main-thread only; never calls controls(), which can write per-song overrides. */
+  boolean restorePlaybackSettings(PlaybackSettingsBackup backup) {
+    if (!foreground || !canRestorePlaybackSettings()) return false;
+    settings.restorePlaybackDefaults(backup);
+    volume = backup.volume;
+    tempo = backup.tempo;
+    pitch = backup.pitch;
+    publish();
+    return true;
+  }
+
+  private void nextIfReserved(ScoreResultTier tier) {
+    ReservationQueue.Entry entry = queue.peek();
+    if (entry == null) {
+      message = "Set finished. Save your played songs as Favorites in Menu → Presets.";
       if (!microphone.enabled()) audio.abandonAudioFocusRequest(focus);
       publish();
+      return;
     }
+    cancelAutoAdvance();
+    autoAdvanceEntryId = entry.id;
+    long delay = tier == null ? 3000L : ScoreRevealPlan.totalMillis(tier) + 5000L;
+    autoAdvance =
+        () -> {
+          autoAdvance = null;
+          autoAdvanceEntryId = null;
+          if (!foreground || loading || current != null || queue.peek() != entry) return;
+          next(); // The manual path, including prepare(), countdown, lyrics and scoring.
+        };
+    main.postDelayed(autoAdvance, delay);
   }
 
   /** Tempo the active song actually plays at (per-song override wins). */
-  float effectiveTempo() {
+  public float effectiveTempo() {
     return current != null && settings.hasSongOverride(current.id)
         ? settings.getSongTempo(current.id, tempo)
         : tempo;
   }
 
   /** Pitch shift the active song actually plays at (per-song override wins). */
-  int effectivePitch() {
+  public int effectivePitch() {
     return current != null && settings.hasSongOverride(current.id)
         ? settings.getSongPitch(current.id, pitch)
         : pitch;
+  }
+
+  /** Offset of the first sung cue of the current song, 0 when unknown or nothing plays. */
+  public long melodyStartMillis() {
+    return current != null ? currentMelodyStart : 0;
   }
 
   boolean currentSongHasOverride() {
@@ -1336,6 +1792,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   /** Restarts the current song from the top (transport Previous). */
   void restartCurrent() {
+    cancelAutoAdvance();
     if (player == null || current == null) return;
     seekTo(0);
     if (!playing && !loading) toggle();
@@ -1343,16 +1800,19 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void toggle() {
-    if (loading) return;
+    cancelAutoAdvance();
+    if (!foreground || loading || countingEntry != null) return;
     if (player == null) {
       next();
       return;
     }
-    if (playing) pause();
-    else if (requestLocalAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+    if (playing || resuming) pause();
+    else if (audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
       try {
+        resuming = true;
         player.start();
       } catch (IllegalStateException e) {
+        resuming = false;
         message = "Please choose Next to reopen this song";
         publish();
       }
@@ -1360,16 +1820,16 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void pause() {
+    cancelAutoAdvance();
+    cancelScheduledMelodyCountdown();
     scoreWaitingForControls = true;
     scoreFrameFloor = SystemClock.elapsedRealtime();
     if (loading || pending != null) {
-      ++generation; // Also retire work still parsing on IO, before a player exists.
-      if (pending != null) pending.release();
-      pending = null;
-      loading = false;
+      discardPendingStart(); // Also retire work still parsing on IO.
       publish();
     }
-    if (player != null && playing) {
+    if (player != null && (playing || resuming)) {
+      resuming = false;
       try {
         player.pause();
       } catch (IllegalStateException ignored) {
@@ -1479,15 +1939,12 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   void stop() {
+    cancelAutoAdvance();
     ++lyricLookupGeneration;
-    ++generation;
-    if (pending != null) {
-      pending.release();
-      pending = null;
-    }
-    loading = false;
+    discardPendingStart();
     releaseCurrent();
     current = null;
+    applyStageShuffleBoundary(false);
     lyrics = Collections.emptyList();
     if (!microphone.enabled()) audio.abandonAudioFocusRequest(focus);
     publish();
@@ -1613,6 +2070,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   private String cancelJson(String argument) {
     try {
+      cancelAutoAdvance();
       queue.remove(java.util.UUID.fromString(argument));
       org.json.JSONObject response = new org.json.JSONObject();
       response.put("status", "ok");
@@ -1641,7 +2099,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   private String pauseJson() {
     try {
-      if (playing) pause();
+      pause();
       org.json.JSONObject response = new org.json.JSONObject();
       response.put("status", "ok");
       response.put("playing", playing);
@@ -1661,6 +2119,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
   private void releaseCurrent() {
+    resuming = false;
     ++scoreRequest;
     if (score != null) score.cancel();
     score = null;
@@ -1720,14 +2179,18 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             failed = outcome.failed;
             reasons = outcome.reasons;
           } catch (Exception e) {
+            diagnostics.record("Import music failed", e);
             failed = files.size();
+          }
+          if (failed > 0 && !importCancelled.get()) {
+            diagnostics.record("Music import: " + failed + " file(s) skipped", null);
           }
           List<Song> loaded = repository.songs();
           File bank = repository.soundFont();
           String bankLabel = repository.soundFontName();
           List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
           StringBuilder result = new StringBuilder("Imported ").append(imported).append(" file(s)");
-          if (duplicates > 0) result.append(", ").append(duplicates).append(" already in My Set");
+          if (duplicates > 0) result.append(", ").append(duplicates).append(" already in your library");
           if (failed > 0) {
             result.append(". ").append(failed).append(" file(s) skipped");
             int shown = Math.min(3, reasons.size());
@@ -1766,12 +2229,18 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         try (ph.kanta.reborn.core.legacy.LegacyImportKey owned = credentials) {
           index = File.createTempFile("legacy-index-", ".idx", context.getCacheDir());
           blob = File.createTempFile("legacy-blob-", ".blob", context.getCacheDir());
-          copyLegacyUri(indexUri, index, 16L * 1024 * 1024);
-          copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024);
+          copyLegacyUri(indexUri, index, 16L * 1024 * 1024, "IDX", "16 MiB", "first");
+          copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024L, "BLOB", "1 GiB", "second");
+          importProgressDispatcher.onProgress(0, 0, "Checking the song library files…");
           ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
               ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
-                  index, blob, new File(repository.media, "legacy-import"), owned, importCancelled::get);
-          good = repository.importLegacyResult(result);
+                  index, blob, new File(repository.media, "legacy-import"), owned, importCancelled::get,
+                  (done, total) -> importProgressDispatcher.onProgress(total, done,
+                      "Reading legacy songs: " + done + "/" + total + "…"));
+          if (!result.songs.isEmpty()) {
+            importProgressDispatcher.onProgress(0, 0, "Adding songs to your library…");
+            good = repository.importLegacyResult(result);
+          }
           resultMessage = "Imported " + good + " legacy song(s); " + result.skippedCount + " record(s) skipped.";
         } catch (Exception failure) {
           if (importCancelled.get() || failure instanceof java.io.InterruptedIOException) {
@@ -1871,11 +2340,36 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     if (listener != null) listener.onComplete(success, status);
   }
 
-  private void copyLegacyUri(android.net.Uri uri, File target, long maxBytes) throws Exception {
-    try (java.io.InputStream in = context.getContentResolver().openInputStream(uri); java.io.FileOutputStream out = new java.io.FileOutputStream(target)) {
-      if (in == null) throw new IOException("Cannot open selected legacy file");
-      byte[] buffer = new byte[65536]; long total = 0; int count;
-      while ((count = in.read(buffer)) != -1) { if (importCancelled.get()) throw new java.io.InterruptedIOException(); total += count; if (total > maxBytes) throw new IOException("Legacy file exceeds safety limit"); out.write(buffer,0,count); }
+  private void copyLegacyUri(android.net.Uri uri, File target, long maxBytes,
+      String role, String limit, String step) throws IOException {
+    importProgressDispatcher.onProgress(0, 0, "Copying " + role + " file…");
+    try (InputStream source = context.getContentResolver().openInputStream(uri);
+         FileOutputStream out = new FileOutputStream(target)) {
+      if (source == null) throw new IOException("Cannot open the " + role + " file.");
+      BufferedInputStream in = new BufferedInputStream(source, 65536);
+      in.mark(4);
+      if ("IDX".equals(role) && in.read() == 'M' && in.read() == 'K'
+          && in.read() == 'M' && in.read() == 'D') {
+        throw new IOException("That looks like the BLOB file. Select the IDX file first.");
+      }
+      in.reset();
+      byte[] buffer = new byte[65536];
+      long copied = 0;
+      while (true) {
+        if (importCancelled.get()) throw new InterruptedIOException();
+        int count = in.read(buffer);
+        if (count == -1) break;
+        long previous = copied;
+        copied += count;
+        if (copied > maxBytes) throw new IOException(role + " file exceeds " + limit
+            + ". Select the " + role + " file " + step + ".");
+        out.write(buffer, 0, count);
+        if ((previous >> 23) != (copied >> 23)) {
+          importProgressDispatcher.onProgress(0, copied,
+              "Copying " + role + " file: " + (copied >> 20) + " MiB…");
+        }
+      }
+      if (copied == 0) throw new IOException("The " + role + " file is empty.");
       out.getFD().sync();
     }
   }
@@ -1885,53 +2379,90 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   }
 
 
-  void deleteSong(String id) {
-    if (!ready || importing) return;
-    io.execute(
-        () -> {
-          try {
-            repository.deleteSong(id);
-            main.post(
-                () -> {
-                  songs = repository.songs();
-                  message = "Removed from My Set.";
-                  publish();
-                });
-          } catch (Exception failure) {
-            main.post(
-                () -> {
-                  message = "Could not remove that song. " + failure.getMessage();
-                  publish();
-                });
-          }
-        });
+  private String removingSong;
+  private boolean removingBank;
+  private boolean advanceAfterRemoval;
+
+  boolean canRemoveLibraryContent() {
+    return ready && !importing && removingSong == null && !removingBank;
   }
 
-  void deleteSoundFont(String fileName) {
-    if (!ready || importing) return;
-    io.execute(
-        () -> {
-          try {
-            repository.deleteSoundFont(fileName);
-            File bank = repository.soundFont();
-            String label = repository.soundFontName();
-            List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
-            main.post(
-                () -> {
-                  selectedSoundFont = bank;
-                  soundFontName = label;
-                  soundFonts = banks;
-                  message = "SoundFont removed.";
-                  publish();
-                });
-          } catch (Exception failure) {
-            main.post(
-                () -> {
-                  message = "Could not remove that SoundFont. " + failure.getMessage();
-                  publish();
-                });
-          }
+  void deleteSong(String id, java.util.function.Consumer<String> completed) {
+    if (!canRemoveLibraryContent()) {
+      completed.accept("Wait for the library to finish, then try again.");
+      return;
+    }
+    if (loading || (current != null && current.id.equals(id))) {
+      completed.accept("Finish or stop the song before removing it.");
+      return;
+    }
+    if (assigningPad || id.equals(loopSongId) || java.util.Arrays.asList(customPads).contains(id)) {
+      completed.accept("Finish any pad setup and clear this song from Intermission and the party pads before removing it.");
+      return;
+    }
+    removingSong = id;
+    io.execute(() -> {
+      try {
+        boolean deleted = repository.deleteSong(id);
+        List<Song> updated = repository.songs();
+        List<LibraryRepository.SavedSet> sets = repository.sets();
+        main.post(() -> {
+          songs = updated;
+          savedSets = sets;
+          for (ReservationQueue.Entry entry : queue.snapshot())
+            if (entry.song.id.equals(id)) queue.remove(entry.id);
+          played.removeIf(song -> song.id.equals(id));
+          finishSongRemoval(completed, deleted ? "Song removed from your library."
+              : "Song removed from your library, but its stored copy could not be erased.");
         });
+      } catch (Exception failure) {
+        main.post(() -> finishSongRemoval(completed, "Could not remove that song."));
+      }
+    });
+  }
+
+  private void finishSongRemoval(java.util.function.Consumer<String> completed, String status) {
+    removingSong = null;
+    boolean advance = advanceAfterRemoval;
+    advanceAfterRemoval = false;
+    publish();
+    completed.accept(status);
+    if (advance && foreground && current == null && !loading) nextIfReserved(null);
+  }
+
+  void deleteSoundFont(String fileName, java.util.function.Consumer<String> completed) {
+    if (!canRemoveLibraryContent()) {
+      completed.accept("Wait for the library to finish, then try again.");
+      return;
+    }
+    // A previous bank can still belong to the loaded MIDI backend after the user switches banks.
+    if (loading || player instanceof SoundFontPlayback) {
+      completed.accept("Finish or stop the MIDI song before removing a SoundFont.");
+      return;
+    }
+    removingBank = true;
+    io.execute(() -> {
+      try {
+        boolean deleted = repository.deleteSoundFont(fileName);
+        File bank = repository.soundFont();
+        String label = repository.soundFontName();
+        List<LibraryRepository.SoundFontEntry> banks = repository.soundFonts();
+        main.post(() -> {
+          selectedSoundFont = bank;
+          soundFontName = label;
+          soundFonts = banks;
+          finishBankRemoval(completed, deleted ? "SoundFont removed."
+              : "SoundFont removed from your library, but its stored copy could not be erased.");
+        });
+      } catch (Exception failure) {
+        main.post(() -> finishBankRemoval(completed, "Could not remove that SoundFont."));
+      }
+    });
+  }
+
+  private void finishBankRemoval(java.util.function.Consumer<String> completed, String status) {
+    removingBank = false;
+    finishSongRemoval(completed, status);
   }
 
   void selectSoundFont(String fileName) {
@@ -2012,29 +2543,6 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
-  void starter(String id, boolean enabled) {
-    if (!ready) return;
-    io.execute(
-        () -> {
-          try {
-            repository.setStarter(id, enabled);
-            List<Song> loaded = repository.songs();
-            main.post(
-                () -> {
-                  songs = loaded;
-                  message = enabled ? "Starter song restored" : "Starter song removed from My Set";
-                  publish();
-                });
-          } catch (Exception e) {
-            main.post(
-                () -> {
-                  message = "Could not change starter song";
-                  publish();
-                });
-          }
-        });
-  }
-
   void saveSet(String name, List<Song> values) {
     if (!ready || savingSet) return;
     savingSet = true;
@@ -2062,7 +2570,54 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
+  void createPlaylist(String name, Song firstSong, java.util.function.Consumer<String> completed) {
+    editPlaylist(() -> {
+      repository.createPlaylist(name, firstSong == null ? null : firstSong.id);
+      return firstSong == null ? R.string.playlist_created : R.string.playlist_created_with_song;
+    }, completed);
+  }
+
+  void addToPlaylist(String playlistId, Song song, java.util.function.Consumer<String> completed) {
+    editPlaylist(() -> repository.addToPlaylist(playlistId, song.id)
+        ? R.string.playlist_song_added : R.string.playlist_song_already_added, completed);
+  }
+
+  private interface PlaylistEdit {
+    int apply() throws Exception;
+  }
+
+  /** Playlist changes publish the library view only, not transport/intermission side effects. */
+  private void editPlaylist(PlaylistEdit edit, java.util.function.Consumer<String> completed) {
+    if (!ready) {
+      completed.accept(context.getString(R.string.playlist_library_loading));
+      return;
+    }
+    io.execute(() -> {
+      try {
+        int status = edit.apply();
+        List<LibraryRepository.SavedSet> updated = repository.sets();
+        main.post(() -> {
+          savedSets = updated;
+          if (listener != null) listener.changed();
+          completed.accept(context.getString(status));
+        });
+      } catch (Exception failure) {
+        diagnostics.record("Saving playlist", failure);
+        main.post(() -> completed.accept(context.getString(R.string.playlist_save_failed)));
+      }
+    });
+  }
+
+  private void retireStageShuffleForScenic() {
+    visualShuffle.invalidate();
+    choosingStage = false;
+    if (shuffledVisual != null && "photo".equals(stageKind)) scenic = manualStagePhoto;
+    shuffledVisual = null;
+    manualStagePhoto = null;
+  }
+
   void scene(String name) {
+    retireStageShuffleForScenic();
     scenicName = name;
     stageKind = "scenic";
     stageVideo = null;
@@ -2110,21 +2665,9 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
-  /** Sets a bundled BGV as the background video (used for auto-shuffle). */
-  public void setBundledBgv(BundledBgvCatalog.Clip clip, java.io.File dest) {
-    if (clip == null || dest == null) return;
-    stageKind = "video";
-    stageVideo = dest;
-    visualEpoch = android.os.SystemClock.elapsedRealtime();
-    visualGeneration++;
-    if (stageStore != null) {
-      stageStore.setVideo(dest.getName());
-    }
-    publish();
-  }
-
   void sceneResource(String name, int drawableResource) {
     if (name == null || name.isEmpty() || drawableResource == 0) return;
+    retireStageShuffleForScenic();
     scenicName = name;
     stageKind = "scenic";
     stageVideo = null;

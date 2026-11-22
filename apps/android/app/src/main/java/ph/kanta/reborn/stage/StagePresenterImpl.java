@@ -11,8 +11,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import ph.kanta.reborn.SessionController;
-import ph.kanta.reborn.settings.SettingsStore;
-import ph.kanta.reborn.BundledBgvCatalog;
 import ph.kanta.reborn.FileAudioPlayback;
 import ph.kanta.reborn.core.MidiLyrics;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
@@ -90,18 +88,12 @@ public final class StagePresenterImpl extends FrameLayout
   private final Runnable frameTicker;
 
   // State
-  private StagePresenter.CountdownListener pendingCountdownListener;
-  private int pendingCountdownSeconds;
-  private boolean countdownActive = false;
   private boolean isPlaying = false;
+  /** True while the rendered-frame ticker has a queued callback. */
+  private boolean tickerRunning = false;
   /** A drum roll is playing; the score card is scheduled but not yet on screen. */
   private Runnable pendingReveal;
   private long revealGeneration;
-
-  // BGV auto-shuffle state
-  private final SettingsStore settingsStore;
-  private long lastBgvShuffleTime = 0;
-  private boolean bgvShuffleInitialized = false;
 
   public StagePresenterImpl(Context context, SessionController session,
       SongCatalog catalog, ReservationQueue queue) {
@@ -114,7 +106,6 @@ public final class StagePresenterImpl extends FrameLayout
     this.session = session;
     this.catalog = catalog;
     this.queue = queue;
-    this.settingsStore = new SettingsStore(context);
 
     setWillNotDraw(false);
     setClipChildren(false);
@@ -183,7 +174,6 @@ public final class StagePresenterImpl extends FrameLayout
     addView(introCard, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(searchOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     addView(queueOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-    addView(remoteStatusView, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
     addView(keypad, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     // QR container on top for Kanta-Connect pairing
     addView(qrContainer, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -229,19 +219,25 @@ public final class StagePresenterImpl extends FrameLayout
     // Frame ticker to keep lyrics synced to rendered output frames
     frameTicker = new Runnable() {
       @Override public void run() {
-        if (isPlaying) {
-          RenderedPlaybackClock clock = session.getClock();
-          if (clock != null) {
-            // For FileAudioPlayback, we need to update its clock approximation
-            if (session.player instanceof FileAudioPlayback) {
-              ((FileAudioPlayback) session.player).updateClock();
-            }
-            // Supply monotonically increasing rendered frame count to LyricStage
-            // This must come from the same output clock used by RenderedPlaybackClock
-            long frames = session.position() * 44100 / 1000; // 44.1kHz sample rate
-            lyricStage.setPlayedFrames(frames);
-          }
+        if (!isPlaying) {
+          tickerRunning = false;
+          return;
         }
+        RenderedPlaybackClock clock = session.getClock();
+        if (clock != null) {
+          // For FileAudioPlayback, we need to update its clock approximation
+          if (session.player instanceof FileAudioPlayback) {
+            ((FileAudioPlayback) session.player).updateClock();
+          }
+          // Supply monotonically increasing rendered frame count to LyricStage
+          // This must come from the same output clock used by RenderedPlaybackClock
+          long frames = session.position() * 44100 / 1000; // 44.1kHz sample rate
+          lyricStage.setPlayedFrames(frames);
+        }
+        // The title card lives until the first sung cue; the lyrics take over from there.
+        long melody = session.melodyStartMillis();
+        if (melody > 0 && introCard.getVisibility() == VISIBLE && session.position() >= melody)
+          introCard.dismiss();
         handler.postDelayed(this, 16); // ~60fps
       }
     };
@@ -290,30 +286,51 @@ public final class StagePresenterImpl extends FrameLayout
 
   @Override
   public void startCountdown(int countdownSeconds, CountdownListener listener) {
-    this.pendingCountdownListener = listener;
-    this.pendingCountdownSeconds = countdownSeconds;
-    this.countdownActive = true;
-
-    // Hide intro card if showing
-    introCard.dismiss();
-
-    // Start countdown
+    // The title card stays mounted until GO — the count ends where the melody starts.
+    countdownStage.bringToFront();
     countdownStage.start(countdownSeconds, new CountdownListener() {
       @Override public void onTick(int remaining) {
-        if (pendingCountdownListener != null) pendingCountdownListener.onTick(remaining);
+        if (listener != null) listener.onTick(remaining);
       }
       @Override public void onComplete() {
-        countdownActive = false;
-        if (pendingCountdownListener != null) pendingCountdownListener.onComplete();
-        pendingCountdownListener = null;
+        introCard.dismiss();
+        if (listener != null) listener.onComplete();
+        // The session dismisses the final cue on start acknowledgement; this keeps it from
+        // lingering when the audio was already running (melody-synced countdown).
+        handler.postDelayed(StagePresenterImpl.this::dismissFinalCue, 700);
       }
     });
+  }
+
+  private void dismissFinalCue() {
+    countdownStage.dismissFinalCue();
+  }
+
+  public void cancelCountdown() {
+    countdownStage.cancel();
+  }
+
+  /**
+   * Starts the rendered-frame ticker exactly once. The ticker is the only producer of
+   * {@link LyricStage#setPlayedFrames(long)}, so without it the embedded stage renders
+   * {@code clock.position(0)} and the lyrics stand still.
+   */
+  private void startFrameTicker() {
+    if (tickerRunning) return;
+    tickerRunning = true;
+    handler.removeCallbacks(frameTicker);
+    handler.post(frameTicker);
+  }
+
+  /** Stops the rendered-frame ticker, keeping the last rendered frame position. */
+  private void stopFrameTicker() {
+    tickerRunning = false;
+    handler.removeCallbacks(frameTicker);
   }
 
   @Override
   public void startPlayback(RenderedPlaybackClock clock, MidiLyrics.Cue[] lyrics) {
     isPlaying = true;
-    countdownActive = false;
 
     // Update lyrics with the new clock and cues
     if (lyrics != null && lyrics.length > 0) {
@@ -321,35 +338,29 @@ public final class StagePresenterImpl extends FrameLayout
     }
 
     // Start frame ticker
-    handler.post(frameTicker);
-
-    // Ensure background is set to BGV if available
-    backgroundStage.setSource(BackgroundStage.Source.BGV);
+    startFrameTicker();
   }
 
   @Override
   public void pausePlayback() {
     isPlaying = false;
-    handler.removeCallbacks(frameTicker);
+    stopFrameTicker();
   }
 
   @Override
   public void resumePlayback() {
     isPlaying = true;
-    handler.post(frameTicker);
+    startFrameTicker();
   }
 
   @Override
   public void stopPlayback() {
+    cancelCountdown();
     isPlaying = false;
-    countdownActive = false;
-    handler.removeCallbacks(frameTicker);
+    stopFrameTicker();
 
     // Reset lyrics
     lyricStage.setLyrics(new MidiLyrics.Cue[0], null);
-
-    // Reset background to solid
-    backgroundStage.setSource(BackgroundStage.Source.SOLID);
 
     // Hide any active overlays
     adjustmentOverlay.hide();
@@ -361,6 +372,10 @@ public final class StagePresenterImpl extends FrameLayout
 
   @Override
   public void showScore(ScoreResult score) {
+    showScore(score, false);
+  }
+
+  private void showScore(ScoreResult score, boolean applausePlayed) {
     // A drum roll lands first, so the number arrives on the accent instead of appearing next
     // to the last chord. The plan is framework-free; this method only schedules it.
     cancelPendingReveal();
@@ -371,7 +386,9 @@ public final class StagePresenterImpl extends FrameLayout
         () -> {
           pendingReveal = null;
           if (generation != revealGeneration) return;
-          session.playEffectCue(ScoreRevealPlan.revealSlot(result.tier));
+          int slot = ScoreRevealPlan.revealSlot(result.tier);
+          if (!applausePlayed || slot != ph.kanta.reborn.core.PartySounds.APPLAUSE)
+            session.playEffectCue(slot);
           // Deterministic per completion: the same score for the same song always plays the
           // same choreography, so the celebration is reproducible and testable.
           long seed =
@@ -435,12 +452,7 @@ public final class StagePresenterImpl extends FrameLayout
 
   @Override
   public void showIntro(IntroCardData data) {
-    introCard.show(data, () -> {
-      // Intro dismissed - if countdown is pending, start it
-      if (pendingCountdownListener != null && pendingCountdownSeconds > 0) {
-        startCountdown(pendingCountdownSeconds, pendingCountdownListener);
-      }
-    });
+    introCard.show(data, null);
   }
 
   @Override
@@ -482,7 +494,7 @@ public final class StagePresenterImpl extends FrameLayout
         findSongByTitle(score.title),
         score.singer
     );
-    showScore(result);
+    showScore(result, score.applausePlayed);
   }
 
   @Override
@@ -542,6 +554,9 @@ public final class StagePresenterImpl extends FrameLayout
   public BackgroundStage.Source backgroundSource() {
     return backgroundStage.getSource();
   }
+
+  /** The Activity places the connection badge below the Stage logo. */
+  public View remoteStatusBadge() { return remoteStatusView; }
 
   /** Sets the remote connection state. */
   public void setRemoteState(RemoteStatusView.State state) {
@@ -677,15 +692,19 @@ public final class StagePresenterImpl extends FrameLayout
       MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);
       lyricStage.setLyrics(cues, session.getClock());
     }
+    // MainActivity never calls startPlayback/pausePlayback, so the rendered-frame ticker
+    // is driven from the authoritative session state instead. Without this the ticker
+    // never runs and the embedded lyrics stay on the first cue while fullscreen, which
+    // reads session.position() directly, keeps moving.
+    isPlaying = session.isPlaying();
+    if (isPlaying && isAttachedToWindow()) startFrameTicker();
+    else stopFrameTicker();
     // Update remote status
     // This would be updated from CompanionControl
 
     // Playback already consumes its reservation. Preserve intentional repeated songs in FIFO.
     upNextTicker.updateFromSnapshot(queue.snapshot());
     updateTickerInsets();
-
-    // BGV auto-shuffle: periodically switch to a random bundled BGV
-    maybeShuffleBgv();
   }
 
   private void updateTickerInsets() {
@@ -694,39 +713,6 @@ public final class StagePresenterImpl extends FrameLayout
     if (params.bottomMargin != inset) {
       params.bottomMargin = inset;
       lyricStage.setLayoutParams(params);
-    }
-  }
-
-  /** Periodically shuffles to a random bundled BGV when auto-shuffle is enabled. */
-  private void maybeShuffleBgv() {
-    if (settingsStore == null) return;
-    if (!settingsStore.getBgvAutoShuffle()) return;
-    if (backgroundStage.getSource() != BackgroundStage.Source.BGV) return;
-
-    long now = System.currentTimeMillis();
-    int intervalMs = settingsStore.getBgvShuffleInterval() * 1000; // convert seconds to ms
-    if (intervalMs <= 0) return;
-
-    // Initialize on first call
-    if (!bgvShuffleInitialized) {
-      lastBgvShuffleTime = now;
-      bgvShuffleInitialized = true;
-      return;
-    }
-
-    if (now - lastBgvShuffleTime < intervalMs) return;
-
-    // Pick a random bundled BGV (different from current if possible)
-    BundledBgvCatalog.Clip nextClip = BundledBgvCatalog.random();
-    if (nextClip == null) return;
-
-    // Copy to stage-media directory
-    java.io.File stageMediaDir = new java.io.File(backgroundStage.getContext().getFilesDir(), "stage-media");
-    java.io.File dest = new java.io.File(stageMediaDir, nextClip.id + ".video");
-    if (BundledBgvCatalog.copyTo(backgroundStage.getContext(), nextClip, dest)) {
-      // Update session via public method
-      session.setBundledBgv(nextClip, dest);
-      lastBgvShuffleTime = now;
     }
   }
 
@@ -816,10 +802,18 @@ public final class StagePresenterImpl extends FrameLayout
   }
 
   @Override
+  protected void onAttachedToWindow() {
+    super.onAttachedToWindow();
+    // A rebuilt orientation or a re-attached persistent stage resumes the ticker from the
+    // live session state instead of waiting for the next refresh tick.
+    if (isPlaying) startFrameTicker();
+  }
+
+  @Override
   protected void onDetachedFromWindow() {
     super.onDetachedFromWindow();
     cancelPendingReveal();
-    handler.removeCallbacks(frameTicker);
+    stopFrameTicker();
     countdownStage.cancel();
     pitchGameOverlay.shutdown();
     learningAssistantOverlay.shutdown();

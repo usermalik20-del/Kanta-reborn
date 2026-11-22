@@ -1880,3 +1880,7 @@ Source 339b8f6 passed hosted Android APK/instrumentation assembly, lint, native 
 **Repair:** execute each mutating admission call first, store its Boolean result, then assert the immutable result. Production admission, pairing timeout and session behavior are unchanged. No assertions were removed.
 
 **Validation:** the prior unsigned simulator app build succeeded. The failed iOS validation did not execute package tests; a fresh exact-head iOS validation, focused simulator smoke and visual walkthrough are required after this compile-only repair. No signing, physical-device, merge or release acceptance is implied.
+
+## Private Android v34 Browser Remote interoperability
+
+The shared browser script uses reconnect only if the Android host advertises it after pairing. The iOS HTTPS host, native view and manual fallbacks retain their existing lifetime; KCP1 and Bonjour are unchanged. Node tested the legacy fallback. No iOS build or simulator run was made.

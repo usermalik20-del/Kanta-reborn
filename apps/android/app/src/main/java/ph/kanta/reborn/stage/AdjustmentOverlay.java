@@ -115,7 +115,7 @@ public final class AdjustmentOverlay extends FrameLayout {
     row.addView(header);
 
     // SeekBar
-    SeekBar seekBar = new SeekBar(getContext());
+    SeekBar seekBar = ph.kanta.reborn.ui.KantaTheme.adjustmentSlider(getContext());
     seekBar.setMax(max - min);
     seekBar.setProgress(defaultValue - min);
     seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {

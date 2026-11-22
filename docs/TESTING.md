@@ -1,3 +1,16 @@
+## Android v35 Stage and Menu source contracts (2026-11-23)
+
+`tools/tests/test_android_menu_finish.py` asserts that the inline Stage panel
+calls `partyPadTrigger(slot, ...)` and that the `party-pads` route opens the
+Menu Party Pads page. `tools/tests/test_android_media_library_v31.py` keeps the
+Intermission guide separate from the Party Pads page. `tools/check-android-workspace-contract.py`
+checks the Menu order, the inline pad panel, and that Settings no longer carries
+duplicated Stage/Party/Voice/Scoring destinations. `RuntimeChecks` opens the
+inline panel on both the embedded and fullscreen Stage, touches each pad
+trigger and the labeled icon controls, and captures `menu_screen.png` from the
+new Menu page. The instrumented run remains a separate gate from these host
+checks; see [Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for the
+device acceptance evidence.
 ## KANTA Daily CI health sweep (2026-11-18)
 
 `daily-ci.yml` runs daily at 03:17 UTC (11:17 AM Philippines) plus manual

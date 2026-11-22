@@ -20,6 +20,11 @@ public final class AudibleControlFence {
     this.firstFrame = firstFrame;
   }
 
+  /** A flush discards buffered old settings; the first new frame uses the latest settings. */
+  public void rebased() {
+    firstFrame = 0;
+  }
+
   public void heard(long playbackHead) {
     if (playbackHead >= firstFrame) audible = pending;
   }

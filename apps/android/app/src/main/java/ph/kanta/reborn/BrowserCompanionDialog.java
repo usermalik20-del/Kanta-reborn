@@ -1,84 +1,141 @@
 package ph.kanta.reborn;
 
 import android.app.*;
-import android.graphics.Color;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.*;
 import android.webkit.*;
 import android.widget.*;
 import java.util.*;
+import ph.kanta.reborn.core.BrowserPairingQr;
+import ph.kanta.reborn.core.BrowserRemoteServer;
 import ph.kanta.reborn.core.CompanionProtocol;
+import ph.kanta.reborn.core.connect.QrEncoder;
+import ph.kanta.reborn.stage.QrCodeView;
 
-/** Built-in remote uses the same locally served interface as browser guests. */
+/** Local HTTPS hosting and the in-app remote that checks the host fingerprint. */
 final class BrowserCompanionDialog {
   static Dialog show(Activity activity,SessionController session){
-    LinearLayout body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);
-    int pad=(int)(18*activity.getResources().getDisplayMetrics().density);body.setPadding(pad,pad,pad,pad);
-    body.setBackgroundColor(Color.rgb(10,17,39));
-    ScrollView scroll=new ScrollView(activity);scroll.addView(body);
-    body.addView(label(activity,"Host / Companion Remote"));
-    body.addView(label(activity,"Host serves the remote securely on this Wi-Fi. Companion Remote opens the same interface inside KANTA; no other app is required."));
-    Spinner addresses=new Spinner(activity);body.addView(addresses);
+    LinearLayout body=MenuDialogStyle.body(activity);
+    LinearLayout warningCard=MenuDialogStyle.card(body,null);
+    TextView warning=label(activity,activity.getString(R.string.browser_remote_warning));
+    warning.setTextColor(ph.kanta.reborn.ui.KantaTheme.WARNING);
+    warningCard.addView(warning);
+
+    LinearLayout hosting=MenuDialogStyle.card(body,activity.getString(R.string.browser_remote_host_title), R.drawable.kanta_menu_phone_radio);
+    Spinner addresses=new Spinner(activity);
+    addresses.setMinimumHeight(MenuDialogStyle.dp(activity,48));
+    hosting.addView(addresses);
     List<String> found=new ArrayList<>();
-    Button host=button(activity,"Host on this device",()->{if(!found.isEmpty())session.browserCompanion.start(found.get(addresses.getSelectedItemPosition()));});
-    host.setTag("kanta.browser.host");body.addView(host);
-    TextView details=label(activity,"");details.setTextIsSelectable(true);body.addView(details);
-    Button revoke=button(activity,"Stop hosting / revoke all guests",session.browserCompanion::stop);body.addView(revoke);
-    body.addView(label(activity,"Companion Remote · enter details from the host"));
-    EditText address=input(activity,"Host private IPv4 address");body.addView(address);
-    EditText fingerprint=input(activity,"Host certificate SHA-256 (64 hexadecimal characters)");body.addView(fingerprint);
+    Button host=MenuDialogStyle.button(activity,activity.getString(R.string.browser_remote_start_host),R.drawable.kanta_submenu_power,true,()->{if(!found.isEmpty())session.browserCompanion.start(found.get(addresses.getSelectedItemPosition()));});
+    host.setTag("kanta.browser.host");MenuDialogStyle.addControl(hosting,host);
+    TextView status=label(activity,"");
+    status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    hosting.addView(status);
+    Button revoke=MenuDialogStyle.button(activity,activity.getString(R.string.browser_remote_stop_host),R.drawable.kanta_submenu_stop,false,session.browserCompanion::stop);
+    MenuDialogStyle.addControl(hosting,revoke);
+    LinearLayout hostDetails=MenuDialogStyle.card(body,activity.getString(R.string.browser_remote_qr_title), R.drawable.kanta_submenu_qr);
+    hostDetails.setVisibility(View.GONE);
+    hostDetails.addView(label(activity,activity.getString(R.string.browser_remote_qr_help)));
+    QrCodeView addressQr=new QrCodeView(activity);
+    addressQr.setTag("kanta.browser.address-qr");
+    addressQr.setContentDescription(activity.getString(R.string.browser_remote_qr_description));
+    int size=Math.round(176*activity.getResources().getDisplayMetrics().density);
+    LinearLayout.LayoutParams qrLayout=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,size);
+    qrLayout.gravity=Gravity.CENTER_HORIZONTAL;
+    hostDetails.addView(addressQr,qrLayout);
+    TextView details=label(activity,"");details.setTextIsSelectable(true);hostDetails.addView(details);
+    hostDetails.addView(label(activity,activity.getString(R.string.browser_remote_expiry)));
+    LinearLayout connecting=MenuDialogStyle.card(body,activity.getString(R.string.browser_remote_client_title), R.drawable.kanta_submenu_link);
+    MenuDialogStyle.addControl(connecting,MenuDialogStyle.button(activity,activity.getString(R.string.browser_remote_scan),R.drawable.kanta_submenu_scan,true,
+        ()->activity.startActivity(new Intent(activity,BrowserPairingScanner.class))));
+    connecting.addView(label(activity,activity.getString(R.string.browser_remote_client_help)));
+    EditText address=input(activity,"Host private IPv4 address");MenuDialogStyle.addControl(connecting,address);
+    String fingerprintLabel="Host certificate SHA-256 (64 hexadecimal characters)";
+    TextView fingerprintCaption=label(activity,fingerprintLabel);
+    EditText fingerprint=input(activity,"SHA-256 fingerprint");
+    fingerprint.setId(View.generateViewId());
+    fingerprintCaption.setLabelFor(fingerprint.getId());
+    connecting.addView(fingerprintCaption);
+    MenuDialogStyle.addControl(connecting,fingerprint);
     fingerprint.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(64)});
-    TextView notice=label(activity,"");body.addView(notice);
-    body.addView(button(activity,"Open Companion Remote",()->{
+    TextView notice=label(activity,"");
+    notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    notice.setTextColor(ph.kanta.reborn.ui.KantaTheme.WARNING);
+    notice.setVisibility(View.GONE);
+    MenuDialogStyle.addControl(connecting,MenuDialogStyle.button(activity,activity.getString(R.string.browser_remote_open_local),R.drawable.kanta_submenu_link,true,()->{
       try{
         String hostAddress=address.getText().toString().trim();CompanionProtocol.privateAddress(hostAddress);
         String pin=fingerprint.getText().toString().trim().toLowerCase(Locale.ROOT);
         if(!pin.matches("[a-f0-9]{64}"))throw new IllegalArgumentException();
         showRemote(activity,hostAddress,pin);
-      }catch(Exception e){notice.setText(ph.kanta.reborn.R.string.label_enter_the_host_s_private_ipv4_address_and_exact_64_char);}
+      }catch(Exception e){notice.setText(R.string.label_enter_the_host_s_private_ipv4_address_and_exact_64_char);notice.setVisibility(View.VISIBLE);}
     }));
-    body.addView(label(activity,"Browser guests: enter the full https:// address shown above. Verify the certificate SHA-256 fingerprint on the host before entering its pairing code. Cancel on a mismatch. Some browsers may require trusting the local certificate before continuing. No system-wide certificate or development workstation is required. Host pairing expires after five minutes, guests after ten minutes, and hosting after thirty minutes or app backgrounding."));
-    AlertDialog dialog=new AlertDialog.Builder(activity).setTitle("KANTA Companion").setView(scroll).setPositiveButton("Done",null).create();
+    connecting.addView(notice);
+    AlertDialog dialog=MenuDialogStyle.dialog(activity,R.string.browser_remote_title,R.drawable.kanta_menu_phone_radio,body).setPositiveButton("Done",null).create();
+    dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
     Runnable refresh=()->{
       BrowserCompanion c=session.browserCompanion;
-      details.setText(c.address.isEmpty() ? c.status : details.getContext().getString(ph.kanta.reborn.R.string.companion_connection_details, c.status, c.address, c.code, c.fingerprint));
-      host.setEnabled(!found.isEmpty()&&!c.active()&&!c.preparing);revoke.setEnabled(c.active());
+      boolean active=c.active();
+      boolean hasAddress=c.pairingOpen()&&!c.address.isEmpty();
+      status.setText(c.status);
+      hostDetails.setVisibility(hasAddress ? View.VISIBLE : View.GONE);
+      if(hasAddress){
+        String hostAddress=c.address.substring("https://".length(),c.address.lastIndexOf(':'));
+        String payload=BrowserPairingQr.encode(hostAddress,c.fingerprint,c.code);
+        if(addressQr.symbol()==null||!payload.equals(addressQr.symbol().text))addressQr.setSymbol(QrEncoder.encode(payload));
+        details.setText(activity.getString(R.string.browser_remote_connection_details,c.address,c.code,c.fingerprint));
+      }else{
+        addressQr.setSymbol(null);
+        details.setText("");
+      }
+      host.setEnabled(!found.isEmpty()&&!active&&!c.preparing);revoke.setEnabled(active);
     };
-    session.browserCompanion.changed=refresh;
-    dialog.setOnDismissListener(d->{if(session.browserCompanion.changed==refresh)session.browserCompanion.changed=null;});
-    dialog.show();dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);refresh.run();
+    Runnable update=new Runnable(){public void run(){
+      status.removeCallbacks(this);
+      if(dialog.isShowing()){refresh.run();if(session.browserCompanion.active())status.postDelayed(this,1000);}
+    }};
+    session.browserCompanion.changed=update;
+    dialog.setOnDismissListener(d->{status.removeCallbacks(update);if(session.browserCompanion.changed==update)session.browserCompanion.changed=null;});
+    dialog.show();MenuDialogStyle.styleShownDialog(dialog);update.run();
     session.io.execute(()->{List<String> values=CompanionControl.addresses();session.main.post(()->{if(!dialog.isShowing())return;found.addAll(values);addresses.setAdapter(new ArrayAdapter<>(activity,android.R.layout.simple_spinner_dropdown_item,values));refresh.run();});});
     return dialog;
+  }
+  static Dialog showRemote(Activity activity,String address,String fingerprint){
+    return showRemote(activity,address,fingerprint,"",()->{});
   }
   // Required by the bundled remote UI. Every resource is intercepted by the pinned
   // transport; file/content/mixed access is disabled and external navigation denied.
   @android.annotation.SuppressLint("SetJavaScriptEnabled")
-  static Dialog showRemote(Activity activity,String address,String fingerprint){
-    String origin="https://"+address+":"+ph.kanta.reborn.core.BrowserRemoteServer.PORT;
+  static Dialog showRemote(Activity activity,String address,String fingerprint,String bootstrapCode,Runnable onClose){
+    String origin="https://"+address+":"+BrowserRemoteServer.PORT;
     WebView web=new WebView(activity);web.setSaveEnabled(false);
     WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(false);
     settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     settings.setMediaPlaybackRequiresUserGesture(true);settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
     web.setWebChromeClient(new WebChromeClient(){@Override public void onPermissionRequest(PermissionRequest request){request.deny();}});
     final PinnedBrowserTransport transport;
-    try{transport=new PinnedBrowserTransport(web,address,fingerprint);}catch(Exception e){web.destroy();return new AlertDialog.Builder(activity).setMessage("Could not prepare secure companion transport.").setPositiveButton("Close",null).show();}
+    try{transport=new PinnedBrowserTransport(web,address,fingerprint,bootstrapCode);}catch(Exception e){
+      web.destroy();return new AlertDialog.Builder(activity).setMessage("Could not prepare secure companion transport.")
+          .setPositiveButton("Close",null).setOnDismissListener(d->onClose.run()).show();
+    }
     web.addJavascriptInterface(transport,"KantaSecureTransport");
     web.setWebViewClient(new WebViewClient(){
       @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){return !transport.sameOrigin(request.getUrl());}
       @Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest request){return transport.resource(request);}
     });
-    AlertDialog dialog=new AlertDialog.Builder(activity).setTitle("Companion Remote").setView(web).setPositiveButton("Disconnect",null).create();
+    AlertDialog dialog=new AlertDialog.Builder(activity).setTitle(R.string.browser_remote_title).setView(web).setPositiveButton("Disconnect",null).create();
+    dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
     Application.ActivityLifecycleCallbacks lifecycle=new Application.ActivityLifecycleCallbacks(){
-      public void onActivityStopped(Activity a){if(a==activity)dialog.dismiss();}
+      public void onActivityStopped(Activity a){}
       public void onActivityDestroyed(Activity a){if(a==activity)dialog.dismiss();}
       public void onActivityCreated(Activity a,Bundle state){} public void onActivityStarted(Activity a){} public void onActivityResumed(Activity a){} public void onActivityPaused(Activity a){} public void onActivitySaveInstanceState(Activity a,Bundle state){}
     };
     activity.getApplication().registerActivityLifecycleCallbacks(lifecycle);
-    dialog.setOnDismissListener(d->{activity.getApplication().unregisterActivityLifecycleCallbacks(lifecycle);transport.close();web.removeJavascriptInterface("KantaSecureTransport");web.stopLoading();web.loadUrl("about:blank");web.clearHistory();web.removeAllViews();web.destroy();});
-    dialog.show();dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);web.loadUrl(origin+"/");return dialog;
+    dialog.setOnDismissListener(d->{activity.getApplication().unregisterActivityLifecycleCallbacks(lifecycle);transport.disconnect();web.removeJavascriptInterface("KantaSecureTransport");web.stopLoading();web.loadUrl("about:blank");web.clearHistory();web.removeAllViews();web.destroy();onClose.run();});
+    dialog.show();web.loadUrl(origin+"/");return dialog;
   }
-  private static TextView label(Activity a,String value){TextView text=new TextView(a);text.setText(value);text.setPadding(0,10,0,10);return text;}
-  private static EditText input(Activity a,String hint){EditText value=new EditText(a);value.setHint(hint);value.setSingleLine(true);value.setSaveEnabled(false);value.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);value.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);return value;}
-  private static Button button(Activity a,String title,Runnable action){Button value=new Button(a);value.setAllCaps(false);value.setText(title);value.setOnClickListener(v->action.run());return value;}
+  private static TextView label(Activity a,String value){return MenuDialogStyle.label(a,value);}
+  private static EditText input(Activity a,String hint){EditText value=new EditText(a);value.setHint(hint);value.setSingleLine(true);value.setSaveEnabled(false);value.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);value.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);MenuDialogStyle.styleInput(value);return value;}
 }

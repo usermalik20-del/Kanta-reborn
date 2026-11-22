@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 /**
  * The built-in bundled background videos.
@@ -24,12 +23,14 @@ public final class BundledBgvCatalog {
     public final String title;
     public final String assetPath; // relative to assets/bgv/
     public final long sizeBytes;
+    public final int thumbnail;
 
-    public Clip(String id, String title, String assetPath, long sizeBytes) {
+    public Clip(String id, String title, String assetPath, long sizeBytes, int thumbnail) {
       this.id = id;
       this.title = title;
       this.assetPath = assetPath;
       this.sizeBytes = sizeBytes;
+      this.thumbnail = thumbnail;
     }
 
     /** Returns the full asset path for opening via AssetManager. */
@@ -45,27 +46,27 @@ public final class BundledBgvCatalog {
               "bgv_default",
               "Default Ambience",
               "video_31F9FE1A.mp4",
-              2952060L),
+              2952060L, R.drawable.kanta_bgv_default),
           new Clip(
               "bgv_ocean",
               "Ocean Waves",
               "video_0431EA43.mp4",
-              8538265L),
+              8538265L, R.drawable.kanta_bgv_ocean),
           new Clip(
               "bgv_sunset",
               "Golden Sunset",
               "video_BD431C68.mp4",
-              8571532L),
+              8571532L, R.drawable.kanta_bgv_sunset),
           new Clip(
               "bgv_forest",
               "Forest Light",
               "video_BF279006.mp4",
-              8595883L),
+              8595883L, R.drawable.kanta_bgv_forest),
           new Clip(
               "bgv_city",
               "City Nights",
               "video_F630A5E5.mp4",
-              2900656L)
+              2900656L, R.drawable.kanta_bgv_city)
       )));
 
   /** Returns a clip by id, or null. */
@@ -75,11 +76,6 @@ public final class BundledBgvCatalog {
       if (clip.id.equals(id)) return clip;
     }
     return null;
-  }
-
-  /** Returns a random clip for shuffle. */
-  public static Clip random() {
-    return BUILT_IN.get(new Random().nextInt(BUILT_IN.size()));
   }
 
   /** Returns the first clip as default. */

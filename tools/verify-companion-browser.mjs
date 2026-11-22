@@ -11,7 +11,16 @@ const native=path.join(root,'apps/android/app/src/main/assets/companion');
 const ios=path.join(root,'apps/ios/Resources/CompanionRemote');
 const iosProject=await readFile(path.join(root,'apps/ios/project.yml'),'utf8');
 assert.match(iosProject,/- path: Resources\/CompanionRemote/,'iOS project does not package the mirrored companion directory');
-for(const name of ['index.html','remote.js','remote.css'])assert.deepEqual(await readFile(path.join(native,name)),await readFile(path.join(ios,name)),`Platform asset drift: ${name}`);
+// Android no longer advertises a video source. Keep all other companion assets in sync.
+const iosHtml=await readFile(path.join(ios,'index.html'),'utf8');
+const androidHtml=await readFile(path.join(native,'index.html'),'utf8');
+assert.doesNotMatch(androidHtml,/youtube|online-limit/i,'Android companion exposes a retired source');
+assert.equal(androidHtml,iosHtml.replace(/^ +<div class="modes"[^\n]*\n[\s\S]*?^ +<p id="online-limit"[^\n]*\n/m,'')
+  .replace('Pairing closes after five minutes; guest sessions last up to ten minutes.',
+    'Pairing closes after five minutes. Once paired, keep this remote open to reconnect after Wi-Fi returns. The session ends three hours after pairing, or sooner if the host stops.'),'Unrelated platform HTML drift');
+const iosCss=await readFile(path.join(ios,'remote.css'),'utf8');
+assert.equal(await readFile(path.join(native,'remote.css'),'utf8'),iosCss.replace(/^\.modes[^\n]*\n/gm,''),'Unrelated platform CSS drift');
+assert.deepEqual(await readFile(path.join(native,'remote.js')),await readFile(path.join(ios,'remote.js')),'Platform protocol JS drift');
 let coverBytes=0;
 for(let index=1;index<=8;index++){
   const name=`${String(index).padStart(2,'0')}.webp`;
@@ -99,6 +108,15 @@ try{
   assert.equal(await evaluate("document.querySelectorAll('#results script').length"),0,'Host metadata became executable HTML');
   await evaluate("document.querySelector('#results button').click()");await wait("document.querySelectorAll('#queue .row').length===1 && !document.getElementById('lookup').disabled");
   await evaluate("document.querySelector('#results button').click()");await wait("document.querySelectorAll('#queue .row').length===2 && !document.getElementById('lookup').disabled");
+  // Hang the link without a page reload: same tab, same authorization, no mutation replay.
+  await cdp('Network.enable');
+  await cdp('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1});
+  await evaluate("document.getElementById('refresh').click()");
+  await wait("document.getElementById('status').textContent.includes('Reconnecting') && document.getElementById('lookup').disabled");
+  await cdp('Network.emulateNetworkConditions',{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});
+  await evaluate("dispatchEvent(new Event('online'))");
+  await wait("!document.getElementById('lookup').disabled && document.querySelectorAll('#queue .row').length===2");
+  assert.equal(await evaluate(`!location.href.includes(${JSON.stringify(code)}) && !document.referrer && document.getElementById('code').value==='' && !localStorage.length && !sessionStorage.length`),true,'Pairing bootstrap was retained by browser');
   await evaluate("document.querySelector('#queue button').click()");await wait("document.querySelectorAll('#queue .row').length===1 && !document.getElementById('lookup').disabled");
   await evaluate("document.getElementById('play-pause').click()");await wait("document.getElementById('transport-state').textContent==='Playing' && !document.getElementById('play-pause').disabled");
   await evaluate("document.getElementById('play-pause').click()");await wait("document.getElementById('transport-state').textContent==='Paused / stopped' && !document.getElementById('play-pause').disabled");

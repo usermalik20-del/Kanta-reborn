@@ -152,3 +152,13 @@ memory for the selected playback or an untimed preview; embedded timed lyrics ar
 not replaced. LRCLIB may retain request information under its own policies. This
 is not an iOS feature or a claim that the currently published Android build includes
 it. Network, matching and lyric-timing accuracy still require Android acceptance.
+
+## Optional reports — Android v34 candidate (server not enabled)
+
+The unreleased Android candidate adds opt-in automatic reporting that is not
+enabled in any public build and sends nothing unless a user turns it on. While
+enabled, it can send a daily activity signal and a simple crash marker with a
+random installation ID; no songs, lyrics, library details, recordings, device
+logs or error messages are sent. Turning reporting off clears pending reports
+and resets the local ID; reports already received expire within 30 days. This
+does not change the separate local-only iPhone and iPad report feature.

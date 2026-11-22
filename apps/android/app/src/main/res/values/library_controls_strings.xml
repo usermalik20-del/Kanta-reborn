@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library controls -->
+    <string name="legacy_folder_help">Put one IDX and one BLOB directly inside the folder. For other file names, select the two files manually below.</string>
+    <string name="legacy_folder_invalid">Could not find one IDX and one BLOB in that folder. Choose a folder with one pair, or select the two files manually.</string>
+    <string name="library_controls_song_remove">Remove an imported song</string>
+    <string name="library_controls_song_remove_confirm">Remove %1$s?</string>
+    <string name="library_controls_song_remove_details">This also removes the song from Up Next and saved sets. Your original file stays unchanged.</string>
+    <string name="library_controls_song_picker_row">%1$s · %2$s</string>
+
+    <!-- Library notices -->
+    <string name="library_notices">Library notices</string>
+    <string name="library_runtime_notices">Runtime notices</string>
+    <string name="library_soundfont_license">SoundFont license</string>
+    <string name="library_privacy">Privacy</string>
+    <string name="library_music_rights">Music rights</string>
+
+    <!-- Plurals -->
+    <plurals name="imported_song_count">
+        <item quantity="one">%d imported song</item>
+        <item quantity="other">%d imported songs</item>
+    </plurals>
+
+    <!-- Stage controls -->
+    <string name="stage_controls_close">Close</string>
+    <string name="scenic_browse_library">Browse library</string>
+    <string name="scenic_library_title">Scene library</string>
+    <string name="scenic_library_intro">Choose a background scene. Your original files stay unchanged.</string>
+    <string name="scenic_library_details">%1$s by %2$s — %3$s. %4$s.</string>
+    <string name="scenic_download">Download</string>
+    <string name="scenic_use_video">Use video</string>
+
+    <!-- Common -->
+    <string name="button_close">Close</string>
+</resources>

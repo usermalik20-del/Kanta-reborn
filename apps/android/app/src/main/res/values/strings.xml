@@ -3,7 +3,6 @@
     <string name="app_name">KANTA Karaoke</string>
     <!-- Displayed labels and formatted values (lint hardening). -->
     <string name="label_enter_the_host_s_private_ipv4_address_and_exact_64_char">Enter the host\'s private IPv4 address and exact 64-character certificate fingerprint.</string>
-    <string name="label_letters">Letters</string>
     <string name="label_view_all">View all</string>
     <string name="label_previous_lyric_line">Previous lyric line</string>
     <string name="label_current_lyric_line_bright_white">Current lyric line — bright white</string>
@@ -16,7 +15,6 @@
     <string name="label_add_songs_to_queue">+ Add Songs to Queue</string>
     <string name="label_no_songs_found">No songs found</string>
     <string name="label_section">Section</string>
-    <string name="label_custom">Custom</string>
     <string name="label_voice_coach">🤖 Voice Coach</string>
     <string name="label_start_singing_for_personalized_guidance">Start singing for personalized guidance…</string>
     <string name="label_session_progress">📊 Session Progress</string>
@@ -51,19 +49,33 @@
     <string name="label_or_find_a_song_in_sing">or find a song in Sing</string>
     <string name="label_kanta_connect">Kanta-Connect</string>
     <string name="label_reserve_a_song_to_begin">Reserve a song to begin</string>
-    <string name="companion_connection_details">%1$s\n\nBrowser / app address\n%2$s\n\nPairing code (private)\n%3$s\n\nCertificate SHA-256\n%4$s</string>
     <string name="reserved_song_count">Reserved songs · %1$d</string>
     <string name="home_collection_card">%1$s\n%2$s\n%3$s</string>
     <string name="gain_percent">%1$d%%</string>
     <string name="error_detail">Error: %1$s</string>
     <string name="score_timing_offset">Score timing offset: %1$d ms</string>
-    <string name="scenic_title_attribution">%1$s · %2$s</string>
     <string name="playback_times">%1$s / %2$s</string>
-    <string name="playback_key_tempo">Key %1$s%2$d   ·   Tempo %3$d%%</string>
+    <string name="lyric_font_load_failed">This font could not be loaded.</string>
     <string name="queue_count">Queue (%1$d)</string>
     <string name="game_score">Score: %1$d</string>
     <string name="game_streak">Streak: %1$d</string>
     <string name="achievement_unlocked">🏆 %1$s unlocked!</string>
     <string name="game_final_score">Game Over! Final Score: %1$d</string>
     <string name="companion_host_port">%1$s:%2$d</string>
+    <string name="stage_search_preview_title">Search results</string>
+    <string name="stage_search_preview_loading">Finding songs…</string>
+    <string name="stage_search_preview_empty">No matching songs</string>
+    <string name="nav_stage">Stage</string>
+    <string name="nav_menu">Menu</string>
+    <string name="stage_controls">Controls</string>
+    <string name="startup_library">Opening song library and saved sets…</string>
+    <string name="startup_audio">Preparing keypad and standby sounds…</string>
+    <string name="startup_stage">Loading stage background…</string>
+    <string name="startup_progress">Startup progress</string>
+
+    <string name="startup_complete">Ready to sing!</string>
+
+    <string name="auto_lyrics_enable">Turn on Auto lyrics (LRCLIB)</string>
+    <string name="auto_lyrics_disable">Turn off Auto lyrics (LRCLIB)</string>
+    <string name="auto_lyrics_details">Fills in missing lyrics automatically from lrclib.net when a song has none. No account needed; only the title and artist are sent.</string>
 </resources>

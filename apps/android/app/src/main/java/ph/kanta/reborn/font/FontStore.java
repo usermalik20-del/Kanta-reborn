@@ -106,9 +106,28 @@ public final class FontStore {
   }
 
   /** Package-private for device regression tests. Temporary bytes never become durable state. */
+  public java.util.List<FontEntry> bundledFonts() {
+    List<FontEntry> entries = new ArrayList<>();
+    for (BundledLyricFonts.Option option : BundledLyricFonts.OPTIONS) {
+      entries.add(new FontEntry(option.uri, option.label));
+    }
+    return Collections.unmodifiableList(entries);
+  }
+
+  public void preview(Uri uri, Consumer<Typeface> completed) {
+    if (uri == null) { completed.accept(null); return; }
+    submit(() -> {
+      Typeface face = load(context, uri);
+      main.post(() -> completed.accept(face));
+    }, () -> completed.accept(null));
+  }
+
   static Typeface load(Context context, Uri uri) {
     File temporary = null;
     try {
+      if (BundledLyricFonts.SCHEME.equals(uri.getScheme())) {
+        return BundledLyricFonts.load(context, uri);
+      }
       temporary = File.createTempFile("lyric-font-", ".tmp", context.getCacheDir());
       long copied = 0;
       try (InputStream input = context.getContentResolver().openInputStream(uri);
