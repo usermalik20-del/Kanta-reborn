@@ -1072,7 +1072,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     art.setImageResource(isLandscape()
         ? R.drawable.kanta_startup_art
         : R.drawable.kanta_startup_art);
-    art.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    art.setScaleType(ImageView.ScaleType.CENTER_CROP);
     art.setContentDescription("KANTA Karaoke");
     content.addView(art, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout information = column();
