@@ -2081,6 +2081,24 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     options.setPadding(dp(16), dp(14), dp(16), dp(14));
     options.addView(KantaTheme.titleText(this, "Advanced voice settings", 16));
 
+    // Music volume (moved from Sound & Mix)
+    options.addView(KantaTheme.titleText(this, "Music volume", 16));
+    SeekBar volume = ph.kanta.reborn.ui.KantaTheme.adjustmentSlider(this);
+    volume.setTag("kanta.settings.music-volume");
+    volume.setContentDescription("Music volume");
+    volume.setMax(100);
+    volume.setProgress(Math.round(session.volume * 100));
+    musicVolumeSlider = volume;
+    volume.setOnSeekBarChangeListener(
+        new SeekBar.OnSeekBarChangeListener() {
+          public void onStartTrackingTouch(SeekBar b) { draggingMusicVolume = true; }
+          public void onStopTrackingTouch(SeekBar b) { draggingMusicVolume = false; }
+          public void onProgressChanged(SeekBar b, int value, boolean user) {
+            if (user) session.setVolume(value / 100f);
+          }
+        });
+    options.addView(volume);
+
     micCorrection = button("Turn on pitch correction",
         () -> session.monitor.correction(!session.monitor.correctionEnabled()));
     micCorrection.setTag("kanta.pitchcorrection.toggle");
@@ -2562,29 +2580,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean draggingMusicVolume;
 
   private void control() {
-    LinearLayout mix = MenuSurface.section(body, getString(R.string.menu_sound_mix));
-    mix.addView(MenuSurface.label(this, "Music volume", 16, Color.WHITE, false));
-    SeekBar volume = ph.kanta.reborn.ui.KantaTheme.adjustmentSlider(this);
-    volume.setTag("kanta.settings.music-volume");
-    volume.setContentDescription("Music volume");
-    volume.setMax(100);
-    volume.setProgress(Math.round(session.volume * 100));
-    musicVolumeSlider = volume;
-    volume.setOnSeekBarChangeListener(
-        new SeekBar.OnSeekBarChangeListener() {
-          public void onStartTrackingTouch(SeekBar b) {
-            draggingMusicVolume = true;
-          }
-
-          public void onStopTrackingTouch(SeekBar b) {
-            draggingMusicVolume = false;
-          }
-
-          public void onProgressChanged(SeekBar b, int value, boolean user) {
-            if (user) session.setVolume(value / 100f);
-          }
-        });
-    mix.addView(volume);
+    // Sound & Mix moved to Voice & Scoring page
     LinearLayout lyrics = MenuSurface.section(body, getString(R.string.menu_lyrics));
     SettingsStore lyricSettings = new SettingsStore(this);
     Button[] autoLyrics = new Button[1];
