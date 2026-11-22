@@ -243,3 +243,13 @@ The mirrored privacy copies disclose optional Android LRCLIB metadata requests.
 This does not implement iOS lyric fetching or change iOS runtime/permissions. See
 [LRCLIB candidate boundaries](../../docs/LRCLIB_LYRICS.md). Do not advertise it as
 an iOS feature.
+
+## Browser Remote reconnect handshake (2026-11-23)
+
+The mirrored `Resources/CompanionRemote/remote.js` now negotiates the
+reconnect handshake only with a host that advertises support, then keeps the
+existing legacy flow (including the old ten-minute session text on iOS
+hosts). The paired browser may reconnect after a Wi-Fi loss until the host's
+hard three-hour deadline; Stop revokes access immediately. The file must stay
+byte-identical to `apps/android/app/src/main/assets/companion/remote.js`
+(the platform protocol parity check enforces this in CI).

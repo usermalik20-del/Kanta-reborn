@@ -2269,6 +2269,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onKeyStep(int amount) {
                 session.controls(session.volume, session.effectiveTempo(), session.effectivePitch() + amount);
               }
+              @Override public void onTempoStep(int amount) {
+                float tempo = session.effectiveTempo() + amount * 0.05f;
+                session.controls(session.volume, Math.max(.5f, Math.min(2f, tempo)), session.effectivePitch());
+              }
               @Override public void onMySet() { openPage("Presets"); }
               @Override public void onFavorites() { openPage("Presets"); }
               @Override public void onRecent() { openPage("Presets"); }
