@@ -2,6 +2,44 @@
 
 This is the durable, append-only engineering record for recurring failures. Keep exact evidence, fix commits, and **the first green run on the fixed SHA**. Do not promote a repair from `candidate` to `verified` merely because code was pushed, a different SHA passed, or compilation succeeded. When an issue recurs, search this ledger before editing.
 
+## Android — v36 score celebration documentation gate and latent regression (2026-11-22)
+
+**Fingerprint:** `KANTA Android validation`, job `android`, step
+`Enforce documentation synchronization before release`; log phrase
+`Documentation sync: FAILED. Update these documents in the same change:`.
+
+**Affected SHA / first observed run:** main `e36edae66d6e9e9022e5bc4bc19d8e6441068941`,
+run [45083653756](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/45083653756),
+job [137397228604](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/45083653756/job/137397228604).
+The changed file was `ScoreCelebrationView.java`; the guard required
+`README.md`, `apps/android/README.md`, `docs/ARCHITECTURE.md`,
+`docs/RECONSTRUCTION.md` and `docs/TESTING.md`. Gradle, lint, core regression,
+APK assembly and emulator checks were skipped.
+
+**Cause (confirmed):** the v36 implementation commit changed Android production
+code without updating its five required owner documents. Source review also
+found the new Perfect-tier plan totals 177 particles against its declared 160
+ceiling, while existing score tests still reject the intentional petal entry
+position and include fireworks/petals in the star-only assertion. Those are
+latent test failures, not failures observed in run 45083653756.
+
+**Fix candidate:** branch `fix/android-score-celebration-budget-20261123`
+reserves all non-confetti particles before calculating confetti, applies planned
+hues to petal paint, and makes the domain tests segment-aware. The required owner
+docs and retired Daily CI description are corrected in the same change. PR link
+will be added after opening.
+
+**Regression coverage:** `ScoreCelebrationRegressionTests` checks total particle
+count, type accounting, petal entry/hue and star-only origins.
+`test_android_score_celebration.py` guards the Canvas paint binding.
+
+**Validation:** pending exact-head Android PR checks. Run 45083653756 did not
+reach any build or test command. No APK or emulator result is claimed.
+
+**Recurrence rule:** when a main commit changes `apps/android/**`, update all
+five mapped owner documents in that same change. Do not treat a skipped Gradle
+step as a build pass. Status: `candidate`.
+
 ## Mandatory repair record
 
 Every failed CI job with an engineering fix must receive a record containing:

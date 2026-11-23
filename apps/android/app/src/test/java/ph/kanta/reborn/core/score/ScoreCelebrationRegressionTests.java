@@ -60,8 +60,12 @@ public final class ScoreCelebrationRegressionTests {
     check(plan.particles.isEmpty(), "Miss has no particles");
     check(plan.durationMillis == 0, "Miss has no duration");
     check(
-        plan.confettiCount == 0 && plan.balloonCount == 0 && plan.starCount == 0,
-        "Miss schedules no confetti, balloons or stars");
+        plan.confettiCount == 0
+            && plan.balloonCount == 0
+            && plan.starCount == 0
+            && plan.fireworksCount == 0
+            && plan.petalCount == 0,
+        "Miss schedules no celebration effects");
   }
 
   private static void higherTiersCelebrateMore() {
@@ -129,7 +133,14 @@ public final class ScoreCelebrationRegressionTests {
             plan.particles.size() <= ScoreCelebrationPlan.MAX_PARTICLES,
             "Particle budget respected at score " + score + " seed " + seed);
         check(plan.durationMillis >= 0, "Non-negative duration");
-        for (ScoreCelebrationPlan.Particle particle : plan.particles) {
+        int expectedParticles =
+            plan.confettiCount + plan.starCount + plan.fireworksCount * 8 + plan.petalCount;
+        check(
+            plan.particles.size() == expectedParticles,
+            "Particle type counts match the generated plan at score " + score);
+        int petalStart = plan.confettiCount + plan.starCount + plan.fireworksCount * 8;
+        for (int index = 0; index < plan.particles.size(); index++) {
+          ScoreCelebrationPlan.Particle particle = plan.particles.get(index);
           check(
               particle.radius > 0f && particle.radius < 0.05f,
               "Particle radius bounded at score " + score);
@@ -139,10 +150,17 @@ public final class ScoreCelebrationRegressionTests {
           check(
               particle.originX >= 0f && particle.originX <= 1f,
               "Origin X inside the stage at score " + score);
+          float minimumY = index >= petalStart ? -0.1f : 0f;
           check(
-              particle.originY >= 0f && particle.originY <= 1f,
-              "Origin Y inside the stage at score " + score);
-          if (plan.tier != ScoreResultTier.KEEP_PRACTICING && particle.originY == 0f) {
+              particle.originY >= minimumY && particle.originY <= 1f,
+              "Origin Y inside the stage or planned petal entry at score " + score);
+          if (index >= petalStart) {
+            check(particle.originY == -0.1f, "Petals begin just above the stage");
+            check(
+                particle.hue >= 340f && particle.hue < 360f,
+                "Petals retain their pink hue range");
+          }
+          if (index < plan.confettiCount && plan.tier != ScoreResultTier.KEEP_PRACTICING) {
             check(
                 particle.velocityY > 0f,
                 "Falling confetti never starts moving upward at score " + score);
@@ -155,7 +173,8 @@ public final class ScoreCelebrationRegressionTests {
   private static void starBurstStartsAtTheCardCentre() {
     ScoreCelebrationPlan.Plan plan = ScoreCelebrationPlan.forScore(100, 9);
     int starsSeen = 0;
-    for (int index = plan.confettiCount; index < plan.particles.size(); index++) {
+    int starEnd = plan.confettiCount + plan.starCount;
+    for (int index = plan.confettiCount; index < starEnd; index++) {
       ScoreCelebrationPlan.Particle star = plan.particles.get(index);
       check(
           star.originX == 0.5f && star.originY == 0.5f,

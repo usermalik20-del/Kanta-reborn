@@ -1,3 +1,22 @@
+## Android v36 score celebration regression (2026-11-23)
+
+`ScoreCelebrationRegressionTests` runs inside `:app:coreRegression`. It checks
+the 160-particle ceiling, exact type-count accounting, the intentional
+`-0.1` petal entry position and pink hue range, star-only center origins,
+deterministic seeds and the no-celebration Miss tier. The plan reduces confetti
+only after reserving all non-confetti effects. The Android view's petal paint
+binding is checked by the Android validation workflow through
+`tools/tests/test_android_score_celebration.py`, which requires the planned hue
+to be applied before drawing.
+
+The main push run [45083653756](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/45083653756)
+for `e36edae` stopped at documentation synchronization before Gradle, lint,
+domain tests, APK assembly or emulator checks. Source review also found
+stale assertions in the existing score regression suite that would reject the
+new petal segment; those assertions are corrected in this candidate. Exact-head
+Android CI is still required before this repair is verified.
+
+---
 ## Android v35 Stage and Menu source contracts (2026-11-23)
 
 `tools/tests/test_android_menu_finish.py` asserts that the inline Stage panel
@@ -11,38 +30,13 @@ trigger and the labeled icon controls, and captures `menu_screen.png` from the
 new Menu page. The instrumented run remains a separate gate from these host
 checks; see [Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for the
 device acceptance evidence.
-## KANTA Daily CI health sweep (2026-11-18)
+## KANTA Daily CI health sweep retired (2026-11-21)
 
-`daily-ci.yml` runs daily at 03:17 UTC (11:17 AM Philippines) plus manual
-dispatch, and reuses the existing workflows as parallel reusable gates instead of
-copying their commands:
-
-- Website fast gate → `website-validation.yml` (verify-website, workflow and
-  website-security contracts, customer legal copy, node syntax checks,
-  page-handler tests).
-- Download/release contracts gate → `verified-downloads.yml` (verified
-  downloads, publish, platform publishing, workflow ownership, doc sync).
-- Android deep gate → `android-validation.yml` with `daily_health: true`
-  (branding, prompt bank, runtime runner, OTA and companion contracts, lint
-  gates, native SoundFont sanitizer, debug + unsigned release build, core
-  regression, AndroidTest APK, runtime-package and browser checks, emulator
-  runtime checks). Owner signing and BLA candidate steps are skipped.
-- iOS simulator gate → `ios-validation.yml` (source/presentation guards, release
-  tooling, starter resources, `swift build --build-tests`,
-  `swift test --skip-build --no-parallel`, unsigned simulator build).
-
-Policy: any failing deterministic gate means a red run; no automatic rerun. The
-reused workflows keep their existing `if: always()` log, lint, APK and
-screenshot artifact uploads. Concurrency groups of the four reused workflows now
-embed `github.event_name` so scheduled sweeps and push validation runs never
-cancel each other. The sweep never signs, never publishes, and never triggers
-the verified-download publisher.
-
-Local evidence: actionlint 1.7.7 clean across all workflows; 100 contract tests
-pass (workflow ownership + doc sync 28, verified downloads 24, publish 6,
-platform publishing 16, website security/vercel 26). The first scheduled or
-dispatched GitHub run is the remaining acceptance step; no emulator, simulator
-or runtime result is claimed by this change yet.
+The scheduled `daily-ci.yml` orchestrator was removed in commit
+`a6895acbe8c0`; no recurring all-platform health sweep is currently active.
+Website, verified-download, Android and iOS checks remain path-filtered and
+manually dispatchable through their own workflows. A green result on one
+platform or an earlier PR does not validate later main commits.
 ## Android camera-rotation instrumentation access repair (2026-11-16)
 
 The rotation runtime check inspects the Activity's private CameraStage through the
