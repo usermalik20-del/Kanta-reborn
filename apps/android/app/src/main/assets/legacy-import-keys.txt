@@ -1,0 +1,12 @@
+# KANTA legacy import key library — format v1
+# One entry per block; blocks are separated by a blank line.
+#   label=<display name>
+#   key=<64 hex digits>   (key=PLACEHOLDER reserves a slot for a future container version)
+#   iv=<32 hex digits>
+label=KANTA v1
+key=9eac94f7d1abf0c1e08e9f67d3a2f6fc45fda31d2477702dae565b259c49fe6b
+iv=4a744e704f62417636373134402a2326
+
+label=KANTA v2 (placeholder — key not yet provided)
+key=PLACEHOLDER
+iv=00000000000000000000000000000000

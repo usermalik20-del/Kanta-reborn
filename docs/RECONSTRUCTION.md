@@ -1,4 +1,21 @@
-## Android v35 Stage, Menu and Browser Remote (2026-11-23)
+## Android bundled legacy key library — owner decision (2026-11-24)
+
+Supersedes the runtime-only import key candidate. The owner distributes the
+`shubidx`/`shubblob` pair publicly and treats KANTA as the player for it, so the
+app now carries the unlock material: `legacy-import-keys.txt` in main assets holds
+the real v1 key/IV plus a labeled `PLACEHOLDER` slot for a future container
+version. `MainActivity` submits every real table entry in order; the controller
+probes each candidate with `LegacyFileContainerImporter.probeKey` (one record
+decode, non-consuming) before the full import, consumes the match, clears the rest,
+and offers the masked manual-entry dialog when nothing matches. Manually entered
+keys remain runtime-only. The `privateLegacy` variant keeps its label/updater
+behavior and optional external asset override; the local build script no longer
+passes the override. Recorded consequence: the container AES layer is obfuscation,
+not a gate — the only remaining secret is that the container files stay out of the
+repository. See [ownership contract](ARCHITECTURE.md#android-bundled-legacy-key-library)
+and [validation scope](TESTING.md#android-bundled-legacy-key-library).
+
+
 
 The Android UI overhaul replaced the icon-only Stage chrome with labeled,
 icon-backed controls and moved Party Pads into a normal Menu page. Stage
@@ -1226,7 +1243,7 @@ The redesign is implemented as modular JS files loaded by all pages:
 <!-- nav removal doc sync v2 -->
 
 <!-- party-sounds-assets-committed -->
-## Android runtime-only legacy import key — local candidate
+## Android runtime-only legacy import key — local candidate (superseded 2026-11-24)
 
 Public Android builds do not bundle key/IV material; the caller supplies it for one
 import. An opt-in private build loads a local build asset after pair selection,
@@ -1236,8 +1253,8 @@ provisioning, not key derivation from the files. The attached pair resolved 47,9
 records in a read-only JVM probe: 47,997 MIDI signatures and one unsupported
 signature. This does not prove title/audio identity, device import or playback.
 D2/D4 remain open; iOS is unchanged.
-See [ownership contract](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate)
-and [validation scope](TESTING.md#android-runtime-only-legacy-import-key--local-candidate).
+See the [ownership contract](ARCHITECTURE.md#android-bundled-legacy-key-library)
+and [validation scope](TESTING.md#android-bundled-legacy-key-library).
 
 ## Local Android B1/B2/D5/D8 candidate
 

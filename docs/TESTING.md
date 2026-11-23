@@ -1442,24 +1442,28 @@ The redesign is implemented as modular JS files loaded by all pages:
 - `vercel-deploy.yml` must keep checkout credentials unpersisted, restrict production deployment to `refs/heads/main`, and scope `VERCEL_TOKEN` only to the verification, domain API, pull, build, and deploy steps. `configure-is-a-dev-domain.yml` is also main-only. BLA candidate steps must not receive the token.
 - `tools/tests/test_workflow_path_ownership.py` guards the Android main-history check, step-scoped signing, keystore cleanup, checkout credential policy, and pinned BLA CLI. `tools/tests/test_vercel_deploy_workflow.py` guards Vercel token scope and main-only production domain/deploy jobs.
 - Repository branch protection and security settings are not controlled by these workflow tests. On 2026-11-09 the GitHub API reported `main` as unprotected; repository-admin action is required to enable protection and restrict production secrets to a protected environment.
-## Android runtime-only legacy import key — local candidate
+## Android bundled legacy key library
 
-`LegacyFileContainerImporterRegressionTests` now uses unrelated synthetic key/IV
+`LegacyFileContainerImporterRegressionTests` uses unrelated synthetic key/IV
 fixtures, without reflecting application constants. Coverage adds strict hex/length
 validation, defensive ownership, idempotent clearing, missing-file cleanup, correct
-and wrong supplied keys, and refusal to reuse cleared keys. Run
+and wrong supplied keys, refusal to reuse cleared keys, and `probeKey` behavior:
+wrong key refused, correct key accepted, missing file/credentials refused, and probed
+material neither consumed nor zeroed until the import itself clears it. Run
 `cd apps/android && ./gradlew --no-daemon :app:coreRegression` on Java 17.
-`python3 -m unittest tools.tests.test_runtime_import_key` checks public/manual and
-private/automatic routing, scoped asset wiring and credential cleanup. The private
+`python3 -m unittest tools.tests.test_runtime_import_key` checks that the table ships
+in main assets with at least one real entry and one placeholder slot, controller
+ownership and clearing of every candidate, the activity's fallback to the masked
+manual dialog, and that the committed key appears in no test source. The private
 launcher label resolves from the `app/src/privateLegacy/res` override instead of a
 manifest placeholder, keeping the manifest reference statically visible to lint. The synthetic
-JVM suite now checks the exact 48-byte private asset layout and rejects truncated or
-oversized input. Direct JDK 17 execution passed 55,756 core checks. A separate read-only
-probe mapped 47,998 attached records, including 47,997 MIDI signatures and one
-unsupported signature; it did not export songs. On an Android build host, verify
-the private APK contains the asset and ordinary debug/release APKs do not, then
-exercise picker, progress, cancellation, catalog persistence and playback on device.
-APK build, Android lint and device acceptance remain unverified for this variant.
+JVM suite still checks the exact 48-byte external asset layout used by the
+`privateLegacy` override and rejects truncated or oversized input. A separate
+read-only probe mapped 47,998 attached records, including 47,997 MIDI signatures
+and one unsupported signature; it did not export songs. On an Android build host,
+verify every APK contains the key table, then exercise picker, table unlock, the
+manual fallback, progress, cancellation, catalog persistence and playback on device.
+APK build, Android lint and device acceptance remain unverified for this change.
 
 ### Android Back navigation regression
 

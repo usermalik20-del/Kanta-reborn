@@ -95,6 +95,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private final Map<String, Integer> pageScrollPositions = new HashMap<>();
   private int pageChangeGeneration;
   private Uri pendingLegacyIndex;
+  private Uri lastLegacyIndex;
+  private Uri lastLegacyBlob;
   private AlertDialog legacyKeyDialog;
   private int queueLimit = 20;
   private final Handler handler = new Handler(Looper.getMainLooper());
@@ -3560,24 +3562,35 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     text.clear();
   }
 
+  /**
+   * Tries every real entry of the bundled key table in order; the importer probes each
+   * candidate against one record before the full import. Without a usable table (missing
+   * asset, every entry still a placeholder) the user falls back to entering a key manually.
+   */
   private void startLegacyPair(Uri index, Uri blob) {
-    if (!BuildConfig.PRIVATE_LEGACY_IMPORT) {
+    lastLegacyIndex = index;
+    lastLegacyBlob = blob;
+    java.util.List<ph.kanta.reborn.core.legacy.LegacyImportKey> candidates = new java.util.ArrayList<>();
+    try (java.io.InputStream asset = getAssets().open("legacy-import-keys.txt")) {
+      for (ph.kanta.reborn.core.legacy.LegacyKeyTable.Entry entry
+          : ph.kanta.reborn.core.legacy.LegacyKeyTable.fromStream(asset)) {
+        if (!entry.placeholder) {
+          candidates.add(ph.kanta.reborn.core.legacy.LegacyImportKey.fromHex(entry.keyHex, entry.ivHex));
+        }
+      }
+    } catch (Exception unusableTable) {
+      for (ph.kanta.reborn.core.legacy.LegacyImportKey credential : candidates) credential.close();
+      candidates.clear();
+    }
+    if (candidates.isEmpty()) {
       requestLegacyKey(index, blob);
       return;
     }
-    ph.kanta.reborn.core.legacy.LegacyImportKey credentials;
-    try (java.io.InputStream asset = getAssets().open("legacy-import-key.bin")) {
-      credentials = ph.kanta.reborn.core.legacy.LegacyImportKey.fromPrivateAsset(asset);
-    } catch (IOException unavailable) {
-      Toast.makeText(this, "This private build cannot unlock legacy files. Rebuild it with the correct key file.",
-          Toast.LENGTH_LONG).show();
-      return;
-    }
-    submitLegacyPair(index, blob, credentials);
+    submitLegacyPair(index, blob, candidates);
   }
 
   private void submitLegacyPair(Uri index, Uri blob,
-      ph.kanta.reborn.core.legacy.LegacyImportKey credentials) {
+      java.util.List<ph.kanta.reborn.core.legacy.LegacyImportKey> credentials) {
     if (session.importLegacyPair(index, blob, credentials)) {
       showImportProgress();
       attachImportProgressListener();
@@ -3586,6 +3599,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
+  
   private void requestLegacyKey(Uri index, Uri blob) {
     if (legacyKeyDialog != null) legacyKeyDialog.dismiss();
     EditText keyInput = legacyKeyInput("Key: 64 hexadecimal digits", 64);
@@ -3627,7 +3641,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       clearLegacyKeyInput(keyInput);
       clearLegacyKeyInput(ivInput);
       dialog.dismiss();
-      submitLegacyPair(index, blob, credentials);
+      submitLegacyPair(index, blob, java.util.Collections.singletonList(credentials));
     });
   }
 
@@ -4175,9 +4189,25 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override
       public void onComplete(boolean success, String message) {
         hideImportProgress(message);
+        if (!success && session.drainLegacyManualKeyOffer()
+            && lastLegacyIndex != null && lastLegacyBlob != null) {
+          offerManualLegacyKey();
+        }
       }
     });
   }
+
+  private void offerManualLegacyKey() {
+    constrainDialog(new AlertDialog.Builder(this)
+        .setTitle("Enter a key")
+        .setMessage("These files could not be unlocked with the bundled keys. "
+            + "If you were given a key and IV for them, you can enter them now.")
+        .setPositiveButton("Enter key",
+            (dialog, which) -> requestLegacyKey(lastLegacyIndex, lastLegacyBlob))
+        .setNegativeButton("Cancel", null)
+        .show());
+  }
+
 
   private void dismissImportProgress() {
     android.app.ProgressDialog dialog = importProgressDialog;

@@ -59,6 +59,34 @@ public final class LegacyFileContainerImporter {
     }
   }
 
+  /**
+   * Checks whether credentials can unlock the first index-referenced record, without consuming
+   * them. Decoding one record costs a fraction of a full import, so a key table can be tried
+   * in order before committing to the multi-thousand-record pass. Returns false for any
+   * unreadable pair, unsupported layout, or key that does not decode; it never throws.
+   */
+  public static boolean probeKey(File index, File blob, LegacyImportKey credentials) {
+    if (credentials == null || !index.isFile() || !blob.isFile()) return false;
+    if (blob.length() <= 0 || blob.length() > MAX_BLOB_BYTES) return false;
+    try {
+      byte[] indexBytes = readBounded(index, 16 * 1024 * 1024);
+      List<ShubIndexProbe.TitleRecord> titles = ShubIndexProbe.decodeTitleRecords(indexBytes);
+      if (titles.isEmpty()) return false;
+      long[] trailing = ShubIndexProbe.trailingUInt32Values(indexBytes);
+      long[] titleBlocks = new long[titles.size()];
+      for (int i = 0; i < titles.size(); i++) titleBlocks[i] = titles.get(i).opaqueB;
+      int[] keypadNumbers = ShubIndexProbe.keypadNumbers(titleBlocks, trailing);
+      boolean numbered = keypadNumbers.length > 0;
+      ArrayList<Long> records = locateRecordStarts(blob, titleBlocks,
+          numbered ? new long[0] : trailing, () -> false);
+      byte[] payload = decodeRecord(blob, records.get(0), credentials.key(), credentials.iv(), () -> false);
+      return extension(payload) != null;
+    } catch (Exception unable) {
+      return false;
+    }
+  }
+
+  
   private static ImportResult importWithKey(
       File index, File blob, File outputDir, byte[] key, byte[] iv,
       java.util.function.BooleanSupplier cancelled,

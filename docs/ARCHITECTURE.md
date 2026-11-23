@@ -1557,37 +1557,58 @@ The Vercel production deploy and domain-attachment jobs are restricted to `refs/
 
 Repository-level security controls are separate from this workflow boundary. On 2026-11-09 GitHub reported `main` as unprotected, and no CODEOWNERS file or CodeQL workflow was present in the repository tree. Dependabot and secret-scanning settings were not verified by this audit. Enabling branch protection or configuring repository security settings requires repository-admin action.
 
-## Android runtime-only legacy import key — local candidate
+## Android bundled legacy key library
 
-Public builds ask for a 64-hex-digit AES-256 key and a 32-hex-digit IV after
-both files are selected in My Set. There is no public bundled default.
-The opt-in `privateLegacy` build sources a 48-byte asset from outside the checkout,
-uses a separate application ID, overrides the launcher label through its own
-`app/src/privateLegacy/res` source set, and disables the public updater. Gradle rejects
-private provisioning in CI; only that build type packages the asset. After the
-blob picker returns, the private build loads the asset into the same per-import
-credential object used by the manual flow. The private APK itself contains
-extractable key material and must not be shared. Other imports and iOS are unchanged.
+Owner decision (2026-11-24): the distributed `shubidx`/`shubblob` container files
+are already in public circulation and KANTA is the player for them, so the unlock
+material ships with the app. Every build packages `legacy-import-keys.txt` from
+main assets — a labeled, versioned table of 64-hex-digit AES-256 keys with
+32-hex-digit IVs, plus `key=PLACEHOLDER` reserved slots for future container
+versions (limits: 64 KiB, 32 entries). After pair selection, `MainActivity`
+submits every real entry in table order. The controller probes each candidate
+against the first index-referenced record with `LegacyFileContainerImporter.probeKey`
+(one decode, never consumes) before the full import, consumes the matching key,
+clears the others, and offers the masked manual-entry dialog when no entry unlocks
+the pair. Manually entered key material remains runtime-only.
+
+Consequence, accepted with the decision: the container's AES layer is obfuscation,
+not a gate — anyone holding a distributed blob and the public table can decode it.
+The only remaining secret is that the container files themselves are not in the
+repository. This is recorded as an explicit owner decision, not an agent choice.
+
+The opt-in `privateLegacy` build keeps its separate application ID, launcher-label
+override, disabled public updater, and its external asset-directory override
+(`kantaPrivateLegacyAssets`), which Gradle still rejects in CI; the default private
+build no longer requires the override and imports from the same bundled table as
+the public build. Adding a key for a future container version is a table edit plus
+rebuild, not a new provisioning pipeline. Other imports and iOS are unchanged. The
+attached pair resolved 47,998 records in a read-only JVM probe: 47,997 MIDI
+signatures and one unsupported signature. This does not prove title/audio identity,
+device import or playback. D2/D4 remain open.
 
 `LegacyImportKey` owns defensive copies and supports idempotent clearing. The
-controller takes ownership even for busy/invalid requests and executor rejection;
-the worker closes it on copy/decode/install failure. The synchronous paired importer
-also consumes it with try-with-resources, including mapping failures and success.
-The entry dialog is masked, excluded from saved state and autofill, requests no
-personalized keyboard learning or extract UI, and uses a secure window. Dismissal,
-cancel and backgrounding clear its fields. The app does not write runtime keys to
-settings, logs, intents or saved instance state. The private build input, Gradle
-intermediates/caches and APK must be kept private. Byte/field clearing is best
-effort: Java, cryptographic providers and keyboards can retain internal copies.
+controller owns every candidate even for busy/invalid requests and executor
+rejection; the worker clears the unused candidates and the synchronous paired
+importer consumes the chosen one with try-with-resources, including mapping
+failures and success. The manual entry dialog is masked, excluded from saved state
+and autofill, requests no personalized keyboard learning or extract UI, and uses a
+secure window. Dismissal, cancel and backgrounding clear its fields. The app does
+not write manually entered keys to settings, logs, intents or saved instance state.
+Byte/field clearing is best effort: Java, cryptographic providers and keyboards can
+retain internal copies.
 
-The existing synthetic importer suite now supplies unrelated fixture material and
-tests valid/wrong keys, strict hex/length validation, defensive copying, idempotent
-clearing, closed-key reuse and cleanup after failed input validation. Python source
-contracts guard the UI/controller wiring. These source checks do not execute Android.
-Direct JDK 17 regression checks ran in the ARM64 sandbox. Gradle APK packaging,
-Android lint and emulator/device UI acceptance still need the pinned Android toolchain.
-D2/D4 remain open for real paired import/playback, semantic title verification and
-storage/cancellation. iOS behavior is unchanged; this candidate is not a release.
+The synthetic importer suite supplies unrelated fixture material and tests
+valid/wrong keys, strict hex/length validation, defensive copying, idempotent
+clearing, closed-key reuse, cleanup after failed input validation, and probe
+non-consumption on a synthetic pair. `LegacyKeyTableRegressionTests` pins the table
+grammar: field shape, both hex cases, placeholder semantics, missing/duplicate/
+unknown fields, label length, the 32-entry limit and the 64 KiB limit. Python source
+contracts assert the bundled table (real entries plus at least one placeholder
+slot), controller candidate ownership, the activity fallback to the manual dialog,
+and that the committed key appears in no test source. These source checks do not
+execute Android. Direct JDK 17 regression checks ran in the ARM64 sandbox. Gradle
+APK packaging, Android lint and emulator/device UI acceptance still need the
+pinned Android toolchain.
 
 ## Local Android B1/B2/D5/D8 boundaries
 

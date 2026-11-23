@@ -262,6 +262,75 @@ public final class LegacyFileContainerImporterRegressionTests {
       }
     }
   }
+  private static void probeKeySelection() throws Exception {
+    java.nio.file.Path dir = Files.createTempDirectory("legacy-probe-");
+    try {
+      File index = dir.resolve("input.idx").toFile();
+      File blob = dir.resolve("input.blob").toFile();
+      byte[] first = new byte[] {'M', 'T', 'h', 'd', 11};
+      byte[] second = new byte[] {'M', 'T', 'h', 'd', 22};
+      try (RandomAccessFile out = new RandomAccessFile(blob, "rw")) {
+        out.setLength(4096);
+        encryptedRecord(out, 0, first);
+        encryptedRecord(out, 2048, second);
+      }
+      try (RandomAccessFile out = new RandomAccessFile(index, "rw")) {
+        out.setLength(28);
+        out.seek(20); u32(out, 28);
+        out.seek(28);
+        for (int i = 0; i < 2; i++) {
+          byte[] title = (i == 0 ? "Synthetic B" : "Synthetic A")
+              .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+          out.write(1); out.write(12 + title.length); out.writeShort(0);
+          u32(out, 0); u32(out, i == 0 ? 1 : 0); out.write(title);
+        }
+        u32(out, 17); u32(out, 513);
+      }
+      byte[] wrong = TEST_KEY.clone();
+      wrong[0] = 1;
+      LegacyImportKey wrongCredentials = new LegacyImportKey(wrong, TEST_IV);
+      byte[] wrongKeyBytes = wrongCredentials.key();
+      byte[] wrongIvBytes = wrongCredentials.iv();
+      check(!LegacyFileContainerImporter.probeKey(index, blob, wrongCredentials),
+          "A key that cannot decode the first record is refused by the probe");
+      check(!LegacyFileContainerImporter.probeKey(index, dir.resolve("missing.blob").toFile(), wrongCredentials),
+          "A missing blob is refused by the probe");
+      check(!LegacyFileContainerImporter.probeKey(index, blob, null),
+          "Missing credentials are refused by the probe");
+      check(!Arrays.equals(wrongKeyBytes, new byte[32]),
+          "The probe refused to zero live key bytes");
+      LegacyFileContainerImporter.ImportResult refused = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("wrong-key").toFile(), wrongCredentials);
+      check(refused.decodedCount == 0 && refused.skippedCount == 2,
+          "The probe does not consume or mutate the probed credentials");
+      checkCleared(wrongCredentials, wrongKeyBytes, wrongIvBytes);
+
+      LegacyImportKey credentials = new LegacyImportKey(TEST_KEY, TEST_IV);
+      byte[] keyBytes = credentials.key();
+      byte[] ivBytes = credentials.iv();
+      check(LegacyFileContainerImporter.probeKey(index, blob, credentials),
+          "A key that decodes the first record is accepted by the probe");
+      boolean stillUsable = true;
+      try {
+        credentials.key(); credentials.iv();
+      } catch (IllegalStateException closedAfterProbe) {
+        stillUsable = false;
+      }
+      check(stillUsable, "A passed probe leaves the credentials available for the import");
+      LegacyFileContainerImporter.ImportResult result = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("output").toFile(), credentials);
+      check(result.decodedCount == 2 && result.errors.isEmpty(),
+          "A probed key still imports the full pair");
+      checkCleared(credentials, keyBytes, ivBytes);
+    } finally {
+      try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(dir)) {
+        for (java.nio.file.Path path : paths.sorted(java.util.Comparator.reverseOrder())
+            .toArray(java.nio.file.Path[]::new)) Files.delete(path);
+      }
+    }
+  }
+
+
   private static void encryptedRecord(RandomAccessFile out, long offset, byte[] payload)
       throws Exception {
     java.util.zip.Deflater compressor = new java.util.zip.Deflater(6, true);
@@ -384,6 +453,7 @@ public final class LegacyFileContainerImporterRegressionTests {
     cancellationStopsInflaterAndEndsNativeState();
     namedImport();
     cancelledImportRemovesPartialOutputs();
+    probeKeySelection();
     return checks;
   }
 }

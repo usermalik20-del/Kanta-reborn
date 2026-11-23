@@ -1393,6 +1393,7 @@ public final class CoreRegressionTests {
     checks += BrowserRemoteRegressionTests.run();
     checks += MkmdDecoderRegressionTests.run();
     checks += ph.kanta.reborn.core.legacy.LegacyFileContainerImporterRegressionTests.run();
+    checks += ph.kanta.reborn.core.legacy.LegacyKeyTableRegressionTests.run();
     checks += SpicePitchRegressionTests.run();
     checks += MidiKeyRegressionTests.run();
     checks += LyricWordAnimationRegressionTests.run();

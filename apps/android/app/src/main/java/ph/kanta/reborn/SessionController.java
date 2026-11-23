@@ -63,6 +63,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private boolean savingSet = false;
   private LibraryRepository repository;
   private LibraryRepository.ImportProgressListener importProgressListener;
+  private volatile boolean legacyManualKeyOffer;
   private final LibraryRepository.ImportProgressListener importProgressDispatcher =
       new LibraryRepository.ImportProgressListener() {
         @Override
@@ -2214,47 +2215,80 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
         });
   }
 
-  // Takes ownership of credentials, including rejected/busy requests.
+  /** True once, when a table import failed because no bundled key unlocked the pair. */
+  boolean drainLegacyManualKeyOffer() {
+    boolean offered = legacyManualKeyOffer;
+    legacyManualKeyOffer = false;
+    return offered;
+  }
+
   boolean importLegacyPair(android.net.Uri indexUri, android.net.Uri blobUri,
       ph.kanta.reborn.core.legacy.LegacyImportKey credentials) {
-    if (credentials == null) return false;
+    return importLegacyPair(indexUri, blobUri, credentials == null
+        ? java.util.Collections.<ph.kanta.reborn.core.legacy.LegacyImportKey>emptyList()
+        : java.util.Collections.singletonList(credentials));
+  }
+
+  // Takes ownership of every credential, including rejected/busy requests. The candidate that
+  // passes LegacyFileContainerImporter.probeKey is consumed by the import itself; all others
+  // are cleared here.
+  boolean importLegacyPair(android.net.Uri indexUri, android.net.Uri blobUri,
+      java.util.List<ph.kanta.reborn.core.legacy.LegacyImportKey> candidates) {
+    if (candidates == null || candidates.isEmpty()) return false;
     if (!ready || importing || indexUri == null || blobUri == null) {
-      credentials.close();
+      for (ph.kanta.reborn.core.legacy.LegacyImportKey credential : candidates) credential.close();
       return false;
     }
     importCancelled.set(false); importing = true; libraryImporting = true; message = "Importing legacy song library…"; publish();
     try {
       io.execute(() -> {
         File index = null, blob = null; int good = 0; String resultMessage;
-        try (ph.kanta.reborn.core.legacy.LegacyImportKey owned = credentials) {
+        ph.kanta.reborn.core.legacy.LegacyImportKey chosen = null;
+        try {
           index = File.createTempFile("legacy-index-", ".idx", context.getCacheDir());
           blob = File.createTempFile("legacy-blob-", ".blob", context.getCacheDir());
           copyLegacyUri(indexUri, index, 16L * 1024 * 1024, "IDX", "16 MiB", "first");
           copyLegacyUri(blobUri, blob, 1024L * 1024 * 1024L, "BLOB", "1 GiB", "second");
           importProgressDispatcher.onProgress(0, 0, "Checking the song library files…");
-          ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
-              ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
-                  index, blob, new File(repository.media, "legacy-import"), owned, importCancelled::get,
-                  (done, total) -> importProgressDispatcher.onProgress(total, done,
-                      "Reading legacy songs: " + done + "/" + total + "…"));
-          if (!result.songs.isEmpty()) {
-            importProgressDispatcher.onProgress(0, 0, "Adding songs to your library…");
-            good = repository.importLegacyResult(result);
+          for (ph.kanta.reborn.core.legacy.LegacyImportKey candidate : candidates) {
+            if (ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.probeKey(index, blob, candidate)) {
+              chosen = candidate;
+              break;
+            }
           }
-          resultMessage = "Imported " + good + " legacy song(s); " + result.skippedCount + " record(s) skipped.";
+          if (chosen == null) {
+            legacyManualKeyOffer = candidates.size() > 1;
+            resultMessage = "These files could not be unlocked. You can enter a key manually.";
+          } else {
+            ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.ImportResult result =
+                ph.kanta.reborn.core.legacy.LegacyFileContainerImporter.importPair(
+                    index, blob, new File(repository.media, "legacy-import"), chosen, importCancelled::get,
+                    (done, total) -> importProgressDispatcher.onProgress(total, done,
+                        "Reading legacy songs: " + done + "/" + total + "…"));
+            if (!result.songs.isEmpty()) {
+              importProgressDispatcher.onProgress(0, 0, "Adding songs to your library…");
+              good = repository.importLegacyResult(result);
+            }
+            resultMessage = "Imported " + good + " legacy song(s); " + result.skippedCount + " record(s) skipped.";
+          }
         } catch (Exception failure) {
           if (importCancelled.get() || failure instanceof java.io.InterruptedIOException) {
             resultMessage = "Legacy import cancelled.";
           } else {
             resultMessage = "Legacy import failed: " + (failure.getMessage() == null ? "unsupported container" : failure.getMessage());
           }
-        } finally { if (index != null) index.delete(); if (blob != null) blob.delete(); }
+        } finally {
+          for (ph.kanta.reborn.core.legacy.LegacyImportKey credential : candidates) {
+            if (credential != chosen) credential.close();
+          }
+          if (index != null) index.delete(); if (blob != null) blob.delete();
+        }
         final int imported = good; final String messageValue = resultMessage;
         main.post(() -> { songs = repository.songs(); importing = false; libraryImporting = false; message = messageValue; completeImportProgress(imported > 0, messageValue); publish(); });
       });
       return true;
     } catch (java.util.concurrent.RejectedExecutionException rejected) {
-      credentials.close();
+      for (ph.kanta.reborn.core.legacy.LegacyImportKey credential : candidates) credential.close();
       importing = false;
       libraryImporting = false;
       message = "Import could not start. Please try again.";
