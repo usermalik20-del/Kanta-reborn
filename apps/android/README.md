@@ -1,3 +1,15 @@
+## Android score celebration budget and rendering (2026-11-23)
+
+The framework-free `ScoreCelebrationPlan` reserves the planned star, fireworks and
+petal particles before allocating confetti, keeping the complete plan at or below
+its declared 160-particle ceiling. `ScoreCelebrationView` applies each petal's
+planned pink hue to its own paint before drawing; the default `Paint` color must
+not leak into the visual effect. `ScoreCelebrationRegressionTests` checks the
+budget, type counts, petal entry range, star-only origin and deterministic seeds.
+A Python source contract guards the Canvas paint binding. These checks do not
+replace visual acceptance on a physical Android device.
+
+---
 ## Legacy MKMD decompression safety (2026-11-16)
 
 The paired `.shubidx`/`.shubblob` importer validates each record independently.

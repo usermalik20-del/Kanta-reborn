@@ -1,21 +1,13 @@
-## Daily CI health sweep (2026-11-18)
+## Daily CI health sweep retired (2026-11-21)
 
-`.github/workflows/daily-ci.yml` runs `KANTA Daily CI` on `schedule` (03:17 UTC /
-11:17 AM Philippines, deliberately off the top of the hour) and `workflow_dispatch`.
-It is a health orchestrator, not a release pipeline: it calls the existing
-`website-validation`, `verified-downloads`, `android-validation` and `ios-validation`
-workflows as reusable (`workflow_call`) gates, all in parallel, and any failing
-deterministic gate turns the run red with no automatic rerun. The Android call
-passes `daily_health: true`; the owner-signing and BLA-hardening steps require that
-input to be absent, so daily runs build unsigned material only and never sign or
-publish. Reusable calls execute inside the caller's run, so the
-`platform-download-publishing.yml` `workflow_run` filter never matches a
-`KANTA Daily CI` run: daily CI answers "is main healthy?" while publishing CI alone
-answers "should users download this?". The four called workflows now embed
-`github.event_name` in their concurrency groups so scheduled runs can never cancel,
-or be cancelled by, push-triggered validation runs. All existing `if: always()`
-diagnostic and artifact uploads are unchanged.
-First-run repair (same day): a new caller's `github.run_number` starts at 1, below the Android build's bounded release range, so the first health run failed with `kantaVersionCode outside bounded release range`; the build step now floors any allocation below the documented baseline (10), guarded by a workflow-ownership regression test. Local baseline builds are unaffected.
+The scheduled `.github/workflows/daily-ci.yml` orchestrator was removed in
+commit `a6895acbe8c0`. No recurring all-platform health sweep is currently
+active. The path-filtered website, verified-download, Android and iOS workflows
+remain the authoritative validation gates; platform publishing still follows
+trusted-main artifact workflows. Do not describe the retired sweep as active or
+recreate a scheduled all-platform run without owner approval. The old
+`daily_health` reusable-workflow input remains in the Android workflow but has
+no current scheduled caller.
 
 ## User-facing wording and README scope
 

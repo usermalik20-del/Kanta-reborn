@@ -1,3 +1,16 @@
+## Android v36 score celebration hardening (2026-11-23)
+
+The v36 score overlay adds fireworks and falling petals to the existing
+deterministic celebration plan. Review found that the Perfect tier generated
+177 particles despite the plan's declared 160-particle ceiling, and the
+existing regression checks still treated petal entry at `y = -0.1` as an
+invalid origin and counted fireworks/petals as stars. The candidate reserves
+all non-confetti particles first, reduces only confetti to stay within budget,
+and updates the segment-aware tests. The Android view also applies each petal's
+planned hue instead of leaving its dedicated Paint at the default black.
+Exact-head CI remains the acceptance gate; no device visual result is claimed.
+
+---
 ## Android v35 Stage, Menu and Browser Remote (2026-11-23)
 
 The Android UI overhaul replaced the icon-only Stage chrome with labeled,

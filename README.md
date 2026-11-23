@@ -82,7 +82,7 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 - **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Malformed or truncated MKMD data in either direct decoding or paired legacy import is rejected promptly; a damaged legacy record is skipped without stalling the import. Party sounds are bundled recordings. Legacy-library compatibility is experimental and may not work with every library or play every song.
 - **Plan your session:** search your library, line up songs and keep saved song sets. The Android preview now shows reserved songs above the keypad, accepts exact song codes with RES, and displays an Up next hint on stage. Playback controls have more room.
 - **Personalize the screen:** choose backgrounds or use your own photos and videos. On Android, open Menu → Stage & Visual to shuffle photos or videos. You can also choose a lyric font from a folder you grant read access to.
-- **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
+- **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects, plus a brief visual celebration for completed score tiers.
 
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
 
@@ -113,7 +113,7 @@ Read the [privacy information](https://kanta-public.vercel.app/privacy) before u
 
 ## For contributors
 
-Build instructions, test results and engineering details live in the developer documentation—not on this front page. A daily automated check re-verifies the website, download contracts, and Android/iOS builds every day; see [testing and release requirements](docs/TESTING.md).
+Build instructions, test results and engineering details live in the developer documentation—not on this front page. Path-specific CI validates the website, download contracts, and the Android or iOS code each workflow owns; no scheduled all-platform health sweep is currently active. See [testing and release requirements](docs/TESTING.md).
 
 - [Android development](apps/android/README.md) · [iOS development](apps/ios/AGENTS.md) · [Website development](apps/web/README.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Engineering rules](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md)

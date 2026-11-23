@@ -162,7 +162,8 @@ public final class ScoreCelebrationView extends View {
         // Fireworks: small stars bursting from center
         drawStar(canvas, x, y, radius * 2.0f);
       } else {
-        // Petals: petal-shaped particles (pink range hues)
+        // Petals: use each planned hue instead of Paint's default opaque black.
+        petalPaint.setColor(hueColor(particle.hue));
         drawPetal(canvas, x, y, radius);
       }
 

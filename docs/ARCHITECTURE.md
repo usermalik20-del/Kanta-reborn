@@ -13,23 +13,22 @@ spaces. `Party Pads` is a first-class Menu page with pad triggers, clip
 assignment, reset and volume; Intermission no longer owns the pads. Settings no
 longer duplicates Stage, Intermission, Party, Voice or Scoring controls.
 The landscape startup artwork replaces the letterboxed portrait variant.
-## Daily CI health sweep (2026-11-18)
 
-`KANTA Daily CI` (`daily-ci.yml`; cron `17 3 * * *` = 03:17 UTC / 11:17 AM
-Philippines, plus manual dispatch) is the nightly orchestrator. Rather than
-duplicating commands, it reuses the four existing validators as `workflow_call`
-jobs — website fast gate, download/release contract gate, Android deep gate,
-iOS simulator gate — running in parallel with no chaining, so one slow native
-gate never delays another. The run is red if any gate fails, and there is no
-automatic rerun: a flaky failure is itself signal. The Android gate receives the
-new `workflow_call` input `daily_health`, which gates owner signing and BLA
-candidate generation, so the sweep proves `main` remains buildable and testable
-without producing release material. Because a reusable call runs inside the
-caller's workflow run, the `workflow_run` publisher
-(`platform-download-publishing.yml`) never fires from the sweep; scheduled Daily
-CI and release/publishing CI stay separate concerns (health vs. download
-readiness). Concurrency groups of the reused workflows now include
-`github.event_name`, keeping daily runs disjoint from push validation runs.
+Android v36 score celebrations remain decorative and controller-independent.
+The framework-free `ScoreCelebrationPlan` reserves stars, eight-particle
+fireworks bursts and petals before allocating confetti, so its complete particle
+list cannot exceed `MAX_PARTICLES = 160`. The Android view uses the planned
+hue for each petal; scoring remains default-off and consumes dry microphone
+estimates without recording audio.
+
+## Daily CI health sweep retired (2026-11-21)
+
+The scheduled `daily-ci.yml` orchestrator was removed in commit
+`a6895acbe8c0`. There is no current scheduled all-platform health sweep.
+The path-filtered website, verified-download, Android and iOS workflows remain
+the authoritative validation gates; platform publishing still follows the
+trusted-main artifact workflows. Do not report the retired sweep as an active
+check or rely on it for current main health.
 ## Android legacy MKMD decompression boundary (2026-11-16)
 
 Both direct MKMD decoding and the paired legacy-container importer use raw DEFLATE.

@@ -24,7 +24,7 @@ public final class ScoreCelebrationPlan {
   /** Hard ceiling so a plan can never ask a view for unbounded work. */
   public static final int MAX_PARTICLES = 160;
 
-  /** One confetti or star particle in normalised stage space (0..1). */
+  /** One particle in normalised stage space. */
   public static final class Particle {
     public final float originX;
     public final float originY;
@@ -104,11 +104,14 @@ public final class ScoreCelebrationPlan {
   public static Plan forScore(int overall, long seed) {
     int clamped = Math.max(0, Math.min(100, overall));
     ScoreResultTier tier = tierFor(clamped);
-    int confetti = confettiFor(tier);
     int balloons = balloonsFor(tier);
     int stars = starsFor(tier);
     int fireworks = fireworksFor(tier);
     int petals = petalsFor(tier);
+    // Reserve the non-confetti effects first; confetti yields to the hard particle budget.
+    int reservedParticles = stars + fireworks * 8 + petals;
+    int confetti =
+        Math.min(confettiFor(tier), Math.max(0, MAX_PARTICLES - reservedParticles));
     int duration = durationFor(tier);
 
     List<Particle> particles = new ArrayList<>(confetti + stars + fireworks + petals);
