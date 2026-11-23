@@ -43,6 +43,28 @@ public final class KantaTheme {
     if (strokeColor != 0 && strokeWidthDp > 0) d.setStroke((int)(strokeWidthDp * density), strokeColor);
     return d;
   }
+  public static android.widget.SeekBar adjustmentSlider(Context context) {
+    float density = context.getResources().getDisplayMetrics().density;
+    android.widget.SeekBar slider = new android.widget.SeekBar(context, null, 0, R.style.KantaAdjustmentSlider);
+    GradientDrawable track = backgroundDrawable(BORDER, 6, 0, 0, density);
+    GradientDrawable fill = backgroundDrawable(PRIMARY_CYAN, 6, 0, 0, density);
+    LayerDrawable progress = new LayerDrawable(new Drawable[] {track,
+        new android.graphics.drawable.ClipDrawable(fill, Gravity.START, android.graphics.drawable.ClipDrawable.HORIZONTAL)});
+    progress.setId(0, android.R.id.background);
+    progress.setId(1, android.R.id.progress);
+    slider.setProgressDrawable(progress);
+    GradientDrawable thumb = backgroundDrawable(TEXT_PRIMARY, 14, PRIMARY_CYAN, 2, density);
+    thumb.setShape(GradientDrawable.OVAL);
+    int size = Math.round(28 * density);
+    thumb.setSize(size, size);
+    slider.setThumb(thumb);
+    slider.setThumbOffset(size / 2);
+    slider.setSplitTrack(false);
+    slider.setMinimumHeight(Math.round(48 * density));
+    slider.setPaddingRelative(size / 2, 0, size / 2, 0);
+    return slider;
+  }
+
   public static GradientDrawable gradientDrawable(int startColor, int endColor, int radiusDp, float density) {
     GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{startColor, endColor});
     d.setCornerRadius(radiusDp * density);
@@ -106,5 +128,27 @@ public final class KantaTheme {
     TextView tv = new TextView(context);
     tv.setText(text); tv.setTextSize(sizeSp); tv.setTextColor(TEXT_SECONDARY);
     return tv;
+  }
+
+  /** Gboard-like key background with rounded corners and press state. */
+  public static StateListDrawable keyBackground(float density, boolean wide) {
+    int radius = Math.round(6 * density);
+    int strokeWidth = Math.round(0.5f * density);
+
+    GradientDrawable normal = new GradientDrawable();
+    normal.setColor(0xFF1E1E1E);
+    normal.setCornerRadius(radius);
+    normal.setStroke(strokeWidth, 0xFF333333);
+
+    GradientDrawable pressed = new GradientDrawable();
+    pressed.setColor(0xFF333333);
+    pressed.setCornerRadius(radius);
+    pressed.setStroke(strokeWidth, 0xFF444444);
+
+    StateListDrawable states = new StateListDrawable();
+    states.addState(new int[]{android.R.attr.state_pressed}, pressed);
+    states.addState(new int[]{android.R.attr.state_focused}, pressed);
+    states.addState(new int[]{}, normal);
+    return states;
   }
 }

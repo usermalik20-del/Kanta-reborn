@@ -50,7 +50,7 @@ runtime-step description below; no signing, merge or publication authority is ch
 Three source-contract regression guards failed before this repair and pass afterward:
 first-launch activation order, actual-texture frame evidence, and CI failure propagation.
 Local static/Python checks are not emulator acceptance; exact-head CI must prove the
-standby assertion and all nineteen UI captures before claiming runtime verification.
+standby assertion and every required UI capture before claiming runtime verification.
 
 ## CI: Fix Trusted Main Branch Check (2026-11-09)
 
@@ -120,6 +120,20 @@ codes and titles require Search selection. DEL remains one-character deletion.
 Native marquee must stop with host visibility and detach, remain noninteractive, and
 reserve measured lyric space rather than covering lyrics. See
 [Android layout validation](docs/ANDROID_HOME_LAYOUT.md) for hosted evidence and remaining device gates.
+
+## Local Android build host: ARM64 AAPT2 override
+
+On the Minis ARM64 Alpine PRoot host, Gradle's pinned Maven AAPT2 is x86-64. AGP
+will fork it for resource transforms, but its daemon handshake fails under this host's
+QEMU emulation. Use the pinned ARM64 AAPT2 wrapper already installed at
+`/opt/kanta-local/aapt2`; persist `android.aapt2FromMavenOverride=/opt/kanta-local/aapt2`
+in ignored `apps/android/local.properties` alongside `sdk.dir`. The wrapper forwards to
+the checksum-pinned AArch64 AAPT2 installed by `/var/minis/skills/android-dev/scripts/bootstrap-android.sh`.
+For fresh hosts, run the bootstrap and `doctor.sh`, verify `/opt/kanta-local/aapt2 version`,
+then set the override in local.properties. This affects only local builds; do not add
+machine-specific SDK paths to Git or change hosted CI tool selection. A Gradle
+`-Pandroid.aapt2FromMavenOverride=/opt/kanta-local/aapt2` command-line property is a
+fallback, but local.properties prevents forgetting the override on every build.
 
 ## Android lint hardening — validated and published
 

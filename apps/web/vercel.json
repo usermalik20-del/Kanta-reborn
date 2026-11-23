@@ -1,5 +1,7 @@
 {
   "cleanUrls": true,
+  "buildCommand": "node server/build-static.mjs",
+  "outputDirectory": ".kanta-static",
   "headers": [
     {
       "source": "/(.*)",
@@ -30,6 +32,10 @@
     }
   ],
   "routes": [
+    {
+      "src": "^/owner/diagnostics$",
+      "dest": "/api/diagnostics-owner"
+    },
     {
       "src": "^/blog/all$",
       "dest": "/api/page?route=%2Fblog%2Fall"

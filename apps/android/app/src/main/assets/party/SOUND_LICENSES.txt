@@ -1,3 +1,6 @@
+score-celebration.mp3 (score-celebration chime): owner-supplied recording processed with Voicemod,
+licensed by the KANTA owner for this repository and all public KANTA downloads.
+
 Party sound sources — all source pages identify CC0 1.0 Universal
 https://creativecommons.org/publicdomain/zero/1.0/
 

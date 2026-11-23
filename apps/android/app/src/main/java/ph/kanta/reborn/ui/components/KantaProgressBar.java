@@ -21,6 +21,7 @@ public class KantaProgressBar extends View {
     trackPaint.setColor(trackColor);
     progressPaint.setStyle(Paint.Style.FILL);
   }
+  public float getProgress() { return progress; }
   public void setProgress(float p) { progress = Math.max(0f, Math.min(1f, p)); invalidate(); }
   public void setTrackColor(int color) { trackColor = color; trackPaint.setColor(color); invalidate(); }
   public void setProgressColors(int start, int end) { progressStart = start; progressEnd = end; invalidate(); }

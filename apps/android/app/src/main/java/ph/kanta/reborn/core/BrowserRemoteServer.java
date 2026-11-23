@@ -10,14 +10,27 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 import javax.net.ssl.*;
 
 /** A bounded HTTPS adapter. The supplied handler remains the only route to host state. */
 public final class BrowserRemoteServer implements AutoCloseable {
   public interface Handler { byte[] apply(CompanionProtocol.Request request) throws Exception; }
+  public interface AuthorizedHandler {
+    byte[] apply(CompanionProtocol.Request request, BooleanSupplier authorized) throws Exception;
+  }
   public static final int PORT=45732;
+  public static final long PAIRING_MILLIS=TimeUnit.MINUTES.toMillis(5);
+  public static final long SESSION_MILLIS=TimeUnit.HOURS.toMillis(3);
+  public static final long HOST_MILLIS=PAIRING_MILLIS+SESSION_MILLIS;
+  private static final long REQUEST_WINDOW_MILLIS=60_000;
+  private static final int MAX_REQUESTS_PER_WINDOW=60;
+  private static final int MAX_REPLY_BYTES=16384;
+  private static final int MAX_REPLAY_BYTES=1024*1024;
   private static final SecureRandom RANDOM=new SecureRandom();
-  private final Handler handler;
+  private final AuthorizedHandler handler;
+  private final LongSupplier clock;
   private final byte[] page,script,style;
   private final Map<String,byte[]> artwork;
   private final SSLServerSocket server;
@@ -25,19 +38,29 @@ public final class BrowserRemoteServer implements AutoCloseable {
   private final ScheduledExecutorService deadlines=Executors.newSingleThreadScheduledExecutor();
   private final Set<Socket> sockets=ConcurrentHashMap.newKeySet();
   private final Map<String,Guest> guests=new HashMap<>();
-  private final long started=System.nanoTime();
+  private final long started;
   private final String code,authority,origin,fingerprint;
   private volatile boolean closed;
-  private int failedPairingCodes;
+  private volatile int failedPairingCodes;
   private static final class Reply { final byte[] request,body; Reply(byte[] r,byte[] b){request=r.clone();body=b.clone();} }
   private static final class Guest {
-    final long created=System.nanoTime(); final Map<UUID,Reply> replies=new HashMap<>(); int bytes;
-    boolean valid(){return System.nanoTime()-created<TimeUnit.MINUTES.toNanos(10);}
+    final long created;
+    final Map<UUID,Reply> replies=new HashMap<>();
+    int bytes, requests;
+    long window;
+    Guest(long now){created=window=now;}
+    boolean valid(long now){return now-created<SESSION_MILLIS;}
+    boolean admit(long now){
+      if(now-window>=REQUEST_WINDOW_MILLIS){window=now;requests=0;}
+      if(requests>=MAX_REQUESTS_PER_WINDOW)return false;
+      requests++;return true;
+    }
   }
   public String fingerprint(){return fingerprint;}
   public String code(){return code;}
   public String address(){return origin;}
-  public boolean active(){return !closed;}
+  public boolean active(){return !closed&&clock.getAsLong()-started<HOST_MILLIS;}
+  public boolean pairingOpen(){return active()&&clock.getAsLong()-started<PAIRING_MILLIS&&failedPairingCodes<3;}
   public BrowserRemoteServer(String address,byte[] page,byte[] script,byte[] style,Handler handler)throws Exception {
     this(address,PORT,page,script,style,Collections.emptyMap(),handler,false);
   }
@@ -48,6 +71,15 @@ public final class BrowserRemoteServer implements AutoCloseable {
     this(address,port,page,script,style,Collections.emptyMap(),handler,test);
   }
   BrowserRemoteServer(String address,int port,byte[] page,byte[] script,byte[] style,Map<String,byte[]> artwork,Handler handler,boolean test)throws Exception {
+    this(address,port,page,script,style,artwork,(request,authorized)->handler.apply(request),test,
+        ()->TimeUnit.NANOSECONDS.toMillis(System.nanoTime()));
+  }
+  public BrowserRemoteServer(String address,byte[] page,byte[] script,byte[] style,Map<String,byte[]> artwork,
+      AuthorizedHandler handler,LongSupplier clock)throws Exception {
+    this(address,PORT,page,script,style,artwork,handler,false,clock);
+  }
+  BrowserRemoteServer(String address,int port,byte[] page,byte[] script,byte[] style,Map<String,byte[]> artwork,
+      AuthorizedHandler handler,boolean test,LongSupplier clock)throws Exception {
     if(!test)CompanionProtocol.privateAddress(address);
     this.handler=Objects.requireNonNull(handler);this.page=page.clone();this.script=script.clone();this.style=style.clone();
     if(page.length>131072||script.length>131072||style.length>65536)throw new IOException("Asset limit");
@@ -72,19 +104,25 @@ public final class BrowserRemoteServer implements AutoCloseable {
     server.setEnabledProtocols(Arrays.stream(server.getSupportedProtocols()).filter(p->p.equals("TLSv1.2")||p.equals("TLSv1.3")).toArray(String[]::new));
     server.bind(new InetSocketAddress(address,port),4);server.setSoTimeout(1000);
     authority=address+":"+server.getLocalPort();origin="https://"+authority;code=CompanionProtocol.newCode();
+    this.clock=Objects.requireNonNull(clock);started=clock.getAsLong();
   }
   public void start(){worker.execute(()->{
     try {
-      while(!closed&&System.nanoTime()-started<TimeUnit.MINUTES.toNanos(30)){
+      while(active()){
+        long now=clock.getAsLong();
+        guests.entrySet().removeIf(e->!e.getValue().valid(now));
         Socket peer;try{peer=server.accept();}catch(SocketTimeoutException e){continue;}
         sockets.add(peer);
-        ScheduledFuture<?> deadline=deadlines.schedule(()->{try{peer.close();}catch(IOException ignored){}},8,TimeUnit.SECONDS);
         try(peer){
-          if(!peer.getInetAddress().isLoopbackAddress())CompanionProtocol.privateAddress(peer.getInetAddress().getHostAddress());
-          peer.setSoTimeout(2500);((SSLSocket)peer).startHandshake();serve(peer);
-        }catch(Exception ignored){}finally{deadline.cancel(false);sockets.remove(peer);}
+          if(!active())break;
+          ScheduledFuture<?> deadline=deadlines.schedule(()->{try{peer.close();}catch(IOException ignored){}},8,TimeUnit.SECONDS);
+          try{
+            if(!peer.getInetAddress().isLoopbackAddress())CompanionProtocol.privateAddress(peer.getInetAddress().getHostAddress());
+            peer.setSoTimeout(2500);((SSLSocket)peer).startHandshake();serve(peer);
+          }finally{deadline.cancel(false);}
+        }catch(Exception ignored){}finally{sockets.remove(peer);}
       }
-    }catch(IOException ignored){}finally{close();}
+    }catch(IOException ignored){}finally{guests.clear();close();}
   });}
   private void serve(Socket peer)throws Exception {
     InputStream in=peer.getInputStream();ByteArrayOutputStream header=new ByteArrayOutputStream();int state=0;
@@ -127,37 +165,53 @@ public final class BrowserRemoteServer implements AutoCloseable {
       reply(peer,403,"text/plain",new byte[0]);return;
     }
     byte[] body=new byte[length];new DataInputStream(in).readFully(body);
-    guests.entrySet().removeIf(e->!e.getValue().valid());
+    long now=clock.getAsLong();
+    guests.entrySet().removeIf(e->!e.getValue().valid(now));
     if(first[1].equals("/pair")){
-      if(failedPairingCodes>=3||System.nanoTime()-started>=TimeUnit.MINUTES.toNanos(5)||closed){
+      if(!pairingOpen()){
         reply(peer,403,"text/plain",new byte[0]);return;
       }
       if(!MessageDigest.isEqual(code.getBytes(StandardCharsets.US_ASCII),body)){
         failedPairingCodes++;reply(peer,403,"text/plain",new byte[0]);return;
       }
       if(guests.size()>=4){reply(peer,403,"text/plain",new byte[0]);return;}
-      String token=randomToken();guests.put(token,new Guest());reply(peer,200,"text/plain",token.getBytes(StandardCharsets.US_ASCII));return;
+      String token=randomToken();guests.put(token,new Guest(clock.getAsLong()));
+      reply(peer,200,"text/plain",token.getBytes(StandardCharsets.US_ASCII),"X-Kanta-Remote-Reconnect: 1\r\n");return;
     }
     String authorization=headers.getOrDefault("authorization","");
     Guest guest=authorization.startsWith("Bearer ")?guests.get(authorization.substring(7)):null;
-    if(guest==null||!guest.valid()||closed){reply(peer,401,"text/plain",new byte[0]);return;}
+    BooleanSupplier authorized=()->active()&&guest!=null&&guest.valid(clock.getAsLong());
+    if(!authorized.getAsBoolean()){reply(peer,401,"text/plain",new byte[0]);return;}
     if(first[1].equals("/leave")){guests.remove(authorization.substring(7));reply(peer,200,"text/plain",new byte[0]);return;}
-    if(!first[1].equals("/command")){reply(peer,404,"text/plain",new byte[0]);return;}
-    CompanionProtocol.Request request=decode(body);Reply old=guest.replies.get(request.id);
-    if(old!=null){
-      if(!MessageDigest.isEqual(old.request,body)){reply(peer,409,"text/plain",new byte[0]);return;}
-      reply(peer,200,"application/json",old.body);return;
+    boolean status=first[1].equals("/status");
+    if(!status&&!first[1].equals("/command")){reply(peer,404,"text/plain",new byte[0]);return;}
+    if(!guest.admit(now)){reply(peer,429,"text/plain",new byte[0]);return;}
+    CompanionProtocol.Request request=decode(body);
+    if(status&&!request.action.equals("snapshot")){reply(peer,403,"text/plain",new byte[0]);return;}
+    if(!status){
+      Reply old=guest.replies.get(request.id);
+      if(old!=null){
+        if(!MessageDigest.isEqual(old.request,body)){reply(peer,409,"text/plain",new byte[0]);return;}
+        reply(peer,200,"application/json",old.body);return;
+      }
+      // Do not evict operation IDs or turn polling into early session revocation.
+      if(guest.replies.size()>=512||guest.bytes>MAX_REPLAY_BYTES-MAX_REPLY_BYTES-body.length){
+        reply(peer,429,"text/plain",new byte[0]);return;
+      }
     }
-    if(guest.replies.size()>=512||guest.bytes>1024*1024-16384){guests.remove(authorization.substring(7));reply(peer,401,"text/plain",new byte[0]);return;}
     byte[] response;
-    try{response=handler.apply(request);}catch(Exception e){response="{\"error\":\"Host could not complete the command. Refresh the queue before trying again.\"}".getBytes(StandardCharsets.UTF_8);}
-    if(response==null||response.length>16384)response="{\"error\":\"Host response exceeded the metadata limit. Refresh the queue before trying again.\"}".getBytes(StandardCharsets.UTF_8);
-    guest.replies.put(request.id,new Reply(body,response));guest.bytes+=body.length+response.length;
-    if(!closed)reply(peer,200,"application/json",response);
+    try{response=handler.apply(request,authorized);}catch(Exception e){response="{\"error\":\"Host could not complete the command. Refresh the queue before trying again.\"}".getBytes(StandardCharsets.UTF_8);}
+    if(response==null||response.length>MAX_REPLY_BYTES)response="{\"error\":\"Host response exceeded the metadata limit. Refresh the queue before trying again.\"}".getBytes(StandardCharsets.UTF_8);
+    if(!authorized.getAsBoolean()){if(active())reply(peer,401,"text/plain",new byte[0]);return;}
+    if(!status){guest.replies.put(request.id,new Reply(body,response));guest.bytes+=body.length+response.length;}
+    reply(peer,200,"application/json",response);
   }
   private void reply(Socket socket,int status,String type,byte[] body)throws IOException {
+    reply(socket,status,type,body,"");
+  }
+  private void reply(Socket socket,int status,String type,byte[] body,String extraHeaders)throws IOException {
     String header="HTTP/1.1 "+status+" "+(status==200?"OK":"Rejected")+"\r\nContent-Type: "+type+
-      "\r\nContent-Length: "+body.length+"\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nX-Frame-Options: DENY\r\nPermissions-Policy: camera=(), microphone=(), geolocation=()\r\nContent-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'\r\n\r\n";
+      "\r\n"+extraHeaders+"Content-Length: "+body.length+"\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nX-Frame-Options: DENY\r\nPermissions-Policy: camera=(), microphone=(), geolocation=()\r\nContent-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'\r\n\r\n";
     OutputStream out=socket.getOutputStream();out.write(header.getBytes(StandardCharsets.US_ASCII));out.write(body);out.flush();
   }
   public static CompanionProtocol.Request decode(byte[] body)throws IOException {

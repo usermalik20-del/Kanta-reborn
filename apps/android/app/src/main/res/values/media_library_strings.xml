@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_library_use">Use</string>
+    <string name="media_library_use_item">Use %1$s</string>
+    <string name="media_library_remove_item">Remove %1$s</string>
+    <string name="media_library_remove_confirm">Remove %1$s?</string>
+    <string name="media_library_original_safe">Your original file stays unchanged.</string>
+    <string name="media_library_active_type">Active · %1$s</string>
+    <string name="media_library_copying">Copying your backgrounds…</string>
+    <string name="media_library_import_failed">Could not add backgrounds. Your current background is unchanged.</string>
+    <plurals name="media_library_import_added">
+        <item quantity="one">%1$d background added.</item>
+        <item quantity="other">%1$d backgrounds added.</item>
+    </plurals>
+    <plurals name="media_library_import_duplicates">
+        <item quantity="one">%1$d already saved.</item>
+        <item quantity="other">%1$d already saved.</item>
+    </plurals>
+    <plurals name="media_library_import_skipped">
+        <item quantity="one">%1$d could not be added.</item>
+        <item quantity="other">%1$d could not be added.</item>
+    </plurals>
+    <string name="media_library_import_cancelled">Import stopped. Any copies already added are kept.</string>
+    <string name="media_library_import_photos">Add photos</string>
+    <string name="media_library_import_videos">Add videos</string>
+    <string name="media_library_photos">Imported photos</string>
+    <string name="media_library_videos">Imported videos</string>
+    <string name="media_library_photo">Imported photo</string>
+    <string name="media_library_video">Imported video</string>
+    <string name="media_library_photo_details">Photo · Still background</string>
+    <string name="media_library_video_details">Video · Muted</string>
+    <string name="media_library_photos_empty">No saved photos yet.</string>
+    <string name="media_library_videos_empty">No saved videos yet.</string>
+    <string name="media_library_photos_help">Select one or more photos, up to 32 MB each. Tap Use to show a saved photo on Stage. Your original files stay unchanged.</string>
+    <string name="media_library_videos_help">Select one or more videos, up to 512 MB and six hours each. Tap Use to show a saved video on Stage without sound. Your original files stay unchanged.</string>
+    <string name="media_library_shuffle_videos">Shuffle background videos</string>
+    <string name="media_library_shuffle_photos">Shuffle background photos</string>
+    <string name="media_library_shuffle_videos_help">While using a video background, KANTA can switch to a different built-in or imported video when a song starts.</string>
+    <string name="media_library_shuffle_photos_help">Tap Use on an imported photo first. KANTA can switch to a different imported photo when a song starts.</string>
+    <string name="media_library_visual_remove_blocked">Use a different background before removing this copy.</string>
+    <string name="media_library_presets_multi">You can select several files at once. KANTA keeps copies and leaves your originals unchanged.</string>
+
+    <string name="intermission_music_heading">Between-song music</string>
+    <string name="intermission_tracks_heading">Imported tracks</string>
+    <string name="intermission_pads_heading">Party Pads</string>
+    <string name="intermission_pad_add_first">Add an MP3 or WAV in Menu → Intermission or Menu → Presets first. Your original file stays unchanged.</string>
+    <string name="intermission_removal_heading">Removing a track</string>
+    <string name="intermission_guide_button">How Intermission works</string>
+    <string name="intermission_add_music">Add MP3 or WAV</string>
+    <string name="intermission_tracks_empty">No imported tracks yet.</string>
+    <string name="intermission_active_track">Selected: %1$s</string>
+    <string name="intermission_bundled">KANTA welcome</string>
+    <string name="intermission_use_bundled">Use KANTA welcome</string>
+    <string name="intermission_turn_off">Turn off between-song music</string>
+    <string name="intermission_turn_on">Turn on between-song music</string>
+    <string name="intermission_music_volume">Between-song volume</string>
+    <string name="intermission_pad_volume">Party sound volume</string>
+    <string name="intermission_music_playing">On · Playing</string>
+    <string name="intermission_music_off">Off</string>
+    <string name="intermission_music_waiting">On · Waiting for karaoke to finish</string>
+    <string name="intermission_music_interrupted">On · Audio interrupted</string>
+    <string name="intermission_music_idle">On · Not playing</string>
+    <string name="intermission_stop_all">Stop all party audio</string>
+    <string name="intermission_assign_clip">Assign clip</string>
+    <string name="intermission_assign_pad">Assign a clip to %1$s</string>
+    <string name="intermission_reset_pad">Reset</string>
+    <string name="intermission_reset_pad_named">Reset %1$s</string>
+    <string name="intermission_pad_custom">%1$s · custom</string>
+    <string name="intermission_tracks_intro">Choose one track to loop between songs. Imports also appear in Presets and can be used in Menu → Party Pads.</string>
+    <string name="intermission_music_guide">1. Tap Add MP3 or WAV and select one or more files.\n2. Find a track in Imported tracks and tap Use. Only one track is selected at a time.\n3. Turn on between-song music and set Between-song volume. Your track loops when no karaoke song is loaded. It stops while a song is starting or loaded, or when you leave the app.\n\nKANTA welcome plays once when the stage is idle. Switching back to it does not replay it if it already played.</string>
+    <string name="intermission_pads_guide">Tap a pad to play its sound. To use your own sound, add an MP3 or WAV in Intermission or Presets, then tap Assign clip beside a pad. Clips must be mono or stereo, up to 30 seconds and 8 MB. Tap Reset to restore that pad’s original sound. Party sound volume is separate from the music volume.</string>
+    <string name="intermission_remove_guide">Before removing a track, select a different track or KANTA welcome, and reset any pads that use it in Menu → Party Pads. Removing the copy also removes it from Presets, Up Next, and saved playlists. Your original stays unchanged.</string>
+    <string name="intermission_remove_blocked">Use another track or KANTA welcome, or reset any pads using this track, before removing the copy.</string>
+</resources>

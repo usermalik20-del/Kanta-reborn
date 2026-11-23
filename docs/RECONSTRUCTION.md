@@ -1,3 +1,36 @@
+## Android bundled legacy key library — owner decision (2026-11-24)
+
+Supersedes the runtime-only import key candidate. The owner distributes the
+`shubidx`/`shubblob` pair publicly and treats KANTA as the player for it, so the
+app now carries the unlock material: `legacy-import-keys.txt` in main assets holds
+the real v1 key/IV plus a labeled `PLACEHOLDER` slot for a future container
+version. `MainActivity` submits every real table entry in order; the controller
+probes each candidate with `LegacyFileContainerImporter.probeKey` (one record
+decode, non-consuming) before the full import, consumes the match, clears the rest,
+and offers the masked manual-entry dialog when nothing matches. Manually entered
+keys remain runtime-only. The `privateLegacy` variant keeps its label/updater
+behavior and optional external asset override; the local build script no longer
+passes the override. Recorded consequence: the container AES layer is obfuscation,
+not a gate — the only remaining secret is that the container files stay out of the
+repository. See [ownership contract](ARCHITECTURE.md#android-bundled-legacy-key-library)
+and [validation scope](TESTING.md#android-bundled-legacy-key-library).
+
+## Android v35 public Stage and Menu port (2026-11-23)
+
+Public main previously still had the `KantaControlDeck` and a separate Search
+screen, plus the older popup-style Stage Controls. v35 ports the retained
+private v34 candidate to public main: the deck and standalone Search screen are
+removed, the persistent Stage presenter is the single owner, and `MainActivity`
+uses `MenuSurface` for top-level and submenu pages. The new `StageControlsPanel`
+expands below the Stage with all Party Pads visible and labeled icon rows for
+the other actions. `Party Pads` is a Menu page; `Stage & Visual` owns the
+separate photo and video tabs; the welcome artwork now has the landscape
+composition in `drawable-land-nodpi`.
+The private `legacy-import-key.bin` asset is not part of this public port; the
+`privateLegacy` Gradle variant and its CI guards are unchanged and remain
+local-only. The owner-supplied `score-celebration.mp3` is recorded in
+`party/SOUND_LICENSES.txt` and `apps/android/THIRD_PARTY_NOTICES.md` as
+owner-licensed for public distribution.
 ## Android paired legacy importer inflater repair — 2026-11-16
 
 The paired-container path had a second inline raw-DEFLATE loop separate from
@@ -1200,9 +1233,11 @@ The redesign is implemented as modular JS files loaded by all pages:
 <!-- nav removal doc sync v2 -->
 
 <!-- party-sounds-assets-committed -->
-## Android runtime-only legacy import key — local candidate
+## Android runtime-only legacy import key — local candidate (superseded 2026-11-24)
 
-Public Android builds do not bundle key/IV material; the caller supplies it for one
+See the [bundled key library entry](#android-bundled-legacy-key-library--owner-decision-2026-11-24) —
+the owner decided the key material ships with the app. Historical record:
+Public Android builds did not bundle key/IV material; the caller supplied it for one
 import. An opt-in private build loads a local build asset after pair selection,
 overrides the launcher label from its own resource source set, and transfers
 ownership to the same controller and synchronous importer. This is
@@ -1210,8 +1245,8 @@ provisioning, not key derivation from the files. The attached pair resolved 47,9
 records in a read-only JVM probe: 47,997 MIDI signatures and one unsupported
 signature. This does not prove title/audio identity, device import or playback.
 D2/D4 remain open; iOS is unchanged.
-See [ownership contract](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate)
-and [validation scope](TESTING.md#android-runtime-only-legacy-import-key--local-candidate).
+See the [ownership contract](ARCHITECTURE.md#android-bundled-legacy-key-library)
+and [validation scope](TESTING.md#android-bundled-legacy-key-library).
 
 ## Local Android B1/B2/D5/D8 candidate
 

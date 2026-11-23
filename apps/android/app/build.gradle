@@ -23,6 +23,8 @@ android {
     externalNativeBuild { cmake { path file("src/main/cpp/CMakeLists.txt"); version "3.22.1" } }
     defaultConfig {
         buildConfigField 'boolean', 'PRIVATE_LEGACY_IMPORT', 'false'
+        // A separate reviewed change may enable this only after private infrastructure approval.
+        buildConfigField 'boolean', 'AUTOMATIC_DIAGNOSTICS', 'false'
         applicationId 'ph.kanta.reborn'
         minSdk 26
         targetSdk 36
@@ -62,15 +64,17 @@ android {
         }
     }
     buildTypes {
-        if (privateLegacyAssets != null) {
-            privateLegacy {
-                initWith debug
-                applicationIdSuffix '.privatelegacy'
-                versionNameSuffix '-private'
-                matchingFallbacks = ['debug']
-                buildConfigField 'boolean', 'PRIVATE_LEGACY_IMPORT', 'true'
-                // app/src/privateLegacy/res overrides the launcher label for this variant.
-            }
+        // Local convenience build: separate application ID, label and updater behavior.
+        // The legacy unlock table ships in main assets for every build, so this variant
+        // no longer requires an external key directory; kantaPrivateLegacyAssets, when
+        // given locally, still shadows it.
+        privateLegacy {
+            initWith debug
+            applicationIdSuffix '.privatelegacy'
+            versionNameSuffix '-private'
+            matchingFallbacks = ['debug']
+            buildConfigField 'boolean', 'PRIVATE_LEGACY_IMPORT', 'true'
+            // app/src/privateLegacy/res overrides the launcher label for this variant.
         }
         release {
             minifyEnabled false
@@ -100,7 +104,8 @@ tasks.register('coreRegression', JavaExec) {
     classpath = files(coreClasses)
     mainClass = 'ph.kanta.reborn.core.CoreRegressionTests'
     args file('src/main/assets/starter').absolutePath,
-         layout.buildDirectory.file('synthetic-songbook.json').get().asFile.absolutePath
+         layout.buildDirectory.file('synthetic-songbook.json').get().asFile.absolutePath,
+         file('src/androidTest/assets/song-fixtures').absolutePath
 }
 
 dependencies {
@@ -108,6 +113,8 @@ dependencies {
     implementation 'androidx.camera:camera-camera2:1.5.3'
     implementation 'androidx.camera:camera-lifecycle:1.5.3'
     implementation 'androidx.camera:camera-view:1.5.3'
+    // Offline QR decoding for the explicitly opened Browser Remote scanner.
+    implementation 'com.google.zxing:core:3.5.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.exifinterface:exifinterface:1.4.2'
     // FileProvider and PackageInfoCompat for the OTA updater's install hand-off.
@@ -158,8 +165,7 @@ def lintContracts = tasks.register('verifyAndroidLintContracts', Exec) {
     workingDir repositoryRoot
     commandLine 'python3', '-m', 'unittest', 'discover', '-s', 'tools/tests', '-p', 'test_android_lint*.py'
 }
-def gatedVariants = [Debug: 'debug', Release: 'release']
-if (privateLegacyAssets != null) gatedVariants.PrivateLegacy = 'privateLegacy'
+def gatedVariants = [Debug: 'debug', Release: 'release', PrivateLegacy: 'privateLegacy']
 gatedVariants.each { variant, reportName ->
     def lintGate = tasks.register("verify${variant}LintDebt", Exec) {
         dependsOn "lint${variant}"

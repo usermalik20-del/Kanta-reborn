@@ -28,6 +28,7 @@ import ph.kanta.reborn.core.VocalMonitorEffects;
 @android.annotation.SuppressLint("InlinedApi")
 final class MicrophoneMonitor {
   private static final int RATE = 48000;
+  private static final float DEFAULT_GAIN = .16f; // +4 dB over the old 10% safe start.
   /** Bluetooth link settling bound: SCO negotiation takes one to three seconds. */
   private static final long COMMUNICATION_READY_MS = 6000;
   /** Wired outputs stall briefly; a Bluetooth link can stall while it reconfigures. */
@@ -46,7 +47,7 @@ final class MicrophoneMonitor {
           new ArrayBlockingQueue<>(1),
           new ThreadPoolExecutor.DiscardOldestPolicy());
   private volatile Run active, outputOwner;
-  private volatile float gain = .1f;
+  private volatile float gain = DEFAULT_GAIN;
   private volatile VocalMonitorEffects.Mode mode = VocalMonitorEffects.Mode.DRY;
 
   private static final class Run {
@@ -54,6 +55,7 @@ final class MicrophoneMonitor {
     final MonitorBuffer buffer = new MonitorBuffer();
     final MonitorRouteGuard guard;
     final boolean communication;
+    final long startedAt = SystemClock.elapsedRealtime();
     volatile boolean communicationRouted;
     volatile boolean cancelled, audible, ready;
     volatile CorrectionChoice correction = CorrectionChoice.OFF;
@@ -66,7 +68,7 @@ final class MicrophoneMonitor {
       guard =
           new MonitorRouteGuard(
               device.getId(),
-              SystemClock.elapsedRealtime(),
+              startedAt,
               communication ? COMMUNICATION_READY_MS : MonitorRouteGuard.READY_MS);
     }
   }
@@ -101,7 +103,7 @@ final class MicrophoneMonitor {
    * headsets are accepted because the microphone belongs to the same worn device.
    */
   static boolean supported(AudioDeviceInfo device) {
-    if (device == null) return false;
+    if (device == null || !device.isSink()) return false;
     switch (device.getType()) {
       case AudioDeviceInfo.TYPE_WIRED_HEADSET:
       case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
@@ -109,7 +111,6 @@ final class MicrophoneMonitor {
       case AudioDeviceInfo.TYPE_USB_HEADSET:
       case AudioDeviceInfo.TYPE_LINE_ANALOG:
       case AudioDeviceInfo.TYPE_AUX_LINE:
-        return device.isSink();
       case AudioDeviceInfo.TYPE_BLUETOOTH_SCO:
       case AudioDeviceInfo.TYPE_BLE_HEADSET:
         return true;
@@ -131,10 +132,12 @@ final class MicrophoneMonitor {
   List<AudioDeviceInfo> outputs() {
     ArrayList<AudioDeviceInfo> devices = new ArrayList<>();
     for (AudioDeviceInfo device : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS))
-      // Communication routing replaced the SCO broadcasts in API 31, so older platforms are
-      // not offered a Bluetooth output they cannot route.
-      if (supported(device) && (Build.VERSION.SDK_INT >= 31 || !communication(device)))
-        devices.add(device);
+      if (supported(device) && !communication(device)) devices.add(device);
+    if (Build.VERSION.SDK_INT >= 31) {
+      // A paired/media-only device is not necessarily connected for headset calls.
+      for (AudioDeviceInfo device : audio.getAvailableCommunicationDevices())
+        if (supported(device) && communication(device)) devices.add(device);
+    }
     return devices;
   }
 
@@ -151,9 +154,18 @@ final class MicrophoneMonitor {
     return active == null && outputOwner == null;
   }
 
-  boolean correctionAvailable() {
+  boolean routeVerified() {
     Run run = active;
     return current(run) && run.ready;
+  }
+
+  boolean negotiatingCommunication() {
+    Run run = active;
+    return current(run) && run.communication && !run.ready;
+  }
+
+  boolean correctionAvailable() {
+    return routeVerified();
   }
 
   boolean correctionEnabled() {
@@ -183,8 +195,23 @@ final class MicrophoneMonitor {
     return mode;
   }
 
+  private static float maxGain(Run run) {
+    return currentWiredHeadset(run != null && !run.cancelled && run.ready
+        ? run.device.getType() : AudioDeviceInfo.TYPE_UNKNOWN) ? .60f : .35f;
+  }
+
+  static boolean currentWiredHeadset(int type) {
+    return type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+        || type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+        || type == AudioDeviceInfo.TYPE_USB_HEADSET;
+  }
+
+  float maxGain() {
+    return maxGain(active);
+  }
+
   void gain(float value) {
-    if (Float.isFinite(value)) gain = Math.max(0, Math.min(.35f, value));
+    if (Float.isFinite(value)) gain = Math.max(0, Math.min(maxGain(), value));
   }
 
   void mode(VocalMonitorEffects.Mode value) {
@@ -196,7 +223,7 @@ final class MicrophoneMonitor {
     if (communication(selected) && Build.VERSION.SDK_INT < 31) return false;
     boolean connected = outputs().stream().anyMatch(d -> d.getId() == selected.getId());
     if (!connected) return false;
-    gain = .1f;
+    gain = DEFAULT_GAIN;
     mode = VocalMonitorEffects.Mode.DRY;
     Run run = new Run(selected);
     active = run;
@@ -214,6 +241,17 @@ final class MicrophoneMonitor {
     Run run = active;
     active = null;
     if (run != null) retire(run);
+  }
+
+  /** Bluetooth communication can suspend ordinary media (notably A2DP on Android 12). */
+  boolean stopCommunicationForMusic(Runnable ready) {
+    Run run = active;
+    Run owner = outputOwner;
+    if (run != null && run.communication) stop();
+    else if (owner == null || !owner.communication) return false;
+    // Serialize after teardown, including clearCommunicationDevice(), before starting music.
+    worker.execute(() -> main.post(ready));
+    return true;
   }
 
   private boolean current(Run run) {
@@ -263,6 +301,11 @@ final class MicrophoneMonitor {
     return device == null ? new int[0] : new int[] {supported(device) ? device.getId() : -1};
   }
 
+  private static void writeSilence(AudioTrack track, float[] silence) {
+    if (track.write(silence, 0, silence.length, AudioTrack.WRITE_NON_BLOCKING) < 0)
+      throw new IllegalStateException();
+  }
+
   private void output(Run run) {
     outputOwner = run;
     float[] block = new float[480];
@@ -277,8 +320,7 @@ final class MicrophoneMonitor {
               if (device.getId() == run.device.getId()) {
                 fail(
                     run,
-                    "Monitoring stopped: the selected output disconnected. Reconnect and enable it"
-                        + " again.");
+                    "Your headphones disconnected. Reconnect them and choose the output again.");
                 return;
               }
           }
@@ -287,13 +329,13 @@ final class MicrophoneMonitor {
         router -> {
           if (!current(run)) return;
           synchronized (run) {
-            if (run.track != null
+            if (run.ready && run.track != null
                 && run.guard.verify(routed(run.track), SystemClock.elapsedRealtime())
                     == MonitorRouteGuard.Decision.STOP)
               fail(
                   run,
-                  "Monitoring stopped because the audio route changed. Enable it again when"
-                      + " ready.");
+                  "Android changed the audio output. Voice playback stopped. Choose the "
+                      + "output again to restart it.");
           }
         };
     boolean callbackRegistered = false;
@@ -317,6 +359,25 @@ final class MicrophoneMonitor {
           }
         }
         run.communicationRouted = communicationRouted;
+        if (!communicationRouted) {
+          fail(run, "Android could not use this Bluetooth headset for calls. Reconnect it "
+              + "in Android Settings, or use wired or USB headphones.");
+          return;
+        }
+        // setCommunicationDevice() accepts a request, not a completed switch. Do not even
+        // start a muted track against the old route while Android is negotiating the link.
+        while (current(run)
+            && SystemClock.elapsedRealtime() - run.startedAt < COMMUNICATION_READY_MS) {
+          AudioDeviceInfo connected = audio.getCommunicationDevice();
+          if (connected != null && connected.getId() == run.device.getId()) break;
+          SystemClock.sleep(20);
+        }
+        if (!current(run)) return;
+        if (SystemClock.elapsedRealtime() - run.startedAt >= COMMUNICATION_READY_MS) {
+          fail(run, "Bluetooth headphones did not connect for calls. Reconnect them or try "
+              + "wired or USB headphones.");
+          return;
+        }
       }
       int minimum =
           AudioTrack.getMinBufferSize(
@@ -331,7 +392,10 @@ final class MicrophoneMonitor {
                           communicationRouted
                               ? AudioAttributes.USAGE_VOICE_COMMUNICATION
                               : AudioAttributes.USAGE_MEDIA)
-                      .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                      .setContentType(
+                          communicationRouted
+                              ? AudioAttributes.CONTENT_TYPE_SPEECH
+                              : AudioAttributes.CONTENT_TYPE_MUSIC)
                       .build())
               .setAudioFormat(
                   new AudioFormat.Builder()
@@ -349,6 +413,9 @@ final class MicrophoneMonitor {
       if (track.getState() != AudioTrack.STATE_INITIALIZED) throw new IllegalStateException();
       if (!current(run)) return;
       if (track.setVolume(0) != AudioTrack.SUCCESS) throw new IllegalStateException();
+      // Pin the track itself: choosing a list item does not change Android's media route.
+      // Keep this assignment even after a communication route has been selected. The guard
+      // still verifies the actual sink and refuses every speaker/default-route substitution.
       if (!track.setPreferredDevice(run.device)) throw new IllegalStateException();
       track.addOnRoutingChangedListener(routing, main);
       audio.registerAudioDeviceCallback(deviceChanges, main);
@@ -358,26 +425,30 @@ final class MicrophoneMonitor {
       if (warmupFrames <= 0 || warmupFrames > (communicationRouted ? RATE / 2 : RATE / 5))
         throw new IllegalStateException();
       float[] warmup = new float[warmupFrames];
-      track.write(warmup, 0, warmup.length, AudioTrack.WRITE_NON_BLOCKING);
-      track.play();
-      boolean ready = false;
+      synchronized (run) {
+        if (!current(run)) return;
+        writeSilence(track, warmup);
+        track.play();
+      }
       while (current(run)) {
-        MonitorRouteGuard.Decision decision =
-            run.guard.verify(routed(track), SystemClock.elapsedRealtime());
-        if (decision == MonitorRouteGuard.Decision.STOP) {
-          fail(
-              run,
-              "Monitoring stopped: the selected wired, USB or Bluetooth output could not be"
-                  + " verified.");
-          return;
-        }
-        if (decision == MonitorRouteGuard.Decision.ALLOW) {
-          ready = true;
-          break;
+        synchronized (run) {
+          if (!current(run)) return;
+          MonitorRouteGuard.Decision decision =
+              run.guard.verifyMutedStartup(routed(track), SystemClock.elapsedRealtime());
+          if (decision == MonitorRouteGuard.Decision.STOP) {
+            fail(
+                run,
+                "Android did not send sound to the headphones you chose. Set them as your "
+                    + "phone’s audio output, then choose them again in KANTA.");
+            return;
+          }
+          if (decision == MonitorRouteGuard.Decision.ALLOW) break;
+          // A nonblocking write may be partial, and a route may need more silence to start.
+          writeSilence(track, warmup);
         }
         SystemClock.sleep(4);
       }
-      if (!ready || !current(run)) return;
+      if (!current(run)) return;
       run.buffer.clear();
       run.ready = true;
       main.post(
@@ -387,13 +458,16 @@ final class MicrophoneMonitor {
       long correctionFloor = SystemClock.elapsedRealtime();
       int offset = block.length;
       long lastWrite = SystemClock.elapsedRealtime(), discontinuity = run.buffer.discontinuities();
+      boolean receivedInput = false;
       boolean hasInput = false;
+      float appliedVolume = 0;
       while (current(run)) {
         synchronized (run) {
           if (!current(run)) break;
           if (run.guard.verify(routed(track), SystemClock.elapsedRealtime())
               != MonitorRouteGuard.Decision.ALLOW) {
-            fail(run, "Monitoring stopped because the selected output changed.");
+            fail(run, "Android changed the audio output. Voice playback stopped. Choose the "
+                + "output again to restart it.");
             break;
           }
           if (offset == block.length) {
@@ -426,24 +500,32 @@ final class MicrophoneMonitor {
             effects.process(block);
             offset = 0;
           }
-          float volume = hasInput ? gain : 0;
-          if (track.setVolume(volume) != AudioTrack.SUCCESS) throw new IllegalStateException();
-          run.audible = volume > 0;
+          // AudioTrack volume applies to the entire playback queue, not just the next write.
+          // A capture gap already provides zeroes; muting the track here would also mute queued voice.
+          float volume = hasInput || receivedInput ? Math.min(gain, maxGain(run)) : 0;
+          if (volume != appliedVolume) {
+            if (track.setVolume(volume) != AudioTrack.SUCCESS) throw new IllegalStateException();
+            appliedVolume = volume;
+          }
           int written =
               track.write(block, offset, block.length - offset, AudioTrack.WRITE_NON_BLOCKING);
           if (written < 0) throw new IllegalStateException();
           offset += written;
-          if (written > 0) lastWrite = SystemClock.elapsedRealtime();
-          else if (SystemClock.elapsedRealtime() - lastWrite
+          if (written > 0) {
+            receivedInput |= hasInput;
+            lastWrite = SystemClock.elapsedRealtime();
+          } else if (SystemClock.elapsedRealtime() - lastWrite
               > (communicationRouted ? COMMUNICATION_WRITE_STALL_MS : WRITE_STALL_MS))
             throw new IllegalStateException();
+          run.audible = receivedInput && appliedVolume > 0;
         }
         SystemClock.sleep(2);
       }
     } catch (RuntimeException failure) {
       fail(
           run,
-          "Monitoring stopped because the output is unavailable. Microphone input is unchanged.");
+          "KANTA could not play sound through these headphones. Reconnect them and choose "
+              + "the output again.");
     } finally {
       retire(run);
       if (callbackRegistered) {

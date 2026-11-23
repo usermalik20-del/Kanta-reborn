@@ -31,9 +31,16 @@ public interface ScoreSink {
     public final String title;
     public final String singer;
     public final MelodyScoreSession.Estimate estimate;
+    public final boolean applausePlayed;
 
     public CompletedScore(UUID playbackIdentity, String title, String singer,
         MelodyScoreSession.Estimate estimate) {
+      this(playbackIdentity, title, singer, estimate, false);
+    }
+
+    public CompletedScore(UUID playbackIdentity, String title, String singer,
+        MelodyScoreSession.Estimate estimate, boolean applausePlayed) {
+      this.applausePlayed = applausePlayed;
       this.playbackIdentity = playbackIdentity;
       this.title = title;
       this.singer = singer;

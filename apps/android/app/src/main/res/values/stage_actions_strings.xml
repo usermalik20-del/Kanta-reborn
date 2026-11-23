@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stage_clear">Clear</string>
+    <string name="stage_reserve">Reserve</string>
+    <string name="stage_next">Next</string>
+    <string name="stage_stop">Stop</string>
+    <string name="stage_restart">Restart</string>
+    <string name="stage_playlist">Playlist</string>
+    <string name="stage_reserve_list">Reserve list</string>
+    <string name="stage_fullscreen_label">Fullscreen</string>
+    <string name="stage_exit_fullscreen">Exit fullscreen stage</string>
+    <string name="stage_reserve_match">Reserve matching song</string>
+    <string name="stage_clear_search">Clear search entry</string>
+    <string name="stage_next_song">Play the next reserved song</string>
+    <string name="stage_stop_song">Stop playback and keep the remaining reservations</string>
+    <string name="stage_camera">Camera</string>
+    <string name="stage_fullscreen">Open fullscreen stage</string>
+    <string name="stage_mic">Microphone</string>
+    <string name="stage_monitor">Hear my voice</string>
+    <string name="stage_scoring">Song scoring</string>
+    <string name="stage_control_state">%1$s · %2$s</string>
+    <string name="stage_state_on">On</string>
+    <string name="stage_state_off">Off</string>
+    <string name="mic_last_song">Last song · %1$s\n%2$s</string>
+    <string name="mic_last_song_with_singer">Last song · %1$s · %2$s\n%3$s</string>
+    <string name="stage_key_short">KEY</string>
+    <string name="stage_tempo_short">TEM</string>
+    <string name="stage_key_lower">Lower key one semitone</string>
+    <string name="stage_key_raise">Raise key one semitone</string>
+    <string name="stage_tempo_slower">Slow tempo by five percent</string>
+    <string name="stage_tempo_faster">Speed up tempo by five percent</string>
+</resources>

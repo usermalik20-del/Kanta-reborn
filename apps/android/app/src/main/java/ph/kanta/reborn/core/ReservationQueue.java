@@ -8,17 +8,11 @@ public final class ReservationQueue {
     public final UUID id;
     public final Song song;
     public final String singer;
-    public final YouTubeVideoReference youtube;
 
     public Entry(UUID id, Song song, String singer) {
-      this(id, song, singer, null);
-    }
-
-    public Entry(UUID id, Song song, String singer, YouTubeVideoReference youtube) {
       this.id = id;
       this.song = song;
       this.singer = singer == null ? "" : singer;
-      this.youtube = youtube;
     }
   }
 
@@ -38,20 +32,6 @@ public final class ReservationQueue {
     requests.put(requestId, e);
     if (requests.size() > 4096) requests.remove(requests.keySet().iterator().next());
     return e;
-  }
-
-  /** Adds a video reservation without inventing a local file path or playback backend. */
-  public synchronized Entry reserveVideo(UUID requestId, Song metadata,
-      YouTubeVideoReference video, String singer) {
-    if (requests.containsKey(requestId)) return requests.get(requestId);
-    if (items.size() >= 1000) throw new IllegalStateException("Up Next is full");
-    Entry entry = new Entry(UUID.randomUUID(), Objects.requireNonNull(metadata),
-        singer == null ? "" : singer.substring(0, Math.min(singer.length(), 80)).trim(),
-        Objects.requireNonNull(video));
-    items.add(entry);
-    requests.put(requestId, entry);
-    if (requests.size() > 4096) requests.remove(requests.keySet().iterator().next());
-    return entry;
   }
 
   public synchronized List<Entry> snapshot() {

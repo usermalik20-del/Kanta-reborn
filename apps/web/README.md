@@ -1,3 +1,11 @@
+## Private Android diagnostics candidate
+
+See [the diagnostics protocol, setup and approval gates](DIAGNOSTICS.md). Both
+Vercel endpoints and Android uploads remain disabled until explicitly approved.
+Run `npm ci && npm test` here for synthetic request and database tests. The
+Vercel static build allowlists public assets and excludes the diagnostics source,
+SQL migration, tests and operations notes from public output.
+
 ## Platform-specific download status (2026-11-16)
 
 The sticky download status bar reads the selected platform entry in

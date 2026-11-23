@@ -58,9 +58,6 @@ input[type=checkbox]{width:22px;min-width:22px;height:22px;margin:0}
 .search-row input{flex:1;margin:0 0 12px}
 .search-row button{min-width:94px}
 #singer{max-width:100%}
-.modes{display:flex;gap:8px;margin:4px 0 8px}
-.modes button{flex:1;min-height:40px;font-size:.72rem}
-.modes .selected{border-color:var(--cyan);color:var(--cyan);background:#12334c}
 .subtle{font-size:.75rem;color:var(--quiet);margin:8px 0}
 .keypad-disclosure{margin:12px 0 18px;padding:10px 12px;border:1px solid #203459;border-radius:12px;background:#081426}
 .keypad-disclosure summary{cursor:pointer;color:#cbd5ed;font-size:.8rem;font-weight:650}

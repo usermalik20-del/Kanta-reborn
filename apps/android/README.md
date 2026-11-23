@@ -52,7 +52,7 @@ origin checks, token validation or request-size limits. The regression is part o
 
 `KeypadSounds` (SoundPool, 1 stream, `USAGE_ASSISTANCE_SONIFICATION`) plays a tone per keypad key. `SessionController.playKeypadSound()` gates on `!isPlaying()` so feedback never masks karaoke. Twelve MP3 assets live in `assets/keypad/`.
 
-The standby interlude (`BundledInterlude`, `assets/interlude/standby-loop.mp3`) is the default between-song source, plays on the empty stage, and stops for karaoke/online audio. Party Mode offers "Override with your own track" and "Use the bundled standby track."
+The standby interlude (`BundledInterlude`, `assets/interlude/standby-loop.mp3`) is the default between-song source, plays on the empty stage, and stops for karaoke. Party Mode offers "Override with your own track" and "Use the bundled standby track."
 
 ## Keypad sounds, interlude once, BGV access, SoundFont progress (2026-11-14)
 
@@ -128,7 +128,7 @@ runtime-step description below; no signing, merge or publication authority is ch
 Three source-contract regression guards failed before this repair and pass afterward:
 first-launch activation order, actual-texture frame evidence, and CI failure propagation.
 Local static/Python checks are not emulator acceptance; exact-head CI must prove the
-standby assertion and all nineteen UI captures before claiming runtime verification.
+standby assertion and every required UI capture before claiming runtime verification.
 
 ## Runtime evidence regression: standby checks ran before the stage was resolved (2026-11-10) — fixed
 
@@ -359,6 +359,50 @@ Both include license files (musescore-license.txt, sgm-license.txt) and are vali
 - Delegated from MainActivity via session.downloadFluidR3GM()
 
 This refactoring fixes 'cannot find symbol' errors by moving download logic to SessionController where io, repository, and main are accessible.
+## Android responsive stage
+
+The Stage tab keeps the lyrics and keypad together. Menu opens the other pages
+without the stage taking up space; playback keeps going. Both tabs use a shorter
+navigation dock, and the main layouts use the full width inside Android's system insets.
+PLAY, RES, and CLR sit below the stage and above Search. KEY changes the pitch by
+one semitone per tap; TEM changes the tempo by five percentage points. Both sit beside
+Space below the keyboard letters.
+
+**Stage & Visual** has separate **Background photos** and **Background videos**
+tabs. Their shuffle switches are off by default. Choose a photo or video first;
+shuffle can change it at the start of a new song without replacing your saved
+choice. Camera and Fullscreen have their own labels and icons beside the Stage.
+
+**Stage Controls** expands a translucent panel beneath the Stage rather than
+replacing the lyric area. The eight Party Pads are immediately visible, with
+microphone, monitor, scoring, queue and remote shortcuts arranged below. Use
+Back to close it in embedded mode; the panel never covers the keyboard or hides
+a Pad behind another tap. **Menu → Party Pads** opens the same pad page with
+clip assignment, reset and volume.
+
+My Set shows the imported-song count and one Notices and licenses
+entry. KANTA no longer adds starter songs to the library.
+
+The compact countdown starts when the song is ready. Its last cue stays visible until
+Android reports playback progress. This is not a measurement of when sound reaches
+speakers or headphones; output buffering and silence in the song can affect that.
+Source-numbered legacy songs accept equivalent leading-zero spellings on the keypad.
+Standalone imports use the code KANTA displays for the song. For karaoke monitoring,
+keep the music and
+voice levels separate: lower the backing track until you can hear yourself clearly,
+then raise voice monitoring gradually on wired headphones or a USB headset. Bluetooth
+call-style monitoring stops for song playback so it cannot take over the music route.
+Physical timing, routing and audition still need device checks.
+
+At startup, KANTA shows the launch artwork and reports progress while opening the
+song library, preparing sounds, and loading the saved stage background. It then
+opens the Stage automatically.
+
+Song matches show below the Stage input as you type, including single digits and
+partial song numbers. Tap a match to reserve it. **Menu** opens Presets, KANTA
+Songbook, Stage & Visual, Intermission, Party Pads, Voice & Scoring, Settings,
+Browser Remote, settings backup, and help.
+
 ## Android SoundFont download compatibility
 
 FluidR3 GM and MuseScore General use the same HTTPS mirror. On older Android
@@ -486,6 +530,8 @@ The primary `StagePresenterImpl` tagged `kanta.stage.primary` remains attached a
 
 The always-visible duplicate utility rows are removed. The persistent five-tab navigation owns primary navigation, **More** expands the six workspace destinations, and the KANTA header logo toggles a lower-panel-only hardware-inspired Control Deck. The deck delegates master volume, transport, microphone/monitor, camera, key/tempo and destination actions to existing owners; it never creates playback, queue, stage or microphone state. Logo re-tap and Android Back restore the prior destination.
 
+The Stage shows the effective key and tempo in a small readout above the visual area, including neutral values. Fullscreen shows the same values in its header; adjustment controls remain separate. In **Menu → Presets → Add Karaoke Folder**, select a folder with one recognized IDX file and one BLOB directly inside it. This uses the existing paired importer; select the files individually if a folder has ambiguous names or more than one pair.
+
 Acceptance requires a fresh APK build and instrumentation on portrait and landscape displays: keep the stage visible above each panel, preview background changes in place, retain playback identity and audible-clock progress, dismiss panels with predictive/system Back, and verify camera/video handoff through fullscreen. Local source/static checks are not emulator or physical-device acceptance.
 
 ## Large SoundFont RAM ceiling — local candidate
@@ -507,7 +553,7 @@ Implemented in source: original starter songs and scenic images; app-private MID
 
 New personal-media source: byte-preserving private photo/video backgrounds, sampled EXIF-oriented photos, muted looping video, persisted selection and stable stage/navigation lifecycle. Accepted personal-media source passed run 38825170997 (201 domain and 47 emulator checks).
 
-Remaining: physical scoring calibration, physical monitor/pitch-correction acceptance, companion networking and official YouTube playback. Optional dry pitch-following estimates are implemented in the accepted 0.8 source. Optional camera preview passed run 38826875086 with 201 domain and 60 emulator checks. Loop and Realm now expose their implemented audio and animated-stage controls. No YouTube player or ad blocker is implemented.
+Remaining: physical scoring calibration, physical monitor/pitch-correction acceptance, companion networking. Optional dry pitch-following estimates are implemented in the accepted 0.8 source. Optional camera preview passed run 38826875086 with 201 domain and 60 emulator checks. Loop and Realm now expose their implemented audio and animated-stage controls. No YouTube player or ad blocker is implemented.
 
 Hosted validation passed Gradle APK assembly, Android lint, all 46 domain regression checks and browser interoperability for the encrypted Songbook export. Debug APK and lint reports are retained in CI artifacts for seven days. This validated baseline is merged as PR #1. Native media source 87e5aa21 passed cloud run 38805798316: NDK APK/instrumentation assembly, lint, 167 core assertions, native sanitizer/malformed-bank checks, browser interoperability and 13 real API 35 emulator checks. Physical-device playback acceptance remains open.
 
@@ -517,7 +563,7 @@ See ../../docs/ARCHITECTURE.md and ../../docs/CODEBASE_CONTEXT_PACKET.md.
 
 Import bounds: MIDI/KAR files have no fixed file-size, event-count or duration caps (structural SMF 0/1 rules still apply; individual text events are capped at 16 MiB and files above 2 GB are not mapped); SF2 has no fixed file-size cap, but import preflights reported size, rechecks available storage while streaming, and preserves a 64 MiB free-space reserve before strict native structure/sample validation; folder scan 10,000 entries, 1,024 directories and depth 16. Negative coarse sample offsets (unsupported safely by the pinned loader) and unsupported/oversized banks are rejected; SF3/Ogg banks are supported through the pinned stb_vorbis decoder with post-decode sample accounting (`synth->sampleTotal`), a synthetic SF3 fixture in the native regression, and a render-tail guard that rejects banks whose region windows come within one float of the decoded buffer end (the Catmull-Rom interpolator reads two floats ahead). The pinned engine implements SF2 modulators and chorus/reverb stages (release `kanta-vendor-a272fe30`; `PROVENANCE.json` pins the revision and file hashes), but KANTA has not wired those engine paths to app controls yet and MIDI poly (key) pressure remains untracked by the engine wrapper. Engine-level validation lives in the fork's own CI; KANTA's native regression compiles the pinned header with `-Wall -Wextra -Werror`. Folder selection makes private copies; it does not watch or edit the source. Bank changes apply to subsequent playback. KAR lyric text encoding is detected (UTF-8, Shift_JIS, GBK, Big5, CP949 with windows-1252 fallback); @T/@A/@C metadata feeds title/artist/copyright, @P pause codes shift lyric cues and \ echo lines are dimmed on the stage. Imported songs and SoundFont banks can be removed from My Set, missing private copies are repaired on load or re-import, and stage search includes the active library. The transport Previous button restarts the current song: seek-to-top is supported for MIDI/KAR synthesis and MP3/WAV playback. Key/tempo adjustments made while a song is playing are remembered for that song and re-applied the next time it plays; Reset in the Pitch & Tempo screen clears the per-song memory (or the app-wide default when the song has no override). My Set lists imported songs and offers Reserve, lists every retained SoundFont with an Active indicator and Use action, and persists bank selection across restart. Paired ShubBlob/kantablob and index-container import is available from My Set by selecting the index and then its paired blob. Single-file container selection remains rejected so a blob is never mistaken for a standalone song; the file-backed MKMD path validates per-title record addresses and rejects ambiguous or invalid layouts rather than guessing physical order; exact-head runtime validation remains required.
 
-Party pads are bundled, edited CC0 WAV recordings (source details are included in the app assets) with at most four concurrent SoundPool voices. Import a short MP3/WAV into My Set to assign a custom pad (8 MiB / 30 seconds maximum, also bounded below SoundPool’s 1 MiB decoded limit). Between-song music selects an imported MP3/WAV, starts only when explicitly enabled and the karaoke queue is idle, and stops for karaoke, focus loss or leaving the foreground. Enabling is not restored automatically. Party volume is independent of karaoke volume.
+Party pads are bundled, edited CC0 WAV recordings (source details are included in the app assets) with at most four concurrent SoundPool voices. Import a short MP3/WAV in Presets or Intermission, then assign it in Party Pads (8 MiB / 30 seconds maximum, also bounded below SoundPool’s 1 MiB decoded limit). Between-song music selects an imported MP3/WAV, starts only when explicitly enabled and the karaoke queue is idle, and stops for karaoke, focus loss or leaving the foreground. Enabling is not restored automatically. Party volume is independent of karaoke volume.
 
 Custom pads must also decode within a 900 KiB PCM allowance (with space below SoundPool's 1 MiB limit); high-quality stereo clips need to be shorter. Rejected files remain playable in My Set, and are never truncated or rewritten by KANTA. See https://developer.android.com/reference/android/media/SoundPool .
 
@@ -596,14 +642,9 @@ The **Controls** accessory now includes three pitch-related entries:
 
 The dialog needs `ph.kanta.reborn.settings.SettingsStore` imported into `MainActivity`; `LearningAssistantOverlay` and `PitchGameOverlay` read the same store from the `stage` package. `AchievementSystem` moved to `ph.kanta.reborn.feature.achievement` so `core/` stays framework-free and `compileCoreRegression` keeps its empty classpath.
 
-## PR #51 foreground player lifetime repair — October 18, 2026
+## Local playback and upgraded queues
 
-The online preview uses a distinct transient UUID per selection and idempotent terminal WebView release. Replacement detaches/destroys the previous player before mounting another. Activity pause clears online and link-entry dialogs; foreground return requires explicit reopen. Main-frame errors/renderer loss retire the preview without local transport/FIFO commands. Domain and native runtime checks cover replace/repeat/background/reopen/stale callbacks; changed-head cloud validation is pending. Audio-focus arbitration and real-device embeds/ads remain open. See ../../docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md.
-
-
-### Online and local audio coordination candidate
-
-Opening an online video requires paused local karaoke and disabled microphone/monitoring. It stops effects and between-song music. Starting local audio, an effect, microphone input or between-song music closes the online video; closing it does not restart those sounds automatically. The local song and queue are preserved. This PR #51 candidate requires fresh Android build/runtime validation and physical-device interruption/YouTube acceptance; see ../../docs/YOUTUBE_LIFECYCLE_CHECKPOINT.md.
+Android plays songs from the local library. The former YouTube preview and its entry points are removed. When loading the existing library, old online queue rows are skipped; local reservations keep their order, reservation IDs and singer names. The next library write keeps only the restored local rows. Companion control, optional LRCLIB lyric lookup and app updates still use the network.
 
 <!-- party-sounds-assets-committed -->
 ## KANTA Karaoke candidate — legacy songbook interoperability
@@ -746,7 +787,7 @@ The karaoke-stage candidate initializes the reference-led Home dashboard on laun
 
 ## Three-group navigation candidate
 
-The current Android UI candidate uses five primary destinations: **Home | Sing | Performance | Experience | More**. Sing is the doorway to KANTA, YouTube and Local discovery, My Set/playlists, Favorites, Recent and Queue. Performance owns the Now Playing/lyrics surface plus Voice, Key & Tempo and Singing Coach. Experience owns Background, Camera, Effects, Scenic, Party Mode and Display. More contains advanced settings and tools. The grouping is presentation-only; `SessionController`, `StagePresenterImpl`, catalog persistence and the microphone owner remain authoritative.
+The current Android UI candidate uses five primary destinations: **Home | Sing | Performance | Experience | More**. Sing is the doorway to My Set/playlists, Favorites and Recent. Performance owns the Now Playing/lyrics surface plus Voice, Key & Tempo and Singing Coach. Experience owns Background, Camera, Effects, Scenic, Party Mode and Display. More contains advanced settings and tools. The grouping is presentation-only; `SessionController`, `StagePresenterImpl`, catalog persistence and the microphone owner remain authoritative.
 
 Search uses an embedded KANTA keypad toggled from the search row. Numeric and compact letter layouts share a fixed-height footprint; the search field suppresses the system IME so the device keyboard cannot cover results.
 
@@ -757,7 +798,7 @@ The UI upgrade pack's multicolor VectorDrawables are used directly by Home and V
 
 ## Paired ShubBlob import candidate
 
-My Set exposes `Import legacy idx + blob`: choose the paired index, then the blob. The importer resolves per-title 2 KiB block references from title-record byte 8 and validates every bounded MKMD header before creating output. Valid trailing byte-offset layouts are still supported; conflicting, duplicate or invalid addresses fail closed. Physical scan order is never used to attach song names. Supported MIDI/WAV/MP3 records are materialized through `LibraryRepository`. A synthetic integration test verifies names against distinct decrypted payloads in a different physical order with extra unreferenced records. A real pair was independently decoded locally using title addresses, without saving or uploading media. Hosted validation for this mapping revision is pending. Paired-file emulator import, runtime-only key handling, storage/cancellation and physical playback remain open.
+My Set exposes `Import legacy idx + blob`: choose the paired index, then the blob. The importer resolves per-title 2 KiB block references from title-record byte 8 and validates every bounded MKMD header before creating output. Valid trailing byte-offset layouts are still supported; conflicting, duplicate or invalid addresses fail closed. Physical scan order is never used to attach song names. Supported MIDI/WAV/MP3 records are materialized through `LibraryRepository`. A synthetic integration test verifies names against distinct decrypted payloads in a different physical order with extra unreferenced records. A real pair was independently decoded locally using title addresses, without saving or uploading media. Hosted validation for this mapping revision is pending. Paired-file emulator import, bundled-key unlock, storage/cancellation and physical playback remain open.
 
 ## Android OTA self-update (branch feat/android-ota-update)
 
@@ -797,30 +838,30 @@ The Home/Search utility uses an app-owned persistent keyboard with a working num
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
 
-## Android runtime-only legacy import key — local candidate
+## Android bundled legacy key library
 
-In the public build, My Set asks for the key and IV after you select the index
-and blob. It does not save them. Cancel or background the prompt to clear it.
-Only import files you are authorized to use.
+In every build, My Set's "Import legacy idx + blob" starts importing as soon as
+both files are selected: the app carries a small labeled key table
+(`app/src/main/assets/legacy-import-keys.txt`) and tries each real entry in
+order, probing one record before the full import. If no bundled entry unlocks
+the pair, a masked prompt asks for the key and IV supplied for those files;
+that entry is never saved. Cancel or background the prompt to clear it. Only
+import files you are authorized to use.
 
-For personal use, **KANTA Private** starts importing as soon as you select both
-files. On a local host with the pinned Android toolchain, run from `apps/android`:
+Owner decision (2026-11-24): the distributed shubidx/shubblob library is in
+public circulation and KANTA is the player for it, so the key material ships
+with the app; the container's AES layer is obfuscation, not a gate. Future
+container versions get a table entry — a labeled block with a 64-hex-digit key
+and 32-hex-digit IV, or a replacement of a `key=PLACEHOLDER` slot (limits:
+64 KiB, 32 entries, pinned by `LegacyKeyTableRegressionTests`).
 
-```sh
-./gradlew --no-daemon --no-build-cache \
-  -PkantaPrivateLegacyAssets="$HOME/.kanta-private-legacy" :app:assemblePrivateLegacy
-```
-
-The directory must be outside the checkout and contain only `legacy-import-key.bin`
-(32 raw key bytes followed by 16 raw IV bytes). The APK is under
-`app/build/outputs/apk/privateLegacy/`. It installs alongside public KANTA with a
-separate library. The launcher label is the standard `app_name` string, overridden
-to “KANTA Private” by the variant resource source set
-(`app/src/privateLegacy/res`), so the manifest reference stays statically visible
-to lint. **Do not share the APK or asset: the key can be extracted from both.**
-The private variant is not built in CI and does not use the public updater.
-Android packaging, picker execution, library installation and playback still need validation.
-See [runtime ownership details](../../docs/ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
+The **KANTA Private** build type (`:app:assemblePrivateLegacy`; separate
+application ID and launcher label via `app/src/privateLegacy/res`, no public
+updater) no longer requires an external key directory. The local-only
+`kantaPrivateLegacyAssets` property can still shadow the table with a
+48-byte `legacy-import-key.bin` in a directory outside the checkout, and CI
+still refuses it.
+See [ownership details](../../docs/ARCHITECTURE.md#android-bundled-legacy-key-library).
 
 ## Local B1/B2/D5/D8 work (not the published build)
 
@@ -910,3 +951,11 @@ releases `Inflater` native state in `finally`, including output-cap and malforme
 failures. This prevents a corrupt encrypted legacy payload from spinning the import
 worker indefinitely. The framework-free core regression uses an encrypted MKMD
 envelope with zero compressed bytes and requires a prompt decode failure.
+
+## Android Stage and Menu (v35)
+
+Stage controls now use text with distinct icons: one stateful Play/Pause, Play on an individual result, Camera and Fullscreen each have their own glyph, and Camera shows state. The Stage Controls action expands a translucent panel directly below the Stage. All eight Party Pads remain visible at once, and the other controls each get a labeled icon row. The panel bounds to a share of the Stage area rather than replacing lyrics.
+
+Menu uses a consistent MenuSurface card/header/row style for top-level pages and submenus, with original Android vectors for each action. The Menu order is Presets, KANTA Songbook, Stage & Visual, Intermission, Party Pads, Voice & Scoring, Settings, Browser Remote, Settings backup, Legal & Privacy, and Help. Stage & Visual has Background photos and Background videos tabs. Intermission owns between-song music. Party Pads is a first-class Menu page for pad triggers, clip assignment, reset, and volume. Settings no longer duplicates Stage visual, Intermission, Party, Voice, or Scoring controls. The control deck and standalone Search screen were removed; Home and Stage share the same persistent stage and controls.
+
+The bundled welcome artwork now uses the provided landscape composition on landscape devices and the portrait composition on portrait devices, selected by live configuration. The landscape variant replaces the previous letterboxed portrait artwork.

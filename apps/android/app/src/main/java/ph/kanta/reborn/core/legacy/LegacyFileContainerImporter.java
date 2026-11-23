@@ -4,13 +4,32 @@ import java.io.*;
 import java.security.GeneralSecurityException;
 import java.util.*;
 import java.util.zip.Inflater;
+import ph.kanta.reborn.core.SongCodes;
 import ph.kanta.reborn.core.songbook.ShubIndexProbe;
 
 /** Bounded file-backed importer for user-supplied shubidx/shubblob pairs. */
 public final class LegacyFileContainerImporter {
   private static final long MAX_BLOB_BYTES = 1024L * 1024L * 1024L;
   private static final int MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
-  public static final class DecodedSong { public final String id,title,fileName; public final File file; public final MkmdDecoder.Signature signature; public final long decodedBytes; DecodedSong(String id,String title,String fileName,File file,MkmdDecoder.Signature signature,long decodedBytes){this.id=id;this.title=title;this.fileName=fileName;this.file=file;this.signature=signature;this.decodedBytes=decodedBytes;} }
+  public static final class DecodedSong {
+    public final String id, title, fileName, sourceCode;
+    public final File file;
+    public final MkmdDecoder.Signature signature;
+    public final long decodedBytes;
+    public final int titleOrdinal;
+
+    DecodedSong(String id, String title, String fileName, String sourceCode, File file,
+        MkmdDecoder.Signature signature, long decodedBytes, int titleOrdinal) {
+      this.id = id;
+      this.title = title;
+      this.fileName = fileName;
+      this.sourceCode = sourceCode;
+      this.file = file;
+      this.signature = signature;
+      this.decodedBytes = decodedBytes;
+      this.titleOrdinal = titleOrdinal;
+    }
+  }
   public static final class ImportError { public final int recordIndex; public final String message; ImportError(int recordIndex,String message){this.recordIndex=recordIndex;this.message=message;} }
   public static final class ImportResult { public final int totalSpans,decodedCount,skippedCount; public final List<DecodedSong> songs; public final List<ImportError> errors; ImportResult(int totalSpans,int decodedCount,int skippedCount,List<DecodedSong> songs,List<ImportError> errors){this.totalSpans=totalSpans;this.decodedCount=decodedCount;this.skippedCount=skippedCount;this.songs=songs;this.errors=errors;} }
   private LegacyFileContainerImporter() {}
@@ -24,26 +43,67 @@ public final class LegacyFileContainerImporter {
   public static ImportResult importPair(
       File index, File blob, File outputDir, LegacyImportKey credentials,
       java.util.function.BooleanSupplier cancelled) throws IOException {
+    return importPair(index, blob, outputDir, credentials, cancelled, (done, total) -> { });
+  }
+
+  /** Imports with cooperative cancellation and (done, total) progress callbacks. */
+  public static ImportResult importPair(
+      File index, File blob, File outputDir, LegacyImportKey credentials,
+      java.util.function.BooleanSupplier cancelled,
+      java.util.function.BiConsumer<Integer, Integer> progress) throws IOException {
     if (credentials == null) throw new IllegalArgumentException("An import key is required.");
     if (cancelled == null) throw new IllegalArgumentException("A cancellation signal is required.");
+    if (progress == null) progress = (done, total) -> { };
     try (LegacyImportKey owned = credentials) {
-      return importWithKey(index, blob, outputDir, owned.key(), owned.iv(), cancelled);
+      return importWithKey(index, blob, outputDir, owned.key(), owned.iv(), cancelled, progress);
+    }
+  }
+
+  /**
+   * Checks whether credentials can unlock the first index-referenced record, without consuming
+   * them. Decoding one record costs a fraction of a full import, so a key table can be tried
+   * in order before committing to the multi-thousand-record pass. Returns false for any
+   * unreadable pair, unsupported layout, or key that does not decode; it never throws.
+   */
+  public static boolean probeKey(File index, File blob, LegacyImportKey credentials) {
+    if (credentials == null || !index.isFile() || !blob.isFile()) return false;
+    if (blob.length() <= 0 || blob.length() > MAX_BLOB_BYTES) return false;
+    try {
+      byte[] indexBytes = readBounded(index, 16 * 1024 * 1024);
+      List<ShubIndexProbe.TitleRecord> titles = ShubIndexProbe.decodeTitleRecords(indexBytes);
+      if (titles.isEmpty()) return false;
+      long[] trailing = ShubIndexProbe.trailingUInt32Values(indexBytes);
+      long[] titleBlocks = new long[titles.size()];
+      for (int i = 0; i < titles.size(); i++) titleBlocks[i] = titles.get(i).opaqueB;
+      int[] keypadNumbers = ShubIndexProbe.keypadNumbers(titleBlocks, trailing);
+      boolean numbered = keypadNumbers.length > 0;
+      ArrayList<Long> records = locateRecordStarts(blob, titleBlocks,
+          numbered ? new long[0] : trailing, () -> false);
+      byte[] payload = decodeRecord(blob, records.get(0), credentials.key(), credentials.iv(), () -> false);
+      return extension(payload) != null;
+    } catch (Exception unable) {
+      return false;
     }
   }
 
   private static ImportResult importWithKey(
       File index, File blob, File outputDir, byte[] key, byte[] iv,
-      java.util.function.BooleanSupplier cancelled) throws IOException {
+      java.util.function.BooleanSupplier cancelled,
+      java.util.function.BiConsumer<Integer, Integer> progress) throws IOException {
     checkCancelled(cancelled);
     if (!index.isFile() || !blob.isFile()) throw new IOException("Both index and blob files are required");
     if (blob.length() <= 0 || blob.length() > MAX_BLOB_BYTES) throw new IOException("ShubBlob exceeds 1 GiB limit");
     byte[] indexBytes = readBounded(index, 16 * 1024 * 1024);
     List<ShubIndexProbe.TitleRecord> titles = ShubIndexProbe.decodeTitleRecords(indexBytes);
     if (titles.isEmpty()) throw new IOException("The Shub index has no title records");
-    long[] offsets = ShubIndexProbe.trailingUInt32Values(indexBytes);
+    long[] trailing = ShubIndexProbe.trailingUInt32Values(indexBytes);
     long[] titleBlocks = new long[titles.size()];
     for (int i = 0; i < titles.size(); i++) titleBlocks[i] = titles.get(i).opaqueB;
-    ArrayList<Long> records = locateRecordStarts(blob, titleBlocks, offsets, cancelled);
+    int[] keypadNumbers = ShubIndexProbe.keypadNumbers(titleBlocks, trailing);
+    boolean numbered = keypadNumbers.length > 0;
+    // The tagged layout uses per-title blocks for payloads, not the trailing words.
+    ArrayList<Long> records = locateRecordStarts(blob, titleBlocks,
+        numbered ? new long[0] : trailing, cancelled);
     if (!outputDir.isDirectory() && !outputDir.mkdirs()) throw new IOException("Cannot create legacy import directory");
     ArrayList<DecodedSong> songs = new ArrayList<>();
     ArrayList<ImportError> errors = new ArrayList<>();
@@ -51,6 +111,7 @@ public final class LegacyFileContainerImporter {
     try {
       for (int i = 0; i < titles.size(); i++) {
         checkCancelled(cancelled);
+        if (i % 200 == 0) progress.accept(i, titles.size());
         try {
           byte[] payload = decodeRecord(blob, records.get(i), key, iv, cancelled);
           String title = titles.get(i).title;
@@ -59,8 +120,9 @@ public final class LegacyFileContainerImporter {
           String fileName = safe(title) + "-" + i + ext;
           File out = write(outputDir, fileName, payload);
           createdFiles.add(out);
+          String sourceCode = numbered ? SongCodes.format(keypadNumbers[i]) : "";
           songs.add(new DecodedSong(UUID.randomUUID().toString(), title.isEmpty() ? "Legacy song " + i : title,
-              fileName, out, signature(payload), payload.length));
+              fileName, sourceCode, out, signature(payload), payload.length, i + 1));
         } catch (InterruptedIOException cancelledImport) {
           throw cancelledImport;
         } catch (Exception failure) {
@@ -68,6 +130,7 @@ public final class LegacyFileContainerImporter {
           errors.add(new ImportError(i, failure.getMessage() == null ? "Decode failed" : failure.getMessage()));
         }
       }
+      progress.accept(titles.size(), titles.size());
       int skipped = records.size() - songs.size();
       return new ImportResult(records.size(), songs.size(), skipped, songs, errors);
     } catch (IOException | RuntimeException failure) {

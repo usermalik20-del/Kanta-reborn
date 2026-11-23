@@ -14,7 +14,7 @@ variant-specific Android lint plus `tools/verify-android-lint.py`. The checked-i
 error fails the build. No automatic baseline refresh is possible. All lint checks
 stay enabled, and reports remain available. Narrow `SuppressLint` annotations
 are allowed only for the exact local TLS-pinning manager, required JavaScript in
-the two hardened embedded WebViews, the application-context-only font singleton,
+the hardened companion WebView, the application-context-only font singleton,
 and programmatic-only views. Source guards
 verify those boundaries and that the views are absent from XML. The hosted job
 also builds unsigned debug/release variants; signing remains confined to the
@@ -45,8 +45,7 @@ relative gravity is used, and AndroidX ExifInterface replaces the platform API.
 
 `PinnedBrowserTransport` pins the exact self-signed leaf SHA-256, checks
 certificate validity and rejects mismatches; it is not a trust-all TLS manager.
-`FontStore` stores only application context. The local companion remote and
-official YouTube embedded player need JavaScript; per-site navigation,
+`FontStore` stores only application context. The local companion remote requires JavaScript; its navigation,
 filesystem, permission and TLS boundaries remain guarded. Deleting a Scenic
 entry no longer replays the incoming Intent. Imported media temp and rename
 fallback files use atomic owner-only permissions. Android 12+ backup and

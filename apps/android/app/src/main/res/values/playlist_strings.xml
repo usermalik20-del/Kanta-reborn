@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playlists_title">Playlists</string>
+    <string name="playlist_create">Create playlist</string>
+    <string name="playlist_create_new">Create new</string>
+    <string name="playlist_create_action">Create</string>
+    <string name="playlist_name">Playlist name</string>
+    <string name="playlist_name_required">Enter a playlist name.</string>
+    <string name="playlist_add">Add to playlist</string>
+    <string name="playlist_add_result">Add %1$s, song %2$s, to a playlist</string>
+    <string name="playlist_add_songs">Add songs</string>
+    <string name="playlist_reserve_all">Reserve all</string>
+    <string name="playlist_none">No playlists yet. Create one to save this song.</string>
+    <string name="playlist_empty">No songs yet. Search your library to add songs to this playlist.</string>
+    <string name="playlist_unavailable">The songs in this playlist are no longer in your library.</string>
+    <string name="playlist_summary">%1$s · %2$s</string>
+    <plurals name="playlist_song_count">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
+    <string name="playlist_search_hint">Search by title, artist or song code</string>
+    <string name="playlist_search_title">Add songs to %1$s</string>
+    <string name="playlist_search_more">Showing the first 50 matches. Narrow your search to find more.</string>
+    <string name="playlist_created">Playlist created.</string>
+    <string name="playlist_created_with_song">Playlist created and song added.</string>
+    <string name="playlist_song_added">Song added to playlist.</string>
+    <string name="playlist_song_already_added">This song is already in the playlist.</string>
+    <string name="playlist_library_loading">Wait for your library to load, then try again.</string>
+    <string name="playlist_save_failed">Could not save the playlist. Check that the song is still in your library and try again.</string>
+</resources>

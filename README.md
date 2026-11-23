@@ -1,3 +1,13 @@
+## Android legacy import progress and file order (2026-11-21)
+
+A full 48,000-record legacy pair import takes minutes on a phone, and the pair
+picker gave no hint about which file is which. The import now reports
+"Importing legacy songs: done/total…" live, the two bounded copy steps identify
+their role (and detect the swap by the BLOB's MKMD prefix, with a specific
+"select the IDX first / BLOB second" message), and a step-1 dialog tells the
+user the smaller IDX file is requested first. Host verification imported all
+47,997 decodable records of a real pair in 318 s; device acceptance is tracked
+with the private build.
 ## Android private-variant launcher label (2026-11-20)
 
 The opt-in **KANTA Private** Android build now gets its launcher label from the
@@ -54,9 +64,9 @@ The iPhone/iPad download cannot be installed directly: it needs a separate, trus
 ---
 ## What you can do
 
-- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also try importing some older song libraries; you must supply the unlock details for each import, and KANTA does not save them. Malformed or truncated MKMD data in either direct decoding or paired legacy import is rejected promptly; a damaged legacy record is skipped without stalling the import. Party sounds are bundled recordings. Legacy-library compatibility is experimental and may not work with every library or play every song.
+- **Bring your own songs:** import karaoke files (MIDI/KAR) or audio files (MP3/WAV). Lyrics depend on what the file contains. Android can also import KANTA song libraries (an IDX + BLOB pair): the shipped library unlocks automatically, and for any other library you are asked for the unlock details supplied with it, which KANTA does not save. Malformed or truncated MKMD data in either direct decoding or paired legacy import is rejected promptly; a damaged legacy record is skipped without stalling the import. Party sounds are bundled recordings. Legacy-library compatibility is experimental and may not work with every library or play every song.
 - **Plan your session:** search your library, line up songs and keep saved song sets. The Android preview now shows reserved songs above the keypad, accepts exact song codes with RES, and displays an Up next hint on stage. Playback controls have more room.
-- **Personalize the screen:** choose backgrounds or use your own photos and videos. Android also lets you choose a lyric font from a folder you grant read access to.
+- **Personalize the screen:** choose backgrounds or use your own photos and videos. On Android, open Menu → Stage & Visual to shuffle photos or videos. You can also choose a lyric font from a folder you grant read access to.
 - **Try optional voice tools:** microphone input, voice effects and scoring are available for testing, with different support on each platform. Android includes separate Small Room, Room, Hall and Concert Hall effects.
 
 For music files that need an instrument sound library, KANTA uses files called **SoundFonts**. See the guide for setup.
@@ -93,9 +103,9 @@ Build instructions, test results and engineering details live in the developer d
 - [Android development](apps/android/README.md) · [iOS development](apps/ios/AGENTS.md) · [Website development](apps/web/README.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Engineering rules](docs/ENGINEERING_ARCHITECTURE_CONTRACT.md)
 - [Testing and release requirements](docs/TESTING.md) · [Download verification](docs/VERIFIED_DOWNLOADS.md)
-- [Outstanding work](docs/UNFINISHED_WORK.md) · [Android engineering records and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md)
+- [Outstanding work](docs/UNFINISHED_WORK.md) · [Android engineering records and testing limits](docs/ANDROID_LOCAL_B1_B2_D5_D8.md) · [Private Android v34](docs/ANDROID_PRIVATE_V34.md)
 - [Plain-language writing guide](docs/USER_FACING_LANGUAGE.md)
-- [Android lint validation and release evidence](docs/ANDROID_LINT_HARDENING.md) · [Android SoundFont downloads](apps/android/README.md#android-soundfont-download-compatibility) · [Private Android legacy import build](apps/android/README.md#android-runtime-only-legacy-import-key--local-candidate)
+- [Android lint validation and release evidence](docs/ANDROID_LINT_HARDENING.md) · [Android layout and stage search](apps/android/README.md#android-responsive-stage) · [Android SoundFont downloads](apps/android/README.md#android-soundfont-download-compatibility) · [Bundled legacy key library](apps/android/README.md#android-bundled-legacy-key-library)
 - [Archived engineering notes from the previous README](docs/README_HISTORY.md) — historical records, not current download or feature guidance.
 ## AdSense policy truthfulness pass (2026-11-17)
 

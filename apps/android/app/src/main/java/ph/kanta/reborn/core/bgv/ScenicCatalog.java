@@ -16,7 +16,7 @@ import java.util.Map;
  * Sources are Wikimedia Commons (CC0 or public domain, VP9 WebM) and the NASA Image and Video
  * Library (public domain, H.264 MP4 for the widest device compatibility).
  *
- * <p>Nothing here depends on YouTube, on an API key or on a third-party downloader library, so
+ * <p>Nothing here depends on an API key or a third-party downloader library, so
  * the offline-first promises on the public site stay true and the app takes on no new dependency
  * and no new permission: <code>INTERNET</code> is already declared for the companion feature.
  */

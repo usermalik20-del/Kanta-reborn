@@ -5,16 +5,15 @@ import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.View.MeasureSpec;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.TextView;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 
-import ph.kanta.reborn.ui.components.KantaIconButton;
 import ph.kanta.reborn.ui.components.KantaProgressBar;
 import ph.kanta.reborn.ui.components.KantaScreenHeader;
 import ph.kanta.reborn.ui.components.KantaStepper;
@@ -53,6 +52,11 @@ public class KantaNowPlayingScreen extends LinearLayout {
   private TextView titleView, artistView, currentTimeView, durationView;
   private KantaProgressBar progressBar;
   private KantaTransportControls transport;
+  private KantaScreenHeader header;
+  private LinearLayout info, progressRow, perfContainer;
+  private HorizontalScrollView transportViewport;
+  private boolean compact;
+  private int compactPlaySize;
   private KantaStepper keyStepper, tempoStepper;
   private TextView lyricLine1, lyricLine2, lyricLine3, lyricLine4;
   public KantaNowPlayingScreen(Context context, Listener listener) {
@@ -70,11 +74,12 @@ public class KantaNowPlayingScreen extends LinearLayout {
     build();
   }
   private void build() {
-    KantaScreenHeader header = new KantaScreenHeader(
+    header = new KantaScreenHeader(
         context, "Now Playing", "Back", "kanta.screen.now-playing.back",
         v -> { if (listener != null) listener.onBack(); });
-    header.addAction("Full screen", "kanta.now-playing.fullscreen",
+    Button fullscreen = header.addAction("Full screen", "kanta.now-playing.fullscreen",
         v -> { if (listener != null) listener.onFullscreen(); });
+    fullscreen.getLayoutParams().height = dp(48);
     addView(header);
     FrameLayout stage = new FrameLayout(context);
     stage.setBackground(ph.kanta.reborn.ui.KantaTheme.stageBackground(context, false));
@@ -108,7 +113,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     // MainActivity owns the only attached live stage. This destination remains a
     // utility projection when no stage view is supplied.
     if (stageView != null) addView(stage);
-    LinearLayout info = new LinearLayout(context);
+    info = new LinearLayout(context);
     info.setOrientation(HORIZONTAL);
     info.setGravity(Gravity.CENTER_VERTICAL);
     info.setPadding((int)(16*density),(int)(8*density),(int)(16*density),(int)(4*density));
@@ -155,7 +160,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     overflow.setLayoutParams(ovParams);
     info.addView(overflow);
     addView(info);
-    LinearLayout progressRow = new LinearLayout(context);
+    progressRow = new LinearLayout(context);
     progressRow.setOrientation(HORIZONTAL);
     progressRow.setGravity(Gravity.CENTER_VERTICAL);
     progressRow.setPadding((int)(16*density), 0, (int)(16*density), (int)(8*density));
@@ -166,7 +171,7 @@ public class KantaNowPlayingScreen extends LinearLayout {
     progressRow.addView(currentTimeView);
     progressBar = new KantaProgressBar(context);
     progressBar.setProgress(progress);
-    LinearLayout.LayoutParams pbParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, (int)(6*density));
+    LinearLayout.LayoutParams pbParams = new LinearLayout.LayoutParams(0, (int)(6*density));
     pbParams.weight = 1;
     pbParams.leftMargin = (int)(12*density); pbParams.rightMargin = (int)(12*density);
     progressBar.setLayoutParams(pbParams);
@@ -187,7 +192,10 @@ public class KantaNowPlayingScreen extends LinearLayout {
     transport.setPlaying(playing);
     LinearLayout.LayoutParams tParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
     tParams.topMargin = (int)(24*density); tParams.bottomMargin = (int)(20*density);
-    addView(transport, tParams);
+    transportViewport = new HorizontalScrollView(context);
+    transportViewport.setFillViewport(true);
+    transportViewport.addView(transport, new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+    addView(transportViewport, tParams);
 
     // Performance controls (Key / Tempo) - responsive container using onMeasure
     // Declare children first so anonymous class can reference them
@@ -224,35 +232,26 @@ public class KantaNowPlayingScreen extends LinearLayout {
     tempoCol.addView(tempoLabel); tempoCol.addView(tempoStepper);
 
     // Now create container with onMeasure that references above final variables
-    LinearLayout perfContainer = new LinearLayout(context) {
+    perfContainer = new LinearLayout(context) {
       private int lastOrientation = -1;
+      private int lastGap;
       @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int availableWidth = MeasureSpec.getSize(widthMeasureSpec);
-        int minHorizontalWidth = (int) (360 * density); // use intrinsic widths, not a tablet-only breakpoint
         int unconstrained = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
         keyCol.measure(unconstrained, unconstrained);
         tempoCol.measure(unconstrained, unconstrained);
+        int gap = dp(compact ? 8 : 16);
         int requiredWidth = keyCol.getMeasuredWidth() + tempoCol.getMeasuredWidth()
-            + getPaddingLeft() + getPaddingRight() + (int)(48 * density);
-        boolean useHorizontal = availableWidth >= Math.max(minHorizontalWidth, requiredWidth);
+            + getPaddingLeft() + getPaddingRight() + (compact ? gap : dp(48));
+        boolean useHorizontal = availableWidth >= Math.max(compact ? 0 : dp(360), requiredWidth);
         int newOrientation = useHorizontal ? HORIZONTAL : VERTICAL;
-        if (newOrientation != lastOrientation) {
+        if (newOrientation != lastOrientation || gap != lastGap) {
           lastOrientation = newOrientation;
+          lastGap = gap;
           setOrientation(newOrientation);
-          setGravity(Gravity.CENTER);
           LayoutParams keyParams = (LayoutParams) keyCol.getLayoutParams();
-          if (useHorizontal) {
-            keyCol.setGravity(Gravity.CENTER);
-            tempoCol.setGravity(Gravity.CENTER);
-            // Horizontal layout: add horizontal margin between key and tempo
-            keyParams.rightMargin = (int)(16 * density);
-            keyParams.bottomMargin = 0;
-          } else {
-            // Vertical layout: add vertical margin between key and tempo
-            keyParams.rightMargin = 0;
-            keyParams.bottomMargin = (int)(16 * density);
-          }
-          keyCol.setLayoutParams(keyParams);
+          keyParams.setMarginEnd(useHorizontal ? gap : 0);
+          keyParams.bottomMargin = useHorizontal ? 0 : gap;
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
       }
@@ -269,6 +268,32 @@ public class KantaNowPlayingScreen extends LinearLayout {
     addView(perfContainer);
 
   }
+  @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+    boolean shortLandscape = CompactLandscape.applies(this, heightMeasureSpec);
+    int width = MeasureSpec.getSize(widthMeasureSpec);
+    int playSize = shortLandscape ? (width >= dp(264) ? 56 : 48) : 72;
+    if (shortLandscape != compact || (shortLandscape && playSize != compactPlaySize)) {
+      compact = shortLandscape;
+      compactPlaySize = playSize;
+      int inset = dp(compact ? 8 : 16);
+      header.setPadding(inset, dp(compact ? 0 : 8), inset, dp(compact ? 0 : 8));
+      info.setPadding(inset, dp(compact ? 2 : 8), inset, dp(compact ? 0 : 4));
+      titleView.setTextSize(compact ? 17 : 20);
+      progressRow.setPadding(inset, 0, inset, dp(compact ? 2 : 8));
+      LayoutParams transportParams = (LayoutParams) transportViewport.getLayoutParams();
+      transportParams.topMargin = dp(compact ? 2 : 24);
+      transportParams.bottomMargin = dp(compact ? 4 : 20);
+      View play = transport.findViewWithTag("kanta.transport.play-pause");
+      play.getLayoutParams().width = dp(playSize);
+      play.getLayoutParams().height = dp(playSize);
+      perfContainer.setPadding(inset, dp(compact ? 0 : 16), inset, dp(compact ? 4 : 16));
+      transport.requestLayout();
+    }
+    super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+  }
+
+  private int dp(int value) { return Math.round(value * density); }
+
   private TextView lyric(String text, int color, float sizeSp) {
     TextView tv = new TextView(context);
     tv.setText(text);

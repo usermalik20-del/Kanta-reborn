@@ -168,6 +168,47 @@ public final class LegacyFileContainerImporterRegressionTests {
       check(result.songs.get(1).title.equals("Synthetic A")
           && Arrays.equals(Files.readAllBytes(result.songs.get(1).file.toPath()), first),
           "Second title materializes its addressed payload");
+      check(result.songs.get(0).sourceCode.isEmpty(), "Untagged trailer supplied a source number");
+      try (RandomAccessFile out = new RandomAccessFile(index, "rw")) {
+        out.seek(out.length() - 8);
+        out.write(new byte[] {9, 1, 3, 2, 9, 0, 42, 0});
+      }
+      LegacyFileContainerImporter.ImportResult numbered = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("numbered").toFile(), new LegacyImportKey(TEST_KEY, TEST_IV));
+      check(numbered.decodedCount == 2 && numbered.errors.isEmpty(), "Numbered pair did not import");
+      LegacyFileContainerImporter.DecodedSong row = numbered.songs.get(0);
+      check(row.sourceCode.equals("066051") && row.titleOrdinal == 1 && Arrays.equals(Files.readAllBytes(row.file.toPath()), second),
+          "The packed keypad number and payload must both follow their title record");
+      check(numbered.songs.get(1).sourceCode.equals("000042"), "Second title must keep its printed number");
+      ph.kanta.reborn.core.Song imported = new ph.kanta.reborn.core.Song(
+          "legacy:" + row.id, row.title, "", row.sourceCode, "legacy-" + row.id + ".mid", false, true);
+      java.util.List<ph.kanta.reborn.core.Song> catalog = java.util.Collections.singletonList(imported);
+      for (String digits : new String[] {"66051", "066051"}) {
+        check(imported.numericPreviewRank(digits) == 0, "Legacy number did not rank as an exact match");
+        check(ph.kanta.reborn.core.Song.uniqueCodeMatch(catalog, digits) == imported,
+            "Legacy number did not resolve the same song for PLAY and RES");
+      }
+      check(imported.numericPreviewRank("066") >= 0
+              && ph.kanta.reborn.core.Song.uniqueCodeMatch(catalog, "066") == null,
+          "A partial code should preview but not submit");
+      check(imported.numericPreviewRank("0066051") == -1
+              && ph.kanta.reborn.core.Song.uniqueCodeMatch(catalog, "0066051") == null,
+          "An overlong alias must not match or submit");
+      check(imported.numericPreviewRank("1") == -1, "The title ordinal became a searchable code");
+      ph.kanta.reborn.core.Song literal = new ph.kanta.reborn.core.Song(
+          "literal", "Collision", "", "66051", "literal.mid", false);
+      check(ph.kanta.reborn.core.Song.uniqueCodeMatch(Arrays.asList(imported, literal), "66051") == null,
+          "Ambiguous alias submitted a different song");
+      try (RandomAccessFile out = new RandomAccessFile(blob, "rw")) {
+        encryptedRecord(out, 2048, new byte[] {1, 2, 3, 4, 5});
+      }
+      LegacyFileContainerImporter.ImportResult withSkip = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("with-skip").toFile(), new LegacyImportKey(TEST_KEY, TEST_IV));
+      check(withSkip.skippedCount == 1 && withSkip.songs.get(0).sourceCode.equals("000042"),
+          "Skipped payload shifted the remaining printed number");
+      check(ph.kanta.reborn.core.songbook.ShubIndexProbe.keypadNumbers(
+          new long[] {1, 0}, new long[] {0x002a0009L, 0x02030109L}).length == 0,
+          "Tagged but uncorrelated trailer supplied source numbers");
     } finally {
       try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(dir)) {
         for (java.nio.file.Path path : paths.sorted(java.util.Comparator.reverseOrder())
@@ -221,6 +262,74 @@ public final class LegacyFileContainerImporterRegressionTests {
       }
     }
   }
+  private static void probeKeySelection() throws Exception {
+    java.nio.file.Path dir = Files.createTempDirectory("legacy-probe-");
+    try {
+      File index = dir.resolve("input.idx").toFile();
+      File blob = dir.resolve("input.blob").toFile();
+      byte[] first = new byte[] {'M', 'T', 'h', 'd', 11};
+      byte[] second = new byte[] {'M', 'T', 'h', 'd', 22};
+      try (RandomAccessFile out = new RandomAccessFile(blob, "rw")) {
+        out.setLength(4096);
+        encryptedRecord(out, 0, first);
+        encryptedRecord(out, 2048, second);
+      }
+      try (RandomAccessFile out = new RandomAccessFile(index, "rw")) {
+        out.setLength(28);
+        out.seek(20); u32(out, 28);
+        out.seek(28);
+        for (int i = 0; i < 2; i++) {
+          byte[] title = (i == 0 ? "Synthetic B" : "Synthetic A")
+              .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+          out.write(1); out.write(12 + title.length); out.writeShort(0);
+          u32(out, 0); u32(out, i == 0 ? 1 : 0); out.write(title);
+        }
+        u32(out, 17); u32(out, 513);
+      }
+      byte[] wrong = TEST_KEY.clone();
+      wrong[0] = 1;
+      LegacyImportKey wrongCredentials = new LegacyImportKey(wrong, TEST_IV);
+      byte[] wrongKeyBytes = wrongCredentials.key();
+      byte[] wrongIvBytes = wrongCredentials.iv();
+      check(!LegacyFileContainerImporter.probeKey(index, blob, wrongCredentials),
+          "A key that cannot decode the first record is refused by the probe");
+      check(!LegacyFileContainerImporter.probeKey(index, dir.resolve("missing.blob").toFile(), wrongCredentials),
+          "A missing blob is refused by the probe");
+      check(!LegacyFileContainerImporter.probeKey(index, blob, null),
+          "Missing credentials are refused by the probe");
+      check(!Arrays.equals(wrongKeyBytes, new byte[32]),
+          "The probe refused to zero live key bytes");
+      LegacyFileContainerImporter.ImportResult refused = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("wrong-key").toFile(), wrongCredentials);
+      check(refused.decodedCount == 0 && refused.skippedCount == 2,
+          "The probe does not consume or mutate the probed credentials");
+      checkCleared(wrongCredentials, wrongKeyBytes, wrongIvBytes);
+
+      LegacyImportKey credentials = new LegacyImportKey(TEST_KEY, TEST_IV);
+      byte[] keyBytes = credentials.key();
+      byte[] ivBytes = credentials.iv();
+      check(LegacyFileContainerImporter.probeKey(index, blob, credentials),
+          "A key that decodes the first record is accepted by the probe");
+      boolean stillUsable = true;
+      try {
+        credentials.key(); credentials.iv();
+      } catch (IllegalStateException closedAfterProbe) {
+        stillUsable = false;
+      }
+      check(stillUsable, "A passed probe leaves the credentials available for the import");
+      LegacyFileContainerImporter.ImportResult result = LegacyFileContainerImporter.importPair(
+          index, blob, dir.resolve("output").toFile(), credentials);
+      check(result.decodedCount == 2 && result.errors.isEmpty(),
+          "A probed key still imports the full pair");
+      checkCleared(credentials, keyBytes, ivBytes);
+    } finally {
+      try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(dir)) {
+        for (java.nio.file.Path path : paths.sorted(java.util.Comparator.reverseOrder())
+            .toArray(java.nio.file.Path[]::new)) Files.delete(path);
+      }
+    }
+  }
+
   private static void encryptedRecord(RandomAccessFile out, long offset, byte[] payload)
       throws Exception {
     java.util.zip.Deflater compressor = new java.util.zip.Deflater(6, true);
@@ -343,6 +452,7 @@ public final class LegacyFileContainerImporterRegressionTests {
     cancellationStopsInflaterAndEndsNativeState();
     namedImport();
     cancelledImportRemovesPartialOutputs();
+    probeKeySelection();
     return checks;
   }
 }

@@ -27,7 +27,9 @@ public final class ScoreCelebrationView extends View {
   private final Paint particlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint balloonPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint stringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+  private final Paint petalPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Path starPath = new Path();
+  private final Path petalPath = new Path();
 
   private ScoreCelebrationPlan.Plan plan;
   private float progress;
@@ -133,6 +135,7 @@ public final class ScoreCelebrationView extends View {
 
     drawBalloons(canvas, width, height, unit);
 
+    // Draw confetti, stars, fireworks, and petals
     int index = 0;
     for (ScoreCelebrationPlan.Particle particle : plan.particles) {
       float x = ScoreCelebrationPlan.positionX(particle, progress) * width;
@@ -141,21 +144,43 @@ public final class ScoreCelebrationView extends View {
         index++;
         continue;
       }
-      boolean star = index >= plan.confettiCount;
       particlePaint.setColor(hueColor(particle.hue));
       float radius = Math.max(1f, particle.radius * unit);
       float rotation = ScoreCelebrationPlan.rotationDegrees(particle, progress);
 
       canvas.save();
       canvas.rotate(rotation, x, y);
-      if (star) {
-        drawStar(canvas, x, y, radius * 1.8f);
-      } else {
+
+      // Distinguish between different particle types
+      if (index < plan.confettiCount) {
+        // Confetti: small rectangles
         canvas.drawRect(x - radius, y - radius * 0.45f, x + radius, y + radius * 0.45f, particlePaint);
+      } else if (index < plan.confettiCount + plan.starCount) {
+        // Stars: star shape
+        drawStar(canvas, x, y, radius * 1.8f);
+      } else if (index < plan.confettiCount + plan.starCount + plan.fireworksCount * 8) {
+        // Fireworks: small stars bursting from center
+        drawStar(canvas, x, y, radius * 2.0f);
+      } else {
+        // Petals: petal-shaped particles (pink range hues)
+        drawPetal(canvas, x, y, radius, particle.hue);
       }
+
       canvas.restore();
       index++;
     }
+  }
+
+  private void drawPetal(Canvas canvas, float cx, float cy, float radius, float hue) {
+    petalPaint.setColor(hueColor(hue));
+    petalPath.reset();
+    // Simple petal shape: teardrop/oval
+    float half = radius * 0.6f;
+    petalPath.moveTo(cx, cy - radius);
+    petalPath.quadTo(cx + half, cy, cx, cy + radius);
+    petalPath.quadTo(cx - half, cy, cx, cy - radius);
+    petalPath.close();
+    canvas.drawPath(petalPath, petalPaint);
   }
 
   private void drawBalloons(Canvas canvas, int width, int height, float unit) {

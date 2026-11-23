@@ -20,12 +20,12 @@ import ph.kanta.reborn.core.Song;
  *
  * <p>When no song is on the stage the reference empty state is not a blank wallpaper: it is a
  * karaoke machine waiting for a song code, showing the same {@code 00000} code prompt a real
- * karaoke remote shows before a selection, a live on-air style badge, an animated equaliser, and
+ * karaoke remote shows before a selection, an animated equaliser, and
  * a clear instruction. This is decoration only: it owns no session state and never touches
  * playback, the queue, the clock or scoring.
  *
  * <p>The code prompt and the instruction are real text views rather than painted glyphs, so they
- * reach screen readers and can be asserted by the runtime checks. Only the scrim, badge and
+ * reach screen readers and can be asserted by the runtime checks. Only the scrim and
  * equaliser are painted on the canvas underneath them.
  *
  * <p>It is also a truthful evidence surface: {@link #liveFrame()} publishes a monotonically
@@ -39,8 +39,6 @@ public final class StagePresenceOverlay extends FrameLayout {
 
   private Shader scrimShader;
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-  private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-  private final Paint badgeTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final Paint barPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final TextView codeView;
   private final TextView titleView;
@@ -70,6 +68,8 @@ public final class StagePresenceOverlay extends FrameLayout {
     codeView.setLetterSpacing(0.16f);
     codeView.setShadowLayer(18f, 0f, 0f, 0x8829D9FF);
     codeView.setGravity(Gravity.CENTER);
+    codeView.setSingleLine(true);
+    codeView.setEllipsize(android.text.TextUtils.TruncateAt.END);
     addView(codeView, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
     hintBlock = new LinearLayout(context);
@@ -90,11 +90,6 @@ public final class StagePresenceOverlay extends FrameLayout {
     hintBlock.addView(subtitleView);
     addView(hintBlock, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
-    badgeTextPaint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
-    badgeTextPaint.setTextAlign(Paint.Align.LEFT);
-    badgeTextPaint.setColor(0xFFFFFFFF);
-    badgeTextPaint.setTextSize(12f * density);
-    badgePaint.setColor(0xE6E23A55);
     barPaint.setStyle(Paint.Style.FILL);
   }
 
@@ -133,6 +128,11 @@ public final class StagePresenceOverlay extends FrameLayout {
         ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
         : View.IMPORTANT_FOR_ACCESSIBILITY_NO;
     setImportantForAccessibility(mode);
+  }
+
+  public void setEnteredCode(String entry) {
+    String code = entry != null && entry.matches("[0-9]+") ? entry : CODE_PROMPT;
+    if (!code.contentEquals(codeView.getText())) codeView.setText(code);
   }
 
   /** Binds the standby presence to the truthful empty-playback state. */
@@ -181,32 +181,15 @@ public final class StagePresenceOverlay extends FrameLayout {
     canvas.drawRect(0, h * 0.10f, w, h, paint);
     paint.setShader(null);
 
-    // Live on-air badge, top-left.
-    float badgeY = h * 0.075f;
-    float badgeH = 26f * scale * density;
-    // Measured width: a fixed width clipped "KARAOKE READY" on narrow stages and at
-    // non-default font scales.
-    float badgeW = badgeTextPaint.measureText("KARAOKE READY") + 46f * scale * density;
-    float badgeX = 18f * density;
-    paint.setColor(0x55000000);
-    canvas.drawRoundRect(badgeX + 6f, badgeY + 6f, badgeX + badgeW + 6f, badgeY + badgeH + 6f,
-        badgeH / 2f, badgeH / 2f, paint);
-    badgePaint.setAlpha(pulseAlpha());
-    canvas.drawRoundRect(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH,
-        badgeH / 2f, badgeH / 2f, badgePaint);
-    paint.setColor(0xFFFFFFFF);
-    canvas.drawCircle(badgeX + 18f * scale * density, badgeY + badgeH / 2f,
-        4f * scale * density, paint);
-    canvas.drawText("KARAOKE READY", badgeX + 32f * scale * density,
-        badgeY + badgeH / 2f + 4f * scale * density, badgeTextPaint);
-
     // Animated equaliser between the code prompt and the instruction.
     float barH = 26f * scale * density;
     float barW = 5f * scale * density;
     float gap = 7f * scale * density;
     float totalW = barCount * barW + (barCount - 1) * gap;
     float bx = cx - totalW / 2f;
-    float barsTop = h * 0.485f;
+    float barsTop = codeView.getBottom() + 2 * density;
+    barH = Math.min(barH, hintBlock.getTop() - barsTop - 2 * density);
+    if (barH <= 0) return;
     long phase = liveFrames / 3;
     for (int i = 0; i < barCount; i++) {
       float t = (float) Math.sin(phase * 0.22f + i * 0.7f);
@@ -218,8 +201,5 @@ public final class StagePresenceOverlay extends FrameLayout {
     }
   }
 
-  private int pulseAlpha() {
-    float t = (float) Math.sin(liveFrames * 0.06f);
-    return (int) (180 + 60 * Math.abs(t));
-  }
+
 }

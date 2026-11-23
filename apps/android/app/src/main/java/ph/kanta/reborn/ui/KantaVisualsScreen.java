@@ -3,275 +3,231 @@ package ph.kanta.reborn.ui;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import ph.kanta.reborn.BundledBgvCatalog;
 import ph.kanta.reborn.R;
+import ph.kanta.reborn.ui.components.KantaScreenHeader;
 
-/** Visual picker wired to bundled KANTA artwork, CameraStage and the existing media import owner. */
+/** Stage Visuals uses bundled artwork and video frames, with media actions owned by the host. */
 // Programmatic-only view: callers supply runtime dependencies; not inflated from XML.
 @android.annotation.SuppressLint("ViewConstructor")
 public final class KantaVisualsScreen extends LinearLayout {
+  public static final int BACKGROUND = 0;
+  // Keep the legacy camera index; old Effects states normalize to a supported tab on entry.
+  public static final int VIDEOS = 2;
+
   public interface Listener {
     void onBack();
-    void onTabSelected(int index, String label);
-    void onBackgroundSelected(String name);
-    void onCameraToggle(boolean enabled);
-    void onEffectSelected(String name);
-    void onCustomImport();
+    void onTabSelected(int tab);
+    void onBackgroundSelected(String id, int drawableResource);
+    void onVideoSelected(String id);
+    void addControls(int tab, LinearLayout target);
   }
+
+  private static final class Still {
+    final String id, label;
+    final int thumbnail;
+
+    Still(String id, String label, int thumbnail) {
+      this.id = id;
+      this.label = label;
+      this.thumbnail = thumbnail;
+    }
+  }
+
+  private static final Still[] BACKGROUNDS = {
+    new Still("default", "Default", R.drawable.kanta_stage_phone),
+    new Still("stageLights", "Stage Lights", R.drawable.kanta_visual_stage_lights),
+    new Still("galaxy", "Galaxy", R.drawable.kanta_visual_galaxy),
+    new Still("sunset", "Sunset", R.drawable.kanta_visual_sunset),
+    new Still("ocean", "Ocean", R.drawable.kanta_visual_ocean),
+    new Still("city", "City", R.drawable.kanta_visual_city),
+    new Still("neon", "Neon", R.drawable.kanta_visual_neon),
+    new Still("particles", "Particles", R.drawable.kanta_visual_particles)
+  };
+  private static final Still[] SCENIC_BACKGROUNDS = {
+    new Still("bayanDawn", "Bayan Dawn", R.drawable.kanta_scene_bayandawn),
+    new Still("bambooMist", "Bamboo Mist", R.drawable.kanta_scene_bamboomist),
+    new Still("coralHaze", "Coral Haze", R.drawable.kanta_scene_coralhaze),
+    new Still("deepLagoon", "Deep Lagoon", R.drawable.kanta_scene_deeplagoon),
+    new Still("emberSunset", "Ember Sunset", R.drawable.kanta_scene_embersunset),
+    new Still("indigoHorizon", "Indigo Horizon", R.drawable.kanta_scene_indigohorizon),
+    new Still("mangoGlow", "Mango Glow", R.drawable.kanta_scene_mangoglow),
+    new Still("moonlitBay", "Moonlit Bay", R.drawable.kanta_scene_moonlitbay),
+    new Still("orchidNight", "Orchid Night", R.drawable.kanta_scene_orchidnight),
+    new Still("pearlSky", "Pearl Sky", R.drawable.kanta_scene_pearlsky)
+  };
 
   private final Context context;
   private final float density;
   private final Listener listener;
-  private int selectedTab;
-  private String selectedBackground = "Default";
-  private boolean cameraEnabled, cameraStreaming;
-  private Button cameraToggle;
-  private TextView cameraStatus;
+  private final int selectedTab;
+  private final String selectedScene, selectedVideo;
+  private final boolean canChoose, menuSurface;
 
-  private static final String[] LABELS = {
-    "Default", "Stage Lights", "Galaxy", "Sunset",
-    "Ocean", "City", "Neon", "Particles"
-  };
-  private static final String[] SCENES = {
-    "default", "stageLights", "galaxy", "sunset", "ocean", "city", "neon", "particles"
-  };
-  private static final int[] ARTWORK = {
-    R.drawable.kanta_stage_phone,
-    R.drawable.kanta_visual_stage_lights,
-    R.drawable.kanta_visual_galaxy,
-    R.drawable.kanta_visual_sunset,
-    R.drawable.kanta_visual_ocean,
-    R.drawable.kanta_visual_city,
-    R.drawable.kanta_visual_neon,
-    R.drawable.kanta_visual_particles
-  };
+  public KantaVisualsScreen(Context context, Listener listener, int selectedTab,
+      String selectedScene, String selectedVideo, boolean canChoose) {
+    this(context, listener, selectedTab, selectedScene, selectedVideo, canChoose, false);
+  }
 
-  public KantaVisualsScreen(Context context, Listener listener) {
+  public KantaVisualsScreen(Context context, Listener listener, int selectedTab,
+      String selectedScene, String selectedVideo, boolean canChoose, boolean menuSurface) {
     super(context);
     this.context = context;
     this.density = context.getResources().getDisplayMetrics().density;
     this.listener = listener;
+    this.selectedTab = selectedTab;
+    this.selectedScene = selectedScene;
+    this.selectedVideo = selectedVideo;
+    this.canChoose = canChoose;
+    this.menuSurface = menuSurface;
     setOrientation(VERTICAL);
-    setBackgroundColor(KantaTheme.BG_MAIN);
-    build();
+    if (!menuSurface) setBackgroundColor(KantaTheme.BG_MAIN);
+    build(menuSurface);
   }
 
-  private int dp(int value) { return (int) (value * density); }
+  private int dp(int value) { return Math.round(value * density); }
 
-  private void build() {
-    addView(new ph.kanta.reborn.ui.components.KantaScreenHeader(
-        context, "Visuals", "Back", "kanta.screen.visuals.back",
-        v -> { if (listener != null) listener.onBack(); }));
+  private void build(boolean menuSurface) {
+    String title = context.getString(R.string.menu_stage_visual);
+    if (menuSurface) {
+      addView(MenuSurface.header(context, title, context.getString(R.string.menu_back),
+          "kanta.screen.visuals.back", listener::onBack));
+    } else {
+      addView(new KantaScreenHeader(context, title, context.getString(R.string.menu_back), "kanta.screen.visuals.back",
+          v -> listener.onBack()));
+    }
+
+    TextView stage = KantaTheme.titleText(context, context.getString(R.string.menu_stage), 19);
+    stage.setPaddingRelative(dp(16), 0, dp(16), 0);
+    androidx.core.view.ViewCompat.setAccessibilityHeading(stage, true);
+    addView(stage);
 
     LinearLayout tabs = new LinearLayout(context);
-    tabs.setOrientation(HORIZONTAL);
-    tabs.setPadding(dp(16), dp(4), dp(16), dp(12));
-    String[] tabNames = {"Background", "Camera", "Effects"};
-    for (int i = 0; i < tabNames.length; i++) {
-      final int index = i;
-      Button tab = smallButton(tabNames[i]);
-      tab.setTag("kanta.visuals.tab." + tabNames[i].toLowerCase(java.util.Locale.ROOT));
-      tab.setTextColor(selectedTab == i ? KantaTheme.TEXT_PRIMARY : KantaTheme.TEXT_SECONDARY);
-      tab.setBackground(KantaTheme.backgroundDrawable(
-          selectedTab == i ? KantaTheme.PRIMARY_PURPLE : KantaTheme.SURFACE,
-          12, selectedTab == i ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER, 1, density));
-      tab.setOnClickListener(v -> {
-        selectedTab = index;
-        if (listener != null) listener.onTabSelected(index, tabNames[index]);
-        refresh();
-      });
-      LayoutParams p = new LayoutParams(0, dp(44), 1);
-      p.leftMargin = dp(3);
-      p.rightMargin = dp(3);
-      tabs.addView(tab, p);
-    }
+    tabs.setPadding(dp(12), dp(4), dp(12), dp(12));
+    addTab(tabs, BACKGROUND, context.getString(R.string.menu_background_photos), "background", R.drawable.kanta_submenu_photo);
+    addTab(tabs, VIDEOS, context.getString(R.string.menu_background_videos), "videos", R.drawable.kanta_submenu_video);
     addView(tabs);
 
-    android.widget.ScrollView scroll = new android.widget.ScrollView(context);
-    scroll.setFillViewport(false);
     LinearLayout content = new LinearLayout(context);
     content.setOrientation(VERTICAL);
     content.setPadding(dp(16), 0, dp(16), dp(24));
-    scroll.addView(content);
-    addView(scroll, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1));
-
-    if (selectedTab == 0) buildBackgroundGrid(content);
-    else if (selectedTab == 1) buildCameraPanel(content);
-    else buildEffectsPanel(content);
+    // MainActivity's outer ScrollView handles the whole destination, including short screens.
+    addView(content);
+    if (selectedTab == VIDEOS) {
+      content.addView(KantaTheme.titleText(context, "Realm · Built-in videos", 16));
+      content.addView(KantaTheme.bodyText(context, "Choose a silent video for your stage.", 13));
+      addVideoGrid(content);
+    } else if (selectedTab == BACKGROUND) {
+      content.addView(KantaTheme.titleText(context, "Still backgrounds", 16));
+      addStillGrid(content, BACKGROUNDS, false);
+    }
+    listener.addControls(selectedTab, content);
+    if (selectedTab == BACKGROUND) {
+      content.addView(KantaTheme.titleText(context, "Scenic stills", 16));
+      addStillGrid(content, SCENIC_BACKGROUNDS, true);
+    }
   }
 
-  private void buildBackgroundGrid(LinearLayout parent) {
-    parent.addView(KantaTheme.titleText(context, "Choose your stage", 15));
-    for (int row = 0; row < 3; row++) {
-      LinearLayout line = new LinearLayout(context);
-      line.setOrientation(HORIZONTAL);
-      for (int col = 0; col < 3; col++) {
-        int index = row * 3 + col;
-        if (index > LABELS.length) break;
-        if (index == LABELS.length) {
-          line.addView(customTile(), tileParams());
-          continue;
-        }
-        final String label = LABELS[index];
-        LinearLayout tile = new LinearLayout(context);
-        tile.setOrientation(VERTICAL);
-        boolean selected = selectedBackground.equals(label);
-        tile.setBackground(KantaTheme.backgroundDrawable(
-            KantaTheme.SURFACE, 13,
-            selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER,
-            selected ? 2 : 1, density));
-        tile.setPadding(dp(5), dp(5), dp(5), dp(7));
-        ImageView image = new ImageView(context);
-        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        image.setImageResource(ARTWORK[index]);
-        image.setContentDescription(label + " background preview");
-        tile.addView(image, new LayoutParams(LayoutParams.MATCH_PARENT, dp(92)));
-        TextView name = new TextView(context);
-        name.setText(selected ? "\u2713  " + label : label);
-        name.setTextColor(selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_PRIMARY);
-        name.setTextSize(12);
-        name.setTypeface(null, Typeface.BOLD);
-        name.setGravity(Gravity.CENTER);
-        name.setPadding(0, dp(6), 0, 0);
-        tile.addView(name);
-        tile.setTag("kanta.visuals.background." + label.toLowerCase(java.util.Locale.ROOT).replace(' ', '-'));
-        tile.setOnClickListener(v -> {
-          selectedBackground = label;
-          if (listener != null) listener.onBackgroundSelected(label);
-          refresh();
-        });
-        line.addView(tile, tileParams());
-      }
-      parent.addView(line);
+  private void addTab(LinearLayout tabs, int index, String label, String tag, int icon) {
+    Button tab = KantaTheme.secondaryButton(context, label, v -> listener.onTabSelected(index));
+    boolean selected = selectedTab == index;
+    tab.setTag("kanta.visuals.tab." + tag);
+    tab.setAllCaps(false);
+    tab.setSelected(selected);
+    tab.setTextSize(12);
+    tab.setPadding(dp(3), dp(8), dp(3), dp(8));
+    tab.setMinWidth(0);
+    tab.setMinimumWidth(0);
+    if (menuSurface) {
+      MenuSurface.setLeadingIcon(tab, icon);
+      MenuSurface.actionStyle(tab, false);
+    } else if (selected) {
+      tab.setTextColor(KantaTheme.PRIMARY_CYAN);
     }
+    LayoutParams params = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
+    params.setMargins(dp(3), 0, dp(3), 0);
+    tab.setMinHeight(dp(48));
+    tabs.addView(tab, params);
+  }
+
+  private void addStillGrid(LinearLayout parent, Still[] backgrounds, boolean legacy) {
+    LinearLayout line = null;
+    for (int i = 0; i < backgrounds.length; i++) {
+      Still still = backgrounds[i];
+      if (i % 3 == 0) line = addGridRow(parent);
+      String tag = "kanta.visuals.background."
+          + still.label.toLowerCase(java.util.Locale.ROOT).replace(' ', '-');
+      line.addView(thumbnail(still.label, still.thumbnail, tag, still.id.equals(selectedScene),
+          () -> listener.onBackgroundSelected(still.id, legacy ? 0 : still.thumbnail)), tileParams());
+    }
+  }
+
+  private void addVideoGrid(LinearLayout parent) {
+    LinearLayout line = null;
+    int index = 0;
+    for (BundledBgvCatalog.Clip clip : BundledBgvCatalog.BUILT_IN) {
+      if (index++ % 3 == 0) line = addGridRow(parent);
+      line.addView(thumbnail(clip.title, clip.thumbnail, "kanta.realm.video." + clip.id,
+          (clip.id + ".video").equals(selectedVideo), () -> listener.onVideoSelected(clip.id)), tileParams());
+    }
+  }
+
+  private LinearLayout addGridRow(LinearLayout parent) {
+    LinearLayout row = new LinearLayout(context);
+    // The explicit weight sum keeps a partial final row aligned to the rows above it.
+    row.setWeightSum(3);
+    parent.addView(row, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+    return row;
   }
 
   private LayoutParams tileParams() {
-    LayoutParams p = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
-    p.leftMargin = dp(4);
-    p.rightMargin = dp(4);
-    p.bottomMargin = dp(8);
-    return p;
+    LayoutParams params = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1);
+    params.setMargins(dp(4), dp(4), dp(4), dp(6));
+    return params;
   }
 
-  private LinearLayout customTile() {
+  private LinearLayout thumbnail(String label, int artwork, String tag, boolean selected, Runnable action) {
     LinearLayout tile = new LinearLayout(context);
     tile.setOrientation(VERTICAL);
-    tile.setGravity(Gravity.CENTER);
     tile.setPadding(dp(5), dp(5), dp(5), dp(7));
-    tile.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 13, KantaTheme.BORDER, 1, density));
-    ImageView icon = new ImageView(context);
-    icon.setImageResource(R.drawable.kanta_song_code_outline);
-    icon.setColorFilter(KantaTheme.TEXT_PRIMARY);
-    icon.setContentDescription("Import custom background");
-    icon.setPadding(dp(28), dp(18), dp(28), dp(18));
-    tile.addView(icon, new LayoutParams(LayoutParams.MATCH_PARENT, dp(92)));
-    TextView label = new TextView(context);
-    label.setText(ph.kanta.reborn.R.string.label_custom);
-    label.setTextColor(KantaTheme.TEXT_PRIMARY);
-    label.setTextSize(12);
-    label.setTypeface(null, Typeface.BOLD);
-    label.setGravity(Gravity.CENTER);
-    tile.addView(label);
-    tile.setTag("kanta.visuals.custom-import");
-    tile.setOnClickListener(v -> { if (listener != null) listener.onCustomImport(); });
+    tile.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 13,
+        selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER, selected ? 2 : 1, density));
+    android.util.TypedValue selectable = new android.util.TypedValue();
+    if (menuSurface) {
+      MenuSurface.tileStyle(tile, selected);
+    } else if (context.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, selectable, true)
+        && selectable.resourceId != 0) {
+      tile.setForeground(context.getDrawable(selectable.resourceId));
+    }
+
+    ImageView image = new ImageView(context);
+    image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+    image.setImageResource(artwork);
+    image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+    tile.addView(image, new LayoutParams(LayoutParams.MATCH_PARENT, dp(78)));
+    TextView name = KantaTheme.titleText(context, selected && !menuSurface ? "✓  " + label : label, 12);
+    if (menuSurface && selected) {
+      MenuSurface.setLeadingIcon(name, R.drawable.kanta_submenu_check);
+      name.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(KantaTheme.PRIMARY_CYAN));
+    }
+    name.setTypeface(null, Typeface.BOLD);
+    name.setTextColor(selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_PRIMARY);
+    name.setGravity(Gravity.CENTER);
+    name.setMinHeight(dp(40));
+    name.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+    tile.addView(name, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+    tile.setTag(tag);
+    tile.setContentDescription(label);
+    tile.setSelected(selected);
+    tile.setOnClickListener(v -> action.run());
+    tile.setEnabled(canChoose);
+    tile.setFocusable(true);
     return tile;
-  }
-
-  private void buildCameraPanel(LinearLayout parent) {
-    LinearLayout card = panelCard();
-    card.addView(KantaTheme.titleText(context, "Camera Background", 16));
-    TextView description = bodyText(
-        "Optional live front-camera preview. Nothing is recorded. Camera permission is requested only when enabled.");
-    card.addView(description);
-    cameraStatus = bodyText(cameraEnabled
-        ? cameraStreaming ? "Camera preview is live" : "Camera is connecting…"
-        : "Camera is off");
-    cameraStatus.setTag("kanta.visuals.camera.status");
-    card.addView(cameraStatus);
-    cameraToggle = smallButton(cameraEnabled ? "Turn off camera" : "Enable camera");
-    cameraToggle.setTag("kanta.visuals.camera.toggle");
-    cameraToggle.setOnClickListener(v -> {
-      if (listener != null) listener.onCameraToggle(!cameraEnabled);
-    });
-    card.addView(cameraToggle);
-    parent.addView(card);
-  }
-
-  private void buildEffectsPanel(LinearLayout parent) {
-    LinearLayout card = panelCard();
-    card.addView(KantaTheme.titleText(context, "Stage effects", 16));
-    TextView explanation = bodyText(
-        "Stage post-processing effects are not implemented yet. The working vocal monitor effects are available under Mic & Voice; no inactive visual controls are shown as enabled.");
-    card.addView(explanation);
-    parent.addView(card);
-  }
-
-  private LinearLayout panelCard() {
-    LinearLayout card = new LinearLayout(context);
-    card.setOrientation(VERTICAL);
-    card.setPadding(dp(16), dp(16), dp(16), dp(16));
-    card.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE_ELEVATED, 16, KantaTheme.BORDER, 1, density));
-    return card;
-  }
-
-  private TextView bodyText(String value) {
-    TextView text = new TextView(context);
-    text.setText(value);
-    text.setTextSize(13);
-    text.setTextColor(KantaTheme.TEXT_SECONDARY);
-    text.setPadding(0, dp(8), 0, dp(8));
-    text.setLineSpacing(dp(2), 1f);
-    return text;
-  }
-
-  private Button smallButton(String value) {
-    Button button = new Button(context);
-    button.setText(value);
-    button.setAllCaps(false);
-    button.setTextSize(12);
-    button.setTypeface(null, Typeface.BOLD);
-    button.setMinHeight(dp(44));
-    button.setTextColor(KantaTheme.TEXT_PRIMARY);
-    button.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 11, KantaTheme.BORDER, 1, density));
-    return button;
-  }
-
-  private void refresh() {
-    removeAllViews();
-    build();
-  }
-
-  public void setSelectedTab(int tab) {
-    selectedTab = Math.max(0, Math.min(2, tab));
-    refresh();
-  }
-
-  public void setSelectedScene(String scene) {
-    if (scene == null) return;
-    if ("bayanDawn".equals(scene) || "default".equals(scene)) {
-      selectedBackground = "Default";
-      refresh();
-      return;
-    }
-    for (int i = 0; i < SCENES.length; i++) {
-      if (SCENES[i].equals(scene)) {
-        selectedBackground = LABELS[i];
-        refresh();
-        return;
-      }
-    }
-  }
-
-  public void setCameraState(boolean enabled, boolean streaming) {
-    cameraEnabled = enabled;
-    cameraStreaming = streaming;
-    if (cameraStatus != null) cameraStatus.setText(
-        !enabled ? "Camera is off" : streaming ? "Camera preview is live" : "Camera is connecting…");
-    if (cameraToggle != null) cameraToggle.setText(enabled ? "Turn off camera" : "Enable camera");
   }
 }

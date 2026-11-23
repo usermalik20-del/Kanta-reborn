@@ -149,6 +149,19 @@ public final class CoreRegressionTests {
     check(
         new MonitorRouteGuard(7, 100).verify(new int[] {7}, 99) == MonitorRouteGuard.Decision.STOP,
         "Invalid monotonic time accepted");
+    MonitorRouteGuard settling = new MonitorRouteGuard(7, 100);
+    for (long now = 100; now < 1550; now += 4) {
+      check(
+          settling.verify(new int[0], now) == MonitorRouteGuard.Decision.WAIT,
+          "Silent startup accepted an unknown route");
+    }
+    check(
+        settling.verify(new int[] {7}, 1599) == MonitorRouteGuard.Decision.ALLOW,
+        "Wired route that settled within the startup window was rejected");
+    check(
+        settling.verify(new int[] {-1}, 1600) == MonitorRouteGuard.Decision.STOP
+            && settling.verify(new int[] {7}, 1601) == MonitorRouteGuard.Decision.STOP,
+        "Speaker fallback during monitoring did not permanently close the activation");
     MonitorRouteGuard fresh = new MonitorRouteGuard(7, 300);
     check(
         fresh.verify(new int[] {7}, 301) == MonitorRouteGuard.Decision.ALLOW,
@@ -773,34 +786,6 @@ public final class CoreRegressionTests {
     check(completions.get() == 1, "Concurrent completion emitted more than one result");
   }
 
-  private static void youtubeLifecycleChecks() {
-    YouTubeVideoReference a = YouTubeVideoReference.parse("https://youtu.be/abcdefghijk");
-    YouTubeVideoReference b = YouTubeVideoReference.parse("https://youtu.be/12345678901");
-    YouTubePreviewLifecycle preview = new YouTubePreviewLifecycle();
-    YouTubePreviewLifecycle.Session first = preview.open(a);
-    YouTubePreviewLifecycle.Session replacement = preview.open(b);
-    check(!preview.close(first.id) && preview.active() == replacement, "Stale online failure closed replacement");
-    YouTubePreviewLifecycle.Session repeated = preview.open(b);
-    check(!repeated.id.equals(replacement.id), "Repeated link reused a disposed player identity");
-    check(!preview.close(replacement.id), "Stale repeated-link callback closed current player");
-    check(preview.close(repeated.id) && !preview.close(repeated.id), "Repeated dismissal was not idempotent");
-    preview.open(a);
-    preview.close();
-    check(preview.active() == null, "Backgrounded player survived");
-    YouTubePreviewLifecycle.Session reopened = preview.open(b);
-    check(!preview.close(first.id) && preview.active() == reopened, "Old callback resurrected/closed a reopened player");
-    ReservationQueue queue = new ReservationQueue();
-    ReservationQueue.Entry one = queue.reserve(UUID.randomUUID(), song(), "Ana");
-    ReservationQueue.Entry two = queue.reserve(UUID.randomUUID(), song(), "Ben");
-    if (YouTubeVideoReference.parse("https://example.com/abcdefghijk") != null) throw new AssertionError("Invalid link accepted");
-    preview.close();
-    preview.open(a);
-    check(queue.snapshot().size() == 2 && queue.snapshot().get(0).id.equals(one.id)
-        && queue.snapshot().get(1).id.equals(two.id), "Online lifecycle changed local FIFO identities");
-    queue.remove(one.id);
-    check(queue.peek().id.equals(two.id) && preview.active() != null, "Explicit local mutation affected online state");
-  }
-
   private static void soundFontStorageChecks() {
     long mib = 1024L * 1024;
     long available = 1024 * mib;
@@ -978,6 +963,11 @@ public final class CoreRegressionTests {
     Song second = new Song("code-b", "Code B", "Singer", "002", "b.mid", false);
     Song ambiguous = new Song("code-c", "Code C", "Singer", "001", "c.mid", false);
     List<Song> library = Arrays.asList(first, second);
+    check(first.numericPreviewRank("0") == 1, "Single digit matches a stored prefix");
+    check(first.numericPreviewRank("00") == 1, "Partial code matches a stored prefix");
+    check(first.numericPreviewRank("1") == 2, "Preview matches without leading zeros");
+    check(first.numericPreviewRank("001") == 0, "Exact code ranks before prefixes");
+    check(first.numericPreviewRank("9") == -1, "Unrelated code does not match");
     check(Song.uniqueCodeMatch(library, "001") == first, "Exact code reserves matching song");
     check(Song.uniqueCodeMatch(library, " 002 ") == second, "Whitespace around code is allowed");
     check(Song.uniqueCodeMatch(library, "1") == null, "Leading zeros are not discarded");
@@ -991,6 +981,28 @@ public final class CoreRegressionTests {
     check(Song.uniqueCodeMatch(Arrays.asList(first, first), "001") == first,
         "Repeated stable identity is not ambiguous");
     check(Song.uniqueCodeMatch(Collections.emptyList(), "001") == null, "Empty library");
+    Song zero = new Song("zero", "Long 1234567 Title", "Ártist Name", "000000", "zero.mid", false, true);
+    Song last = new Song("last", "End", "", "999999", "last.mid", false);
+    check(Song.uniqueCodeMatch(Arrays.asList(zero, last), "000000") == zero
+        && Song.uniqueCodeMatch(Arrays.asList(zero, last), "0") == zero
+        && Song.uniqueCodeMatch(Arrays.asList(zero, last), "999999") == last,
+        "Six-digit endpoints and zero alias must resolve");
+    check(Song.uniqueCodeMatch(List.of(zero), "0000000") == null
+        && Song.uniqueCodeMatch(List.of(last), "9999999") == null
+        && zero.numericPreviewRank("0000000") == -1, "Seven digits are not a song code");
+    check(zero.matches("1234567 artist") && !SongCodes.isOverlongNumericQuery("1234567 artist")
+        && SongCodes.isOverlongNumericQuery(" 1234567 "), "Title and artist search must be unrestricted");
+    java.util.BitSet used = new java.util.BitSet();
+    SongCodes.markUsed(used, "012345");
+    check(used.get(12345), "Code allocation must detect leading-zero collisions");
+    try {
+      check(SongCodes.claimGenerated(used, 999999) == 999999, "Last generated code is usable");
+      SongCodes.claimGenerated(used, 999999);
+      throw new AssertionError("Generated code overflowed six digits");
+    } catch (java.io.IOException expected) {
+      check(SongCodes.format(0).equals("000000") && SongCodes.format(999999).equals("999999"),
+          "Generated code formatting stays within six digits");
+    }
   }
 
   private static void catalogMergeChecks() {
@@ -1018,7 +1030,6 @@ public final class CoreRegressionTests {
   }
 
   public static void main(String[] args) throws Exception {
-    youtubeLifecycleChecks();
     microphonePitchChecks();
     checks += SpectrumRegressionTests.run();
     checks += LrcLyricsRegressionTests.run();
@@ -1028,7 +1039,7 @@ public final class CoreRegressionTests {
     karaokeMetaAndCharsetChecks();
     catalogMergeChecks();
     uniqueCodeChecks();
-    scoringChecks(args[0]);
+    scoringChecks(args[2]);
     pitchCorrectionChecks();
     ReservationQueue queue = new ReservationQueue();
     UUID request = UUID.randomUUID();
@@ -1066,7 +1077,7 @@ public final class CoreRegressionTests {
     }
     check(traversal, "Unsafe media path accepted");
     for (String name : new String[] {"morning-light", "sing-together", "starlight-echo"}) {
-      byte[] midi = Files.readAllBytes(Paths.get(args[0], name + ".kar"));
+      byte[] midi = Files.readAllBytes(Paths.get(args[2], name + ".kar"));
       MidiLyrics.Document document = MidiLyrics.decode(midi);
       List<MidiLyrics.Cue> cues = document.cues;
       check(!document.messages.isEmpty(), "Starter MIDI events missing");
@@ -1382,6 +1393,7 @@ public final class CoreRegressionTests {
     checks += BrowserRemoteRegressionTests.run();
     checks += MkmdDecoderRegressionTests.run();
     checks += ph.kanta.reborn.core.legacy.LegacyFileContainerImporterRegressionTests.run();
+    checks += ph.kanta.reborn.core.legacy.LegacyKeyTableRegressionTests.run();
     checks += SpicePitchRegressionTests.run();
     checks += MidiKeyRegressionTests.run();
     checks += LyricWordAnimationRegressionTests.run();
@@ -1389,6 +1401,7 @@ public final class CoreRegressionTests {
     checks += KantaConnectInfoRegressionTests.run();
     checks += ScoreCelebrationRegressionTests.run();
     checks += ScoreRevealRegressionTests.run();
+    checks += MelodyStartPlanRegressionTests.run();
     checks += ScenicCatalogRegressionTests.run();
     System.out.println("KANTA Android core: " + checks + " regression checks passed");
   }

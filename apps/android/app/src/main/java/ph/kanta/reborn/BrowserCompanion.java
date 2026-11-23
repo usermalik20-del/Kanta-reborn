@@ -4,6 +4,7 @@ import android.os.SystemClock;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.BooleanSupplier;
 import org.json.*;
 import ph.kanta.reborn.core.*;
 
@@ -17,7 +18,8 @@ final class BrowserCompanion {
   String status="Browser companion is off",address="",code="",fingerprint="";
   Runnable changed;
   BrowserCompanion(SessionController session){this.session=session;}
-  boolean active(){return server!=null&&server.active();}
+  boolean active(){BrowserRemoteServer host=server;return host!=null&&host.active();}
+  boolean pairingOpen(){BrowserRemoteServer host=server;return host!=null&&host.pairingOpen();}
   void stop(){generation++;BrowserRemoteServer old=server;server=null;if(old!=null)old.close();
     preparing=false;address="";code="";fingerprint="";status="Browser companion is off";notifyChanged();}
   private void notifyChanged(){if(changed!=null)changed.run();}
@@ -38,13 +40,16 @@ final class BrowserCompanion {
           if(artworkBytes>1500000)throw new IOException("Artwork bundle limit");
           artwork.put("/assets/covers/"+name,cover);
         }
-        candidate=new BrowserRemoteServer(address,page,script,style,artwork,request->apply(ticket,request));
+        candidate=new BrowserRemoteServer(address,page,script,style,artwork,(request,authorized)->apply(ticket,request,authorized),SystemClock::elapsedRealtime);
         BrowserRemoteServer ready=candidate;
         session.main.post(()->{
           if(ticket!=generation||!session.foreground){ready.close();return;}
           preparing=false;server=ready;this.address=ready.address();code=ready.code();fingerprint=ready.fingerprint();
           status="HTTPS host ready · up to four paired guests";ready.start();notifyChanged();
-          session.main.postDelayed(()->{if(ticket==generation){stop();status="Host expired. Start again for a new certificate and code.";notifyChanged();}},30*60_000);
+          session.main.postDelayed(()->{if(ticket==generation){
+            code="";status="Pairing closed · connected guests can still use the remote";notifyChanged();
+          }},BrowserRemoteServer.PAIRING_MILLIS);
+          session.main.postDelayed(()->{if(ticket==generation){stop();status="Host expired. Start again for a new certificate and code.";notifyChanged();}},BrowserRemoteServer.HOST_MILLIS);
         });
       }catch(Exception e){if(candidate!=null)candidate.close();session.main.post(()->{if(ticket==generation){stop();status="Could not start HTTPS hosting. Check the selected Wi-Fi address.";notifyChanged();}});}
     });
@@ -57,10 +62,10 @@ final class BrowserCompanion {
       return out.toByteArray();
     }
   }
-  private byte[] apply(long ticket,CompanionProtocol.Request request)throws Exception {
+  private byte[] apply(long ticket,CompanionProtocol.Request request,BooleanSupplier authorized)throws Exception {
     CompletableFuture<byte[]> result=new CompletableFuture<>();
     session.main.post(()->{
-      if(ticket!=generation||!session.foreground||!active()||result.isCancelled()){result.completeExceptionally(new IOException("Revoked"));return;}
+      if(ticket!=generation||!session.foreground||!authorized.getAsBoolean()||result.isCancelled()){result.completeExceptionally(new IOException("Revoked"));return;}
       try{
         JSONObject value;
         if(request.action.equals("stop")){

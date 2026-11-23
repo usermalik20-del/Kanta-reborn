@@ -2,12 +2,8 @@ package ph.kanta.reborn.stage;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,14 +25,9 @@ public final class ScoreOverlay extends FrameLayout {
 
   private static final int ANIM_DURATION_MS = 300;
 
-  private final Paint backgroundPaint;
-  private final Paint borderPaint;
-  private final Paint tierPaint;
-  private final Paint scorePaint;
-  private final Paint labelPaint;
-  private final Paint dividerPaint;
-  private final int cornerRadiusPx;
-  private final int paddingPx;
+  /** Extra time after the celebration where the card stays up before fading out on its own. */
+  private static final long AUTO_DISMISS_BUFFER_MS = 900;
+
   private final int rowGapPx;
 
   private TextView scoreValueView;
@@ -48,6 +39,9 @@ public final class ScoreOverlay extends FrameLayout {
   private boolean isVisible = false;
   private ValueAnimator counter;
   private boolean reducedMotion;
+  private final android.os.Handler autoDismissHandler =
+      new android.os.Handler(android.os.Looper.getMainLooper());
+  private Runnable autoDismiss;
 
   public ScoreOverlay(Context context) {
     this(context, null);
@@ -55,75 +49,41 @@ public final class ScoreOverlay extends FrameLayout {
 
   public ScoreOverlay(Context context, AttributeSet attrs) {
     super(context, attrs);
-    setWillNotDraw(false);
     setClipChildren(false);
     setClipToPadding(false);
 
     float density = context.getResources().getDisplayMetrics().density;
-    cornerRadiusPx = (int) (24 * density);
-    paddingPx = (int) (24 * density);
     rowGapPx = (int) (12 * density);
-
-    // Background
-    backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    backgroundPaint.setColor(0xFF1B1030); // surface
-
-    // Border
-    borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    borderPaint.setStyle(Paint.Style.STROKE);
-    borderPaint.setStrokeWidth(1 * density);
-    borderPaint.setColor(0xFF1A1A1A); // hairline
-
-    // Tier label
-    tierPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    tierPaint.setTextSize(14 * density);
-    tierPaint.setFakeBoldText(true);
-    tierPaint.setTextAlign(Paint.Align.CENTER);
-
-    // Score value
-    scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    scorePaint.setTextSize(48 * density);
-    scorePaint.setFakeBoldText(true);
-    scorePaint.setColor(0xFFFFFFFF);
-    scorePaint.setTextAlign(Paint.Align.CENTER);
-
-    // Labels
-    labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    labelPaint.setTextSize(13 * density);
-    labelPaint.setColor(0xFFCCCCCC);
-    labelPaint.setTextAlign(Paint.Align.LEFT);
-
-    // Divider
-    dividerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    dividerPaint.setStrokeWidth(1 * density);
-    dividerPaint.setColor(0xFF1A1A1A);
 
     reducedMotion = isReducedMotion(context);
     initViews(context);
   }
 
   private void initViews(Context context) {
-    // Main container (we'll draw background ourselves, this is for child views)
+    float density = context.getResources().getDisplayMetrics().density;
+    // No card: the number floats over the stage with a soft shadow, karaoke style.
     LinearLayout container = new LinearLayout(context);
     container.setOrientation(LinearLayout.VERTICAL);
-    container.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
+    container.setPadding((int) (8 * density), (int) (8 * density), (int) (8 * density), (int) (8 * density));
     container.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
     FrameLayout.LayoutParams containerParams = new FrameLayout.LayoutParams(
         FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
     containerParams.gravity = android.view.Gravity.CENTER;
     addView(container, containerParams);
 
-    // Score value
+    // Score value — the hero of the card, big enough to read from the back row.
     scoreValueView = new TextView(context);
-    scoreValueView.setTextSize(48);
+    scoreValueView.setTextSize(96);
     scoreValueView.setTextColor(0xFFFFFFFF);
     scoreValueView.setTypeface(null, android.graphics.Typeface.BOLD);
     scoreValueView.setGravity(android.view.Gravity.CENTER);
+    scoreValueView.setShadowLayer(12 * density, 0f, 6 * density, 0xCC000000);
+    scoreValueView.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null);
     container.addView(scoreValueView);
 
     // Tier label
     tierLabelView = new TextView(context);
-    tierLabelView.setTextSize(14);
+    tierLabelView.setTextSize(18);
     tierLabelView.setTypeface(null, android.graphics.Typeface.BOLD);
     tierLabelView.setGravity(android.view.Gravity.CENTER);
     tierLabelView.setPadding(0, (int)(4 * context.getResources().getDisplayMetrics().density), 0, 0);
@@ -133,7 +93,7 @@ public final class ScoreOverlay extends FrameLayout {
     View divider = new View(context);
     divider.setLayoutParams(new LinearLayout.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT, (int)(1 * context.getResources().getDisplayMetrics().density)));
-    divider.setBackgroundColor(0xFF1A1A1A);
+    divider.setBackgroundColor(0x66FFFFFF);
     container.addView(divider);
 
     // Breakdown container
@@ -153,10 +113,22 @@ public final class ScoreOverlay extends FrameLayout {
     container.addView(closeButton);
   }
 
-  /** Shows the score result: the number counts up, then the band lands under it. */
-  public void show(StagePresenter.ScoreResult result, Runnable onDismiss) {
+  /**
+   * Shows the score result: the number counts up, then the band lands under it.
+   *
+   * <p>Karaoke behaviour: after the celebration runs, the card fades out on its own;
+   * the Dismiss tap remains as an early exit.
+   *
+   * @param celebrationMillis how long the celebration for this score runs
+   */
+  public void show(StagePresenter.ScoreResult result, long celebrationMillis, Runnable onDismiss) {
     this.onDismiss = onDismiss;
     this.isVisible = true;
+    cancelAutoDismiss();
+    autoDismiss = this::dismiss;
+    long minVisible =
+        Math.max(celebrationMillis, (long) ScoreRevealPlan.COUNT_UP_MILLIS + ScoreRevealPlan.LABEL_MILLIS);
+    autoDismissHandler.postDelayed(autoDismiss, minVisible + AUTO_DISMISS_BUFFER_MS);
 
     final int target = result.overallScore;
     final int floor = ScoreResultTier.FLOOR;
@@ -224,6 +196,13 @@ public final class ScoreOverlay extends FrameLayout {
     }
   }
 
+  private void cancelAutoDismiss() {
+    if (autoDismiss != null) {
+      autoDismissHandler.removeCallbacks(autoDismiss);
+      autoDismiss = null;
+    }
+  }
+
   private static boolean isReducedMotion(Context context) {
     float scale;
     try {
@@ -248,16 +227,20 @@ public final class ScoreOverlay extends FrameLayout {
 
     TextView labelView = new TextView(ctx);
     labelView.setText(label);
-    labelView.setTextSize(13);
-    labelView.setTextColor(0xFFCCCCCC);
+    labelView.setTextSize(16);
+    labelView.setTextColor(0xFFE8E8E8);
+    labelView.setShadowLayer(8 * density, 0f, 4 * density, 0xCC000000);
+    labelView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
     labelView.setLayoutParams(new LinearLayout.LayoutParams(
         0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
     TextView valueView = new TextView(ctx);
     valueView.setText(String.format(Locale.getDefault(), "%d", value));
-    valueView.setTextSize(13);
+    valueView.setTextSize(16);
     valueView.setTextColor(color);
     valueView.setTypeface(null, android.graphics.Typeface.BOLD);
+    valueView.setShadowLayer(8 * density, 0f, 4 * density, 0xCC000000);
+    valueView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
     valueView.setGravity(android.view.Gravity.END);
     valueView.setLayoutParams(new LinearLayout.LayoutParams(
         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -283,6 +266,7 @@ public final class ScoreOverlay extends FrameLayout {
   public void dismiss() {
     if (!isVisible) return;
     isVisible = false;
+    cancelAutoDismiss();
     cancelCounter();
 
     animate()
@@ -300,22 +284,4 @@ public final class ScoreOverlay extends FrameLayout {
         .start();
   }
 
-  @Override
-  protected void onDraw(Canvas canvas) {
-    super.onDraw(canvas);
-    // Draw rounded background behind children
-    int w = getWidth();
-    int h = getHeight();
-    int cx = w / 2;
-    int cy = h / 2;
-    int rw = (int) (w * 0.85f);
-    int rh = (int) (h * 0.85f);
-    int left = cx - rw / 2;
-    int top = cy - rh / 2;
-    int right = cx + rw / 2;
-    int bottom = cy + rh / 2;
-
-    canvas.drawRoundRect(left, top, right, bottom, cornerRadiusPx, cornerRadiusPx, backgroundPaint);
-    canvas.drawRoundRect(left, top, right, bottom, cornerRadiusPx, cornerRadiusPx, borderPaint);
-  }
 }

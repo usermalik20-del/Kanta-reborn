@@ -156,11 +156,20 @@ public final class ScoreCelebrationRegressionTests {
     ScoreCelebrationPlan.Plan plan = ScoreCelebrationPlan.forScore(100, 9);
     int starsSeen = 0;
     for (int index = plan.confettiCount; index < plan.particles.size(); index++) {
-      ScoreCelebrationPlan.Particle star = plan.particles.get(index);
-      check(
-          star.originX == 0.5f && star.originY == 0.5f,
-          "Star burst originates at the score card centre");
-      starsSeen++;
+      ScoreCelebrationPlan.Particle particle = plan.particles.get(index);
+      boolean star = index < plan.confettiCount + plan.starCount;
+      boolean firework = index < plan.confettiCount + plan.starCount + plan.fireworksCount * 8;
+      boolean petal = !star && !firework;
+      if (star) starsSeen++;
+      if (star || firework) {
+        check(
+            particle.originX == 0.5f && particle.originY == 0.5f,
+            "Star and firework bursts originate at the score card centre");
+      }
+      if (petal) {
+        check(particle.originY == 0f && particle.velocityY > 0f,
+            "Petals fall from the top edge of the stage");
+      }
     }
     check(starsSeen == plan.starCount, "Star count matches the planned burst");
   }

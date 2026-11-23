@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stage_play">Play</string>
+    <string name="stage_pause">Pause</string>
+    <string name="stage_pause_playback">Pause playback</string>
+    <string name="stage_resume_playback">Resume playback</string>
+    <string name="stage_reserve_result">Reserve %1$s, song %2$s</string>
+    <string name="stage_play_result">Play %1$s now, song %2$s</string>
+    <string name="stage_adjustment_readout">Key %1$s · Tempo %2$.2f×</string>
+</resources>

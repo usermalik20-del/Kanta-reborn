@@ -19,7 +19,6 @@ Installed under `apps/android/app/src/main/res/drawable/`:
 - `kanta_settings_outline.xml`
 - `kanta_library_outline.xml`
 - `kanta_more_outline.xml`
-- `kanta_song_code_outline.xml`
 
 Home uses these resources for the brand/navigation, settings, search and code entry affordances, six-feature grid and quick-play cards. Icon color is supplied by the active KANTA theme rather than baked into the icon state.
 

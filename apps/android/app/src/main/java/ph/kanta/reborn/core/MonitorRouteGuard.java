@@ -33,6 +33,13 @@ public final class MonitorRouteGuard {
     this.readyDeadlineMs = readyDeadlineMs;
   }
 
+  /** Zero-volume startup may briefly use the old route. A verified route never gets grace. */
+  public synchronized Decision verifyMutedStartup(int[] routedIds, long now) {
+    if (!verified && routedIds != null && (routedIds.length != 1 || routedIds[0] != deviceId))
+      return verify(null, now);
+    return verify(routedIds, now);
+  }
+
   public synchronized Decision verify(int[] routedIds, long now) {
     if (closed) return Decision.STOP;
     long elapsed = now - startedAt;

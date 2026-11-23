@@ -29,7 +29,8 @@ class AudioControlContractTests(unittest.TestCase):
     def test_master_volume_remains_connected_to_controller(self):
         activity = (JAVA / 'MainActivity.java').read_text()
         self.assertIn('session.setVolume(', activity)
-        self.assertIn('deck.setVolume(session.volume)', activity)
+        self.assertIn('volume.setProgress(Math.round(session.volume * 100))', activity)
+        self.assertIn('adjustmentSlider(this)', activity)
         controller = (JAVA / 'SessionController.java').read_text()
         self.assertIn('settings.setMasterVolume(', controller)
 

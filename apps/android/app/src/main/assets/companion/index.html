@@ -25,7 +25,7 @@
         <input id="code" type="password" autocomplete="off" maxlength="32" spellcheck="false" autocapitalize="none" required pattern="[a-fA-F0-9]{32}">
         <button type="submit" class="primary">Pair with host</button>
       </form>
-      <p>No media files, microphone or camera are shared. Pairing closes after five minutes; guest sessions last up to ten minutes.</p>
+      <p>No media files, microphone or camera are shared. Pairing closes after five minutes. Once paired, keep this remote open to reconnect after Wi-Fi returns. The session ends three hours after pairing, or sooner if the host stops.</p>
     </section>
 
     <div id="controller" class="remote-layout" hidden>
@@ -60,11 +60,6 @@
             <label for="singer">Singer (optional)</label>
             <input id="singer" maxlength="80" autocomplete="off" placeholder="Singer name">
           </form>
-          <div class="modes" aria-label="Music source">
-            <button type="button" class="selected" aria-pressed="true">KANTA LIBRARY</button>
-            <button type="button" disabled aria-describedby="online-limit">YouTube</button>
-          </div>
-          <p id="online-limit" class="subtle">YouTube playback stays on the host's visible official player. This remote controls the local library.</p>
           <details class="keypad-disclosure">
             <summary>Enter a song code with keypad</summary>
             <div class="keypad" aria-label="Song code keypad">
