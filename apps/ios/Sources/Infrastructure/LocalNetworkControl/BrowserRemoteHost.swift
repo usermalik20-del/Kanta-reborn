@@ -27,7 +27,7 @@ public final class BrowserRemoteHost: ObservableObject {
     private let queue = DispatchQueue(label: "ph.kanta.browser.https")
     private var started = ContinuousClock.now
     private var guests: [String: Guest] = [:]
-    private var failures = 0
+    private var pairingAdmission = BrowserRemotePairingAdmission()
     private var executing: UUID?
     private var assets: [String: Data] = [:]
     private struct Cached { let input: Data; let output: Data }
@@ -88,7 +88,7 @@ public final class BrowserRemoteHost: ObservableObject {
                 parameters.requiredLocalEndpoint = .hostPort(host: NWEndpoint.Host(localAddress), port: 45732)
                 let listener = try NWListener(using: parameters)
                 self.preparation = nil
-                self.listener = listener; self.started = .now; self.failures = 0
+                self.listener = listener; self.started = .now; self.pairingAdmission = BrowserRemotePairingAdmission()
                 self.code = SymmetricKey(size: .bits128).withUnsafeBytes { Data($0).map { String(format: "%02x", $0) }.joined() }
                 self.fingerprint = SHA256.hash(data: material.certificate).map { String(format: "%02x", $0) }.joined()
                 self.address = "https://\(localAddress):45732"
@@ -184,8 +184,13 @@ public final class BrowserRemoteHost: ObservableObject {
         if request.path == "/pair" {
             let expected = Data(code.utf8), supplied = request.body
             let matches = expected.count == supplied.count && zip(expected, supplied).reduce(UInt8(0)) { $0 | ($1.0 ^ $1.1) } == 0
-            guard failures < 3, started.duration(to: .now) < .seconds(300), guests.count < 4, matches else {
-                failures += 1; reply(403, Data(), "text/plain", connection, id); return
+            let admission = pairingAdmission.evaluate(
+                pairingWindowOpen: started.duration(to: .now) < .seconds(300),
+                guestCount: guests.count,
+                codeMatches: matches
+            )
+            guard admission == .accepted else {
+                reply(403, Data(), "text/plain", connection, id); return
             }
             let token = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0).map { String(format: "%02x", $0) }.joined() }
             guests[token] = Guest(); guestCount = guests.count

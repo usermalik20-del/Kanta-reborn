@@ -1377,6 +1377,16 @@ Keypad key-press tones: 12 MP3 assets in `assets/keypad/`, played via `KeypadSou
 <!-- keypad-sounds+interlude: 2026-11-14 -->
 
 
+## iOS Browser Remote pairing admission (2026-11-23)
+
+The iOS HTTPS Browser Remote now separates pairing-window state, four-guest
+capacity and incorrect-code attempts. Only a wrong code during an open window
+with available capacity consumes the three-attempt budget. Capacity rejection
+no longer locks out a later guest after a slot is released. The pure admission
+state machine is covered by Swift Testing; the legacy Bonjour plaintext path
+and its separate release-hardening limitations are unchanged.
+
+---
 ## Private Songbook CSV export hardening (2026-11-16)
 
 The browser reader continues to use the same AES-GCM envelope and key derivation.

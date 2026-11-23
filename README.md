@@ -102,7 +102,7 @@ The stray `|` divider between Key and Tempo columns in the Now Playing header wa
 - **Real-device testing is not complete.** Voice quality, microphone delay, camera use and external displays still need testing on physical devices. Passing automated tests does not guarantee they work on your device.
 - **Remote control is experimental.** Compatibility and setup differ between platforms; use a trusted private network and share pairing codes only with people you trust. Closing the host screen or leaving the app disconnects the session; commands are not replayed after reconnect.
 
-- **Remote control is experimental.** The legacy iOS Bonjour remote is plaintext and intended only for a trusted local network; its new connection cap and pairing timeout limit idle sessions but do not encrypt traffic or rate-limit PIN guesses. Browser Remote and the encrypted Android companion are separate paths, not upgrades to that legacy channel. Share pairing codes only with people you trust.
+- **Remote control has separate trust boundaries.** The legacy iOS Bonjour remote remains plaintext and trusted-LAN-only. Browser Remote uses HTTPS with per-session certificate-fingerprint verification, a five-minute pairing window, a four-guest cap and a three-wrong-code limit; the encrypted Android companion is a separate KCP1 path. None upgrades the legacy Bonjour channel.
 - **YouTube playback is not available.**
 
 ## Privacy

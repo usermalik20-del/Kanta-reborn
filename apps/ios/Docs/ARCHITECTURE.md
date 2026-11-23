@@ -1,6 +1,6 @@
 # Architecture
 
-**Current repository baseline (November 16, 2026):** `usermalik20-del/Kanta-reborn` `main` at `11e6710b1cd0b6417315423b90bb9097fb2af18c`. This iOS subtree is part of the monorepo; older standalone-repository CI and transfer notes below are historical. No signed TestFlight upload or physical-device acceptance is implied. Native Bonjour Remote v2 remains plaintext, while Browser Remote and the KCP1 Android companion are separate protected paths.
+**Current repository baseline (November 23, 2026):** `usermalik20-del/Kanta-reborn` `main` at `e36edae66d6e9e9022e5bc4bc19d8e6441068941`. This iOS subtree is part of the monorepo; older standalone-repository CI and transfer notes below are historical. No signed TestFlight upload or physical-device acceptance is implied. Native Bonjour Remote v2 remains plaintext, while Browser Remote and the KCP1 Android companion are separate protected paths.
 
 
 ## Architectural principles
@@ -221,11 +221,14 @@ they do not encrypt traffic or globally rate-limit six-digit PIN guesses. Keep
 this legacy path on trusted LANs only.
 
 The separate Browser Remote uses HTTPS with an ephemeral certificate whose
-fingerprint is verified during pairing. The separate `EncryptedCompanionClient`
-uses KCP1 AES-GCM for Android hosts. Neither path upgrades the legacy Bonjour
-stream, and PIN authentication alone does not provide secrecy against a
-local-network observer. Transport confidentiality for the legacy path remains
-an explicit release-hardening gate.
+fingerprint is verified during pairing. Its admission state allows at most four
+guests during a five-minute pairing window; only incorrect codes consume the
+three-attempt failure budget. Capacity and closed-window rejections do not
+consume credential attempts. The separate `EncryptedCompanionClient` uses KCP1
+AES-GCM for Android hosts. Neither path upgrades the legacy Bonjour stream, and
+PIN authentication alone does not provide secrecy against a local-network
+observer. Transport confidentiality for the legacy path remains an explicit
+release-hardening gate.
 
 ## Scoring and microphone boundary
 

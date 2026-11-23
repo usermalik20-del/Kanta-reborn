@@ -1,7 +1,29 @@
 # KANTA reliability hardening handover
 
-**Current repository baseline (November 16, 2026):** `usermalik20-del/Kanta-reborn` `main` at `11e6710b1cd0b6417315423b90bb9097fb2af18c`. This iOS subtree is part of the monorepo; standalone-repository CI and merge references below are historical. No signed TestFlight upload or physical-device acceptance is implied. The native Bonjour Remote remains plaintext; Browser Remote and KCP1 Android Companion are separate protected paths.
+**Current repository baseline (November 23, 2026):** `usermalik20-del/Kanta-reborn` `main` at `e36edae66d6e9e9022e5bc4bc19d8e6441068941`. This iOS subtree is part of the monorepo; standalone-repository CI and merge references below are historical. No signed TestFlight upload or physical-device acceptance is implied. The native Bonjour Remote remains plaintext; Browser Remote and KCP1 Android Companion are separate protected paths.
 
+
+## 2026-11-23 — Separate Browser Remote capacity from invalid-code lockout
+
+**Finding:** `BrowserRemoteHost` used one combined guard for the five-minute pairing
+window, four-guest capacity, three-invalid-code budget and credential comparison.
+Every rejected request incremented the failure counter, including a correct code
+rejected only because four guests were already paired. Three capacity rejections
+could therefore exhaust pairing permanently for the current host session even after
+a guest left.
+
+**Fix:** `BrowserRemotePairingAdmission` evaluates window, capacity and code as
+separate decisions. Only an incorrect code while pairing is open and capacity is
+available increments the three-attempt budget. Full capacity and closed-window
+rejections do not consume credential attempts.
+
+**Regression protection:** Swift Testing covers capacity release after a rejected
+attempt, three incorrect codes closing pairing, and a closed pairing window not
+incrementing the failure budget.
+
+**Validation:** pending exact-head iOS Core, simulator and repository checks. No
+physical-LAN test, signed IPA, TestFlight upload or security review is claimed.
+The legacy Bonjour channel remains plaintext and unchanged.
 
 ## 2026-11-16 — Bound legacy Bonjour remote session admission
 

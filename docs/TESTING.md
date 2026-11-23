@@ -948,6 +948,17 @@ Android emulator startup uses an explicit shared AVD directory for avdmanager an
   encryption, failed-PIN rate limiting, physical LAN behavior or independent security
   review.
 
+## iOS Browser Remote pairing admission regression (2026-11-23)
+
+`BrowserRemotePairingAdmissionTests` exercises the pure admission state machine
+used by `BrowserRemoteHost`: four paired guests cause a capacity rejection
+without consuming the three-incorrect-code budget; after a guest leaves, a
+correct code can still pair. Three incorrect codes close pairing, and an
+expired pairing window rejects without incrementing the wrong-code count.
+These unit tests do not claim physical-LAN behavior, certificate trust on a
+real browser, or transport confidentiality for the legacy Bonjour path.
+
+---
 ## iOS walkthrough runner diagnostics and suite timeout
 
 `tools/capture-ios-runtime.py` executes the complete `KantaVisualWalkthroughUITests` suite for the requested simulator and requires every name in its `EXPECTED_TESTS` manifest to have a clean passing result. The current manifest contains 13 cases: the prior eight cases, with the six-destination menu coverage split into six independently budgeted tests instead of one aggregate case.

@@ -706,9 +706,19 @@ Companion commands require explicit pairing, authorization, bounded replay prote
 
 Android companion host discovery considers active non-loopback interfaces, including virtual interfaces exposed by emulators or network adapters. Every candidate still passes the strict RFC1918 IPv4 validator, and host startup confirms the selected address belongs to a local interface before binding to that exact address; never broaden this to a wildcard bind.
 
-## Planned built-in and browser Companion Remote
+## Companion Remote implementation and trust boundaries
 
-The owner-approved [Companion Remote roadmap](COMPANION_REMOTE_ROADMAP.md) defines the supplied remote design as a built-in role in both native apps, with host-address browser access for guests without KANTA. Pairing and host authorization are mandatory; both interfaces project the existing host/source owners and never create a queue. Native iOS hosting, browser transport/trust bootstrap and expanded controls remain planned. The reference is preserved in docs/design-references/companion-remote-reference.jpeg. The owner moved this implementation into PR #51 on October 18. The initial planning-only status is superseded by the candidate described below.
+The Android and iOS apps now expose Browser Remote over HTTPS with a per-session
+certificate fingerprint, short pairing code, bounded guest capacity and
+dispatch-time authorization against the authoritative host/session owner. The
+iOS host limits pairing to four guests during a five-minute window and closes
+pairing after three incorrect codes; capacity and expired-window rejections do
+not consume that credential budget. Android's KCP1 encrypted companion remains
+a separate native path. The legacy iOS Bonjour stream is still plaintext,
+trusted-LAN-only and not upgraded by Browser Remote. Every remote surface
+projects the existing queue and playback owner; it must not create a parallel
+queue or replay commands after reconnect. The visual reference remains at
+`docs/design-references/companion-remote-reference.jpeg`.
 
 ## iOS app navigation, Queue projection, and online-player retirement
 
