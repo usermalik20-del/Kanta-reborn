@@ -5,8 +5,9 @@ the 160-particle ceiling, exact type-count accounting, the intentional
 `-0.1` petal entry position and pink hue range, star-only center origins,
 deterministic seeds and the no-celebration Miss tier. The plan reduces confetti
 only after reserving all non-confetti effects. The Android view's petal paint
-binding is guarded by `tools/tests/test_android_score_celebration.py`, which
-requires the planned hue to be applied before drawing.
+binding is checked by the Android validation workflow through
+`tools/tests/test_android_score_celebration.py`, which requires the planned hue
+to be applied before drawing.
 
 The main push run [45083653756](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/45083653756)
 for `e36edae` stopped at documentation synchronization before Gradle, lint,
