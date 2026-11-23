@@ -798,7 +798,7 @@ The UI upgrade pack's multicolor VectorDrawables are used directly by Home and V
 
 ## Paired ShubBlob import candidate
 
-My Set exposes `Import legacy idx + blob`: choose the paired index, then the blob. The importer resolves per-title 2 KiB block references from title-record byte 8 and validates every bounded MKMD header before creating output. Valid trailing byte-offset layouts are still supported; conflicting, duplicate or invalid addresses fail closed. Physical scan order is never used to attach song names. Supported MIDI/WAV/MP3 records are materialized through `LibraryRepository`. A synthetic integration test verifies names against distinct decrypted payloads in a different physical order with extra unreferenced records. A real pair was independently decoded locally using title addresses, without saving or uploading media. Hosted validation for this mapping revision is pending. Paired-file emulator import, runtime-only key handling, storage/cancellation and physical playback remain open.
+My Set exposes `Import legacy idx + blob`: choose the paired index, then the blob. The importer resolves per-title 2 KiB block references from title-record byte 8 and validates every bounded MKMD header before creating output. Valid trailing byte-offset layouts are still supported; conflicting, duplicate or invalid addresses fail closed. Physical scan order is never used to attach song names. Supported MIDI/WAV/MP3 records are materialized through `LibraryRepository`. A synthetic integration test verifies names against distinct decrypted payloads in a different physical order with extra unreferenced records. A real pair was independently decoded locally using title addresses, without saving or uploading media. Hosted validation for this mapping revision is pending. Paired-file emulator import, bundled-key unlock, storage/cancellation and physical playback remain open.
 
 ## Android OTA self-update (branch feat/android-ota-update)
 
@@ -838,30 +838,30 @@ The Home/Search utility uses an app-owned persistent keyboard with a working num
 <!-- nav removal doc sync -->
 <!-- nav removal doc sync v2 -->
 
-## Android runtime-only legacy import key — local candidate
+## Android bundled legacy key library
 
-In the public build, My Set asks for the key and IV after you select the index
-and blob. It does not save them. Cancel or background the prompt to clear it.
-Only import files you are authorized to use.
+In every build, My Set's "Import legacy idx + blob" starts importing as soon as
+both files are selected: the app carries a small labeled key table
+(`app/src/main/assets/legacy-import-keys.txt`) and tries each real entry in
+order, probing one record before the full import. If no bundled entry unlocks
+the pair, a masked prompt asks for the key and IV supplied for those files;
+that entry is never saved. Cancel or background the prompt to clear it. Only
+import files you are authorized to use.
 
-For personal use, **KANTA Private** starts importing as soon as you select both
-files. On a local host with the pinned Android toolchain, run from `apps/android`:
+Owner decision (2026-11-24): the distributed shubidx/shubblob library is in
+public circulation and KANTA is the player for it, so the key material ships
+with the app; the container's AES layer is obfuscation, not a gate. Future
+container versions get a table entry — a labeled block with a 64-hex-digit key
+and 32-hex-digit IV, or a replacement of a `key=PLACEHOLDER` slot (limits:
+64 KiB, 32 entries, pinned by `LegacyKeyTableRegressionTests`).
 
-```sh
-./gradlew --no-daemon --no-build-cache \
-  -PkantaPrivateLegacyAssets="$HOME/.kanta-private-legacy" :app:assemblePrivateLegacy
-```
-
-The directory must be outside the checkout and contain only `legacy-import-key.bin`
-(32 raw key bytes followed by 16 raw IV bytes). The APK is under
-`app/build/outputs/apk/privateLegacy/`. It installs alongside public KANTA with a
-separate library. The launcher label is the standard `app_name` string, overridden
-to “KANTA Private” by the variant resource source set
-(`app/src/privateLegacy/res`), so the manifest reference stays statically visible
-to lint. **Do not share the APK or asset: the key can be extracted from both.**
-The private variant is not built in CI and does not use the public updater.
-Android packaging, picker execution, library installation and playback still need validation.
-See [runtime ownership details](../../docs/ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
+The **KANTA Private** build type (`:app:assemblePrivateLegacy`; separate
+application ID and launcher label via `app/src/privateLegacy/res`, no public
+updater) no longer requires an external key directory. The local-only
+`kantaPrivateLegacyAssets` property can still shadow the table with a
+48-byte `legacy-import-key.bin` in a directory outside the checkout, and CI
+still refuses it.
+See [ownership details](../../docs/ARCHITECTURE.md#android-bundled-legacy-key-library).
 
 ## Local B1/B2/D5/D8 work (not the published build)
 

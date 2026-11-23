@@ -1482,7 +1482,7 @@ with the fix. The OSUOSL TLS regression checks the exact public root fingerprint
 exact hostname scope, and continued cleartext denial. OpenSSL also validated the
 live mirror's chain and hostname using only that root. Retest both downloads on
 Android 12; the host checks do not prove device download or playback acceptance.
-See [legacy key ownership and privacy limitations](ARCHITECTURE.md#android-runtime-only-legacy-import-key--local-candidate).
+See [legacy key ownership and privacy limitations](ARCHITECTURE.md#android-bundled-legacy-key-library).
 
 
 Android party-pad asset checks verify eight distinct short mono 22.05 kHz / 16-bit WAVs, peak range and the built-in asset-loading path (tools/tests/test_party_assets.py). Physical listening, device decoding and SoundPool playback remain separate acceptance.
