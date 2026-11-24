@@ -16,6 +16,10 @@ In compact landscape row heights the Delete key now shows the ⌫ glyph instead 
 
 ## Android CI AAPT2 portability fix (2026-11-24)
 
+## Emulator acceptance: Stage Controls bounds polled after layout (2026-11-25)
+
+The below-stage bounds assertion ran synchronously right after opening the panel, before the layout pass that follows `setVisibility(VISIBLE)`, so it read stale geometry and failed. The check is now polled via `await` (`stageControlsBelowStage`, 50 ms / 15 s) between the open and the content/collapse verification; all assertions are unchanged.
+
 ## Emulator acceptance: Stage Controls below-stage geometry (2026-11-24)
 
 The shipped portrait layout places the Stage Controls panel as a sibling below the Stage pane (`main.addView(embeddedControls)`), never layered over the Stage surface and never inside the keyboard scroll. The emulator walk's `checkStagePartyPads` now verifies that geometry (panel top at or below the Stage bottom) instead of the pre-v34 overlay expectation (FrameLayout parent inside Stage bounds), which the current product shape deliberately does not use. The pad/count/translucency assertions are unchanged.

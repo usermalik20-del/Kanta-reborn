@@ -537,7 +537,13 @@ public final class RuntimeChecks extends Instrumentation {
       });
       await(() -> visibleOnScreen("kanta.group.back"), "Voice & Scoring did not return to Menu");
       runOnMainSync(() -> activity.getWindow().getDecorView().findViewWithTag("kanta.nav.Home").performClick());
-      runOnMainSync(() -> checkStagePartyPads(activity.getWindow().getDecorView(), "kanta.stage.controls"));
+      runOnMainSync(() -> openStageControlsForCheck(activity.getWindow().getDecorView(), "kanta.stage.controls"));
+      await(this::stageControlsBelowStage, "Embedded Stage Controls must sit below the Stage, never above it");
+      runOnMainSync(() -> {
+        View decor = activity.getWindow().getDecorView();
+        verifyStageControlsContent(decor, "kanta.stage.controls");
+        collapseStageControls(decor, "kanta.stage.controls");
+      });
       runOnMainSync(() -> {
         View open = activity.getWindow().getDecorView().findViewWithTag("kanta.stage.fullscreen");
         check(open != null && open.performClick(), "Stage fullscreen button did not open");
@@ -2086,24 +2092,22 @@ public final class RuntimeChecks extends Instrumentation {
   }
 
   /** The inline panel shows every pad and each remaining control without a second surface. */
-  private void checkStagePartyPads(View decor, String controlsTag) {
+  private void openStageControlsForCheck(View decor, String controlsTag) {
     View anchor = decor.findViewWithTag(controlsTag);
     checkStageTextButton(anchor, R.string.stage_controls);
     check(anchor.performClick(), "Stage Controls did not open");
     View panel = decor.findViewWithTag(controlsTag + ".panel");
     check(panel != null && panel.getVisibility() == View.VISIBLE, "Inline Stage Controls panel missing");
+  }
+
+  private void verifyStageControlsContent(View decor, String controlsTag) {
+    View panel = decor.findViewWithTag(controlsTag + ".panel");
     if ("kanta.stage.controls".equals(controlsTag)) {
-      // The portrait panel is a sibling below the Stage pane (never layered over the
-      // Stage surface and never inside the keyboard scroll), so verify that geometry.
+      // The portrait panel must not cover the Stage surface (no layout pass needed).
       View stage = decor.findViewWithTag("kanta.stage.primary");
       check(!(panel.getParent() instanceof android.widget.FrameLayout)
               || panel.getParent() != stage,
           "Embedded Stage Controls must not cover the Stage surface");
-      android.graphics.Rect panelBounds = new android.graphics.Rect();
-      android.graphics.Rect stageBounds = new android.graphics.Rect();
-      check(panel.getGlobalVisibleRect(panelBounds) && stage.getGlobalVisibleRect(stageBounds)
-              && panelBounds.top >= stageBounds.bottom,
-          "Embedded Stage Controls must sit below the Stage, never above it");
     }
     String prefix = controlsTag + ".";
     for (int slot = 0; slot < 8; slot++) {
@@ -2118,8 +2122,36 @@ public final class RuntimeChecks extends Instrumentation {
         (android.graphics.drawable.GradientDrawable) panel.getBackground();
     check(background != null && android.graphics.Color.alpha(background.getColor().getDefaultColor()) < 255,
         "Stage Controls panel is not translucent");
+  }
+
+  private void collapseStageControls(View decor, String controlsTag) {
+    View anchor = decor.findViewWithTag(controlsTag);
+    View panel = decor.findViewWithTag(controlsTag + ".panel");
     check(anchor.performClick(), "Stage Controls did not collapse");
     check(panel.getVisibility() != View.VISIBLE, "Stage Controls panel stayed open");
+  }
+
+  /**
+   * Pollable geometry: the portrait panel is a sibling below the Stage pane (never layered over
+   * the Stage surface and never inside the keyboard scroll). Polled via await because the
+   * bounds are only valid after the layout pass that follows opening the panel.
+   */
+  private boolean stageControlsBelowStage() {
+    View decor = activity.getWindow().getDecorView();
+    View panel = decor.findViewWithTag("kanta.stage.controls.panel");
+    View stage = decor.findViewWithTag("kanta.stage.primary");
+    if (panel == null || stage == null || panel.getVisibility() != View.VISIBLE) return false;
+    android.graphics.Rect panelBounds = new android.graphics.Rect();
+    android.graphics.Rect stageBounds = new android.graphics.Rect();
+    return panel.getGlobalVisibleRect(panelBounds)
+        && stage.getGlobalVisibleRect(stageBounds)
+        && panelBounds.top >= stageBounds.bottom;
+  }
+
+  private void checkStagePartyPads(View decor, String controlsTag) {
+    openStageControlsForCheck(decor, controlsTag);
+    verifyStageControlsContent(decor, controlsTag);
+    collapseStageControls(decor, controlsTag);
   }
 
   private void checkPartyPadsPanel() {

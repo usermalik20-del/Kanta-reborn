@@ -1,3 +1,7 @@
+## Emulator acceptance: Stage Controls bounds check polled after layout (2026-11-25)
+
+Seventh emulator runtime acceptance failure: the below-stage bounds assertion executed synchronously inside the same main-thread runnable that opened the panel, i.e. before the layout pass that `setVisibility(VISIBLE)` schedules, so `getGlobalVisibleRect` returned stale geometry. The assertion is unchanged but is now polled with `await` (`stageControlsBelowStage`, 50 ms / 15 s) between open and collapse; `checkStagePartyPads` was split into open / verify-content / collapse helpers so the instrumentation thread can interpose the poll. The fullscreen-panel path is unchanged.
+
 ## Emulator acceptance: Stage Controls geometry aligned with shipped layout (2026-11-24)
 
 Sixth emulator runtime acceptance failure: `checkStagePartyPads` still encoded the pre-v34 expectation that the embedded Stage Controls panel is a FrameLayout child inside the Stage bounds. Both shipped lines (private and public) place the panel as a sibling below the Stage pane (`main.addView(embeddedControls)`) — enforced by the host test `test_stage_controls_sit_below_stage_never_on_it_or_in_keyboard` — so the emulator check was stale, not the app. The check now asserts the shipped geometry (panel below the Stage, never covering it) while keeping the pad exposure, labeled-control, and translucency assertions. App layout unchanged.
