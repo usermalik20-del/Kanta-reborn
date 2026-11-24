@@ -148,6 +148,19 @@ public final class InlineKeyboard extends LinearLayout {
     for (LinearLayout row : rows) {
       row.getLayoutParams().height = dp(compact ? COMPACT_ROW_HEIGHT_DP : ROW_HEIGHT_DP);
     }
+    Button delete = (Button) findViewWithTag("kanta.keyboard.delete");
+    if (delete != null) {
+      if (compact) {
+        // The compact row is too short for the DEL glyph to stay legible; the icon carries
+        // the meaning visually while the content description keeps the spoken label.
+        delete.setText("");
+        delete.setForeground(getContext().getDrawable(R.drawable.kanta_menu_back));
+        delete.setForegroundGravity(Gravity.CENTER);
+      } else {
+        delete.setText(getContext().getString(R.string.keyboard_delete_short));
+        delete.setForeground(null);
+      }
+    }
     stretched = false;
     requestLayout();
   }
