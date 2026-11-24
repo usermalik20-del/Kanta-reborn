@@ -16,6 +16,10 @@ In compact landscape row heights the Delete key now shows the ⌫ glyph instead 
 
 ## Android CI AAPT2 portability fix (2026-11-24)
 
+## Emulator acceptance: fullscreen transport counts action buttons (2026-11-25)
+
+The shipped fullscreen transport row also holds the artist branding (a `TextView` at the bottom-right), so the runtime check now counts only `Button`-typed transport actions (restart, play/pause, next) rather than asserting a fixed total child count.
+
 ## Emulator acceptance: fullscreen has no Stage Controls panel (2026-11-25)
 
 The shipped fullscreen Stage is deliberately free of the controls panel (`StageDialog` clears it and `fullscreenControls` stays null). The runtime check now asserts `kanta.fullscreen.controls` is absent, then verifies the fullscreen transport and close buttons.

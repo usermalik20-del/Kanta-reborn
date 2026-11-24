@@ -1559,6 +1559,10 @@ The Vercel production deploy and domain-attachment jobs are restricted to `refs/
 
 Repository-level security controls are separate from this workflow boundary. On 2026-11-09 GitHub reported `main` as unprotected, and no CODEOWNERS file or CodeQL workflow was present in the repository tree. Dependabot and secret-scanning settings were not verified by this audit. Enabling branch protection or configuring repository security settings requires repository-admin action.
 
+## Emulator acceptance: fullscreen transport counts action buttons (2026-11-25)
+
+The shipped fullscreen transport row also holds the artist branding (a `TextView` at the bottom-right), so the runtime check now counts only `Button`-typed transport actions (restart, play/pause, next) rather than asserting a fixed total child count.
+
 ## Emulator acceptance: fullscreen has no Stage Controls panel (2026-11-25)
 
 The shipped fullscreen Stage is deliberately free of the controls panel (`StageDialog` clears it and `fullscreenControls` stays null). The runtime check now asserts `kanta.fullscreen.controls` is absent, then verifies the fullscreen transport and close buttons.

@@ -1447,6 +1447,10 @@ The redesign is implemented as modular JS files loaded by all pages:
 ### Search-results dock overlaps Stage (2026-11-24)
 - The search-results panel (`kanta.stage.search-results`) is docked as a persistent overlay on the Stage, so it intentionally overlaps rather than sits below it. `RuntimeChecks.assertPersistentStage` therefore exempts this panel from the below-the-Stage geometry invariant.
 
+## Emulator acceptance: fullscreen transport counts action buttons (2026-11-25)
+
+The fullscreen transport check counts `Button`-typed children (restart, play/pause, next) instead of a fixed child count, since the shipped transport row also carries the artist branding `TextView`.
+
 ## Emulator acceptance: fullscreen has no Stage Controls panel (2026-11-25)
 
 The fullscreen runtime check no longer expects a `kanta.fullscreen.controls` anchor button; it asserts the fullscreen dialog contains no Stage Controls panel (matching the shipped `fullscreenControls = null` design) and verifies the fullscreen transport and close buttons instead.

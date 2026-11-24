@@ -568,7 +568,13 @@ public final class RuntimeChecks extends Instrumentation {
         checkStageTextButton(decor.findViewWithTag("kanta.fullscreen.next"), R.string.stage_next);
         checkStageTextButton(decor.findViewWithTag("kanta.fullscreen.close"), R.string.stage_controls_close);
         ViewGroup transport = (ViewGroup) decor.findViewWithTag("kanta.fullscreen.play-pause").getParent();
-        check(transport.getChildCount() == 3, "Fullscreen has redundant transport actions");
+        int transportActions = 0;
+        for (int i = 0; i < transport.getChildCount(); i++) {
+          if (transport.getChildAt(i) instanceof Button) {
+            transportActions++;
+          }
+        }
+        check(transportActions == 3, "Fullscreen has redundant transport actions");
         check(decor.findViewWithTag("kanta.fullscreen.time") instanceof TextView
                 && decor.findViewWithTag("kanta.fullscreen.progress") == null,
             "Fullscreen should show elapsed time without a progress bar");
