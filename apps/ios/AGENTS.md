@@ -32,6 +32,7 @@ Read `Docs/ARCHITECTURE.md` before changing system boundaries. Update it in the 
 - Scoring defaults OFF. Microphone analysis stays in memory on device: no recording/upload. Ambiguous melody targets remain playable and unscored.
 - Folder bookmarks and symlinks stay bounded to the user-selected root. Reject unsafe paths and unsupported indexed-container variants rather than guessing offsets.
 - Source media/SF2 remains byte-preserved. No transcoding, resizing, whole-container import, or bundled user libraries. Follow `Docs/COMMERCIAL_DISTRIBUTION.md` and provenance guards.
+- Legacy import keys: the Android build bundles a labeled legacy key table (AES-256 key/IV entries plus placeholder slots) in its app assets, and the on-device importer probes each real entry; the container encryption is obfuscation, not a gate. Manual key/IV entry is runtime-only for one import and must never be persisted. The iOS build must not bundle key material.
 - Large SF2 preparation must preserve control responsiveness, active playback, and selected preference; reuse a hot bank and retain bounded fallback behavior. Do not claim all 1 GB banks fit device memory.
 - Runtime priorities: audio, controls/queue, lyrics, scoring, stage visuals. Reduce disposable visual workload first.
 - Bundle `com.gelo.karaoke`, iCloud container `iCloud.com.gelo.karaoke`, deployment target iOS/iPadOS 17 remain stable. GitHub transfer/rebranding does not authorize changing Apple identities.

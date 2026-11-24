@@ -55,6 +55,10 @@ KANTA reads music from folders you choose through Apple's Files app. To remember
 
 If you export a Songbook CSV or a saved setlist, it contains song information rather than audio files. You decide where to send it.
 
+## Legacy library import and key material
+
+Legacy song libraries import as an index plus container file pair, and decryption happens only on the device. KANTA Android bundles a labeled legacy key table for the distributed song library and unlocks it automatically at import. The key material ships with the app, so the container's encryption is not an access gate; the library files themselves are the asset that is shared. KANTA iOS does not bundle key material. KANTA never transmits key material. If you import a legacy library the app cannot unlock, KANTA can ask for a key/IV hex pair; that pair is used for that one import only, is never saved, and is never transmitted.
+
 ## Microphone, scores and voice search
 
 Optional scoring and live vocal effects process microphone sound on the device. KANTA does not store recordings of singing or upload that audio to a KANTA server. Vocal monitoring starts off and is intended for compatible wired/USB or Bluetooth headset audio equipment.
