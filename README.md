@@ -221,3 +221,6 @@ core reader script. Decorative effects must not reveal the reader before decrypt
 succeeds or replace the core page-navigation state. The existing CSS flip-sheet
 animation is driven by the core page state; decorative JavaScript only owns effects.
 <!-- CI runtime acceptance: companion search uses imported fixture display title. -->
+## Android emulator SQLite compatibility (2026-11-25)
+
+The Android runtime SQLite FTS4 implementation rejects the optional `content_rowid` parameter. The catalog now uses the default FTS4 content rowid, which is already aliased by the `songs.song_id INTEGER PRIMARY KEY`, and bumps the catalog schema version so existing databases recreate safely.

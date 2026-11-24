@@ -1735,3 +1735,6 @@ does not attach unlock/lock/page/keyboard handlers or mutate song-list HTML, tha
 core script owns those controls, that the flip-sheet remains visible to the core CSS
 animation, and that `songbook.html` loads the core before the decorative FX script.
 <!-- CI runtime acceptance: companion search uses imported fixture display title. -->
+## Android emulator SQLite compatibility (2026-11-25)
+
+The Android runtime SQLite FTS4 implementation rejects the optional `content_rowid` parameter. The catalog now uses the default FTS4 content rowid, which is already aliased by the `songs.song_id INTEGER PRIMARY KEY`, and bumps the catalog schema version so existing databases recreate safely.

@@ -39,7 +39,7 @@ public final class SqliteSongCatalog implements SongCatalog {
 
   private static final String TAG = "SqliteSongCatalog";
   private static final String DB_NAME = "songbook.db";
-  private static final int DB_VERSION = 1;
+  private static final int DB_VERSION = 2;
 
   // Schema per replica/schema.sql
   private static final String SQL_CREATE_VOLUMES =
@@ -72,7 +72,7 @@ public final class SqliteSongCatalog implements SongCatalog {
   // FTS4 virtual table for full-text search
   private static final String SQL_CREATE_FTS =
       "CREATE VIRTUAL TABLE IF NOT EXISTS song_search USING fts4("
-          + "title, artist, code, content='songs', content_rowid='song_id', tokenize=unicode61"
+          + "title, artist, code, content='songs', tokenize=unicode61"
           + ");";
 
   private static final String SQL_CREATE_INDEX_META =
