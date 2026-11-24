@@ -1481,3 +1481,4 @@ and the second page-flip handler could swap song lists without updating page lab
 The FX script is now decorative-only; the core reader owns unlock/lock, search,
 navigation and keyboard state. The core CSS flip-sheet is visible again and provides
 the page animation. The AES-GCM reader and encrypted file format were not changed.
+<!-- CI runtime acceptance: companion search uses imported fixture display title. -->

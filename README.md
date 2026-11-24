@@ -220,3 +220,4 @@ The browser Songbook keeps unlock/lock, page navigation and keyboard controls in
 core reader script. Decorative effects must not reveal the reader before decryption
 succeeds or replace the core page-navigation state. The existing CSS flip-sheet
 animation is driven by the core page state; decorative JavaScript only owns effects.
+<!-- CI runtime acceptance: companion search uses imported fixture display title. -->

@@ -1734,3 +1734,4 @@ explicit regression tests.
 does not attach unlock/lock/page/keyboard handlers or mutate song-list HTML, that the
 core script owns those controls, that the flip-sheet remains visible to the core CSS
 animation, and that `songbook.html` loads the core before the decorative FX script.
+<!-- CI runtime acceptance: companion search uses imported fixture display title. -->

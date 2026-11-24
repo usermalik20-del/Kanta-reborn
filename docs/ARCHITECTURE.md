@@ -1808,3 +1808,4 @@ click/keyboard handlers or list DOM swaps there can reveal the reader before AES
 decryption succeeds and can desynchronize page contents from page numbers. The core
 script toggles `.physical-book.next` / `.prev`; `songbook.css` owns the corresponding
 flip-sheet animation. `theme.css` must not hide the flip sheet.
+<!-- CI runtime acceptance: companion search uses imported fixture display title. -->

@@ -1964,7 +1964,8 @@ public final class RuntimeChecks extends Instrumentation {
       try (CompanionProtocol.Channel channel = CompanionProtocol.handshake(
           socket.getInputStream(), socket.getOutputStream(), code.get(), false)) {
         await(() -> session.companion.pairing.isEmpty(), "Connected host retained pairing code");
-        CompanionProtocol.Request search = new CompanionProtocol.Request(java.util.UUID.randomUUID(), "search", "Morning", "");
+        CompanionProtocol.Request search = new CompanionProtocol.Request(
+            java.util.UUID.randomUUID(), "search", "Original KAR", "");
         org.json.JSONObject found = companionRequest(channel, search);
         check(found.getJSONArray("songs").length() == 1, "Encrypted host search failed");
         check(!found.toString().contains("fileName"), "Companion exposed private media path");
