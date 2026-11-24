@@ -2158,6 +2158,11 @@ public final class RuntimeChecks extends Instrumentation {
       // attachment and geometry still prove it belongs to the lower utility region.
       if (panel == null || !panel.isAttachedToWindow() || panel.getHeight() <= 0) return false;
       if (!stageVisible) return true;
+      // The search-results dock is positioned as a persistent overlay on the Stage,
+      // so it intentionally overlaps the Stage rather than sitting below it.
+      if ("kanta.stage.search-results".equals(lowerPanelTag)) {
+        return panel.isAttachedToWindow();
+      }
       int[] stageLocation = new int[2];
       int[] panelLocation = new int[2];
       primary.getLocationInWindow(stageLocation);
