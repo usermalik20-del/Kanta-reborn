@@ -1447,6 +1447,10 @@ The redesign is implemented as modular JS files loaded by all pages:
 ### Search-results dock overlaps Stage (2026-11-24)
 - The search-results panel (`kanta.stage.search-results`) is docked as a persistent overlay on the Stage, so it intentionally overlaps rather than sits below it. `RuntimeChecks.assertPersistentStage` therefore exempts this panel from the below-the-Stage geometry invariant.
 
+## Emulator acceptance: fullscreen has no Stage Controls panel (2026-11-25)
+
+The fullscreen runtime check no longer expects a `kanta.fullscreen.controls` anchor button; it asserts the fullscreen dialog contains no Stage Controls panel (matching the shipped `fullscreenControls = null` design) and verifies the fullscreen transport and close buttons instead.
+
 ## Emulator acceptance: Stage Controls pad tag mismatch (2026-11-25)
 
 The pad-visibility check derived the child tags as controlsTag + ".pad.N" (kanta.stage.controls.pad.0), but the app tags pads and controls from the bare stage prefix: kanta.stage.pad.N and kanta.stage.control.X (only the panel carries the .controls segment, kanta.stage.controls.panel). A tag-tree dump from the failing run proved all 8 pads present as Buttons; the onCreate queue shortcut had already verified the same scheme at runtime. The check now derives the child prefix from controlsTag with the .controls suffix removed, for both the embedded and fullscreen panels. No app change.

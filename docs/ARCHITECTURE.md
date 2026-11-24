@@ -1559,6 +1559,10 @@ The Vercel production deploy and domain-attachment jobs are restricted to `refs/
 
 Repository-level security controls are separate from this workflow boundary. On 2026-11-09 GitHub reported `main` as unprotected, and no CODEOWNERS file or CodeQL workflow was present in the repository tree. Dependabot and secret-scanning settings were not verified by this audit. Enabling branch protection or configuring repository security settings requires repository-admin action.
 
+## Emulator acceptance: fullscreen has no Stage Controls panel (2026-11-25)
+
+The shipped fullscreen Stage is deliberately free of the controls panel (`StageDialog` clears it and `fullscreenControls` stays null). The runtime check now asserts `kanta.fullscreen.controls` is absent, then verifies the fullscreen transport and close buttons.
+
 ## Emulator acceptance: Stage Controls pad tag mismatch (2026-11-25)
 
 The pad-visibility check derived the child tags as controlsTag + ".pad.N" (kanta.stage.controls.pad.0), but the app tags pads and controls from the bare stage prefix: kanta.stage.pad.N and kanta.stage.control.X (only the panel carries the .controls segment, kanta.stage.controls.panel). A tag-tree dump from the failing run proved all 8 pads present as Buttons; the onCreate queue shortcut had already verified the same scheme at runtime. The check now derives the child prefix from controlsTag with the .controls suffix removed, for both the embedded and fullscreen panels. No app change.

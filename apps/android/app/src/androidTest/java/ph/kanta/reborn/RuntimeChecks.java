@@ -554,8 +554,13 @@ public final class RuntimeChecks extends Instrumentation {
               && fullscreenDialog.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.stage") != null,
           "Fullscreen StageSurface did not open");
       capture("fullscreen_stage.png");
-      runOnMainSync(() -> checkStagePartyPads(fullscreenDialog.getWindow().getDecorView(),
-          "kanta.fullscreen.controls"));
+      runOnMainSync(() -> {
+        // The shipped fullscreen Stage carries no Stage Controls panel (fullscreenControls is
+        // never built): the fullscreen bar holds transport actions, and key/tempo stay on the
+        // docked Stage's Stage Controls. Assert the panel is absent rather than missing it.
+        check(fullscreenDialog.getWindow().getDecorView().findViewWithTag("kanta.fullscreen.controls") == null,
+            "Fullscreen Stage must not expose a Stage Controls panel");
+      });
       runOnMainSync(() -> {
         View decor = fullscreenDialog.getWindow().getDecorView();
         checkStageTextButton(decor.findViewWithTag("kanta.fullscreen.restart"), R.string.stage_restart);
@@ -2170,12 +2175,6 @@ public final class RuntimeChecks extends Instrumentation {
     return panel.getGlobalVisibleRect(panelBounds)
         && stage.getGlobalVisibleRect(stageBounds)
         && panelBounds.top >= stageBounds.bottom;
-  }
-
-  private void checkStagePartyPads(View decor, String controlsTag) {
-    openStageControlsForCheck(decor, controlsTag);
-    verifyStageControlsContent(decor, controlsTag);
-    collapseStageControls(decor, controlsTag);
   }
 
   private void checkPartyPadsPanel() {
