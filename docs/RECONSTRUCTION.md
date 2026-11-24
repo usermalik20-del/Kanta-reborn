@@ -1,6 +1,6 @@
-## Emulator acceptance: Stage Controls pad diagnostics (2026-11-25)
+## Emulator acceptance: Stage Controls pad tag mismatch (2026-11-25)
 
-Eighth emulator runtime acceptance failure: `Stage Controls did not expose pad 0`. The construction path is statically consistent (pads built once from the `static final` `PartySounds.TITLES` list; tags and view types verified), so the check now logs the panel's full tag tree (tag `KANTA_RUNTIME`) on failure. The next run's artifact will show whether the pads are absent from the tree at that moment, present as a non-`Button` type, or resolved to a different panel instance; the fix follows from that evidence.
+Eighth emulator runtime acceptance failure: "Stage Controls did not expose pad 0". A diagnostic run (f403ddc4) dumped the panel tag tree to logcat (KANTA_RUNTIME): all 8 pads were present as Buttons under kanta.stage.pad.0..7, so the app was correct. Root cause: the check derived child tags as controlsTag + ".pad.N" = kanta.stage.controls.pad.0, but the app tags from the bare stage prefix (kanta.stage.pad.N, kanta.stage.control.X; only the panel carries .controls). The onCreate queue shortcut had already proven the app scheme at runtime (kanta.stage.control.queue). Fix: derive the child prefix from controlsTag with the .controls suffix removed (embedded and fullscreen). No app change; the diagnostic dump stays for future failures.
 
 ## Emulator acceptance: Stage Controls bounds check polled after layout (2026-11-25)
 

@@ -2109,7 +2109,10 @@ public final class RuntimeChecks extends Instrumentation {
               || panel.getParent() != stage,
           "Embedded Stage Controls must not cover the Stage surface");
     }
-    String prefix = controlsTag + ".";
+    // The app tags panel children from the bare prefix (kanta.stage / kanta.fullscreen):
+    // pads are kanta.stage.pad.N and controls kanta.stage.control.X, while the panel itself
+    // is kanta.stage.controls.panel. Derive the child prefix from controlsTag accordingly.
+    String prefix = controlsTag.replaceFirst("\\.controls$", "") + ".";
     for (int slot = 0; slot < 8; slot++) {
       android.view.View pad = panel.findViewWithTag(prefix + "pad." + slot);
       if (!(pad instanceof android.widget.Button)) {
