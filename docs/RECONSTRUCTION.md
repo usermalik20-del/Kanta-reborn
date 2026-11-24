@@ -1,3 +1,19 @@
+## Compact keypad backspace icon — first CI emulator execution (2026-11-24)
+
+The consolidated tree reached a point where the Android validation workflow could run its
+emulator runtime acceptance for the first time on v35+ code (all earlier main runs died at the
+doc-sync gate). The run crashed on `InlineKeyboardChecks`: "Backspace must have a visible
+icon and a spoken label". The private-line `InlineKeyboard` rendered Delete as text-only
+(`icon=0`), while the same-line check requires the compact row to show an icon plus the spoken
+label — a pair that had never been executed (no emulator in the local environment, and the
+private line never went through CI). Fix: `setCompact(true)` now sets the `kanta_menu_back`
+glyph as the Delete key's foreground and clears the DEL text; `setCompact(false)` restores
+the text and clears the foreground. The content description ("Delete one character") is set
+once at construction and is unchanged. The test was not weakened; the app now satisfies its
+accessibility intent. Diagnosis path: the job log only records "Process crashed"; the exact
+assertion comes from `android-logcat.log` inside the run's `android-reconstruction-checks`
+artifact (FATAL EXCEPTION section).
+
 ## Android CI AAPT2 portability fix (2026-11-24)
 
 After the consolidation moved the working v38 tree to `main`, the Android validation run

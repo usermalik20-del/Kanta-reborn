@@ -48,6 +48,10 @@ origin checks, token validation or request-size limits. The regression is part o
   refreshes only on an orientation change, not on ordinary navigation. Physical-device rotation remains a separate acceptance.
 
 ---
+## Compact keypad backspace icon (2026-11-24)
+
+`InlineKeyboard.setCompact` swaps the Delete key to the ⌫ foreground glyph in compact row heights (restoring the DEL text in normal mode); the content description is unchanged, and `InlineKeyboardChecks` verifies the icon plus spoken label in the CI emulator runtime acceptance.
+
 ## Keypad press sounds & standby interlude (2026-11-14)
 
 `KeypadSounds` (SoundPool, 1 stream, `USAGE_ASSISTANCE_SONIFICATION`) plays a tone per keypad key. `SessionController.playKeypadSound()` gates on `!isPlaying()` so feedback never masks karaoke. Twelve MP3 assets live in `assets/keypad/`.

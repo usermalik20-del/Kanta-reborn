@@ -1,3 +1,7 @@
+## Compact keypad backspace icon (2026-11-24)
+
+In compact landscape row heights the Delete key now shows the ⌫ glyph instead of the DEL text (too short to stay legible); normal rows keep DEL. The spoken label ("Delete one character") is unchanged. The runtime acceptance check for this behavior first executed on the CI emulator when the consolidated tree reached main.
+
 ## Android CI AAPT2 portability fix (2026-11-24)
 
 A machine-specific AAPT2 override (`android.aapt2FromMavenOverride=/opt/kanta-local/aapt2`) had been committed in `apps/android/gradle.properties`; the path exists only on one build machine, so GitHub runners failed AAR resource compilation with "Specified AAPT2 executable does not exist". The override is removed: CI uses the AAPT2 that AGP resolves from Maven, and local builds that pin an AAPT2 pass `-Pandroid.aapt2FromMavenOverride=...` on the command line instead of a tracked file.

@@ -313,6 +313,7 @@ preview release from sharing one version.
 ### Ambiguity and consistency fixes
 - `InlineKeyboard`: `CLR`/`RES` became the standard ⌫ (backspace) and `OK`, on both the numeric and
   letter layouts.
+- `InlineKeyboard`: the Delete key renders the ⌫ glyph in compact (landscape) row heights, where the DEL text cannot stay legible; normal rows keep the DEL label. The content description ("Delete one character") is unchanged in both modes (2026-11-24; the runtime acceptance check for this landed with the consolidation and first executed on the CI emulator at that time).
 - Search/keyboard toggles read `Letters` / `Numbers` instead of the cryptic `ABC` / `123`
   (Home and the Search destination). The decorative magnifier no longer advertises itself as an
   unlabelled image; it is described as "Search".
