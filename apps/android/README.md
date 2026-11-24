@@ -48,6 +48,10 @@ origin checks, token validation or request-size limits. The regression is part o
   refreshes only on an orientation change, not on ordinary navigation. Physical-device rotation remains a separate acceptance.
 
 ---
+## Compact landscape Home: no duplicate queue card (2026-11-24)
+
+`HomeScreen` now sets the queue card (tag `kanta.home.reservations`) to `GONE` in landscape from construction, matching what `onMeasure` already enforced afterwards; the CI emulator runtime acceptance verifies it before the first measurement.
+
 ## Compact keypad backspace icon (2026-11-24)
 
 `InlineKeyboard.setCompact` swaps the Delete key to the ⌫ foreground glyph in compact row heights (restoring the DEL text in normal mode); the content description is unchanged, and `InlineKeyboardChecks` verifies the icon plus spoken label in the CI emulator runtime acceptance.

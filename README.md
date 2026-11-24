@@ -1,3 +1,7 @@
+## Compact landscape Home: no duplicate queue card (2026-11-24)
+
+A compact landscape Home now hides the Up next queue card from construction (previously only after the first measurement), so it never duplicates the Stage's Up next ticker in any state, including the first frame.
+
 ## Compact keypad backspace icon (2026-11-24)
 
 In compact landscape row heights the Delete key now shows the ⌫ glyph instead of the DEL text (too short to stay legible); normal rows keep DEL. The spoken label ("Delete one character") is unchanged. The runtime acceptance check for this behavior first executed on the CI emulator when the consolidated tree reached main.

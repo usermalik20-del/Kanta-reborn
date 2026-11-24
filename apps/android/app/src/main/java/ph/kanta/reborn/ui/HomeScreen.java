@@ -189,6 +189,13 @@ public class HomeScreen extends LinearLayout {
     queueParams.setMargins(0, dp(10), 0, dp(10));
     addView(queuePanel, queueParams);
     setReservedSongs(java.util.Collections.emptyList(), 0);
+    // Landscape already shows the Stage's Up next ticker, so the duplicate queue card is
+    // hidden from construction, not only from the first onMeasure onward.
+    if (!lookupDocked) {
+      boolean landscape = context.getResources().getConfiguration().orientation
+          == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+      queuePanel.setVisibility(landscape ? GONE : VISIBLE);
+    }
 
     // Inline keyboard
     keyboard = new InlineKeyboard(context, new InlineKeyboard.Listener() {

@@ -1,3 +1,13 @@
+## Compact landscape Home: queue card hidden from construction (2026-11-24)
+
+Second emulator runtime acceptance failure. `CompactLandscapeChecks.testHome` requires the
+queue card (`kanta.home.reservations`) to be `GONE` on a compact landscape Home **before the
+first measurement** — but `HomeScreen` only applied the landscape `GONE` inside `onMeasure`,
+and the test constructs the screen and checks visibility before laying it out. The app fix:
+the constructor now applies the same rule (`!lookupDocked && landscape => GONE`), so the view
+never shows the duplicate card in any state. The docked lookup mode (which intentionally shows
+the card) is untouched because it sets its own visibility when docking.
+
 ## Compact keypad backspace icon — first CI emulator execution (2026-11-24)
 
 The consolidated tree reached a point where the Android validation workflow could run its
