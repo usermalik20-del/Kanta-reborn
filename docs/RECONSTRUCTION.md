@@ -1,3 +1,7 @@
+## Emulator runtime acceptance: settings volume spec (2026-11-24)
+
+The emulator walk (first full execution of the v35+ line) reached the settings check and found stale test expectations: the music volume slider moved to Voice & Scoring (removed Sound & Mix section), so `hasSettingsWithoutDuplicateControls` no longer requires `kanta.settings.music-volume` on the Settings page; the slider accessibility/persistence check now opens Voice & Scoring, runs the check, and returns to the settings group. The duplicate-control assertions (no key/tempo/voice/intermission/background controls on Settings) are unchanged. This matches the shipped product shape; the test had never executed before (instrumentation was compile-only until CI emulator acceptance started running).
+
 ## Search-results dock overlaps Stage (2026-11-24)
 
 Third emulator runtime acceptance failure. `assertPersistentStage` requires every lower panel to sit below the Stage, but the search-results dock is a persistent overlay on the Stage, so the geometry check failed. The app design is correct (the dock is intentionally layered over the Stage); the test now exempts `kanta.stage.search-results` from the overlap invariant.

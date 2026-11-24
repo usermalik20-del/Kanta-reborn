@@ -432,6 +432,10 @@ public final class RuntimeChecks extends Instrumentation {
       awaitStageSearch("Queue Add songs");
       runOnMainSync(() -> openMenuGroup("settings"));
       await(this::hasSettingsWithoutDuplicateControls, "Key & Tempo belongs on Stage, not in Settings");
+      runOnMainSync(this::openMenuVoiceScoring);
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice") != null,
+          "Voice & Scoring did not open for the music volume check");
       runOnMainSync(() -> {
         View decor = activity.getWindow().getDecorView();
         SeekBar slider = decor.findViewWithTag("kanta.settings.music-volume");
@@ -452,6 +456,10 @@ public final class RuntimeChecks extends Instrumentation {
         session.setVolume(initial);
         session.publish();
       });
+      runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+      await(
+          () -> activity.getWindow().getDecorView().findViewWithTag("kanta.group.settings") != null,
+          "Music volume check did not return to the settings group");
       runOnMainSync(() -> {
         View decor = activity.getWindow().getDecorView();
         decor.findViewWithTag("kanta.nav.Home").performClick();
@@ -1129,7 +1137,7 @@ public final class RuntimeChecks extends Instrumentation {
 
       runOnMainSync(() -> openMenuGroup("settings"));
       check(state(this::hasSettingsWithoutDuplicateControls),
-          "Settings lost music volume or still embeds voice, key or tempo controls");
+          "Settings still embeds voice, key or tempo controls");
       runOnMainSync(this::openMenuVoiceScoring);
       await(this::hasSharedMicVoiceControls, "Menu did not open Voice & Scoring");
       capture("voice_settings.png", "kanta.screen.mic-voice");
@@ -1680,11 +1688,13 @@ public final class RuntimeChecks extends Instrumentation {
   }
 
   private boolean hasSettingsWithoutDuplicateControls() {
+    // Music volume lives on the Voice & Scoring page (moved out of the removed
+    // Sound & Mix section), so Settings is only checked for controls that
+    // belong elsewhere.
     View decor = activity.getWindow().getDecorView();
     return decor.findViewWithTag("kanta.voice.settings") == null
         && decor.findViewWithTag("kanta.settings.intermission") == null
         && decor.findViewWithTag("kanta.group.background") == null
-        && decor.findViewWithTag("kanta.settings.music-volume") instanceof SeekBar
         && decor.findViewWithTag("kanta.screen.mic-voice") == null
         && decor.findViewWithTag("kanta.pitchcorrection.toggle") == null
         && !contains(decor, "Key −") && !contains(decor, "Slower");

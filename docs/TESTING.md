@@ -1447,6 +1447,10 @@ The redesign is implemented as modular JS files loaded by all pages:
 ### Search-results dock overlaps Stage (2026-11-24)
 - The search-results panel (`kanta.stage.search-results`) is docked as a persistent overlay on the Stage, so it intentionally overlaps rather than sits below it. `RuntimeChecks.assertPersistentStage` therefore exempts this panel from the below-the-Stage geometry invariant.
 
+## Emulator runtime acceptance: volume spec (2026-11-24)
+
+The music volume slider `kanta.settings.music-volume` lives on the Voice & Scoring page (advanced options), not the Settings page. `hasSettingsWithoutDuplicateControls` therefore only asserts the absence of duplicate key/tempo/voice/intermission/background controls on Settings; the slider accessibility + persistence check runs on Voice & Scoring.
+
 ## Android bundled legacy key library
 
 `LegacyFileContainerImporterRegressionTests` uses unrelated synthetic key/IV

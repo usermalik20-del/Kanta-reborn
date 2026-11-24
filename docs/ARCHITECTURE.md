@@ -1559,6 +1559,10 @@ The Vercel production deploy and domain-attachment jobs are restricted to `refs/
 
 Repository-level security controls are separate from this workflow boundary. On 2026-11-09 GitHub reported `main` as unprotected, and no CODEOWNERS file or CodeQL workflow was present in the repository tree. Dependabot and secret-scanning settings were not verified by this audit. Enabling branch protection or configuring repository security settings requires repository-admin action.
 
+## Emulator runtime acceptance: settings volume spec (2026-11-24)
+
+The music volume slider `kanta.settings.music-volume` lives on the Voice & Scoring page (advanced options), not the Settings page. `hasSettingsWithoutDuplicateControls` therefore only asserts the absence of duplicate key/tempo/voice/intermission/background controls on Settings; the slider accessibility + persistence check runs on Voice & Scoring.
+
 ## Android bundled legacy key library
 
 Owner decision (2026-11-24): the distributed `shubidx`/`shubblob` container files

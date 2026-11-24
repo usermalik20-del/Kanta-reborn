@@ -848,6 +848,10 @@ The Android app includes a framework-free OTA update subsystem:
 
 ### OTA versioning and signing gate
 
+## Emulator runtime acceptance: settings volume spec (2026-11-24)
+
+The music volume slider `kanta.settings.music-volume` lives on the Voice & Scoring page (advanced options), not the Settings page. `hasSettingsWithoutDuplicateControls` therefore only asserts the absence of duplicate key/tempo/voice/intermission/background controls on Settings; the slider accessibility + persistence check runs on Voice & Scoring.
+
 CI passes `kantaVersionCode` from its monotonic workflow allocation. Release metadata comes from the signed release APK (`aapt`/`apksigner`); publication verifies the pinned prior APK digest and requires the candidate to match the owner-approved signer fingerprint. Release signing uses repository Actions secrets only on trusted main runs; PR builds do not receive the key. CI resolves AAPT2 from Maven via AGP; machine-specific AAPT2 paths must never be committed (2026-11-24: a committed `/opt/kanta-local/aapt2` override broke `:app:processDebugResources` on runners) — local builds pass `-Pandroid.aapt2FromMavenOverride=...` on the command line. This is an intentional signer transition: APKs published before the new key cannot update in place and may need uninstall/reinstall, losing private app data. Physical-device acceptance of the new signer remains unverified; see `../../docs/OTA_UPGRADE_ACCEPTANCE.md`.
 ### Search keyboard
 The Home/Search utility uses an app-owned persistent keyboard with a working number/letter switch and system-IME suppression.
