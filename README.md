@@ -16,6 +16,10 @@ In compact landscape row heights the Delete key now shows the ⌫ glyph instead 
 
 ## Android CI AAPT2 portability fix (2026-11-24)
 
+## Emulator acceptance: Stage Controls pad diagnostics (2026-11-25)
+
+The embedded Stage Controls pad-visibility check is failing in the emulator walk while the construction code is statically consistent (pads built once from a `static final` list, tags verified). The check now dumps the panel's full tag tree to logcat (tag `KANTA_RUNTIME`) on failure so the run artifact shows the exact runtime state.
+
 ## Emulator acceptance: Stage Controls bounds polled after layout (2026-11-25)
 
 The below-stage bounds assertion ran synchronously right after opening the panel, before the layout pass that follows `setVisibility(VISIBLE)`, so it read stale geometry and failed. The check is now polled via `await` (`stageControlsBelowStage`, 50 ms / 15 s) between the open and the content/collapse verification; all assertions are unchanged.

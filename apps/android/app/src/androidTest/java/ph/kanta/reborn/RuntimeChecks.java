@@ -2111,8 +2111,13 @@ public final class RuntimeChecks extends Instrumentation {
     }
     String prefix = controlsTag + ".";
     for (int slot = 0; slot < 8; slot++) {
-      check(panel.findViewWithTag(prefix + "pad." + slot) instanceof android.widget.Button,
-          "Stage Controls did not expose pad " + slot);
+      android.view.View pad = panel.findViewWithTag(prefix + "pad." + slot);
+      if (!(pad instanceof android.widget.Button)) {
+        android.util.Log.e("KANTA_RUNTIME", "pad " + slot + " missing; panel tag=" + panel.getTag()
+            + " vis=" + panel.getVisibility() + " children=" + ((android.view.ViewGroup) panel).getChildCount()
+            + " tree=" + dumpTagTree(panel));
+        check(false, "Stage Controls did not expose pad " + slot);
+      }
     }
     for (String control : new String[]{"mic", "monitor", "scoring", "stop-party"}) {
       check(panel.findViewWithTag(prefix + "control." + control) != null,
@@ -2122,6 +2127,22 @@ public final class RuntimeChecks extends Instrumentation {
         (android.graphics.drawable.GradientDrawable) panel.getBackground();
     check(background != null && android.graphics.Color.alpha(background.getColor().getDefaultColor()) < 255,
         "Stage Controls panel is not translucent");
+  }
+
+  private static String dumpTagTree(android.view.View v) {
+    StringBuilder o = new StringBuilder();
+    dumpInto(v, o, 0);
+    return o.length() == 0 ? "(empty)" : o.toString();
+  }
+
+  private static void dumpInto(android.view.View v, StringBuilder o, int d) {
+    if (o.length() > 1600) return;
+    o.append("\n").append("  ".repeat(d)).append(v.getClass().getSimpleName())
+        .append(" tag=").append(v.getTag()).append(" vis=").append(v.getVisibility());
+    if (v instanceof android.view.ViewGroup) {
+      android.view.ViewGroup g = (android.view.ViewGroup) v;
+      for (int i = 0; i < g.getChildCount(); i++) dumpInto(g.getChildAt(i), o, d + 1);
+    }
   }
 
   private void collapseStageControls(View decor, String controlsTag) {

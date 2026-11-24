@@ -1,3 +1,7 @@
+## Emulator acceptance: Stage Controls pad diagnostics (2026-11-25)
+
+Eighth emulator runtime acceptance failure: `Stage Controls did not expose pad 0`. The construction path is statically consistent (pads built once from the `static final` `PartySounds.TITLES` list; tags and view types verified), so the check now logs the panel's full tag tree (tag `KANTA_RUNTIME`) on failure. The next run's artifact will show whether the pads are absent from the tree at that moment, present as a non-`Button` type, or resolved to a different panel instance; the fix follows from that evidence.
+
 ## Emulator acceptance: Stage Controls bounds check polled after layout (2026-11-25)
 
 Seventh emulator runtime acceptance failure: the below-stage bounds assertion executed synchronously inside the same main-thread runnable that opened the panel, i.e. before the layout pass that `setVisibility(VISIBLE)` schedules, so `getGlobalVisibleRect` returned stale geometry. The assertion is unchanged but is now polled with `await` (`stageControlsBelowStage`, 50 ms / 15 s) between open and collapse; `checkStagePartyPads` was split into open / verify-content / collapse helpers so the instrumentation thread can interpose the poll. The fullscreen-panel path is unchanged.
