@@ -1595,7 +1595,10 @@ background/foreground. The ticker must not obscure active lyric lines or capture
 Local Python/source checks do not establish compilation, emulator or physical-device
 acceptance. The current iSH JVM fails with unsupported `getcpu(2)`; Android platform and
 AAPT2/D8 are missing and ADB lists no device. No APK build, signing or publication is
-implied by this local candidate.
+implied by this local candidate. On CI the reverse applies: the runner resolves AAPT2 from
+Maven (AGP default); a committed machine-specific AAPT2 path (2026-11-24 incident)
+failed `:app:processDebugResources` immediately, so local tool pins belong on the command
+line (`-Pandroid.aapt2FromMavenOverride=...`), never in `gradle.properties`.
 
 Home now has one Letters/Numbers toggle instead of a duplicate code icon. The shared
 keyboard shows DEL for one-character deletion; Home labels its submit key RES. Exact,

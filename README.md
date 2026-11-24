@@ -1,3 +1,7 @@
+## Android CI AAPT2 portability fix (2026-11-24)
+
+A machine-specific AAPT2 override (`android.aapt2FromMavenOverride=/opt/kanta-local/aapt2`) had been committed in `apps/android/gradle.properties`; the path exists only on one build machine, so GitHub runners failed AAR resource compilation with "Specified AAPT2 executable does not exist". The override is removed: CI uses the AAPT2 that AGP resolves from Maven, and local builds that pin an AAPT2 pass `-Pandroid.aapt2FromMavenOverride=...` on the command line instead of a tracked file.
+
 ## Android legacy import progress and file order (2026-11-21)
 
 A full 48,000-record legacy pair import takes minutes on a phone, and the pair

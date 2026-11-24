@@ -1,3 +1,16 @@
+## Android CI AAPT2 portability fix (2026-11-24)
+
+After the consolidation moved the working v38 tree to `main`, the Android validation run
+failed in `:app:processDebugResources` on the runner with "Specified AAPT2 executable does
+not exist: /opt/kanta-local/aapt2". The cause was a machine-specific workaround committed in
+`apps/android/gradle.properties` (`android.aapt2FromMavenOverride=/opt/kanta-local/aapt2`),
+added for one local build environment; the path does not exist on GitHub runners, and every
+AAR resource transform failed. The override line is removed from the tracked file; CI now
+uses the AAPT2 that AGP resolves from Maven (the historical CI behavior), and local builds
+that need a pinned AAPT2 pass `-Pandroid.aapt2FromMavenOverride=...` on the command line
+(`build-private-apk.sh` already does). Rule going forward: no machine-specific tool paths in
+tracked build files; `local.properties` stays untracked and gitignored as before.
+
 ## Android bundled legacy key library — owner decision (2026-11-24)
 
 Supersedes the runtime-only import key candidate. The owner distributes the
