@@ -1,3 +1,7 @@
+## Legacy key table privacy note (2026-11-24)
+
+Documented the bundled legacy key table: the Android build ships labeled AES-256 key/IV entries (plus placeholder slots for future container versions) so the distributed song library imports without a key dialog. Decryption is on-device; because the key material ships with the app, the container encryption is obfuscation rather than an access gate and the library files are the asset. No key material is transmitted. A manual key/IV pair for other libraries is used for that one import only and never saved.
+
 ## AdSense policy truthfulness pass (2026-11-17)
 
 Corrected public blog claims that contradicted verified product behavior, including the

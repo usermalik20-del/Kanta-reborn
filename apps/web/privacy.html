@@ -1,3 +1,7 @@
+## Legacy key table privacy note (2026-11-24)
+
+Documented the bundled legacy key table: the Android build ships labeled AES-256 key/IV entries (plus placeholder slots for future container versions) so the distributed song library imports without a key dialog. Decryption is on-device; because the key material ships with the app, the container encryption is obfuscation rather than an access gate and the library files are the asset. No key material is transmitted. A manual key/IV pair for other libraries is used for that one import only and never saved.
+
 ## Blog Expansion: 15 Substantial Articles + Fixed 404 (2026-11-08)
 
 Fixed 404 on `/blog/converting-karaoke-files-ffmpeg-tools` — the article was defined in blog.js but the HTML file was never created. Now all 15 blog posts have actual HTML files.
