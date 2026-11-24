@@ -1,3 +1,11 @@
+## Search-results dock overlaps Stage (2026-11-24)
+
+The in-app search-results panel is docked as a persistent overlay on the Stage (rather than below it), which the runtime acceptance now accounts for.
+
+## Compact landscape Home: no duplicate queue card (2026-11-24)
+
+A compact landscape Home now hides the Up next queue card from construction (previously only after the first measurement), so it never duplicates the Stage's Up next ticker in any state, including the first frame.
+
 ## Compact landscape Home: no duplicate queue card (2026-11-24)
 
 A compact landscape Home now hides the Up next queue card from construction (previously only after the first measurement), so it never duplicates the Stage's Up next ticker in any state, including the first frame.

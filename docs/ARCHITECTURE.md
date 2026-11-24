@@ -1773,6 +1773,8 @@ browser's AES-GCM envelope, domain-separated SHA-256 key derivation and decrypt
 routine remain byte-identical to the archived reader reference; parser/export changes
 are covered separately by the website regression suite.
 
+### Search-results dock overlaps Stage (2026-11-24)
+- The search-results panel (`kanta.stage.search-results`) is docked as a persistent overlay on the Stage, so it intentionally overlaps rather than sits below it. `RuntimeChecks.assertPersistentStage` therefore exempts this panel from the below-the-Stage geometry invariant.
 ## Private Songbook interaction ownership (2026-11-16)
 
 The private browser Songbook has one state owner: `songbook.js`. It controls unlock

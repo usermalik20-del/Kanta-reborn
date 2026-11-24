@@ -1,3 +1,7 @@
+## Search-results dock overlaps Stage (2026-11-24)
+
+`MainActivity` docks the search-results panel on the Stage as a persistent overlay; `RuntimeChecks.assertPersistentStage` exempts `kanta.stage.search-results` from the below-the-Stage geometry check.
+
 ## Legacy MKMD decompression safety (2026-11-16)
 
 The paired `.shubidx`/`.shubblob` importer validates each record independently.
@@ -48,6 +52,10 @@ origin checks, token validation or request-size limits. The regression is part o
   refreshes only on an orientation change, not on ordinary navigation. Physical-device rotation remains a separate acceptance.
 
 ---
+## Compact landscape Home: no duplicate queue card (2026-11-24)
+
+`HomeScreen` now sets the queue card (tag `kanta.home.reservations`) to `GONE` in landscape from construction, matching what `onMeasure` already enforced afterwards; the CI emulator runtime acceptance verifies it before the first measurement.
+
 ## Compact landscape Home: no duplicate queue card (2026-11-24)
 
 `HomeScreen` now sets the queue card (tag `kanta.home.reservations`) to `GONE` in landscape from construction, matching what `onMeasure` already enforced afterwards; the CI emulator runtime acceptance verifies it before the first measurement.
