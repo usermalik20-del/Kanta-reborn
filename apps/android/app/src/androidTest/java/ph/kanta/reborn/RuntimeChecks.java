@@ -2093,14 +2093,17 @@ public final class RuntimeChecks extends Instrumentation {
     View panel = decor.findViewWithTag(controlsTag + ".panel");
     check(panel != null && panel.getVisibility() == View.VISIBLE, "Inline Stage Controls panel missing");
     if ("kanta.stage.controls".equals(controlsTag)) {
+      // The portrait panel is a sibling below the Stage pane (never layered over the
+      // Stage surface and never inside the keyboard scroll), so verify that geometry.
       View stage = decor.findViewWithTag("kanta.stage.primary");
-      check(panel.getParent() instanceof android.widget.FrameLayout,
-          "Embedded Stage Controls should be in the Stage foreground, not keyboard scroll");
+      check(!(panel.getParent() instanceof android.widget.FrameLayout)
+              || panel.getParent() != stage,
+          "Embedded Stage Controls must not cover the Stage surface");
       android.graphics.Rect panelBounds = new android.graphics.Rect();
       android.graphics.Rect stageBounds = new android.graphics.Rect();
       check(panel.getGlobalVisibleRect(panelBounds) && stage.getGlobalVisibleRect(stageBounds)
-              && stageBounds.contains(panelBounds),
-          "Embedded Stage Controls overlay escaped the Stage bounds");
+              && panelBounds.top >= stageBounds.bottom,
+          "Embedded Stage Controls must sit below the Stage, never above it");
     }
     String prefix = controlsTag + ".";
     for (int slot = 0; slot < 8; slot++) {

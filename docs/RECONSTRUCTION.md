@@ -1,3 +1,7 @@
+## Emulator acceptance: Stage Controls geometry aligned with shipped layout (2026-11-24)
+
+Sixth emulator runtime acceptance failure: `checkStagePartyPads` still encoded the pre-v34 expectation that the embedded Stage Controls panel is a FrameLayout child inside the Stage bounds. Both shipped lines (private and public) place the panel as a sibling below the Stage pane (`main.addView(embeddedControls)`) — enforced by the host test `test_stage_controls_sit_below_stage_never_on_it_or_in_keyboard` — so the emulator check was stale, not the app. The check now asserts the shipped geometry (panel below the Stage, never covering it) while keeping the pad exposure, labeled-control, and translucency assertions. App layout unchanged.
+
 ## Emulator runtime acceptance: settings volume spec (2026-11-24)
 
 The emulator walk (first full execution of the v35+ line) reached the settings check and found stale test expectations: the music volume slider moved to Voice & Scoring (removed Sound & Mix section), so `hasSettingsWithoutDuplicateControls` no longer requires `kanta.settings.music-volume` on the Settings page; the slider accessibility/persistence check now opens Voice & Scoring, runs the check, and returns to the settings group. The duplicate-control assertions (no key/tempo/voice/intermission/background controls on Settings) are unchanged. This matches the shipped product shape; the test had never executed before (instrumentation was compile-only until CI emulator acceptance started running).
