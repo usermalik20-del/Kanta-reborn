@@ -236,3 +236,6 @@ Runtime screenshot capture no longer treats `UiAutomation.waitForIdle()` timing 
 ## Android FTS4 search compatibility (2026-11-25)
 
 The Android catalog search query now avoids the unsupported SQLite FTS `rank` column. Matching remains bounded by the existing result limit; Android FTS4 does not provide this ranking column on the device implementation.
+## Browser companion fixture title (2026-11-25)
+
+The browser companion runtime check searches the imported fixture by its provider display title (`Original KAR`), matching the Android companion check and the catalog import contract.

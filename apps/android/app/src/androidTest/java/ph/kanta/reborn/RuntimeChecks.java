@@ -2028,7 +2028,8 @@ public final class RuntimeChecks extends Instrumentation {
     }},new java.security.SecureRandom());
     String token=browserHttp(tls,origin.get(),"/pair","",code.get().getBytes(java.nio.charset.StandardCharsets.US_ASCII));
     check(token.matches("[a-f0-9]{64}"),"HTTPS host did not issue a scoped token");
-    CompanionProtocol.Request search=new CompanionProtocol.Request(java.util.UUID.randomUUID(),"search","Morning","");
+    CompanionProtocol.Request search=new CompanionProtocol.Request(
+        java.util.UUID.randomUUID(), "search", "Original KAR", "");
     org.json.JSONObject found=new org.json.JSONObject(browserHttp(tls,origin.get(),"/command",token,search.encode()));
     check(found.getInt("version")==1&&found.getString("source").equals("local"),"Missing browser capability contract");
     String song=found.getJSONArray("songs").getJSONObject(0).getString("id");
