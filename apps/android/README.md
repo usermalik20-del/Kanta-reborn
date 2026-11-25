@@ -1,3 +1,18 @@
+## PiP surface shows only the Stage (2026-11-26)
+
+`onPictureInPictureModeChanged` delegates to `applyPipLayout(boolean)`. In PiP
+mode it closes the inline Stage Controls, hides `appHeader`,
+`stageAdjustments`, `pageScroll` and `navigationTabs`, forces `stagePane`
+visible (even when the current tab hides it) with weight 1, and marks the
+stage presenter visually active so the window keeps drawing. On exit it
+restores the scroll, tabs and adjustments readout, re-weights the split for
+the current orientation (0.50/0.58 portrait, 0.56/0.44 landscape) and defers
+all tab-dependent state to `updatePrimaryStageVisibility()`.
+`onUserLeaveHint` calls `closeFullscreen()` before `enterStagePip()` because
+the fullscreen Stage is a separate dialog window that would remain pinned
+over the PiP surface, and `onConfigurationChanged` re-applies
+`applyPipLayout(true)` after an in-PiP orientation rebuild.
+
 ## Visual editors with live stage preview (2026-11-26)
 
 `ui/MiniStagePreview` is a canvas-drawn, scaled-down stage (frame, scrim,

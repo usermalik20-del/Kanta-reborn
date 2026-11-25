@@ -1,3 +1,16 @@
+## PiP surface showed the menu chrome (2026-11-26)
+
+The first PiP pass only hid the utility scroll and the navigation dock, so the
+floating window still contained the brand header, the key/tempo readout row
+and (in portrait) the stage controls tray — the window read as a list of menu
+labels around a squashed Stage. Two related gaps: entering PiP from a tab that
+hides the Stage (More, Presets, ...) produced an empty window, and leaving the
+app from the fullscreen Stage left the dialog pinned over the PiP window
+because a Dialog is a separate window that PiP cannot host. The fix is the
+`applyPipLayout` Stage-only surface described in apps/android/README.md, the
+tab-forced-visible Stage pane, and `closeFullscreen()` before
+`enterStagePip()` in `onUserLeaveHint`.
+
 ## Feature batch: visual editors, interlude, unified folder import (2026-11-26)
 
 Reconstruction batch delivered on main in four commits (68060b7a, 4733ecc4,

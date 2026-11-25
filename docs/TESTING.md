@@ -1,3 +1,15 @@
+## PiP surface validation (2026-11-26)
+
+No host Python contract asserts on the PiP layout (no test references
+`onPictureInPictureModeChanged`/`enterStagePip`), so the change is covered by
+the standard gate set: compile, zero-lint, 73,285 core regression checks and
+the CI emulator runtime walk, all green at commit bcd39d24. Device check
+points for the floating window: Home mid-song from the embedded Stage (only
+the stage renders), from the More tab (the Stage appears in PiP and the More
+surface returns on resume), and from the fullscreen Stage (the dialog closes
+and the embedded Stage enters PiP). Tapping the PiP window restores the
+pre-leave tab state, including the 50/50 portrait split.
+
 ## Host contracts for the unified folder import and visual editors (2026-11-26)
 
 `tools/tests/test_android_stage_readouts_and_legacy_folder.py` now pins the

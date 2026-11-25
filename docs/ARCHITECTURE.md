@@ -1,3 +1,15 @@
+## PiP layout ownership (2026-11-26)
+
+Picture-in-Picture layout state is owned by `MainActivity.applyPipLayout`,
+with exactly two entry points: `onPictureInPictureModeChanged` (enter/exit)
+and `onConfigurationChanged` (orientation rebuild while in PiP re-applies the
+Stage-only surface). Exit never re-derives tab state itself — it restores the
+chrome views and then calls `updatePrimaryStageVisibility()`, which remains
+the single source of truth for stage-pane visibility, the header, the brand
+tags and the presenter's visual-active flag. While in PiP the presenter is
+forced visually active and `session.foreground` stays true (the activity is
+started, not stopped), so the Stage keeps animating in the floating window.
+
 ## Stage & Visual editor ownership (2026-11-26)
 
 `KantaVisualsScreen` remains a stateless programmatic view: the host

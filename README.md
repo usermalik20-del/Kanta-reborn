@@ -1,3 +1,12 @@
+## PiP shows only the Stage (2026-11-26)
+
+Minimizing during a song now opens the Picture-in-Picture window with just the
+stage screen: the brand header, the key/tempo readout, the utility list and the
+bottom navigation are hidden while the app is in PiP, and the full window
+returns when you tap the PiP window. Leaving the app while the fullscreen
+Stage is open falls back to the embedded Stage first, so no dialog stays
+pinned over the PiP window.
+
 ## Android visual editors, interlude, unified folder import (2026-11-26)
 
 The Stage & Visual destination now previews every choice: a small faithful stage
