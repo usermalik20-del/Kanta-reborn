@@ -2801,7 +2801,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     addMenuRow(support, "backup", getString(R.string.settings_backup_title),
         getString(R.string.menu_backup_summary), R.drawable.kanta_menu_cloud_upload);
     addMenuRow(support, "app-update", "App update", "Check for a newer verified Android build",
-        R.drawable.kanta_submenu_download);
+        R.drawable.kanta_menu_update);
     addMenuRow(support, "legal", getString(R.string.menu_legal), getString(R.string.menu_legal_summary),
         R.drawable.kanta_menu_shield_check);
     addMenuRow(support, "help", getString(R.string.menu_help), getString(R.string.menu_help_summary),
