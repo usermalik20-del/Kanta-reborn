@@ -308,6 +308,62 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   @Override
+  public void onUserLeaveHint() {
+    // Leaving the app while a song is in progress must not stop the stage:
+    // enter Picture-in-Picture so playback continues.
+    if (stagePane != null && session.current != null
+        && (session.isPlaying() || session.position() > 0)) {
+      enterStagePip();
+      return;
+    }
+    super.onUserLeaveHint();
+  }
+
+  private void enterStagePip() {
+    if (isInPictureInPictureMode() || stagePane == null) return;
+    int[] location = new int[2];
+    stagePane.getLocationInWindow(location);
+    android.graphics.Rect source = new android.graphics.Rect(
+        location[0], location[1],
+        location[0] + stagePane.getWidth(), location[1] + stagePane.getHeight());
+    android.app.PictureInPictureParams params =
+        new android.app.PictureInPictureParams.Builder().setSourceRect(source).build();
+    try {
+      enterPictureInPictureMode(params);
+    } catch (IllegalStateException already) {
+      // Mode transition already in flight; nothing to do.
+    }
+  }
+
+  @Override
+  public void onPictureInPictureModeChanged(boolean isInPipMode, android.content.res.Configuration config) {
+    if (stagePane != null && pageScroll != null
+        && stagePane.getParent() instanceof ViewGroup) {
+      LinearLayout.LayoutParams stageParams =
+          (LinearLayout.LayoutParams) stagePane.getLayoutParams();
+      LinearLayout.LayoutParams scrollParams =
+          (LinearLayout.LayoutParams) pageScroll.getLayoutParams();
+      if (isInPipMode) {
+        closeInlineStageControls();
+        pageScroll.setVisibility(View.GONE);
+        if (navigationTabs != null) navigationTabs.setVisibility(View.GONE);
+        stageParams.height = 0;
+        stageParams.weight = 1f;
+        stagePane.setLayoutParams(stageParams);
+      } else {
+        pageScroll.setVisibility(View.VISIBLE);
+        if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
+        stageParams.height = 0;
+        stageParams.weight = 0.50f;
+        stagePane.setLayoutParams(stageParams);
+        scrollParams.weight = 0.50f;
+        pageScroll.setLayoutParams(scrollParams);
+      }
+    }
+    super.onPictureInPictureModeChanged(isInPipMode, config);
+  }
+
+  @Override
   public void onTrimMemory(int level) {
     super.onTrimMemory(level);
     session.diagnostics.record("Android trim-memory level=" + level, null);
@@ -750,7 +806,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // Give the backdrop the larger landscape pane while keeping the keypad reachable.
     LinearLayout.LayoutParams stageParams = landscape
         ? new LinearLayout.LayoutParams(0, -1, .56f)
-        : new LinearLayout.LayoutParams(-1, 0, .42f);
+        : new LinearLayout.LayoutParams(-1, 0, .50f);
     main.addView(stagePane, stageParams);
     if (!landscape) {
       main.addView(embeddedControls, new LinearLayout.LayoutParams(-1, -2));
@@ -4529,11 +4585,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     updateInstallButton.setEnabled(updateReadyApk != null);
     content.addView(check);
     content.addView(updateInstallButton);
-    updateDialog = new AlertDialog.Builder(this)
-        .setTitle("App update")
-        .setView(content)
-        .setNegativeButton("Close", null)
-        .create();
+    content.addView(
+        KantaTheme.secondaryButton(this, "Close", () -> {
+          if (updateDialog != null) updateDialog.dismiss();
+        }),
+        new LinearLayout.LayoutParams(-1, -2));
+    updateDialog = new AlertDialog.Builder(this).setView(content).create();
+    if (updateDialog.getWindow() != null) {
+      updateDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+    }
+    content.setBackground(KantaTheme.backgroundDrawable(
+        KantaTheme.BG_ELEVATED, 20, KantaTheme.BORDER, 1, getResources().getDisplayMetrics().density));
     updateDialog.show();
   }
 
