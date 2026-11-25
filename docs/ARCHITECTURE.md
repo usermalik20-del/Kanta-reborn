@@ -1,3 +1,31 @@
+## Stage & Visual editor ownership (2026-11-26)
+
+`KantaVisualsScreen` remains a stateless programmatic view: the host
+(`MainActivity`) supplies runtime dependencies through `Listener`, including
+the new `onPreviewReady(MiniStagePreview)` hook. The preview
+(`ui/MiniStagePreview`) owns no session state and performs no I/O — it is a
+pure canvas renderer (background bitmap or placeholder, scrim, wordmark, song
+chip, mode content) that repaints on every setter, so an editor can neither
+block the UI thread with document work nor leak a session reference.
+
+The interlude is a session concern, not a view concern: `SessionController`
+exposes the text, size and image (with a loaded-drawable cache) and persists
+through `SettingsStore`; `core/media/InterludeStore` owns the single
+app-private image file (atomic import, decode-validated, 16 MB, PNG/JPEG/
+WebP/GIF). The fullscreen `StageView` and the embedded `stage/LyricStage`
+both read the interlude in the pre-song window, so one choice renders in both
+stage forms.
+
+Folder import is centralized in `SessionController.importKaraokeFolder`:
+`DocumentTreeScanner.scanClassified` performs one bounded DocumentsContract
+walk and returns a `Classification` (songs, videos, photos, legacy index+blob);
+the controller then runs the existing per-kind importers sequentially
+on the folder worker, publishing progress through the usual import listener.
+The previously parallel two-step IDX/BLOB document pickers and the
+activity-side `startLegacyPair` table walk are gone: the bundled key table is
+read by the controller (`legacyTableCandidates`) and the manual-key fallback
+reuses the URIs the scan found.
+
 ## Android v35 Stage controls and Menu (2026-11-23)
 
 The v35 Stage and Menu follow-up lands on main as a public port of the retained

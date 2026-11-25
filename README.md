@@ -1,3 +1,16 @@
+## Android visual editors, interlude, unified folder import (2026-11-26)
+
+The Stage & Visual destination now previews every choice: a small faithful stage
+rendering sits above the Photos, Videos, Lyrics and Interlude tabs, showing the
+current background (photo, video frame or bundled scene) with the content being
+edited. The Interlude — the message and image shown while a reserved song waits
+for its first cue — is fully customizable (message, size, PNG/GIF image) and
+renders in both the embedded and fullscreen Stage. "Add Karaoke Folder" imports
+songs, background photos, background videos and a legacy IDX + BLOB pair from a
+single folder in one pass. The portrait Stage now splits 50/50, the App update
+panel uses the app theme, minimizing during a song enters Picture-in-Picture,
+and the Help page is an illustrated step-by-step guide.
+
 ## Search-results dock overlaps Stage (2026-11-24)
 
 The in-app search-results panel is docked as a persistent overlay on the Stage (rather than below it), which the runtime acceptance now accounts for.

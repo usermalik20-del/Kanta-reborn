@@ -1,3 +1,16 @@
+## Feature batch: visual editors, interlude, unified folder import (2026-11-26)
+
+Reconstruction batch delivered on main in four commits (68060b7a, 4733ecc4,
+7a3cf1d7, 66ce9492): 50/50 portrait Stage split, themed App update panel,
+Picture-in-Picture keep-playing, customizable pre-song interlude (message,
+size, PNG/GIF image) rendered by both stage forms, one-folder import of songs
++ background video + background photo + legacy pair, four-tab Stage & Visual
+editors with a live `MiniStagePreview`, and an illustrated eight-step Help
+guide. The superseded two-step IDX/BLOB picker chain was removed and its
+host-test contracts moved to the unified-scan architecture. Validation:
+73,285 core checks, 299 host tests, 0 lint findings, androidTest compiles;
+emulator acceptance rides the next green CI run.
+
 ## Emulator acceptance: fullscreen transport counts action buttons (2026-11-25)
 
 Tenth emulator runtime acceptance failure. The walk cleared the "no controls panel" assertion and advanced to the transport-bar check, which failed: "Fullscreen has redundant transport actions". Root cause: the check asserted the `kanta.fullscreen.play-pause` button's parent row had exactly 3 children, but the shipped fullscreen transport row also appends the artist branding as a 4th child (a `TextView`, added at the bottom-right per the "Branding sits at the bottom-right corner of the fullscreen dock" comment in `MainActivity`). The assertion's intent is "no redundant transport *actions*", and the branding label is not an action. Fix (test-side): count only `Button`-typed children (restart, play/pause, next) and assert that equals 3, rather than asserting a fixed total child count. App unchanged (73,285 core; androidTest compiles; 299 Python green).

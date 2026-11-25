@@ -1,3 +1,37 @@
+## Visual editors with live stage preview (2026-11-26)
+
+`ui/MiniStagePreview` is a canvas-drawn, scaled-down stage (frame, scrim,
+wordmark, song chip, mode-specific content) that owns no session state and
+performs no I/O; every setter repaints. `KantaVisualsScreen` gained Lyrics and
+Interlude tabs and embeds the preview in all four tabs; the host fills it via
+the new `Listener.onPreviewReady` (stage photo file, imported-video frame via
+`MediaMetadataRetriever`, bundled-scene thumbnail, the current lyric line in
+the selected font, or the interlude text + image).
+
+Interlude state lives in `SessionController` (`interludeText`,
+`interludeTextSizeSp`, `interludeImage`, `setInterludeText`,
+`setInterludeImage`, `clearInterludeImage`, `resetInterlude`), persisted by
+`SettingsStore` and stored by `core/media/InterludeStore` (one app-private
+file, atomic replace, 16 MB cap, PNG/JPEG/WebP/GIF, animated via
+`AnimatedImageDrawable` on API 28+). Both `StageView` (fullscreen) and
+`stage/LyricStage` (embedded) render the interlude in the pre-song window.
+
+`DocumentTreeScanner.scanClassified` classifies a whole folder (songs,
+background videos, background photos, legacy index+blob) in one bounded
+walk (10,000-entry cap) and `SessionController.importKaraokeFolder` runs the
+import steps sequentially on the folder worker. The two-step IDX/BLOB picker
+chain (`LegacyFolderPicker`, `pickLegacyIndex`/`pickLegacyBlob`,
+`startLegacyPair`, `lastLegacyIndex`/`lastLegacyBlob`) is removed; the
+manual-key fallback now uses the pair the folder scan found
+(`pendingLegacyIndexUri`/`pendingLegacyBlobUri`).
+
+The portrait Stage split is 50/50; the App update panel is a themed elevated
+card (no system gray); leaving the app during an in-progress song enters
+Picture-in-Picture (`supportsPictureInPicture`, source-rect hint,
+`setAutoEnterEnabled` on API 31+). `helpPage` renders eight numbered
+icon-tile steps matching the real menu paths. Lint is at 0 findings
+(zero-debt budget); core regression 73,285; 299 host tests.
+
 ## Search-results dock overlaps Stage (2026-11-24)
 
 `MainActivity` docks the search-results panel on the Stage as a persistent overlay; `RuntimeChecks.assertPersistentStage` exempts `kanta.stage.search-results` from the below-the-Stage geometry check.

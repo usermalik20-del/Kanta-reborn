@@ -1,3 +1,25 @@
+## Host contracts for the unified folder import and visual editors (2026-11-26)
+
+`tools/tests/test_android_stage_readouts_and_legacy_folder.py` now pins the
+unified architecture: `importLegacyFolder` delegates to
+`session.importKaraokeFolder(tree)`, `DocumentTreeScanner` carries the bounded
+walk (10,000-entry cap, child-document URIs, directory MIME check) and the
+controller routes the scanned pair through
+`importLegacyPair(found.legacyIndex, found.legacyBlob, legacyTableCandidates())`;
+the manual-key fallback must use `pendingLegacyIndexUri`/
+`pendingLegacyBlobUri`, and `LegacyFolderPicker` must not reappear.
+`tools/tests/test_runtime_import_key.py` moves the "table then manual"
+contract to the controller's `legacyTableCandidates` block plus the
+activity's `offerManualLegacyKey`/`requestLegacyKey` pair, and drops the
+two-step picker assertions. `test_android_menu_finish.py` pins the
+illustrated Help page (`addHelpStep` + `kanta.help.step.` tags) instead of
+the plain section list. `build.gradle`'s framework-free
+`compileCoreRegression` excludes `core/media/InterludeStore.java` (Android
+APIs), matching the existing SqliteSongCatalog / MegContainerImporter /
+companion exclusions. The zero-debt lint budget now covers the API-31-gated
+PiP `setAutoEnterEnabled`, the preallocated `LyricStage` interlude rect and
+the formatted-resource lyric-font label.
+
 ## Android v35 Stage and Menu source contracts (2026-11-23)
 
 `tools/tests/test_android_menu_finish.py` asserts that the inline Stage panel
