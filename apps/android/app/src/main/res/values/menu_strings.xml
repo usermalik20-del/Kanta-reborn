@@ -37,12 +37,12 @@
     <string name="menu_library_import">Import music</string>
     <string name="menu_soundfont_details">KANTA checks SoundFont files before you can use them. Large MIDI or KAR files may take longer to import.</string>
     <string name="menu_issue_report">Issue report</string>
-    <string name="menu_help_singing">Your karaoke night</string>
-    <string name="menu_help_singing_details">1. Add MIDI, KAR, MP3 or WAV songs in Menu → Presets.\n\n2. Search on Stage by title, artist or song code. Choose Reserve to add a song to Up Next, or Play to start it.\n\n3. Use Next for the next reservation and the fullscreen button for larger lyrics.\n\n4. Open Presets for playlists and SoundFonts, KANTA Songbook for PDFs, or Intermission for between-song music.</string>
+    <string name="menu_help_singing">Sing with the Stage</string>
+    <string name="menu_help_singing_details">The countdown leads into the first line. Use the transport for Play, Pause, Restart, and Next — and tap the Stage for fullscreen lyrics.</string>
     <string name="menu_help_voice">Voice &amp; Scoring</string>
     <string name="menu_help_voice_details">In Menu → Voice &amp; Scoring, tap Choose output under Hear My Voice and select your headphones. Allow microphone access when asked. Start quietly. If you hear nothing, check the input meter and both volume controls, or reconnect and select your headphones again. Use wired or USB headphones during songs. Bluetooth headsets may work between songs on Android 12 or later. Speakers cannot play your microphone.</string>
-    <string name="menu_help_remote">Remote controls</string>
-    <string name="menu_help_remote_details">Android Companion pairs with a typed code. Browser Remote shows an HTTPS address QR after you start hosting. The QR does not pair. Share pairing codes only with someone you trust on the same private network. Use music you have permission to use.</string>
+    <string name="menu_help_remote">Sing with others</string>
+    <string name="menu_help_remote_details">Open Menu → Browser Remote and start hosting. Guests open the HTTPS address from the QR on their phones and pair with the code. The QR only shows the address — it does not pair. Share pairing codes only with people you trust on the same private network, and use music you have permission to use.</string>
     <string name="menu_lyric_font">Lyric font</string>
     <string name="menu_songbook_exports">Export your song list</string>
 </resources>

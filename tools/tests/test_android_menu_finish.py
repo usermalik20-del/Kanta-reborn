@@ -11,7 +11,9 @@ class MenuFinishTest(unittest.TestCase):
         for route, method in [('MENU_HELP', 'helpPage'), ('MENU_LEGAL', 'libraryNoticesPage')]:
             self.assertIn(f'openPage({route});', activity)
             self.assertIn(f'case {route}:\n        {method}();', activity)
-        self.assertIn('MenuSurface.section(body, getString(title))', activity)
+        # Help is an illustrated step-by-step guide, not a plain section list.
+        self.assertIn('addHelpStep(1, R.drawable.kanta_submenu_folder', activity)
+        self.assertIn('"kanta.help.step."', activity)
 
     def test_stage_chrome_uses_icon_actions_and_camera_state(self):
         activity = (JAVA / 'MainActivity.java').read_text()

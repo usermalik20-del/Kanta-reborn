@@ -21,16 +21,20 @@ class StageReadoutsAndLegacyFolderTest(unittest.TestCase):
 
     def test_folder_scan_is_bounded_and_routes_through_paired_import(self):
         activity = (JAVA / 'MainActivity.java').read_text()
-        picker = (JAVA / 'LegacyFolderPicker.java').read_text()
+        scanner = (JAVA / 'DocumentTreeScanner.java').read_text()
+        controller = (JAVA / 'SessionController.java').read_text()
         self.assertIn('new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), LEGACY_FOLDER', activity)
         self.assertIn('importLegacyFolder(data.getData());', activity)
         action = activity.split('private void importLegacyFolder(', 1)[1].split('\n  }', 1)[0]
-        self.assertIn('session.io.execute(', action)
-        self.assertIn('startLegacyPair(selected[0], selected[1]);', action)
-        self.assertIn('this::pickLegacyIndex', activity)
-        self.assertEqual(picker.count('resolver.query('), 1)
-        self.assertIn('buildChildDocumentsUriUsingTree(tree,', picker)
-        self.assertIn('MIME_TYPE_DIR.equals', picker)
-        self.assertIn('++count > 10000', picker)
-        self.assertIn('pair[role] != null) return null', picker)
-        self.assertIn('pair[0] != null && pair[1] != null', picker)
+        self.assertIn('session.importKaraokeFolder(tree);', action)
+        # The classifier bounds the walk and the controller routes the pair through the importer.
+        self.assertIn('buildChildDocumentsUriUsingTree(tree,', scanner)
+        self.assertIn('MIME_TYPE_DIR.equals', scanner)
+        self.assertIn('++count > 10000', scanner)
+        self.assertIn('importLegacyPair(found.legacyIndex, found.legacyBlob, legacyTableCandidates());',
+                      controller)
+        # Manual key fallback uses the pair the folder scan found, not a second picker.
+        self.assertIn('session.pendingLegacyIndexUri()', activity)
+        self.assertIn('session.pendingLegacyBlobUri()', activity)
+        self.assertIn('offerManualLegacyKey()', activity)
+        self.assertNotIn('LegacyFolderPicker', activity)

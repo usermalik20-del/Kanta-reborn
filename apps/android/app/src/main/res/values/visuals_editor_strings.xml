@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="visuals_tab_lyrics">Lyrics</string>
+    <string name="visuals_lyrics_intro">The Stage renders your song\'s lyrics in this font. The size fits the screen automatically.</string>
+    <string name="visuals_lyrics_font">Lyric font</string>
+    <string name="visuals_lyrics_font_default">KANTA default</string>
+    <string name="visuals_lyrics_font_value">%1$s · %2$s</string>
+    <string name="visuals_lyrics_change">Change font</string>
+    <string name="visuals_interlude_save">Save message</string>
+    <string name="visuals_interlude_size_default">Default</string>
+    <string name="visuals_interlude_size_value">%1$d sp</string>
+    <string name="visuals_interlude_image_set">Image set</string>
+    <string name="visuals_interlude_image_added">Interlude image added.</string>
+
+    <string name="visuals_interlude_remove_title">Remove interlude image?</string>
+    <string name="visuals_interlude_remove_message">The image is removed from the app. Your message and size are kept.</string>
+    <string name="visuals_interlude_reset">Reset interlude</string>
+    <string name="visuals_preview_photo">Background photo</string>
+    <string name="visuals_preview_video">Background video</string>
+</resources>

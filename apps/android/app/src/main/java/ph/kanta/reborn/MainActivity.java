@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.app.*;
 import android.content.*;
 import android.graphics.Color;
+import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
 import android.net.Uri;
@@ -36,6 +37,7 @@ import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.ui.KantaTheme;
 import ph.kanta.reborn.ui.MenuSurface;
 import ph.kanta.reborn.ui.KantaVisualsScreen;
+import ph.kanta.reborn.ui.MiniStagePreview;
 import ph.kanta.reborn.ui.components.KantaProgressBar;
 
 public final class MainActivity extends androidx.activity.ComponentActivity {
@@ -57,9 +59,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int VIDEO = 15;
   private static final int CAMERA = 16;
   private static final int MICROPHONE = 17;
-  private static final int LEGACY_INDEX = 18;
-  private static final int LEGACY_BLOB = 19;
   private static final int LEGACY_FOLDER = 21;
+  private static final int INTERLUDE_IMAGE = 22;
   private static final int NAVY = KantaTheme.BG_MAIN;
   private static final int PANEL = KantaTheme.SURFACE_ELEVATED;
   private static final int CYAN = KantaTheme.PRIMARY_CYAN;
@@ -94,9 +95,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private final ArrayList<String> menuParents = new ArrayList<>();
   private final Map<String, Integer> pageScrollPositions = new HashMap<>();
   private int pageChangeGeneration;
-  private Uri pendingLegacyIndex;
-  private Uri lastLegacyIndex;
-  private Uri lastLegacyBlob;
   private AlertDialog legacyKeyDialog;
   private int queueLimit = 20;
   private final Handler handler = new Handler(Looper.getMainLooper());
@@ -145,6 +143,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int lyricDialogGeneration;
   private int fontPickerGeneration;
   private int visualsSelectedTab;
+  private MiniStagePreview visualsPreview;
+  private TextView visualsFontLabel;
   private final Map<String, Integer> mediaListPositions = new HashMap<>();
   private final android.util.LruCache<File, android.graphics.Bitmap> visualThumbnails =
       new android.util.LruCache<>(32);
@@ -215,8 +215,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     camera = new CameraStage(this, session);
     if (saved != null) {
       tab = saved.getString("tab", "Home");
-      visualsSelectedTab = saved.getInt("visualsSelectedTab") == KantaVisualsScreen.VIDEOS
-          ? KantaVisualsScreen.VIDEOS : KantaVisualsScreen.BACKGROUND;
+      int restoredTab = saved.getInt("visualsSelectedTab", KantaVisualsScreen.BACKGROUND);
+      visualsSelectedTab = restoredTab == KantaVisualsScreen.VIDEOS || restoredTab == KantaVisualsScreen.LYRICS
+          || restoredTab == KantaVisualsScreen.INTERLUDE ? restoredTab : KantaVisualsScreen.BACKGROUND;
       tab = resolvePageRoute(tab);
       ArrayList<String> parents = saved.getStringArrayList("navigationParents");
       restorePageParents(tab, parents, navigationParents);
@@ -326,8 +327,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     android.graphics.Rect source = new android.graphics.Rect(
         location[0], location[1],
         location[0] + stagePane.getWidth(), location[1] + stagePane.getHeight());
-    android.app.PictureInPictureParams params =
-        new android.app.PictureInPictureParams.Builder().setSourceRectHint(source).build();
+    android.app.PictureInPictureParams.Builder pipBuilder =
+        new android.app.PictureInPictureParams.Builder().setSourceRectHint(source);
+    if (Build.VERSION.SDK_INT >= 31) pipBuilder.setAutoEnterEnabled(true);
+    android.app.PictureInPictureParams params = pipBuilder.build();
     try {
       enterPictureInPictureMode(params);
     } catch (IllegalStateException already) {
@@ -1997,6 +2000,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void addControls(int index, LinearLayout target) {
         addStageVisualControls(index, target);
       }
+      @Override public void onPreviewReady(MiniStagePreview preview) {
+        visualsPreview = preview;
+        refreshVisualsPreview();
+      }
     }, visualsSelectedTab, activeScene, activeVideo == null ? null : activeVideo.getName(),
         session.canChangeStageMedia(), usesMenuSurface());
     screen.setTag("kanta.screen.visuals");
@@ -2004,6 +2011,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void addStageVisualControls(int section, LinearLayout target) {
+    if (section == KantaVisualsScreen.LYRICS) { addLyricsVisualControls(target); return; }
+    if (section == KantaVisualsScreen.INTERLUDE) { addInterludeVisualControls(target); return; }
     boolean video = section == KantaVisualsScreen.VIDEOS;
     int icon = video ? R.drawable.kanta_submenu_video : R.drawable.kanta_submenu_photo;
     Switch shuffle = new Switch(this);
@@ -2082,6 +2091,204 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
   }
 
+  private void addLyricsVisualControls(LinearLayout target) {
+    target.addView(sectionHeader(getString(R.string.visuals_tab_lyrics)));
+    target.addView(text(getString(R.string.visuals_lyrics_intro), 14, KantaTheme.TEXT_SECONDARY));
+    visualsFontLabel = text(getString(R.string.visuals_lyrics_font_value,
+        getString(R.string.visuals_lyrics_font), currentLyricsFontName()), 15, KantaTheme.TEXT_PRIMARY);
+    visualsFontLabel.setTag("kanta.visuals.lyrics.font");
+    visualsFontLabel.setMinHeight(dp(48));
+    target.addView(visualsFontLabel);
+    Button change = actionButton(getString(R.string.visuals_lyrics_change),
+        R.drawable.kanta_submenu_type, this::chooseLyricFont);
+    change.setTag("kanta.visuals.lyrics.font.change");
+    target.addView(change);
+  }
+
+  private String currentLyricsFontName() {
+    String saved = new SettingsStore(this).getLyricFont();
+    if (saved.isEmpty()) return getString(R.string.visuals_lyrics_font_default);
+    try {
+      String segment = android.net.Uri.parse(saved).getLastPathSegment();
+      return segment == null || segment.isEmpty() ? getString(R.string.visuals_lyrics_font_default) : segment;
+    } catch (Exception unavailable) {
+      return getString(R.string.visuals_lyrics_font_default);
+    }
+  }
+
+  private void noteLyricsFontChanged() {
+    if (visualsFontLabel != null) {
+      visualsFontLabel.setText(getString(R.string.visuals_lyrics_font_value,
+          getString(R.string.visuals_lyrics_font), currentLyricsFontName()));
+    }
+    refreshVisualsPreview();
+  }
+
+  private void addInterludeVisualControls(LinearLayout target) {
+    target.addView(sectionHeader(getString(R.string.interlude_heading)));
+    target.addView(text(getString(R.string.interlude_intro), 14, KantaTheme.TEXT_SECONDARY));
+    target.addView(text(getString(R.string.interlude_message), 15, KantaTheme.TEXT_PRIMARY));
+    EditText message = new EditText(this);
+    message.setTag("kanta.visuals.interlude.message");
+    message.setHint(R.string.interlude_message_hint);
+    message.setMinLines(2);
+    message.setSingleLine(false);
+    message.setText(new SettingsStore(this).getInterludeText());
+    message.setTextColor(KantaTheme.TEXT_PRIMARY);
+    message.setHintTextColor(KantaTheme.TEXT_SECONDARY);
+    message.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 13, KantaTheme.BORDER, 1,
+        getResources().getDisplayMetrics().density));
+    message.setPadding(dp(12), dp(10), dp(12), dp(10));
+    target.addView(message, new LinearLayout.LayoutParams(-1, -2));
+    Button save = actionButton(getString(R.string.visuals_interlude_save), R.drawable.kanta_submenu_check,
+        () -> { session.setInterludeText(message.getText().toString()); refreshVisualsPreview(); });
+    save.setTag("kanta.visuals.interlude.save");
+    target.addView(save);
+    target.addView(text(getString(R.string.interlude_size), 15, KantaTheme.TEXT_PRIMARY));
+    TextView sizeLabel = text(interludeSizeLabel(session.interludeTextSizeSp()), 15, KantaTheme.TEXT_PRIMARY);
+    sizeLabel.setTag("kanta.visuals.interlude.size");
+    target.addView(sizeLabel);
+    SeekBar size = new SeekBar(this);
+    size.setTag("kanta.visuals.interlude.size.slider");
+    size.setMax(72);
+    size.setProgress(Math.min(72, session.interludeTextSizeSp()));
+    size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onProgressChanged(SeekBar bar, int value, boolean fromUser) {
+        session.setInterludeTextSize(value);
+        sizeLabel.setText(interludeSizeLabel(value));
+        refreshVisualsPreview();
+      }
+      @Override public void onStartTrackingTouch(SeekBar bar) { }
+      @Override public void onStopTrackingTouch(SeekBar bar) { }
+    });
+    target.addView(size);
+    if (session.interludeImage() != null) {
+      TextView imageSet = text(getString(R.string.visuals_interlude_image_set), 15, KantaTheme.TEXT_PRIMARY);
+      imageSet.setTag("kanta.visuals.interlude.image");
+      imageSet.setMinHeight(dp(48));
+      target.addView(imageSet);
+      Button remove = actionButton(getString(R.string.interlude_remove_image),
+          R.drawable.kanta_submenu_remove, () -> constrainDialog(new AlertDialog.Builder(this)
+              .setTitle(R.string.visuals_interlude_remove_title)
+              .setMessage(R.string.visuals_interlude_remove_message)
+              .setPositiveButton(getString(R.string.interlude_remove_image), (d, w) -> {
+                session.clearInterludeImage();
+                refreshVisualsPreview();
+              })
+              .setNegativeButton("Cancel", null).show()));
+      remove.setTag("kanta.visuals.interlude.image.remove");
+      target.addView(remove);
+    } else {
+      Button add = actionButton(getString(R.string.interlude_image), R.drawable.kanta_submenu_upload,
+          () -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
+              .addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), INTERLUDE_IMAGE));
+      add.setTag("kanta.visuals.interlude.image.add");
+      target.addView(add);
+      target.addView(text(getString(R.string.interlude_image_summary), 14, KantaTheme.TEXT_SECONDARY));
+    }
+    Button reset = actionButton(getString(R.string.visuals_interlude_reset), R.drawable.kanta_submenu_reset,
+        () -> { session.resetInterlude(); refreshVisualsPreview(); });
+    reset.setTag("kanta.visuals.interlude.reset");
+    target.addView(reset);
+  }
+
+  private String interludeSizeLabel(int sp) {
+    return sp <= 0 ? getString(R.string.visuals_interlude_size_default)
+        : getString(R.string.visuals_interlude_size_value, sp);
+  }
+
+  private void refreshVisualsPreview() {
+    MiniStagePreview preview = visualsPreview;
+    if (preview == null) return;
+    Song song = session.currentSong();
+    preview.setChip(song == null ? "" : song.title);
+    int tab = visualsSelectedTab;
+    if (tab == KantaVisualsScreen.INTERLUDE) {
+      preview.setPlaceholder("");
+      preview.setBackground(previewBackgroundBitmap(tab));
+      preview.setInterlude(session.interludeText(), session.interludeImage(),
+          ph.kanta.reborn.font.FontStore.getInstance(this).typeface());
+      return;
+    }
+    if (tab == KantaVisualsScreen.VIDEOS) {
+      preview.setMode(MiniStagePreview.MODE_VIDEO);
+      preview.setPlaceholder(getString(R.string.visuals_preview_video));
+    } else if (tab == KantaVisualsScreen.LYRICS) {
+      preview.setMode(MiniStagePreview.MODE_LYRICS);
+      preview.setPlaceholder("Lyrics");
+    } else {
+      preview.setMode(MiniStagePreview.MODE_PHOTO);
+      preview.setPlaceholder(getString(R.string.visuals_preview_photo));
+    }
+    preview.setBackground(previewBackgroundBitmap(tab));
+    preview.setLyricLines(sampleLyricLine(), "",
+        ph.kanta.reborn.font.FontStore.getInstance(this).typeface(), 1f);
+  }
+
+  private String sampleLyricLine() {
+    Song song = session.currentSong();
+    if (song == null) return "Sing more, together.";
+    int index = MidiLyrics.activeIndex(session.lyrics, session.position());
+    if (index >= 0 && index < session.lyrics.size()) return session.lyrics.get(index).line;
+    if (!session.lyrics.isEmpty()) return session.lyrics.get(0).line;
+    return song.title;
+  }
+
+  private Bitmap previewBackgroundBitmap(int tab) {
+    try {
+      String kind = session.stageKind();
+      if (tab == KantaVisualsScreen.VIDEOS) {
+        if ("scenic".equals(kind) || "video".equals(kind)) {
+          File file = session.stageVideo();
+          if (file != null && file.exists()) {
+            Bitmap frame = decodeVideoFrame(file);
+            if (frame != null) return frame;
+          }
+          String scene = session.scenicName;
+          if (scene != null) {
+            for (BundledBgvCatalog.Clip clip : BundledBgvCatalog.BUILT_IN) {
+              if ((clip.id + ".video").equals(scene)) {
+                return android.graphics.BitmapFactory.decodeResource(getResources(), clip.thumbnail);
+              }
+            }
+          }
+        }
+        return null;
+      }
+      if (tab == KantaVisualsScreen.BACKGROUND && "photo".equals(kind)) {
+        File file = session.stagePhotoFile();
+        if (file != null && file.exists()) return decodeStill(file, 720);
+      }
+      return null;
+    } catch (Exception unavailable) {
+      return null;
+    }
+  }
+
+  private Bitmap decodeStill(File file, int maxSide) {
+    android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+    bounds.inJustDecodeBounds = true;
+    android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+    int sample = 1;
+    while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxSide) sample *= 2;
+    android.graphics.BitmapFactory.Options decode = new android.graphics.BitmapFactory.Options();
+    decode.inSampleSize = sample;
+    return android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), decode);
+  }
+
+  private Bitmap decodeVideoFrame(File file) {
+    android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+    try {
+      retriever.setDataSource(file.getAbsolutePath());
+      return retriever.getFrameAtTime(1000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+    } catch (Exception unavailable) {
+      return null;
+    } finally {
+      try {
+        retriever.release();
+      } catch (IOException ignored) { }
+    }
+  }
   private void chooseStageMedia(boolean video) {
     if (!session.ready || !session.canChangeStageMedia()) return;
     Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -3776,6 +3983,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           if (isFinishing() || isDestroyed()) return;
           Toast.makeText(this, success ? "Lyric font updated."
               : "This font could not be loaded. Using the default font.", Toast.LENGTH_LONG).show();
+          noteLyricsFontChanged();
         })).show();
     constrainDialog(preview);
     if (uri != null) {
@@ -3796,25 +4004,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     session.importKaraokeFolder(tree);
   }
 
-  private void pickLegacyIndex() {
-    pendingLegacyIndex = null;
-    constrainDialog(new AlertDialog.Builder(this)
-        .setTitle("Legacy import — step 1 of 2")
-        .setMessage("Select the IDX file first: it is the smaller of the two files. The larger BLOB file is requested next.")
-        .setPositiveButton("Choose IDX", (dialog, which) -> launchLegacyIndexPicker())
-        .setNegativeButton("Cancel", null)
-        .show());
-  }
 
-  private void launchLegacyIndexPicker() {
-    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
-    startActivityForResult(intent, LEGACY_INDEX);
-  }
 
-  private void pickLegacyBlob() {
-    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream");
-    startActivityForResult(intent, LEGACY_BLOB);
-  }
 
   private EditText legacyKeyInput(String hint, int digits) {
     EditText input = new EditText(this);
@@ -3843,28 +4034,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
    * candidate against one record before the full import. Without a usable table (missing
    * asset, every entry still a placeholder) the user falls back to entering a key manually.
    */
-  private void startLegacyPair(Uri index, Uri blob) {
-    lastLegacyIndex = index;
-    lastLegacyBlob = blob;
-    java.util.List<ph.kanta.reborn.core.legacy.LegacyImportKey> candidates = new java.util.ArrayList<>();
-    try (java.io.InputStream asset = getAssets().open("legacy-import-keys.txt")) {
-      for (ph.kanta.reborn.core.legacy.LegacyKeyTable.Entry entry
-          : ph.kanta.reborn.core.legacy.LegacyKeyTable.fromStream(asset)) {
-        if (!entry.placeholder) {
-          candidates.add(ph.kanta.reborn.core.legacy.LegacyImportKey.fromHex(entry.keyHex, entry.ivHex));
-        }
-      }
-    } catch (Exception unusableTable) {
-      for (ph.kanta.reborn.core.legacy.LegacyImportKey credential : candidates) credential.close();
-      candidates.clear();
-    }
-    if (candidates.isEmpty()) {
-      requestLegacyKey(index, blob);
-      return;
-    }
-    submitLegacyPair(index, blob, candidates);
-  }
-
   private void submitLegacyPair(Uri index, Uri blob,
       java.util.List<ph.kanta.reborn.core.legacy.LegacyImportKey> credentials) {
     if (session.importLegacyPair(index, blob, credentials)) {
@@ -4306,7 +4475,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       return;
     }
     if (result != RESULT_OK || data == null) {
-      if (request == LEGACY_INDEX || request == LEGACY_BLOB) pendingLegacyIndex = null;
       if (request == EXPORT) {
         exportBytes = null;
         exportCode = null;
@@ -4319,20 +4487,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       if (!sources.isEmpty()) session.importStageBatch(sources, request == VIDEO);
       return;
     }
+    if (request == INTERLUDE_IMAGE && data.getData() != null) {
+      boolean ok = session.setInterludeImage(data.getData());
+      Toast.makeText(this, ok ? R.string.visuals_interlude_image_added
+          : R.string.interlude_image_failed, Toast.LENGTH_LONG).show();
+      refreshVisualsPreview();
+      return;
+    }
     if (request == LEGACY_FOLDER && data.getData() != null) {
       importLegacyFolder(data.getData());
-      return;
-    }
-    if (request == LEGACY_INDEX && data.getData() != null) {
-      pendingLegacyIndex = data.getData();
-      pickLegacyBlob();
-      return;
-    }
-    if (request == LEGACY_BLOB && data.getData() != null) {
-      if (pendingLegacyIndex == null) { Toast.makeText(this, "Choose the index file first.", Toast.LENGTH_LONG).show(); return; }
-      Uri index = pendingLegacyIndex;
-      pendingLegacyIndex = null;
-      startLegacyPair(index, data.getData());
       return;
     }
     if (request == MUSIC) {
@@ -4818,12 +4981,31 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   private void helpPage() {
-    addHelpSection(R.string.menu_help_singing, R.string.menu_help_singing_details);
-    addHelpSection(R.string.menu_help_voice, R.string.menu_help_voice_details);
-    addHelpSection(R.string.menu_help_remote, R.string.menu_help_remote_details);
+    body.addView(MenuSurface.detail(this, getString(R.string.help_guide_intro)));
+    addHelpStep(1, R.drawable.kanta_submenu_folder, R.string.help_step_add_title, R.string.help_step_add_details);
+    addHelpStep(2, R.drawable.kanta_submenu_scan, R.string.help_step_find_title, R.string.help_step_find_details);
+    addHelpStep(3, R.drawable.kanta_menu_music_mic, R.string.menu_help_singing, R.string.menu_help_singing_details);
+    addHelpStep(4, R.drawable.kanta_menu_visual, R.string.help_step_visual_title, R.string.help_step_visual_details);
+    addHelpStep(5, R.drawable.kanta_menu_party_pads, R.string.help_step_party_title, R.string.help_step_party_details);
+    addHelpStep(6, R.drawable.kanta_submenu_headphones, R.string.menu_help_voice, R.string.menu_help_voice_details);
+    addHelpStep(7, R.drawable.kanta_menu_phone_radio, R.string.menu_help_remote, R.string.menu_help_remote_details);
+    addHelpStep(8, R.drawable.kanta_menu_music_list, R.string.help_step_intermission_title, R.string.help_step_intermission_details);
   }
 
-  private void addHelpSection(int title, int detail) {
-    MenuSurface.section(body, getString(title)).addView(MenuSurface.detail(this, getString(detail)));
+  private void addHelpStep(int number, int icon, int titleRes, int detailRes) {
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setPadding(dp(16), dp(14), dp(16), dp(14));
+    row.setTag("kanta.help.step." + number);
+    ImageView iconView = MenuSurface.icon(this, icon, 11);
+    LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(52), dp(52));
+    iconParams.setMarginEnd(dp(12));
+    iconParams.gravity = Gravity.CENTER_VERTICAL;
+    row.addView(iconView, iconParams);
+    LinearLayout labels = column();
+    labels.addView(MenuSurface.label(this, number + ". " + getString(titleRes), 16, Color.WHITE, true));
+    labels.addView(MenuSurface.detail(this, getString(detailRes)));
+    row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
+    body.addView(row);
   }
 }

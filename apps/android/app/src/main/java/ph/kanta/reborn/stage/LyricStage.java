@@ -125,6 +125,7 @@ public final class LyricStage extends View {
   private String interludeText;
   /** Optional image above the standby message; null for text-only interludes. */
   private Bitmap interludeImage;
+  private final android.graphics.RectF interludeRect = new android.graphics.RectF();
   private boolean interludeDirty;
 
   public void setInterludeText(String text) {
@@ -191,8 +192,8 @@ public final class LyricStage extends View {
       int dh = Math.max(1, Math.round(interludeImage.getHeight() * scale));
       int left = Math.round((getWidth() - dw) / 2f);
       int top = Math.round(padding + (height - dh) / 2f - dh * .18f);
-      canvas.drawBitmap(interludeImage, null,
-          new android.graphics.RectF(left, top, left + dw, top + dh), null);
+      interludeRect.set(left, top, left + dw, top + dh);
+      canvas.drawBitmap(interludeImage, null, interludeRect, null);
     }
     visibleLyrics.draw(canvas, x, y,
         index < 0 ? 0f : LyricWordAnimation.highlightedCharacters(cue, position), HIGHLIGHT_COLOR);

@@ -20,6 +20,8 @@ public final class KantaVisualsScreen extends LinearLayout {
   public static final int BACKGROUND = 0;
   // Keep the legacy camera index; old Effects states normalize to a supported tab on entry.
   public static final int VIDEOS = 2;
+  public static final int LYRICS = 3;
+  public static final int INTERLUDE = 4;
 
   public interface Listener {
     void onBack();
@@ -27,6 +29,8 @@ public final class KantaVisualsScreen extends LinearLayout {
     void onBackgroundSelected(String id, int drawableResource);
     void onVideoSelected(String id);
     void addControls(int tab, LinearLayout target);
+    /** Host fills the shared stage preview for the current tab. */
+    default void onPreviewReady(MiniStagePreview preview) { }
   }
 
   private static final class Still {
@@ -112,6 +116,8 @@ public final class KantaVisualsScreen extends LinearLayout {
     tabs.setPadding(dp(12), dp(4), dp(12), dp(12));
     addTab(tabs, BACKGROUND, context.getString(R.string.menu_background_photos), "background", R.drawable.kanta_submenu_photo);
     addTab(tabs, VIDEOS, context.getString(R.string.menu_background_videos), "videos", R.drawable.kanta_submenu_video);
+    addTab(tabs, LYRICS, context.getString(R.string.visuals_tab_lyrics), "lyrics", R.drawable.kanta_submenu_lyrics);
+    addTab(tabs, INTERLUDE, context.getString(R.string.interlude_heading), "interlude", R.drawable.kanta_submenu_document);
     addView(tabs);
 
     LinearLayout content = new LinearLayout(context);
@@ -119,6 +125,10 @@ public final class KantaVisualsScreen extends LinearLayout {
     content.setPadding(dp(16), 0, dp(16), dp(24));
     // MainActivity's outer ScrollView handles the whole destination, including short screens.
     addView(content);
+    MiniStagePreview preview = new MiniStagePreview(context);
+    LayoutParams previewParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(168));
+    previewParams.setMargins(0, dp(8), 0, dp(12));
+    content.addView(preview, previewParams);
     if (selectedTab == VIDEOS) {
       content.addView(KantaTheme.titleText(context, "Realm · Built-in videos", 16));
       content.addView(KantaTheme.bodyText(context, "Choose a silent video for your stage.", 13));
@@ -128,6 +138,7 @@ public final class KantaVisualsScreen extends LinearLayout {
       addStillGrid(content, BACKGROUNDS, false);
     }
     listener.addControls(selectedTab, content);
+    listener.onPreviewReady(preview);
     if (selectedTab == BACKGROUND) {
       content.addView(KantaTheme.titleText(context, "Scenic stills", 16));
       addStillGrid(content, SCENIC_BACKGROUNDS, true);

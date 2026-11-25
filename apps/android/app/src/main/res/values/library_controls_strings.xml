@@ -2,7 +2,6 @@
 <resources>
     <!-- Library controls -->
     <string name="legacy_folder_help">Pick your karaoke folder once. KANTA finds the songs, the background videos and photos, and the paired library files inside it, then files each one in the right place automatically.</string>
-    <string name="legacy_folder_invalid">Could not find one IDX and one BLOB in that folder. Choose a folder with one pair, or select the two files manually.</string>
     <string name="library_controls_song_remove">Remove an imported song</string>
     <string name="library_controls_song_remove_confirm">Remove %1$s?</string>
     <string name="library_controls_song_remove_details">This also removes the song from Up Next and saved sets. Your original file stays unchanged.</string>

@@ -83,7 +83,7 @@ class RuntimeImportKeyContractTests(unittest.TestCase):
                             "applicationIdSuffix '.privatelegacy'", 'Private legacy builds must not run in CI'):
             self.assertIn(requirement, gradle)
         activity = (JAVA / 'MainActivity.java').read_text()
-        self.assertIn('startLegacyPair(index, data.getData())', activity)
+        self.assertIn('session.importKaraokeFolder(tree);', activity)
         self.assertNotIn('legacy-import-key.bin', activity)
         self.assertNotIn('fromPrivateAsset', activity)
 
@@ -108,13 +108,19 @@ class RuntimeImportKeyContractTests(unittest.TestCase):
 
     def test_activity_tries_table_then_manual(self):
         activity = (JAVA / 'MainActivity.java').read_text()
-        flow = activity.split('private void startLegacyPair(', 1)[1].split(
-            'private void submitLegacyPair(', 1)[0]
-        self.assertIn('getAssets().open("legacy-import-keys.txt")', flow)
-        self.assertIn('LegacyKeyTable.fromStream(asset)', flow)
-        self.assertIn('entry.placeholder', flow)
-        self.assertIn('requestLegacyKey(index, blob)', flow)
-        self.assertIn('submitLegacyPair(index, blob, candidates)', flow)
+        controller = (JAVA / 'SessionController.java').read_text()
+        # The bundled table is loaded once and probed before any manual offer can appear.
+        table = controller.split('legacyTableCandidates() {', 1)[1].split(
+            'private void karaokeFinished', 1)[0]
+        self.assertIn('getAssets().open("legacy-import-keys.txt")', table)
+        self.assertIn('LegacyKeyTable.fromStream(asset)', table)
+        self.assertIn('entry.placeholder', table)
+        self.assertIn('importLegacyPair(found.legacyIndex, found.legacyBlob, legacyTableCandidates());',
+                      controller)
+        # When the table fails, the manual dialog receives the pair the folder scan found.
+        self.assertIn('requestLegacyKey(', activity)
+        self.assertIn('session.pendingLegacyIndexUri()', activity)
+        self.assertIn('session.pendingLegacyBlobUri()', activity)
         self.assertIn('java.util.Collections.singletonList(credentials)', activity)
         self.assertIn('session.drainLegacyManualKeyOffer()', activity)
         self.assertIn('offerManualLegacyKey()', activity)
@@ -131,8 +137,8 @@ class RuntimeImportKeyContractTests(unittest.TestCase):
                             'if ("IDX".equals(role) && in.read()'):
             self.assertIn(requirement, controller)
         activity = (JAVA / 'MainActivity.java').read_text()
-        self.assertIn('Legacy import — step 1 of 2', activity)
-        self.assertIn('launchLegacyIndexPicker()', activity)
+        self.assertIn('offerManualLegacyKey()', activity)
+        self.assertIn('requestLegacyKey(', activity)
 
     def test_synthetic_regressions_do_not_reflect_real_constants(self):
         source = (ROOT / 'apps/android/app/src/test/java/ph/kanta/reborn/core/legacy/'
