@@ -245,3 +245,6 @@ The missing-media recovery check now seeds its synthetic absent-file reservation
 ## Emulator runtime timeout (2026-11-25)
 
 The Android runtime runner now allows up to 600 seconds for `RuntimeChecks` instrumentation. The emulator can spend over a minute booting and the full acceptance walk includes real media, browser companion, fullscreen, and screenshot checks; the previous 180-second subprocess limit terminated a still-running test before it could report results.
+## Public updater menu entry (2026-11-25)
+
+The public Android build exposes the existing verified OTA updater from **More → Support → App update**. The private legacy build continues to block public OTA installation because it uses a separate package/signing identity.
