@@ -378,11 +378,12 @@ public final class RuntimeChecks extends Instrumentation {
         View decor = activity.getWindow().getDecorView();
         decor.findViewWithTag("kanta.nav.More").performClick();
         for (String removed : new String[]{"sing-menu", "performance-menu", "experience-menu",
-            "find-song", "key-tempo", "queue", "background", "party", "stage", "visual", "voice", "scoring"}) {
+            "find-song", "key-tempo", "queue", "background", "party", "stage", "visual", "voice", "scoring",
+            "backup", "app-update", "legal", "help"}) {
           check(decor.findViewWithTag("kanta.group." + removed) == null, "Redundant Menu row: " + removed);
         }
         String[] ordered = {"my-songs", "import-pdf", "stage-visual", "intermission", "party-pads", "voice-scoring",
-            "settings", "browser-remote", "backup", "legal", "help"};
+            "settings", "browser-remote"};
         for (String action : ordered) checkIconTile(decor.findViewWithTag("kanta.group." + action), action);
         checkIconBack(decor.findViewWithTag("kanta.group.back"), "Menu");
       });
@@ -392,7 +393,7 @@ public final class RuntimeChecks extends Instrumentation {
         View decor = activity.getWindow().getDecorView();
         int lastTop = Integer.MIN_VALUE;
         for (String action : new String[]{"my-songs", "import-pdf", "stage-visual", "intermission", "party-pads", "voice-scoring",
-            "settings", "browser-remote", "backup", "legal", "help"}) {
+            "settings", "browser-remote"}) {
           int[] location = new int[2];
           decor.findViewWithTag("kanta.group." + action).getLocationInWindow(location);
           check(location[1] > lastTop, "Menu order is wrong at " + action);
@@ -432,6 +433,12 @@ public final class RuntimeChecks extends Instrumentation {
       awaitStageSearch("Queue Add songs");
       runOnMainSync(() -> openMenuGroup("settings"));
       await(this::hasSettingsWithoutDuplicateControls, "Key & Tempo belongs on Stage, not in Settings");
+      runOnMainSync(() -> {
+        View decor = activity.getWindow().getDecorView();
+        for (String moved : new String[]{"backup", "app-update", "legal", "help"})
+          check(decor.findViewWithTag("kanta.group." + moved) != null,
+              "Settings does not host the Support row: " + moved);
+      });
       runOnMainSync(this::openMenuVoiceScoring);
       await(
           () -> activity.getWindow().getDecorView().findViewWithTag("kanta.screen.mic-voice") != null,
@@ -476,6 +483,9 @@ public final class RuntimeChecks extends Instrumentation {
         check(decor.findViewWithTag("kanta.visuals.shuffle.photos") != null
                 && decor.findViewWithTag("kanta.visuals.shuffle.videos") == null,
             "Background photos did not have separate controls");
+        check(decor.findViewWithTag("kanta.visuals.tab.lyrics") == null
+                && decor.findViewWithTag("kanta.visuals.tab.interlude") == null,
+            "Lyrics and Interlude belong on Intermission, not Stage & Visual");
         decor.findViewWithTag("kanta.visuals.tab.videos").performClick();
         check(decor.findViewWithTag("kanta.visuals.shuffle.videos") != null
                 && decor.findViewWithTag("kanta.visuals.shuffle.photos") == null,
@@ -719,6 +729,11 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         check(activity.getWindow().getDecorView().findViewWithTag("kanta.party-pad.trigger.0") == null,
             "Intermission still hosts Party Pads");
+        check(activity.getWindow().getDecorView().findViewWithTag("kanta.screen.intermission-editors") != null,
+            "Intermission does not host the lyrics and interlude editors");
+        check(activity.getWindow().getDecorView().findViewWithTag("kanta.visuals.tab.lyrics") != null
+                && activity.getWindow().getDecorView().findViewWithTag("kanta.visuals.tab.interlude") != null,
+            "Intermission editor tabs missing");
         openMenuGroup("party-pads");
         checkPartyPadsPanel();
       });

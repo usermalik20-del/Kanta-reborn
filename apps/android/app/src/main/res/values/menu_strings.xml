@@ -16,7 +16,6 @@
     <string name="menu_help_summary">Get started with karaoke</string>
     <string name="menu_voice_scoring">Voice &amp; Scoring</string>
     <string name="menu_sound_mix">Sound &amp; mix</string>
-    <string name="menu_lyrics">Lyrics</string>
     <string name="menu_diagnostics">Support &amp; diagnostics</string>
     <string name="menu_stage">Stage</string>
     <string name="menu_stage_visual">Stage &amp; Visual</string>
@@ -43,6 +42,5 @@
     <string name="menu_help_voice_details">In Menu → Voice &amp; Scoring, tap Choose output under Hear My Voice and select your headphones. Allow microphone access when asked. Start quietly. If you hear nothing, check the input meter and both volume controls, or reconnect and select your headphones again. Use wired or USB headphones during songs. Bluetooth headsets may work between songs on Android 12 or later. Speakers cannot play your microphone.</string>
     <string name="menu_help_remote">Sing with others</string>
     <string name="menu_help_remote_details">Open Menu → Browser Remote and start hosting. Guests open the HTTPS address from the QR on their phones and pair with the code. The QR only shows the address — it does not pair. Share pairing codes only with people you trust on the same private network, and use music you have permission to use.</string>
-    <string name="menu_lyric_font">Lyric font</string>
     <string name="menu_songbook_exports">Export your song list</string>
 </resources>

@@ -47,8 +47,10 @@ class FontContractTests(unittest.TestCase):
         my_set = activity.split('private void mySet()', 1)[1].split('\n  }', 1)[0]
         visuals = activity.split('private void addStageVisualControls(', 1)[1].split('\n  }', 1)[0]
         settings = activity.split('private void control()', 1)[1].split('\n  }', 1)[0]
-        self.assertIn('lyrics.addView(menuAction(getString(R.string.menu_lyric_font)', settings)
-        self.assertIn('this::chooseLyricFont', settings)
+        lyrics_editor = activity.split('private void addLyricsVisualControls(', 1)[1].split('\n  }', 1)[0]
+        # The lyric font picker moved from Settings to the Intermission lyrics editor.
+        self.assertIn('this::chooseLyricFont', lyrics_editor)
+        self.assertNotIn('this::chooseLyricFont', settings)
         self.assertNotIn('this::chooseLyricFont', visuals)
         self.assertNotIn('this::chooseLyricFont', my_set)
 

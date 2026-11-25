@@ -22,6 +22,7 @@ public final class KantaVisualsScreen extends LinearLayout {
   public static final int VIDEOS = 2;
   public static final int LYRICS = 3;
   public static final int INTERLUDE = 4;
+  private static final int[] ALL_TABS = {BACKGROUND, VIDEOS, LYRICS, INTERLUDE};
 
   public interface Listener {
     void onBack();
@@ -73,6 +74,8 @@ public final class KantaVisualsScreen extends LinearLayout {
   private final int selectedTab;
   private final String selectedScene, selectedVideo;
   private final boolean canChoose, menuSurface;
+  private final int[] tabIndices;
+  private final boolean showHeader;
 
   public KantaVisualsScreen(Context context, Listener listener, int selectedTab,
       String selectedScene, String selectedVideo, boolean canChoose) {
@@ -81,6 +84,13 @@ public final class KantaVisualsScreen extends LinearLayout {
 
   public KantaVisualsScreen(Context context, Listener listener, int selectedTab,
       String selectedScene, String selectedVideo, boolean canChoose, boolean menuSurface) {
+    this(context, listener, selectedTab, selectedScene, selectedVideo, canChoose, menuSurface,
+        ALL_TABS, true);
+  }
+
+  public KantaVisualsScreen(Context context, Listener listener, int selectedTab,
+      String selectedScene, String selectedVideo, boolean canChoose, boolean menuSurface,
+      int[] tabs, boolean showHeader) {
     super(context);
     this.context = context;
     this.density = context.getResources().getDisplayMetrics().density;
@@ -90,6 +100,8 @@ public final class KantaVisualsScreen extends LinearLayout {
     this.selectedVideo = selectedVideo;
     this.canChoose = canChoose;
     this.menuSurface = menuSurface;
+    this.tabIndices = tabs.clone();
+    this.showHeader = showHeader;
     setOrientation(VERTICAL);
     if (!menuSurface) setBackgroundColor(KantaTheme.BG_MAIN);
     build(menuSurface);
@@ -98,13 +110,15 @@ public final class KantaVisualsScreen extends LinearLayout {
   private int dp(int value) { return Math.round(value * density); }
 
   private void build(boolean menuSurface) {
-    String title = context.getString(R.string.menu_stage_visual);
-    if (menuSurface) {
-      addView(MenuSurface.header(context, title, context.getString(R.string.menu_back),
-          "kanta.screen.visuals.back", listener::onBack));
-    } else {
-      addView(new KantaScreenHeader(context, title, context.getString(R.string.menu_back), "kanta.screen.visuals.back",
-          v -> listener.onBack()));
+    if (showHeader) {
+      String title = context.getString(R.string.menu_stage_visual);
+      if (menuSurface) {
+        addView(MenuSurface.header(context, title, context.getString(R.string.menu_back),
+            "kanta.screen.visuals.back", listener::onBack));
+      } else {
+        addView(new KantaScreenHeader(context, title, context.getString(R.string.menu_back), "kanta.screen.visuals.back",
+            v -> listener.onBack()));
+      }
     }
 
     TextView stage = KantaTheme.titleText(context, context.getString(R.string.menu_stage), 19);
@@ -114,10 +128,17 @@ public final class KantaVisualsScreen extends LinearLayout {
 
     LinearLayout tabs = new LinearLayout(context);
     tabs.setPadding(dp(12), dp(4), dp(12), dp(12));
-    addTab(tabs, BACKGROUND, context.getString(R.string.menu_background_photos), "background", R.drawable.kanta_submenu_photo);
-    addTab(tabs, VIDEOS, context.getString(R.string.menu_background_videos), "videos", R.drawable.kanta_submenu_video);
-    addTab(tabs, LYRICS, context.getString(R.string.visuals_tab_lyrics), "lyrics", R.drawable.kanta_submenu_lyrics);
-    addTab(tabs, INTERLUDE, context.getString(R.string.interlude_heading), "interlude", R.drawable.kanta_submenu_document);
+    for (int index : tabIndices) {
+      if (index == BACKGROUND) {
+        addTab(tabs, BACKGROUND, context.getString(R.string.menu_background_photos), "background", R.drawable.kanta_submenu_photo);
+      } else if (index == VIDEOS) {
+        addTab(tabs, VIDEOS, context.getString(R.string.menu_background_videos), "videos", R.drawable.kanta_submenu_video);
+      } else if (index == LYRICS) {
+        addTab(tabs, LYRICS, context.getString(R.string.visuals_tab_lyrics), "lyrics", R.drawable.kanta_submenu_lyrics);
+      } else {
+        addTab(tabs, INTERLUDE, context.getString(R.string.interlude_heading), "interlude", R.drawable.kanta_submenu_document);
+      }
+    }
     addView(tabs);
 
     LinearLayout content = new LinearLayout(context);

@@ -6,9 +6,9 @@
     <string name="help_step_find_title">Find a song</string>
     <string name="help_step_find_details">Search the Stage by title, artist, or song code. Choose Reserve to add a song to Up Next, or Play to start it right away.</string>
     <string name="help_step_visual_title">Make the Stage yours</string>
-    <string name="help_step_visual_details">Open Menu → Stage &amp; Visual. Pick a background photo or video, choose your lyric font, and set the Interlude message and image. Every editor shows a live preview of the Stage.</string>
+    <string name="help_step_visual_details">Open Menu → Stage &amp; Visual and pick a background photo or video for the Stage.</string>
     <string name="help_step_party_title">Party Pads</string>
     <string name="help_step_party_details">Open the Stage Controls panel: the eight pads trigger your next songs for the group, so nobody searches for a title mid-song.</string>
     <string name="help_step_intermission_title">Between songs</string>
-    <string name="help_step_intermission_details">Open Menu → Intermission for between-song music and the Party Pads, so the room stays warm while you change songs.</string>
+    <string name="help_step_intermission_details">Open Menu → Intermission for between-song music, the Party Pads, your lyric settings and the Interlude message and image. Every editor shows a live preview of the Stage.</string>
 </resources>

@@ -143,6 +143,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private int lyricDialogGeneration;
   private int fontPickerGeneration;
   private int visualsSelectedTab;
+  private int intermissionSelectedTab = KantaVisualsScreen.LYRICS;
+  private boolean pipSurfaceActive;
   private MiniStagePreview visualsPreview;
   private TextView visualsFontLabel;
   private final Map<String, Integer> mediaListPositions = new HashMap<>();
@@ -216,8 +218,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (saved != null) {
       tab = saved.getString("tab", "Home");
       int restoredTab = saved.getInt("visualsSelectedTab", KantaVisualsScreen.BACKGROUND);
-      visualsSelectedTab = restoredTab == KantaVisualsScreen.VIDEOS || restoredTab == KantaVisualsScreen.LYRICS
-          || restoredTab == KantaVisualsScreen.INTERLUDE ? restoredTab : KantaVisualsScreen.BACKGROUND;
+      visualsSelectedTab = restoredTab == KantaVisualsScreen.VIDEOS ? restoredTab : KantaVisualsScreen.BACKGROUND;
+      int restoredIntermissionTab = saved.getInt("intermissionSelectedTab", KantaVisualsScreen.LYRICS);
+      intermissionSelectedTab = restoredIntermissionTab == KantaVisualsScreen.INTERLUDE
+          ? restoredIntermissionTab : KantaVisualsScreen.LYRICS;
       tab = resolvePageRoute(tab);
       ArrayList<String> parents = saved.getStringArrayList("navigationParents");
       restorePageParents(tab, parents, navigationParents);
@@ -279,6 +283,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   @Override
   protected void onStop() {
+    // Some platforms deliver onStop for a Picture-in-Picture transition. The PiP
+    // window must keep playing and stay lit, so the shutdown path is skipped while
+    // the PiP surface is active; onStart restores everything on the way back.
+    if (pipSurfaceActive) {
+      session.diagnostics.record("onStop while PiP active: playback and stage kept alive", null);
+      super.onStop();
+      return;
+    }
     if (intermissionGuide != null) intermissionGuide.dismiss();
     closeInlineStageControls();
     if (homeScreen != null) homeScreen.dismissSongLookup();
@@ -334,6 +346,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         new android.app.PictureInPictureParams.Builder().setSourceRectHint(source);
     if (Build.VERSION.SDK_INT >= 31) pipBuilder.setAutoEnterEnabled(true);
     android.app.PictureInPictureParams params = pipBuilder.build();
+    pipSurfaceActive = true;
+    session.diagnostics.record("PiP enter requested: tab=" + tab
+        + " orient=" + lastOrientation
+        + " playing=" + session.isPlaying()
+        + " pos=" + session.position(), null);
     try {
       enterPictureInPictureMode(params);
     } catch (IllegalStateException already) {
@@ -372,17 +389,20 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       stageParams.weight = 1f;
       stagePane.setLayoutParams(stageParams);
       if (stagePresenter != null) stagePresenter.setVisualActive(true);
+      session.diagnostics.record("PiP layout applied: tab=" + tab + " orient=" + lastOrientation
+          + " foreground=" + session.foreground, null);
     } else {
+      pipSurfaceActive = false;
       if (stageAdjustments != null) stageAdjustments.setVisibility(View.VISIBLE);
       pageScroll.setVisibility(View.VISIBLE);
       if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
-      boolean landscape = isLandscape();
       stageParams.height = 0;
-      stageParams.weight = landscape ? 0.56f : 0.50f;
+      stageParams.weight = 0.60f;
       stagePane.setLayoutParams(stageParams);
-      scrollParams.weight = landscape ? 0.44f : 0.58f;
+      scrollParams.weight = 0.40f;
       pageScroll.setLayoutParams(scrollParams);
       updatePrimaryStageVisibility();
+      session.diagnostics.record("PiP layout restored: tab=" + tab + " orient=" + lastOrientation, null);
     }
   }
 
@@ -417,6 +437,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     boolean cameraWasOnPrimaryStage =
         camera != null && stagePresenter != null && camera.ownsSurface(stagePresenter);
     if (newOrient != lastOrientation) {
+      session.diagnostics.record("Window rebuild: orient " + lastOrientation + " -> " + newOrient
+          + " pip=" + isInPictureInPictureMode(), null);
       if (fullscreen == null || !fullscreen.isShowing()) session.cancelCountdown();
       closeInlineStageControls();
       // Rebuild from the incoming configuration. Resources can still reflect the old
@@ -453,6 +475,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     super.onSaveInstanceState(out);
     out.putString("tab", tab);
     out.putInt("visualsSelectedTab", visualsSelectedTab);
+    out.putInt("intermissionSelectedTab", intermissionSelectedTab);
     out.putStringArrayList("navigationParents", new ArrayList<>(navigationParents));
     out.putString("menuDestination", menuDestination);
     out.putStringArrayList("menuParents", new ArrayList<>(menuParents));
@@ -830,9 +853,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // compact displays must leave usable space for the lower utility destination.
     stagePane.setMinimumHeight(dp(140));
     // Give the backdrop the larger landscape pane while keeping the keypad reachable.
+    // The Stage owns 60% of the split in both orientations.
     LinearLayout.LayoutParams stageParams = landscape
-        ? new LinearLayout.LayoutParams(0, -1, .56f)
-        : new LinearLayout.LayoutParams(-1, 0, .50f);
+        ? new LinearLayout.LayoutParams(0, -1, .60f)
+        : new LinearLayout.LayoutParams(-1, 0, .60f);
     main.addView(stagePane, stageParams);
     if (!landscape) {
       main.addView(embeddedControls, new LinearLayout.LayoutParams(-1, -2));
@@ -849,8 +873,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     utilities.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
     scroll.addView(utilities);
     LinearLayout.LayoutParams contentParams = landscape
-        ? new LinearLayout.LayoutParams(0, -1, .44f)
-        : new LinearLayout.LayoutParams(-1, 0, .58f);
+        ? new LinearLayout.LayoutParams(0, -1, .40f)
+        : new LinearLayout.LayoutParams(-1, 0, .40f);
     main.addView(scroll, contentParams);
     // Bottom navigation is one continuous floating dock with text labels,
     // muted when inactive, cyan + a subtle glow pill when the destination is active.
@@ -1195,12 +1219,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       }
     } else {
       stageParams.height = 0;
-      stageParams.weight = 0.42f;
+      stageParams.weight = 0.60f;
       stagePane.setLayoutParams(stageParams);
       if (pageScroll != null) {
         LinearLayout.LayoutParams scrollParams =
             (LinearLayout.LayoutParams) pageScroll.getLayoutParams();
-        scrollParams.weight = 0.58f;
+        scrollParams.weight = 0.40f;
         pageScroll.setLayoutParams(scrollParams);
       }
     }
@@ -2028,8 +2052,32 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         refreshVisualsPreview();
       }
     }, visualsSelectedTab, activeScene, activeVideo == null ? null : activeVideo.getName(),
-        session.canChangeStageMedia(), usesMenuSurface());
+        session.canChangeStageMedia(), usesMenuSurface(),
+        new int[] {KantaVisualsScreen.BACKGROUND, KantaVisualsScreen.VIDEOS}, true);
     screen.setTag("kanta.screen.visuals");
+    body.addView(screen, new LinearLayout.LayoutParams(-1, -2));
+  }
+
+  /** Intermission hosts the lyrics and interlude editors with the shared Stage preview. */
+  private void intermissionEditors() {
+    KantaVisualsScreen screen = new KantaVisualsScreen(this, new KantaVisualsScreen.Listener() {
+      @Override public void onBack() { navigateBack(); }
+      @Override public void onTabSelected(int index) {
+        if (intermissionSelectedTab == index) return;
+        intermissionSelectedTab = index;
+        if (pageScroll != null) pageScroll.scrollTo(0, 0);
+        render();
+      }
+      @Override public void onBackgroundSelected(String id, int drawableResource) { }
+      @Override public void onVideoSelected(String id) { }
+      @Override public void addControls(int index, LinearLayout target) { addStageVisualControls(index, target); }
+      @Override public void onPreviewReady(MiniStagePreview preview) {
+        visualsPreview = preview;
+        refreshVisualsPreview();
+      }
+    }, intermissionSelectedTab, null, null, false, usesMenuSurface(),
+        new int[] {KantaVisualsScreen.LYRICS, KantaVisualsScreen.INTERLUDE}, false);
+    screen.setTag("kanta.screen.intermission-editors");
     body.addView(screen, new LinearLayout.LayoutParams(-1, -2));
   }
 
@@ -2117,6 +2165,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void addLyricsVisualControls(LinearLayout target) {
     target.addView(sectionHeader(getString(R.string.visuals_tab_lyrics)));
     target.addView(text(getString(R.string.visuals_lyrics_intro), 14, KantaTheme.TEXT_SECONDARY));
+    // Auto-lyrics moved here from the old Settings page.
+    SettingsStore lyricStore = new SettingsStore(this);
+    Button[] autoLyrics = new Button[1];
+    autoLyrics[0] = menuButton(getString(lyricStore.getAutoLyrics()
+        ? R.string.auto_lyrics_disable : R.string.auto_lyrics_enable), () -> {
+      lyricStore.setAutoLyrics(!lyricStore.getAutoLyrics());
+      autoLyrics[0].setText(lyricStore.getAutoLyrics()
+          ? R.string.auto_lyrics_disable : R.string.auto_lyrics_enable);
+    });
+    autoLyrics[0].setTag("kanta.settings.auto-lyrics");
+    MenuSurface.setLeadingIcon(autoLyrics[0], R.drawable.kanta_submenu_lyrics);
+    target.addView(autoLyrics[0]);
+    target.addView(MenuSurface.detail(this, getString(R.string.auto_lyrics_details)));
     visualsFontLabel = text(getString(R.string.visuals_lyrics_font_value,
         getString(R.string.visuals_lyrics_font), currentLyricsFontName()), 15, KantaTheme.TEXT_PRIMARY);
     visualsFontLabel.setTag("kanta.visuals.lyrics.font");
@@ -2225,7 +2286,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (preview == null) return;
     Song song = session.currentSong();
     preview.setChip(song == null ? "" : song.title);
-    int tab = visualsSelectedTab;
+    // The Intermission page keeps its own editor tab selection.
+    int tab = MENU_INTERMISSION.equals(this.tab) ? intermissionSelectedTab : visualsSelectedTab;
     if (tab == KantaVisualsScreen.INTERLUDE) {
       preview.setPlaceholder("");
       preview.setBackground(previewBackgroundBitmap(tab));
@@ -3083,15 +3145,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     LinearLayout remotes = MenuSurface.section(body, getString(R.string.menu_remotes));
     addMenuRow(remotes, "browser-remote", getString(R.string.browser_remote_title),
         getString(R.string.browser_remote_summary), R.drawable.kanta_menu_phone_radio);
-    LinearLayout support = MenuSurface.section(body, getString(R.string.menu_support));
-    addMenuRow(support, "backup", getString(R.string.settings_backup_title),
-        getString(R.string.menu_backup_summary), R.drawable.kanta_menu_cloud_upload);
-    addMenuRow(support, "app-update", "App update", "Check for a newer verified Android build",
-        R.drawable.kanta_menu_update);
-    addMenuRow(support, "legal", getString(R.string.menu_legal), getString(R.string.menu_legal_summary),
-        R.drawable.kanta_menu_shield_check);
-    addMenuRow(support, "help", getString(R.string.menu_help), getString(R.string.menu_help_summary),
-        R.drawable.kanta_menu_help);
   }
 
   private void addMenuRow(LinearLayout section, String id, String title, String detail, int icon) {
@@ -3115,26 +3168,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean draggingMusicVolume;
 
   private void control() {
-    // Music volume moved to Voice & Scoring.
-    LinearLayout lyrics = MenuSurface.section(body, getString(R.string.menu_lyrics));
-    SettingsStore lyricSettings = new SettingsStore(this);
-    Button[] autoLyrics = new Button[1];
-    autoLyrics[0] = menuButton(getString(lyricSettings.getAutoLyrics()
-        ? R.string.auto_lyrics_disable : R.string.auto_lyrics_enable), () -> {
-      lyricSettings.setAutoLyrics(!lyricSettings.getAutoLyrics());
-      autoLyrics[0].setText(lyricSettings.getAutoLyrics()
-          ? R.string.auto_lyrics_disable : R.string.auto_lyrics_enable);
-    });
-    autoLyrics[0].setTag("kanta.settings.auto-lyrics");
-    MenuSurface.setLeadingIcon(autoLyrics[0], R.drawable.kanta_submenu_lyrics);
-    lyrics.addView(autoLyrics[0]);
-    lyrics.addView(MenuSurface.detail(this, getString(R.string.auto_lyrics_details)));
-    lyrics.addView(menuAction(getString(R.string.menu_lyric_font), R.drawable.kanta_submenu_type,
-        this::chooseLyricFont));
-    LinearLayout support = MenuSurface.section(body, getString(R.string.menu_diagnostics));
-    support.addView(menuAction("Diagnostics", R.drawable.kanta_submenu_check,
+    // Music volume moved to Voice & Scoring; lyrics and interlude moved to Intermission.
+    LinearLayout diagnosticsSection = MenuSurface.section(body, getString(R.string.menu_diagnostics));
+    diagnosticsSection.addView(menuAction("Diagnostics", R.drawable.kanta_submenu_check,
         () -> diagnostics(true)));
-
+    LinearLayout support = MenuSurface.section(body, getString(R.string.menu_support));
+    addMenuRow(support, "backup", getString(R.string.settings_backup_title),
+        getString(R.string.menu_backup_summary), R.drawable.kanta_menu_cloud_upload);
+    addMenuRow(support, "app-update", "App update", "Check for a newer verified Android build",
+        R.drawable.kanta_menu_update);
+    addMenuRow(support, "legal", getString(R.string.menu_legal), getString(R.string.menu_legal_summary),
+        R.drawable.kanta_menu_shield_check);
+    addMenuRow(support, "help", getString(R.string.menu_help), getString(R.string.menu_help_summary),
+        R.drawable.kanta_menu_help);
   }
 
   private void queue() {
@@ -3827,7 +3873,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         return item;
       });
     }
-
+    intermissionEditors();
   }
 
   private void partyPadsPage() {
