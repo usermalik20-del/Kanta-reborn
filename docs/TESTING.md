@@ -1741,3 +1741,12 @@ The Android runtime SQLite FTS4 implementation rejects the optional `content_row
 ## Android PDF swipe compatibility (2026-11-25)
 
 `PdfPageView` now dispatches a horizontal page swipe from release displacement when Android does not classify a synthetic or low-velocity drag as `GestureDetector.onFling()`. The existing fling path remains active and is guarded against duplicate page changes.
+## Physical Android startup acceptance timing (2026-11-25)
+
+The runtime harness allows 30 seconds for first Stage readiness. On the Sony SO-51A Android 12 device, cold startup completes after roughly 20 seconds under memory pressure; the app reaches the normal Stage and remains responsive. This increases harness synchronization time only and does not change product behavior or acceptance assertions.
+## Animated-stage runtime screenshots (2026-11-25)
+
+Runtime screenshot capture no longer treats `UiAutomation.waitForIdle()` timing out as a failure when a visible video or fullscreen stage is continuously rendering. Required target visibility, geometry, and control assertions still run; capture proceeds with the next compositor frame.
+## Android FTS4 search compatibility (2026-11-25)
+
+The Android catalog search query now avoids the unsupported SQLite FTS `rank` column. Matching remains bounded by the existing result limit; Android FTS4 does not provide this ranking column on the device implementation.

@@ -152,7 +152,7 @@ public final class SqliteSongCatalog implements SongCatalog {
       String ftsQuery = buildFtsQuery(query.trim());
       String sql = "SELECT s.song_id, s.volume_id, s.title, s.artist, s.code, s.file_path, s.starter "
           + "FROM songs s JOIN song_search f ON s.song_id = f.rowid "
-          + "WHERE song_search MATCH ? ORDER BY rank LIMIT ?";
+          + "WHERE song_search MATCH ? LIMIT ?";
       try (Cursor c = db.rawQuery(sql, new String[]{ftsQuery, String.valueOf(Math.max(1, limit))})) {
         return cursorToSongs(c);
       }

@@ -308,6 +308,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   }
 
   @Override
+  public void onTrimMemory(int level) {
+    super.onTrimMemory(level);
+    session.diagnostics.record("Android trim-memory level=" + level, null);
+  }
+
+  @Override
+  public void onLowMemory() {
+    super.onLowMemory();
+    session.diagnostics.record("Android low-memory callback", null);
+  }
+
+  @Override
   protected void onDestroy() {
     settingsBackup.close();
     pdfSongbooks.close();

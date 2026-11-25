@@ -13,9 +13,12 @@ final class DiagnosticEvents {
   private static final int LIMIT = 32;
   private final ArrayDeque<String> recent = new ArrayDeque<>();
   private final AtomicFile lastCrash;
+  private final AtomicFile lastCheckpoint;
 
   DiagnosticEvents(Context context) {
-    lastCrash = new AtomicFile(new File(context.getNoBackupFilesDir(), "last-app-crash.txt"));
+    File directory = context.getNoBackupFilesDir();
+    lastCrash = new AtomicFile(new File(directory, "last-app-crash.txt"));
+    lastCheckpoint = new AtomicFile(new File(directory, "last-diagnostic-checkpoint.txt"));
   }
 
   void installCrashCapture(Runnable markAutomaticCrash) {
@@ -35,8 +38,10 @@ final class DiagnosticEvents {
   }
 
   synchronized void record(String operation, Throwable failure) {
+    String item = event(operation, failure);
     if (recent.size() == LIMIT) recent.removeFirst();
-    recent.addLast(event(operation, failure));
+    recent.addLast(item);
+    saveCheckpoint(item);
   }
 
   synchronized String snapshot() {
@@ -49,7 +54,26 @@ final class DiagnosticEvents {
     } catch (IOException unavailable) {
       out.append("\nNo saved app crash.\n");
     }
+    try {
+      String checkpoint = new String(lastCheckpoint.readFully(), StandardCharsets.UTF_8);
+      out.append("\nLast persisted checkpoint\n").append(checkpoint);
+    } catch (IOException unavailable) {
+      out.append("\nNo persisted checkpoint.\n");
+    }
     return out.toString();
+  }
+
+  private synchronized void saveCheckpoint(String item) {
+    FileOutputStream stream = null;
+    try {
+      stream = lastCheckpoint.startWrite();
+      String memory = "memoryPssKb=" + (android.os.Debug.getPss())
+          + " nativeHeapKb=" + (android.os.Debug.getNativeHeapAllocatedSize() / 1024);
+      stream.write((item + "\n" + memory + "\n").getBytes(StandardCharsets.UTF_8));
+      lastCheckpoint.finishWrite(stream);
+    } catch (IOException | RuntimeException unavailable) {
+      lastCheckpoint.failWrite(stream);
+    }
   }
 
   private synchronized void saveCrash(Throwable failure) {
