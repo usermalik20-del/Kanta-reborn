@@ -1021,3 +1021,6 @@ The browser companion runtime check searches the imported fixture by its provide
 ## Missing-media recovery runtime fixture (2026-11-25)
 
 The missing-media recovery check now seeds its synthetic absent-file reservation directly in the authoritative queue. The public `SessionController.reserve` API correctly accepts only catalog songs; the recovery scenario models a previously persisted reservation whose file later disappeared.
+## Emulator runtime timeout (2026-11-25)
+
+The Android runtime runner now allows up to 600 seconds for `RuntimeChecks` instrumentation. The emulator can spend over a minute booting and the full acceptance walk includes real media, browser companion, fullscreen, and screenshot checks; the previous 180-second subprocess limit terminated a still-running test before it could report results.

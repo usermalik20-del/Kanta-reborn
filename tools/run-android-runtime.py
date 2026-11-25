@@ -81,7 +81,7 @@ def main() -> int:
         run(adb, "install", ROOT / "apps/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk", timeout=60)
         with (ROOT / "android-runtime.log").open("wb") as output:
             run(adb, "shell", "am", "instrument", "-w", "ph.kanta.reborn.test/ph.kanta.reborn.RuntimeChecks",
-                stdout=output, stderr=subprocess.STDOUT, timeout=180)
+                stdout=output, stderr=subprocess.STDOUT, timeout=600)
         result = (ROOT / "android-runtime.log").read_text(errors="replace")
         print(result, flush=True)
         if "KANTA runtime:" not in result or "checks passed" not in result:
