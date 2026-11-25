@@ -752,9 +752,9 @@ The framework-free OTA update subsystem (`ph.kanta.reborn.core.update` + `ph.kan
 
 ### Explicit non-claims
 
-- Feed state: apps/web/updates.json holds the newest published Android build (current entry: release v0.10.0-preview-1f49555c, source 1f49555c); the publisher regenerates it after every successful Android build on main and the endpoint is served through the vercel.json routing table.
-- signingCertSha256 supported by the contract but NOT yet published by feed tooling.
-- No local JVM/Gradle build, APK, emulator, runtime or physical-device acceptance ran (JVM cannot start on this iSH emulator: getcpu(2) unsupported). Java correctness is guarded by CI only (coreRegression + android-validation + android runtime checks).
+- Feed state: `apps/web/updates.json` now holds the published Android build `v0.10.0.947-preview-bac94877` from source `bac94877`; the durable APK SHA-256 is `428ca3afa96251f18f41ab7c40e0a4d1f434a41d1a81338bcf7ba9b1166a39e4`, and the endpoint is served through the `vercel.json` routing table.
+- `signingCertSha256` is emitted and verified for the exact signed APK; the published certificate fingerprint is `04488bab3deaf6c9702605e27b7e5469e5f1b6bcf2d440b0bd2b507202d385fc`.
+- Local Gradle builds, APK validation, and physical-device instrumentation were exercised during the 2026-11-25 repair loop. Hosted Android validation is the release gate; full physical-device acceptance and update-install flow remain open.
 - The GitHub Release asset creation makes every post-merge Android build a public release asset automatically.
 - Update is user-initiated, off by default, HTTPS-only, SHA-256 verified, app-private staging, install needs separate "Install unknown apps" permission.
 

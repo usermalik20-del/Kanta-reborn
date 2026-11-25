@@ -1,6 +1,12 @@
 # Unfinished work
 
-**Last updated:** 2026-11-13 · **main reviewed:** `d62db1a` · **Android layout code source:** `df87c03a`
+**Last updated:** 2026-11-25 · **main reviewed:** `bac94877` · **latest Android release:** [`v0.10.0.947-preview-bac94877`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.947-preview-bac94877)
+
+## Current Android release status — hosted validation and publication complete
+
+Exact-main Android validation passed in [run 45544525873](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/45544525873). Verified publication produced Android preview `v0.10.0.947-preview-bac94877` from `bac94877`, APK SHA-256 `428ca3afa96251f18f41ab7c40e0a4d1f434a41d1a81338bcf7ba9b1166a39e4`, and signer certificate SHA-256 `04488bab3deaf6c9702605e27b7e5469e5f1b6bcf2d440b0bd2b507202d385fc`.
+
+This closes the hosted Android build, emulator acceptance, packaging, signer-continuity and Android preview-publication gates. It does **not** close physical-device acceptance, iOS signing, hardware audio/camera acceptance, domain migration, or owner-controlled legal/security decisions.
 
 This is the single list of what is **not** done. It exists so that outstanding work is
 visible in the repository rather than living in a chat transcript.
@@ -185,7 +191,9 @@ physical-device acceptance and a tagged/store release are not claimed. iOS was n
 
 ## L. Android OTA self-update
 
-Open items remaining for the Android OTA self-update subsystem:
+The first post-merge Android publication is now complete: the current feed entry is
+`v0.10.0.947-preview-bac94877`, and it includes `signingCertSha256`. The remaining OTA
+items are device acceptance and owner policy, not feed generation or certificate emission.
 
 | ID | Item | Why it matters | Acceptance criterion | Effort |
 | --- | --- | --- | --- | --- |
@@ -202,6 +210,9 @@ Privacy disclosure "Optional Android self-update" added to all four privacy file
 
 | Item | Closed by | Evidence |
 | --- | --- | --- |
+| Hosted Android validation and preview publication for the consolidated main line | `bac94877` / publisher run `45545544620` | Exact-main Android validation [run 45544525873](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/45544525873) passed. Published release [`v0.10.0.947-preview-bac94877`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.947-preview-bac94877) carries APK SHA-256 `428ca3afa96251f18f41ab7c40e0a4d1f434a41d1a81338bcf7ba9b1166a39e4`. This is hosted/emulator evidence, not physical-device acceptance. |
+| Android FTS4 compatibility, browser fixture, missing-media fixture and runtime-runner timeout fixes | `b521e943`, `766f52f9`, `2f4e2769`, `a27902a6` | All are covered by the successful exact-main validation above; local/device diagnostics supplied the failure evidence and the fixes preserved shipped behavior. |
+| Android OTA feed publication and signing-certificate metadata | publisher run `45545544620` | Feed publication now points to the 947 release and includes the verified signer certificate field; physical update-install acceptance remains open. |
 | B1 — PCM spectrum analysis plan and tests | `1b666b2`; validated on `eed8020e` | [Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43260500332) passed 55,724 core checks, including registered `SpectrumRegressionTests`. Analysis uses the existing dry microphone analysis path; no spectrum view or physical-device acceptance is claimed. |
 | D5 — video backend decision | `1b666b2` | Owner chose the existing platform `MediaPlayer` / `TextureView`; [the corrected plan](D5-video-backend.md) records the decision. This is not physical-device video acceptance. |
 | D8 / G2 — remove nonfunctional melody/guide sliders | `1b666b2`; validated on `eed8020e` | Removed unsupported controls and callbacks; [Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43260500332) passed build/lint and emulator checks. Separate per-part mixing remains unsupported. |
