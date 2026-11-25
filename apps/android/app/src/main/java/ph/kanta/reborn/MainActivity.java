@@ -314,6 +314,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // enter Picture-in-Picture so playback continues.
     if (stagePane != null && session.current != null
         && (session.isPlaying() || session.position() > 0)) {
+      // The fullscreen Stage is a separate dialog window and would stay pinned
+      // over the PiP surface; fall back to the embedded Stage before leaving.
+      closeFullscreen();
       enterStagePip();
       return;
     }
@@ -340,30 +343,47 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   @Override
   public void onPictureInPictureModeChanged(boolean isInPipMode, android.content.res.Configuration config) {
-    if (stagePane != null && pageScroll != null
-        && stagePane.getParent() instanceof ViewGroup) {
-      LinearLayout.LayoutParams stageParams =
-          (LinearLayout.LayoutParams) stagePane.getLayoutParams();
-      LinearLayout.LayoutParams scrollParams =
-          (LinearLayout.LayoutParams) pageScroll.getLayoutParams();
-      if (isInPipMode) {
-        closeInlineStageControls();
-        pageScroll.setVisibility(View.GONE);
-        if (navigationTabs != null) navigationTabs.setVisibility(View.GONE);
-        stageParams.height = 0;
-        stageParams.weight = 1f;
-        stagePane.setLayoutParams(stageParams);
-      } else {
-        pageScroll.setVisibility(View.VISIBLE);
-        if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
-        stageParams.height = 0;
-        stageParams.weight = 0.50f;
-        stagePane.setLayoutParams(stageParams);
-        scrollParams.weight = 0.50f;
-        pageScroll.setLayoutParams(scrollParams);
-      }
-    }
+    applyPipLayout(isInPipMode);
     super.onPictureInPictureModeChanged(isInPipMode, config);
+  }
+
+  /**
+   * The Picture-in-Picture surface shows only the Stage. The brand header, the
+   * adjustments readout, the utility scroll and the navigation dock are hidden
+   * while the app is in PiP, and the full window (restored from the current tab
+   * state) returns when the activity leaves PiP.
+   */
+  private void applyPipLayout(boolean inPip) {
+    if (stagePane == null || pageScroll == null
+        || !(stagePane.getParent() instanceof ViewGroup)) return;
+    LinearLayout.LayoutParams stageParams =
+        (LinearLayout.LayoutParams) stagePane.getLayoutParams();
+    LinearLayout.LayoutParams scrollParams =
+        (LinearLayout.LayoutParams) pageScroll.getLayoutParams();
+    if (inPip) {
+      closeInlineStageControls();
+      if (appHeader != null) appHeader.setVisibility(View.GONE);
+      if (stageAdjustments != null) stageAdjustments.setVisibility(View.GONE);
+      pageScroll.setVisibility(View.GONE);
+      if (navigationTabs != null) navigationTabs.setVisibility(View.GONE);
+      // The Stage may be hidden for the current tab; the PiP surface shows it anyway.
+      stagePane.setVisibility(View.VISIBLE);
+      stageParams.height = 0;
+      stageParams.weight = 1f;
+      stagePane.setLayoutParams(stageParams);
+      if (stagePresenter != null) stagePresenter.setVisualActive(true);
+    } else {
+      if (stageAdjustments != null) stageAdjustments.setVisibility(View.VISIBLE);
+      pageScroll.setVisibility(View.VISIBLE);
+      if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
+      boolean landscape = isLandscape();
+      stageParams.height = 0;
+      stageParams.weight = landscape ? 0.56f : 0.50f;
+      stagePane.setLayoutParams(stageParams);
+      scrollParams.weight = landscape ? 0.44f : 0.58f;
+      pageScroll.setLayoutParams(scrollParams);
+      updatePrimaryStageVisibility();
+    }
   }
 
   @Override
@@ -408,6 +428,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       appHeader = null;
       buildWindow(newOrient);
       render();
+      // An orientation change while in Picture-in-Picture rebuilds the full window;
+      // re-apply the Stage-only surface so the PiP window keeps showing the Stage.
+      if (isInPictureInPictureMode()) applyPipLayout(true);
       // The welcome dialog pins one artwork for the orientation it was created in; rebuild
       // it so a first-launch rotation still shows the matching composition.
       if (startupDialog != null) {
