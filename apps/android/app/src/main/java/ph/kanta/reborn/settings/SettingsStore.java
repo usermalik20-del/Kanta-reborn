@@ -156,6 +156,22 @@ public final class SettingsStore {
   public String getLyricFont() { return prefs.getString(KEY_LYRIC_FONT, ""); }
   public void setLyricFont(String uri) { prefs.edit().putString(KEY_LYRIC_FONT, uri == null ? "" : uri).apply(); }
 
+  /** Interlude = the standby message the Stage shows while waiting for the song to start. */
+  public String getInterludeText() { return prefs.getString("interlude.text", ""); }
+  public void setInterludeText(String v) {
+    prefs.edit().putString("interlude.text", v == null ? "" : v).apply();
+  }
+  public int getInterludeTextSize() { return prefs.getInt("interlude.textSize", 0); }
+  public void setInterludeTextSize(int v) { prefs.edit().putInt("interlude.textSize", v).apply(); }
+  public String getInterludeMode() { return prefs.getString("interlude.mode", "text"); }
+  public void setInterludeMode(String v) {
+    prefs.edit().putString("interlude.mode", v == null ? "text" : v).apply();
+  }
+  public String getInterludeImage() { return prefs.getString("interlude.image", ""); }
+  public void setInterludeImage(String v) {
+    prefs.edit().putString("interlude.image", v == null ? "" : v).apply();
+  }
+
   public float getLyricFontSize() { return prefs.getFloat(KEY_LYRIC_FONT_SIZE, 1.0f); }
   public void setLyricFontSize(float v) { prefs.edit().putFloat(KEY_LYRIC_FONT_SIZE, v).apply(); }
 

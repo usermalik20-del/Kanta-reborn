@@ -137,13 +137,16 @@ final class StageView extends View {
       int index = session.current == null ? -1 : MidiLyrics.activeIndex(session.lyrics, position);
       MidiLyrics.Cue cue = index >= 0 ? session.lyrics.get(index) : null;
       String current = session.current == null ? "Your music. Your stage." : cue != null ? cue.line
-          : session.lyrics.isEmpty() ? session.current.title : "Get ready to sing\u2026";
+          : session.lyrics.isEmpty() ? session.current.title : session.interludeText();
       MidiLyrics.Cue nextCue = cue != null && index + 1 < session.lyrics.size()
           ? session.lyrics.get(index + 1) : null;
       String next = session.current == null ? "Reserve your next song in CONTROL"
           : nextCue == null ? "" : nextCue.line;
       float font = StageLyricLayout.preferredSize(getResources(), getWidth(), true)
           * session.lyricScale;
+      if (session.preSongInterludeActive() && session.interludeTextSizeSp() > 0) {
+        font = session.interludeTextSizeSp() * getResources().getDisplayMetrics().scaledDensity;
+      }
       boolean echo = nextCue != null && nextCue.echo;
       int width = getWidth() - dp(36);
       int padding = Math.min(dp(18), lyricHeight / 10);
@@ -170,6 +173,25 @@ final class StageView extends View {
             * (fullscreenMode ? .45f : .5f);
         canvas.save();
         canvas.clipRect(0, contentTop, w, h - contentBottom);
+        if (session.preSongInterludeActive()
+            && "image".equals(session.interludeMode())) {
+          android.graphics.drawable.Drawable interlude = session.interludeImage();
+          if (interlude != null) {
+            int iw = interlude.getIntrinsicWidth();
+            int ih = interlude.getIntrinsicHeight();
+            if (iw > 0 && ih > 0) {
+              float maxW = width * .8f;
+              float maxH = lyricHeight * .45f;
+              float scale = Math.min(maxW / iw, maxH / ih);
+              int dw = Math.round(iw * scale);
+              int dh = Math.round(ih * scale);
+              int left = Math.round((w - dw) / 2f);
+              int top = Math.round(contentTop + (lyricHeight - dh) / 2f - dh * .18f);
+              interlude.setBounds(left, top, left + dw, top + dh);
+              interlude.draw(canvas);
+            }
+          }
+        }
         visibleLyrics.draw(canvas, x, y, LyricWordAnimation.highlightedCharacters(cue, position),
             0xFFFFD700);
         if (cue != null) drawPitchWave(canvas, visibleLyrics.current, x, y, cue, position);

@@ -175,6 +175,64 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   /** Current song, or null when nothing is loaded. Read-only, for the stage subpackage. */
   public synchronized Song currentSong() { return current; }
 
+  /** Standby message shown on the Stage while the reserved song waits for its first cue. */
+  public synchronized String interludeText() {
+    String stored = settings.getInterludeText();
+    return stored.isEmpty() ? context.getString(R.string.interlude_default) : stored;
+  }
+
+  public synchronized boolean preSongInterludeActive() {
+    return current != null && !lyrics.isEmpty()
+        && MidiLyrics.activeIndex(lyrics, position()) < 0;
+  }
+
+  public synchronized int interludeTextSizeSp() { return settings.getInterludeTextSize(); }
+
+  public synchronized void setInterludeTextSize(int sp) {
+    settings.setInterludeTextSize(Math.max(0, Math.min(120, sp)));
+    publish();
+  }
+
+  public synchronized String interludeMode() { return settings.getInterludeMode(); }
+
+  public synchronized android.graphics.drawable.Drawable interludeImage() {
+    if (!"image".equals(interludeMode()) || interludeImageCache != null) {
+      return interludeImageCache;
+    }
+    interludeImageCache = ph.kanta.reborn.core.media.InterludeStore.load(context);
+    return interludeImageCache;
+  }
+
+  public synchronized void setInterludeText(String value) {
+    settings.setInterludeText(value == null ? "" : value.trim());
+    publish();
+  }
+
+  public synchronized boolean setInterludeImage(Uri source) {
+    if (!ph.kanta.reborn.core.media.InterludeStore.install(context, source)) return false;
+    settings.setInterludeImage(ph.kanta.reborn.core.media.InterludeStore.FILE_NAME);
+    settings.setInterludeMode("image");
+    interludeImageCache = ph.kanta.reborn.core.media.InterludeStore.load(context);
+    publish();
+    return true;
+  }
+
+  public synchronized void clearInterludeImage() {
+    ph.kanta.reborn.core.media.InterludeStore.delete(context);
+    settings.setInterludeImage("");
+    settings.setInterludeMode("text");
+    interludeImageCache = null;
+    publish();
+  }
+
+  public synchronized void resetInterlude() {
+    settings.setInterludeText("");
+    settings.setInterludeTextSize(0);
+    settings.setInterludeMode("text");
+    interludeImageCache = null;
+    publish();
+  }
+
   boolean libraryImporting = false;
   private Listener listener;
   private ScoreSink scoreSink;
@@ -183,6 +241,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   float volume = 1, tempo = 1;
   int pitch;
   float lyricScale = 1;
+  /** Cached decoded interlude image; cleared whenever the stored image changes. */
+  private android.graphics.drawable.Drawable interludeImageCache;
   private final SettingsStore settings;
   /** Music-session equalizer; attached to each playback backend's media session. */
   private final MusicEqualizer equalizer;

@@ -691,6 +691,16 @@ public final class StagePresenterImpl extends FrameLayout
     boolean standby = current == null && !session.isPlaying();
     presenceOverlay.bind(standby ? null : current);
     lyricStage.setStandby(standby);
+    // While the reserved song waits for its first cue, the standby interlude owns the
+    // primary line; animated interludes keep their text line in the embedded panel.
+    lyricStage.setInterludeText(
+        session.preSongInterludeActive() ? session.interludeText() : null);
+    android.graphics.drawable.Drawable interlude =
+        session.preSongInterludeActive() ? session.interludeImage() : null;
+    lyricStage.setInterludeImage(
+        interlude instanceof android.graphics.drawable.BitmapDrawable
+            ? ((android.graphics.drawable.BitmapDrawable) interlude).getBitmap()
+            : null);
     // Update lyrics if playing
     if (session.isPlaying() && session.lyrics != null && !session.lyrics.isEmpty()) {
       MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);

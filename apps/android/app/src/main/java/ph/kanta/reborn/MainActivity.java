@@ -327,7 +327,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         location[0], location[1],
         location[0] + stagePane.getWidth(), location[1] + stagePane.getHeight());
     android.app.PictureInPictureParams params =
-        new android.app.PictureInPictureParams.Builder().setSourceRect(source).build();
+        new android.app.PictureInPictureParams.Builder().setSourceRectHint(source).build();
     try {
       enterPictureInPictureMode(params);
     } catch (IllegalStateException already) {
@@ -4586,9 +4586,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     content.addView(check);
     content.addView(updateInstallButton);
     content.addView(
-        KantaTheme.secondaryButton(this, "Close", () -> {
-          if (updateDialog != null) updateDialog.dismiss();
-        }),
+        KantaTheme.secondaryButton(this, "Close",
+            new android.view.View.OnClickListener() {
+              @Override
+              public void onClick(android.view.View v) {
+                if (updateDialog != null) updateDialog.dismiss();
+              }
+            }),
         new LinearLayout.LayoutParams(-1, -2));
     updateDialog = new AlertDialog.Builder(this).setView(content).create();
     if (updateDialog.getWindow() != null) {

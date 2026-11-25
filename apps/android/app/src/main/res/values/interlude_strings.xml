@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="interlude_heading">Interlude</string>
+    <string name="interlude_intro">Shown on the Stage while KANTA waits for the song to start. Customize what the audience sees during that time.</string>
+    <string name="interlude_default">Get ready to sing…</string>
+    <string name="interlude_message">Message</string>
+    <string name="interlude_message_hint">Type the standby message</string>
+    <string name="interlude_size">Text size</string>
+    <string name="interlude_image">Image (PNG or GIF)</string>
+    <string name="interlude_image_summary">Shown above the message on the Stage</string>
+    <string name="interlude_image_none">No image set</string>
+    <string name="interlude_remove_image">Remove image</string>
+    <string name="interlude_restore_default">Restore default message</string>
+    <string name="interlude_preview">Live stage preview</string>
+    <string name="interlude_image_failed">That image could not be used. Use a PNG, JPEG, WebP, or GIF up to 16 MB.</string>
+</resources>

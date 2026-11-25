@@ -1,6 +1,7 @@
 package ph.kanta.reborn.stage;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -120,6 +121,26 @@ public final class LyricStage extends View {
     visibleLyrics = null;
   }
 
+  /** Standby message shown while the reserved song waits for its first cue. */
+  private String interludeText;
+  /** Optional image above the standby message; null for text-only interludes. */
+  private Bitmap interludeImage;
+  private boolean interludeDirty;
+
+  public void setInterludeText(String text) {
+    if (java.util.Objects.equals(interludeText, text)) return;
+    interludeText = text;
+    interludeDirty = true;
+    invalidate();
+  }
+
+  public void setInterludeImage(Bitmap image) {
+    if (interludeImage == image) return;
+    interludeImage = image;
+    interludeDirty = true;
+    invalidate();
+  }
+
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
@@ -146,7 +167,11 @@ public final class LyricStage extends View {
     long position = clock != null ? clock.position(playedFrames) : 0L;
     int index = findCurrentLine(position);
     MidiLyrics.Cue cue = cues[Math.max(0, index)];
-    if (visibleLyrics == null || index != currentLineIndex) {
+    // Before the first cue the reserved song's standby interlude owns the primary line.
+    String primary = index < 0 && interludeText != null && !interludeText.isEmpty()
+        ? interludeText : cue.line;
+    if (visibleLyrics == null || index != currentLineIndex || interludeDirty) {
+      interludeDirty = false;
       currentLineIndex = index;
       MidiLyrics.Cue next = Math.max(0, index) + 1 < cues.length
           ? cues[Math.max(0, index) + 1] : null;
@@ -154,11 +179,21 @@ public final class LyricStage extends View {
       activePaint.setTextSize(size);
       TextPaint preview = next != null && next.echo ? echoPaint : upcomingPaint;
       preview.setTextSize(size * .65f);
-      visibleLyrics = StageLyricLayout.fit(cue.line, activePaint, next == null ? "" : next.line,
+      visibleLyrics = StageLyricLayout.fit(primary, activePaint, next == null ? "" : next.line,
           preview, width, height, (int) (8 * density), 16 * density);
     }
     float x = (getWidth() - width) / 2f;
     float y = padding + Math.max(0, height - visibleLyrics.height()) / 2f;
+    if (index < 0 && interludeImage != null && !interludeImage.isRecycled()) {
+      float scale = Math.min((width * .8f) / interludeImage.getWidth(),
+          (height * .45f) / interludeImage.getHeight());
+      int dw = Math.max(1, Math.round(interludeImage.getWidth() * scale));
+      int dh = Math.max(1, Math.round(interludeImage.getHeight() * scale));
+      int left = Math.round((getWidth() - dw) / 2f);
+      int top = Math.round(padding + (height - dh) / 2f - dh * .18f);
+      canvas.drawBitmap(interludeImage, null,
+          new android.graphics.RectF(left, top, left + dw, top + dh), null);
+    }
     visibleLyrics.draw(canvas, x, y,
         index < 0 ? 0f : LyricWordAnimation.highlightedCharacters(cue, position), HIGHLIGHT_COLOR);
     pitchEnergy = currentPitchEnergy();
