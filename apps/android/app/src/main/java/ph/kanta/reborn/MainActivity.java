@@ -2989,7 +2989,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             () -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), FOLDER));
     folder.setEnabled(session.ready && !session.importing);
     imports.addView(folder);
-    imports.addView(menuAction("Import legacy idx + blob", R.drawable.kanta_submenu_folder_plus, this::pickLegacyIndex));
 
     LinearLayout playlists = MenuSurface.section(body, getString(R.string.playlists_title));
     Button createPlaylist = menuAction(getString(R.string.playlist_create),
@@ -3792,23 +3791,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
 
   private void importLegacyFolder(Uri tree) {
     if (!session.canRemoveLibraryContent()) return;
-    session.io.execute(() -> {
-      Uri[] pair;
-      try {
-        pair = LegacyFolderPicker.find(getContentResolver(), tree);
-      } catch (IOException | RuntimeException failure) {
-        pair = null;
-      }
-      Uri[] selected = pair;
-      handler.post(() -> {
-        if (isFinishing() || isDestroyed() || !session.foreground) return;
-        if (selected == null) {
-          Toast.makeText(this, R.string.legacy_folder_invalid, Toast.LENGTH_LONG).show();
-        } else {
-          startLegacyPair(selected[0], selected[1]);
-        }
-      });
-    });
+    showImportProgress();
+    attachImportProgressListener();
+    session.importKaraokeFolder(tree);
   }
 
   private void pickLegacyIndex() {
@@ -4470,7 +4455,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       public void onComplete(boolean success, String message) {
         hideImportProgress(message);
         if (!success && session.drainLegacyManualKeyOffer()
-            && lastLegacyIndex != null && lastLegacyBlob != null) {
+            && session.pendingLegacyIndexUri() != null && session.pendingLegacyBlobUri() != null) {
           offerManualLegacyKey();
         }
       }
@@ -4483,7 +4468,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         .setMessage("These files could not be unlocked with the bundled keys. "
             + "If you were given a key and IV for them, you can enter them now.")
         .setPositiveButton("Enter key",
-            (dialog, which) -> requestLegacyKey(lastLegacyIndex, lastLegacyBlob))
+            (dialog, which) -> requestLegacyKey(
+                session.pendingLegacyIndexUri(), session.pendingLegacyBlobUri()))
         .setNegativeButton("Cancel", null)
         .show());
   }

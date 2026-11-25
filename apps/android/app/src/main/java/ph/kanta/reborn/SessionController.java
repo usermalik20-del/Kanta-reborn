@@ -233,6 +233,18 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     publish();
   }
 
+  /** The legacy pair the last folder scan found, or null. */
+  public synchronized Uri pendingLegacyIndexUri() { return pendingLegacyIndexUri; }
+
+  public synchronized Uri pendingLegacyBlobUri() { return pendingLegacyBlobUri; }
+
+  /** Retries the scanned legacy pair with a key the user typed (never persisted). */
+  boolean importPendingLegacyKey(
+      ph.kanta.reborn.core.legacy.LegacyImportKey key) {
+    return key != null && pendingLegacyIndexUri != null && pendingLegacyBlobUri != null
+        && importLegacyPair(pendingLegacyIndexUri, pendingLegacyBlobUri, key);
+  }
+
   boolean libraryImporting = false;
   private Listener listener;
   private ScoreSink scoreSink;
@@ -266,6 +278,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   String loopSongId = "";
   /** Cached copy of the bundled standby interlude; null until prepared on startup. */
   private File bundledInterludeFile;
+  /** URIs of the legacy pair found by the last "Add Karaoke Folder" scan. */
+  private Uri pendingLegacyIndexUri, pendingLegacyBlobUri;
   final String[] customPads = new String[8];
   private final long[] padGeneration = new long[8];
   String soundFontName = "KANTA original tone";
@@ -2702,6 +2716,122 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                 });
           }
         });
+  }
+
+  /**
+   * The single "Add Karaoke Folder" entry point: one folder may hold songs, background videos
+   * and photos, and a legacy index/blob pair. Each group is routed to the destination KANTA
+   * already owns, in that order, one group at a time.
+   */
+  void importKaraokeFolder(Uri tree) {
+    if (!ready || importing) return;
+    importing = true;
+    importCancelled.set(false);
+    message = "Reading your selected folder…";
+    publish();
+    folderWorker.execute(
+        () -> {
+          try {
+            DocumentTreeScanner.Classification found =
+                DocumentTreeScanner.scanClassified(
+                    context.getContentResolver(), tree, importCancelled::get);
+            main.post(() -> {
+              importing = false;
+              karaokeNextStep(found, 0);
+            });
+          } catch (Exception e) {
+            main.post(() -> {
+              importing = false;
+              message = "The folder is unavailable, cancelled or exceeds the scan limit.";
+              completeImportProgress(false, message);
+              publish();
+            });
+          }
+        });
+  }
+
+  private void karaokeNextStep(DocumentTreeScanner.Classification found, int step) {
+    if (importCancelled.get()) return;
+    boolean started = false;
+    switch (step) {
+      case 0:
+        if (found.legacyIndex != null && found.legacyBlob != null) {
+          pendingLegacyIndexUri = found.legacyIndex;
+          pendingLegacyBlobUri = found.legacyBlob;
+          started = importLegacyPair(found.legacyIndex, found.legacyBlob, legacyTableCandidates());
+        }
+        break;
+      case 1:
+        if (!found.songs.isEmpty()) {
+          importSongs(found.songs);
+          started = importing;
+        }
+        break;
+      case 2:
+        if (!found.videos.isEmpty()) {
+          importStageBatch(found.videos, true);
+          started = importing;
+        }
+        break;
+      case 3:
+        if (!found.photos.isEmpty()) {
+          importStageBatch(found.photos, false);
+          started = importing;
+        }
+        break;
+      default:
+        karaokeFinished(found);
+        return;
+    }
+    if (started) karaokePoll(found, step + 1, SystemClock.uptimeMillis());
+    else karaokeNextStep(found, step + 1);
+  }
+
+  /** Waits for the running group to clear the import flag, then starts the next group. */
+  private void karaokePoll(DocumentTreeScanner.Classification found, int step, long startedAt) {
+    main.postDelayed(
+        () -> {
+          if (!importing) {
+            karaokeNextStep(found, step);
+          } else if (SystemClock.uptimeMillis() - startedAt > 30L * 60L * 1000L) {
+            importing = false;
+            karaokeFinished(found);
+          } else {
+            karaokePoll(found, step, startedAt);
+          }
+        },
+        300);
+  }
+
+  /** Reads the bundled key table exactly like the manual legacy picker does. */
+  private List<ph.kanta.reborn.core.legacy.LegacyImportKey> legacyTableCandidates() {
+    List<ph.kanta.reborn.core.legacy.LegacyImportKey> candidates = new ArrayList<>();
+    try (java.io.InputStream asset =
+        context.getAssets().open("legacy-import-keys.txt")) {
+      for (ph.kanta.reborn.core.legacy.LegacyKeyTable.Entry entry
+          : ph.kanta.reborn.core.legacy.LegacyKeyTable.fromStream(asset)) {
+        if (!entry.placeholder) {
+          candidates.add(
+              ph.kanta.reborn.core.legacy.LegacyImportKey.fromHex(entry.keyHex, entry.ivHex));
+        }
+      }
+    } catch (Exception unusableTable) {
+      for (ph.kanta.reborn.core.legacy.LegacyImportKey credential : candidates)
+        credential.close();
+      candidates.clear();
+    }
+    return candidates;
+  }
+
+  private void karaokeFinished(DocumentTreeScanner.Classification found) {
+    StringBuilder summary = new StringBuilder("Folder import finished");
+    if (found.legacyIndex != null && found.legacyBlob != null) summary.append(" · legacy pair");
+    if (!found.songs.isEmpty()) summary.append(" · ").append(found.songs.size()).append(" song(s)");
+    if (!found.videos.isEmpty()) summary.append(" · ").append(found.videos.size()).append(" video(s)");
+    if (!found.photos.isEmpty()) summary.append(" · ").append(found.photos.size()).append(" photo(s)");
+    message = summary.append('.').toString();
+    completeImportProgress(true, message);
+    publish();
   }
 
   void saveSet(String name, List<Song> values) {
