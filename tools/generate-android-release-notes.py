@@ -15,12 +15,22 @@ def api_json(repo, path, token):
         return json.loads(data)
     except (OSError,urllib.error.URLError,json.JSONDecodeError) as exc: raise NotesError("GitHub release-note evidence request failed") from exc
 
-def previous_android_release(releases,current_sha):
+def previous_android_release(releases,current_sha,repo=None,token=None):
     valid=[]
     for rel in releases:
         tag=rel.get("tag_name",""); match=TAG_RE.fullmatch(tag) if isinstance(tag,str) else None
         if not match or current_sha.startswith(match.group(1)) or rel.get("draft"): continue
-        if any(isinstance(a.get("name"),str) and a["name"].startswith("KANTA-Android-preview-") and a["name"].endswith(".apk") for a in rel.get("assets",[])): valid.append(rel)
+        if not any(isinstance(a.get("name"),str) and a["name"].startswith("KANTA-Android-preview-") and a["name"].endswith(".apk") for a in rel.get("assets",[])): continue
+        if repo is None or token is None:
+            valid.append(rel)
+            continue
+        try:
+            prior=resolve_release_commit(repo,tag,token)
+            comparison=api_json(repo,f"compare/{prior}...{current_sha}?per_page=1",token)
+            if comparison.get("status") in ("ahead","identical"):
+                valid.append(rel)
+        except NotesError:
+            continue
     return max(valid,key=lambda r:r.get("created_at",""),default=None)
 
 def resolve_release_commit(repo, tag, token):
@@ -131,7 +141,7 @@ def main():
         or str(sr.get("run_number"))!=source_run_number):raise NotesError("source workflow run is not the successful exact-main-SHA Android validation")
     releases=api_json(repo,"releases?per_page=100",token)
     if not isinstance(releases,list):raise NotesError("GitHub release list response is malformed")
-    prior=previous_android_release(releases,source); prior_sha,prior,prs,commits=change_summary(repo,source,prior,token)
+    prior=previous_android_release(releases,source,repo,token); prior_sha,prior,prs,commits=change_summary(repo,source,prior,token)
     notes=render_notes(repo,source,sr,pub,meta,a.apk.name,prior,prior_sha,prs,commits)
     a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_text(notes,encoding="utf-8")
     print("Generated detailed release notes for "+source[:8])
