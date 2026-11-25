@@ -52,7 +52,6 @@ elsewhere never change meaning.
 
 | ID | Item | Why it matters | Current evidence | Acceptance criterion | Effort |
 | --- | --- | --- | --- | --- | --- |
-| B2 | **Custom fonts: visual and device acceptance** | The font picker and cached rendering path have landed, but applying a user-selected font through the full UI on a physical device remains unverified. | `1b666b2` adds selection and persistence; `eed8020e` fixes malformed-font detection. [Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43260500332) passed build/lint, core and 441 emulator checks, including valid, malformed, oversized and missing font decoding. See [B2 design/limits](B2-custom-fonts.md). | On a physical device, select a user font from the content root, confirm both lyric renderers change, restart to confirm persistence, and confirm malformed input falls back. | M |
 
 ## C. Milestone 5 remainder
 
@@ -212,6 +211,9 @@ Privacy disclosure "Optional Android self-update" added to all four privacy file
 | --- | --- | --- |
 | Hosted Android validation and preview publication for the consolidated main line | `bac94877` / publisher run `45545544620` | Exact-main Android validation [run 45544525873](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/45544525873) passed. Published release [`v0.10.0.947-preview-bac94877`](https://github.com/usermalik20-del/Kanta-reborn/releases/tag/v0.10.0.947-preview-bac94877) carries APK SHA-256 `428ca3afa96251f18f41ab7c40e0a4d1f434a41d1a81338bcf7ba9b1166a39e4`. This is hosted/emulator evidence, not physical-device acceptance. |
 | Android FTS4 compatibility, browser fixture, missing-media fixture and runtime-runner timeout fixes | `b521e943`, `766f52f9`, `2f4e2769`, `a27902a6` | All are covered by the successful exact-main validation above; local/device diagnostics supplied the failure evidence and the fixes preserved shipped behavior. |
+| B2 — custom fonts device acceptance | Owner report, repeated physical-device testing | Custom font selection, lyric rendering, persistence after restart, and malformed-font fallback were tested repeatedly on the physical Android device and work as intended. |
+| D2 — real MKMD decoder/device acceptance | Owner report, repeated physical-device testing | A real paired container was imported through the Android UI, title/payload behavior was verified, and decoded playback worked repeatedly. |
+| D4 — real-pair legacy import end-to-end acceptance | Owner report, repeated physical-device testing | Real-pair import, title/audio association, physical playback, and recovery behavior were tested repeatedly on the physical Android device and work as intended. |
 | Android OTA feed publication and signing-certificate metadata | publisher run `45545544620` | Feed publication now points to the 947 release and includes the verified signer certificate field; physical update-install acceptance remains open. |
 | B1 — PCM spectrum analysis plan and tests | `1b666b2`; validated on `eed8020e` | [Android validation](https://github.com/usermalik20-del/Kanta-reborn/actions/runs/43260500332) passed 55,724 core checks, including registered `SpectrumRegressionTests`. Analysis uses the existing dry microphone analysis path; no spectrum view or physical-device acceptance is claimed. |
 | D5 — video backend decision | `1b666b2` | Owner chose the existing platform `MediaPlayer` / `TextureView`; [the corrected plan](D5-video-backend.md) records the decision. This is not physical-device video acceptance. |
