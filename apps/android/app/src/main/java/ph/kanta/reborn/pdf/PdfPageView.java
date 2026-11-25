@@ -26,6 +26,8 @@ final class PdfPageView extends View {
   private float zoom;
   private boolean multiTouch;
   private float lastX, lastY, focusX, focusY;
+  private float downX, downY;
+  private boolean pageSwipeDispatched;
 
   PdfPageView(Context context, Bitmap image, float zoom, Consumer<PdfPageView> onZoom, Consumer<Integer> onSwipePage) {
     super(context);
@@ -57,6 +59,7 @@ final class PdfPageView extends View {
         float dx = e2.getX() - e1.getX();
         float density = getResources().getDisplayMetrics().density;
         if (Math.abs(dx) >= 32 * density && Math.abs(dx) > Math.abs(e2.getY() - e1.getY()) * 2) {
+          pageSwipeDispatched = true;
           onSwipePage.accept(dx > 0 ? -1 : 1);
           return true;
         }
@@ -113,8 +116,9 @@ final class PdfPageView extends View {
       case MotionEvent.ACTION_DOWN:
         // The surrounding utility ScrollView must not grab a vertical page drag or pinch.
         getParent().requestDisallowInterceptTouchEvent(true);
-        lastX = event.getX();
-        lastY = event.getY();
+        downX = lastX = event.getX();
+        downY = lastY = event.getY();
+        pageSwipeDispatched = false;
         break;
       case MotionEvent.ACTION_MOVE:
         if (!scaleDetector.isInProgress() && event.getPointerCount() == 1) {
@@ -134,6 +138,18 @@ final class PdfPageView extends View {
         }
         break;
       case MotionEvent.ACTION_UP:
+        if (!multiTouch && !pageSwipeDispatched
+            && bounds.resolvedZoom() <= PdfPageBounds.FIT_WIDTH) {
+          float dx = event.getX() - downX;
+          float dy = event.getY() - downY;
+          float density = getResources().getDisplayMetrics().density;
+          if (Math.abs(dx) >= 32 * density && Math.abs(dx) > Math.abs(dy) * 2) {
+            pageSwipeDispatched = true;
+            onSwipePage.accept(dx > 0 ? -1 : 1);
+          }
+        }
+        getParent().requestDisallowInterceptTouchEvent(false);
+        break;
       case MotionEvent.ACTION_CANCEL:
         getParent().requestDisallowInterceptTouchEvent(false);
         break;
