@@ -239,3 +239,6 @@ The Android catalog search query now avoids the unsupported SQLite FTS `rank` co
 ## Browser companion fixture title (2026-11-25)
 
 The browser companion runtime check searches the imported fixture by its provider display title (`Original KAR`), matching the Android companion check and the catalog import contract.
+## Missing-media recovery runtime fixture (2026-11-25)
+
+The missing-media recovery check now seeds its synthetic absent-file reservation directly in the authoritative queue. The public `SessionController.reserve` API correctly accepts only catalog songs; the recovery scenario models a previously persisted reservation whose file later disappeared.

@@ -1567,7 +1567,10 @@ public final class RuntimeChecks extends Instrumentation {
           new Song("missing-runtime-fixture", "Missing fixture", "", "999", "missing.mid", false);
       runOnMainSync(
           () -> {
-            session.reserve(missing, "Retry");
+            // Reserve directly in the authoritative queue: SessionController.reserve correctly
+            // rejects songs outside the imported catalog, while this check targets recovery of
+            // an already-persisted reservation whose media file is now missing.
+            session.queue.reserve(java.util.UUID.randomUUID(), missing, "Retry");
             session.next();
           });
       await(() -> !session.loading, "Failed media preparation never completed");
