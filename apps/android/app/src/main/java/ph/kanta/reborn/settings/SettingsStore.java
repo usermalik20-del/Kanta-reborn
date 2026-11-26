@@ -38,6 +38,21 @@ public final class SettingsStore {
   public static final String KEY_LYRIC_ACTIVE_COLOR = "lyric.activeColor";
   public static final String KEY_LYRIC_UPCOMING_OPACITY = "lyric.upcomingOpacity";
   public static final String KEY_LYRIC_SHOW_UPCOMING = "lyric.showUpcoming";
+  public static final String KEY_LYRIC_ALL_CAPS = "lyric.allCaps";
+  public static final String KEY_LYRIC_BOLD = "lyric.bold";
+  public static final String KEY_LYRIC_OUTLINE = "lyric.outline";
+  public static final String KEY_LYRIC_ALIGNMENT = "lyric.alignment";
+  public static final String KEY_LYRIC_LINES = "lyric.lines";
+  public static final String KEY_LYRIC_SHOW_TITLE = "lyric.showTitle";
+  public static final String KEY_LYRIC_SHOW_WATERMARK = "lyric.showWatermark";
+  public static final String KEY_LYRIC_SHOW_COUNTDOWN = "lyric.showCountdown";
+  public static final String KEY_INTERLUDE_TEXT_COLOR = "interlude.textColor";
+  public static final String KEY_INTERLUDE_ANIMATION = "interlude.animation";
+  public static final String KEY_INTERLUDE_IMAGE_SCALE = "interlude.imageScale";
+  public static final String KEY_INTERLUDE_IMAGE_PLACEMENT = "interlude.imagePlacement";
+  public static final String KEY_INTERLUDE_SHOW_UP_NEXT = "interlude.showUpNext";
+  public static final String KEY_INTERLUDE_SHOW_VISUALIZER = "interlude.showVisualizer";
+  public static final String KEY_INTERLUDE_SHOW_WATERMARK = "interlude.showWatermark";
 
   // Group: mic
   public static final String KEY_MIC_MONITOR_LEVEL = "mic.monitorLevel";
@@ -178,14 +193,86 @@ public final class SettingsStore {
   public float getLyricLineSpacing() { return prefs.getFloat(KEY_LYRIC_LINE_SPACING, 1.0f); }
   public void setLyricLineSpacing(float v) { prefs.edit().putFloat(KEY_LYRIC_LINE_SPACING, v).apply(); }
 
-  public int getLyricActiveColor() { return prefs.getInt(KEY_LYRIC_ACTIVE_COLOR, 0xFFFF3D8B); }
+  public int getLyricActiveColor() { return prefs.getInt(KEY_LYRIC_ACTIVE_COLOR, 0xFFFFFFFF); }
   public void setLyricActiveColor(int v) { prefs.edit().putInt(KEY_LYRIC_ACTIVE_COLOR, v).apply(); }
 
-  public float getLyricUpcomingOpacity() { return prefs.getFloat(KEY_LYRIC_UPCOMING_OPACITY, 0.4f); }
+  public float getLyricUpcomingOpacity() { return prefs.getFloat(KEY_LYRIC_UPCOMING_OPACITY, 0.8f); }
   public void setLyricUpcomingOpacity(float v) { prefs.edit().putFloat(KEY_LYRIC_UPCOMING_OPACITY, v).apply(); }
 
   public boolean getLyricShowUpcoming() { return prefs.getBoolean(KEY_LYRIC_SHOW_UPCOMING, true); }
   public void setLyricShowUpcoming(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_SHOW_UPCOMING, v).apply(); }
+
+  public boolean getLyricAllCaps() { return prefs.getBoolean(KEY_LYRIC_ALL_CAPS, false); }
+  public void setLyricAllCaps(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_ALL_CAPS, v).apply(); }
+
+  public boolean getLyricBold() { return prefs.getBoolean(KEY_LYRIC_BOLD, true); }
+  public void setLyricBold(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_BOLD, v).apply(); }
+
+  /** 0 = none, 1 = thin, 2 = thick drop shadow/outline. */
+  public int getLyricOutline() { return prefs.getInt(KEY_LYRIC_OUTLINE, 1); }
+  public void setLyricOutline(int v) {
+    prefs.edit().putInt(KEY_LYRIC_OUTLINE, Math.max(0, Math.min(2, v))).apply();
+  }
+
+  /** center | bottom | left. */
+  public String getLyricAlignment() { return prefs.getString(KEY_LYRIC_ALIGNMENT, "center"); }
+  public void setLyricAlignment(String v) {
+    prefs.edit().putString(KEY_LYRIC_ALIGNMENT, v == null ? "center" : v).apply();
+  }
+
+  /** two = active + upcoming cue, multi = the active cue alone. */
+  public String getLyricLines() { return prefs.getString(KEY_LYRIC_LINES, "two"); }
+  public void setLyricLines(String v) {
+    prefs.edit().putString(KEY_LYRIC_LINES, v == null ? "two" : v).apply();
+  }
+
+  public boolean getLyricShowTitle() { return prefs.getBoolean(KEY_LYRIC_SHOW_TITLE, false); }
+  public void setLyricShowTitle(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_SHOW_TITLE, v).apply(); }
+
+  public boolean getLyricShowWatermark() { return prefs.getBoolean(KEY_LYRIC_SHOW_WATERMARK, true); }
+  public void setLyricShowWatermark(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_SHOW_WATERMARK, v).apply(); }
+
+  public boolean getLyricShowCountdown() { return prefs.getBoolean(KEY_LYRIC_SHOW_COUNTDOWN, false); }
+  public void setLyricShowCountdown(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_SHOW_COUNTDOWN, v).apply(); }
+
+  public int getInterludeTextColor() { return prefs.getInt(KEY_INTERLUDE_TEXT_COLOR, 0xFFFFFFFF); }
+  public void setInterludeTextColor(int v) { prefs.edit().putInt(KEY_INTERLUDE_TEXT_COLOR, v).apply(); }
+
+  /** static | pulse | marquee. */
+  public String getInterludeAnimation() { return prefs.getString(KEY_INTERLUDE_ANIMATION, "static"); }
+  public void setInterludeAnimation(String v) {
+    prefs.edit().putString(KEY_INTERLUDE_ANIMATION, v == null ? "static" : v).apply();
+  }
+
+  public float getInterludeImageScale() { return prefs.getFloat(KEY_INTERLUDE_IMAGE_SCALE, 1.0f); }
+  public void setInterludeImageScale(float v) {
+    prefs.edit().putFloat(KEY_INTERLUDE_IMAGE_SCALE, Math.max(0.2f, Math.min(1.6f, v))).apply();
+  }
+
+  /** above = above the message, background = dimmed full-bleed. */
+  public String getInterludeImagePlacement() {
+    return prefs.getString(KEY_INTERLUDE_IMAGE_PLACEMENT, "above");
+  }
+  public void setInterludeImagePlacement(String v) {
+    prefs.edit().putString(KEY_INTERLUDE_IMAGE_PLACEMENT, v == null ? "above" : v).apply();
+  }
+
+  public boolean getInterludeShowUpNext() { return prefs.getBoolean(KEY_INTERLUDE_SHOW_UP_NEXT, true); }
+  public void setInterludeShowUpNext(boolean v) { prefs.edit().putBoolean(KEY_INTERLUDE_SHOW_UP_NEXT, v).apply(); }
+
+  public boolean getInterludeShowVisualizer() {
+    return prefs.getBoolean(KEY_INTERLUDE_SHOW_VISUALIZER, false);
+  }
+  public void setInterludeShowVisualizer(boolean v) {
+    prefs.edit().putBoolean(KEY_INTERLUDE_SHOW_VISUALIZER, v).apply();
+  }
+
+  public boolean getInterludeShowWatermark() {
+    return prefs.getBoolean(KEY_INTERLUDE_SHOW_WATERMARK, true);
+  }
+  public void setInterludeShowWatermark(boolean v) {
+    prefs.edit().putBoolean(KEY_INTERLUDE_SHOW_WATERMARK, v).apply();
+  }
 
   // Mic
   public float getMicMonitorLevel() { return prefs.getFloat(KEY_MIC_MONITOR_LEVEL, 0.1f); }
@@ -241,6 +328,23 @@ public final class SettingsStore {
   public boolean getBgvDefaultSelected() { return prefs.getBoolean(KEY_BGV_DEFAULT_SELECTED, false); }
   public void setBgvDefaultSelected(boolean v) { prefs.edit().putBoolean(KEY_BGV_DEFAULT_SELECTED, v).apply(); }
   public void setBgvScrimOpacity(float v) { prefs.edit().putFloat(KEY_BGV_SCRIM_OPACITY, v).apply(); }
+
+  /** Clears every lyric-stage-style preference back to its default. */
+  public void clearLyricStyle() {
+    prefs.edit().remove(KEY_LYRIC_ALL_CAPS).remove(KEY_LYRIC_BOLD).remove(KEY_LYRIC_OUTLINE)
+        .remove(KEY_LYRIC_ACTIVE_COLOR).remove(KEY_LYRIC_UPCOMING_OPACITY)
+        .remove(KEY_LYRIC_SHOW_UPCOMING).remove(KEY_LYRIC_ALIGNMENT).remove(KEY_LYRIC_LINES)
+        .remove(KEY_LYRIC_SHOW_TITLE).remove(KEY_LYRIC_SHOW_WATERMARK)
+        .remove(KEY_LYRIC_SHOW_COUNTDOWN).apply();
+  }
+
+  /** Clears every interlude-style preference back to its default. */
+  public void clearInterludeStyle() {
+    prefs.edit().remove(KEY_INTERLUDE_TEXT_COLOR).remove(KEY_INTERLUDE_ANIMATION)
+        .remove(KEY_INTERLUDE_IMAGE_SCALE).remove(KEY_INTERLUDE_IMAGE_PLACEMENT)
+        .remove(KEY_INTERLUDE_SHOW_UP_NEXT).remove(KEY_INTERLUDE_SHOW_VISUALIZER)
+        .remove(KEY_INTERLUDE_SHOW_WATERMARK).apply();
+  }
 
   /** Resets all settings to defaults. */
   public void resetAll() {

@@ -103,7 +103,10 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     lyrics.mediaVisible(mediaLive || cameraLive);
     lyrics.refresh();
 
-    upNextTicker.updateFromSnapshot(session.queue.snapshot());
+    java.util.List<ph.kanta.reborn.core.ReservationQueue.Entry> next = session.queue.snapshot();
+    if (session.preSongInterludeActive() && !session.interludeShowUpNext())
+      next = java.util.Collections.emptyList();
+    upNextTicker.updateFromSnapshot(next);
     upNextTicker.setVisualActive(active && session.foreground);
     standbyPrompt.setVisibility(standby && upNextTicker.getVisibility() != VISIBLE ? VISIBLE : GONE);
     updateTickerInsets();

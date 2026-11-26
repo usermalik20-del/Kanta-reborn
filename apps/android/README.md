@@ -1,3 +1,24 @@
+## Stage style editors and SoundFont budget (2026-11-26)
+
+`MainActivity` builds the upgraded Lyrics/Interlude editors (font chips via
+`addLyricsFontChips`, styling toggles, swatches, pills, overlay switches);
+every control writes through `SessionController` accessors into
+`SettingsStore` (keys under `lyric.*` and `interlude.*`), publishes, and
+repaints the shared `MiniStagePreview` via `refreshVisualsPreview`. The
+Retro LED face is the OFL-licensed VT323 bundled at
+`assets/lyric-fonts/vt323.ttf` (see PROVENANCE.json); `kanta_submenu_type`
+and the old Change-font/Save-message strings were removed with the buttons
+they styled.
+
+The native SoundFont library (`soundfont.c`, built by the CMake step into
+`libkanta_audio.so` for arm64-v8a/armeabi-v7a/x86_64) now caps tracked
+allocations at 3072 MiB; `tests/soundfont-test.c` pins the constant and its
+boundary accounting. Local validation note: the host unit-test compile needs
+a JDK whose module set includes `javax.sound.sampled` and the Java 11 file
+APIs; where the sandbox JDK is stripped, compile the test sources with the
+full JDK API and run `ph.kanta.reborn.core.CoreRegressionTests` directly with
+`<assets>/party`, a scratch file, and the androidTest song fixtures as
+arguments.
 ## PiP surface shows only the Stage (2026-11-26)
 
 `onPictureInPictureModeChanged` delegates to `applyPipLayout(boolean)`. In PiP

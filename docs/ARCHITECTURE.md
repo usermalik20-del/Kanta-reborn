@@ -1,3 +1,23 @@
+## Stage style ownership (2026-11-26)
+
+All Lyrics/Interlude stage style state lives in `SettingsStore` (groups
+`lyric.*` / `interlude.*`, with `clearLyricStyle()` / `clearInterludeStyle()`
+for the two reset actions) and reaches renderers only through the
+synchronized `SessionController` accessors, which publish on change.
+`StageView` is the single renderer: it applies face/bold per-frame from the
+font store, maps the active-lyric color (with a lightened sung-highlight, or
+classic gold over white), per-character ALL CAPS (length-preserving, so timed
+cue offsets stay valid), outline shadow levels, Center/Bottom/Left layout via
+the alignment-aware `StageLyricLayout.fit`, the optional song-title header,
+the watermark gate, and the vocal countdown dots driven by the new
+`countdownRemainingMs()` state set where countdowns start and cleared where
+they end. Animated interlude states (pulse, marquee, visualizer) and a live
+countdown re-arm frames with `postInvalidateOnAnimation`; everything else
+stays on the session clock. The interlude image renders above the message or
+as a dimmed full-bleed background per `interludeImagePlacement`, scaled by
+`interludeImageScale`. `MiniStagePreview` mirrors the same state through a
+`LyricStyle` snapshot plus the interlude color/animation/scale/placement so
+the editor box tracks the real Stage without owning session state.
 ## PiP layout ownership (2026-11-26)
 
 Picture-in-Picture layout state is owned by `MainActivity.applyPipLayout`,

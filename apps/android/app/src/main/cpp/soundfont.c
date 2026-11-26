@@ -14,7 +14,7 @@ static _Thread_local size_t allocated;
 // Full-tail banks may decode to more than 1 GiB of floats; keep a finite cap
 // while allowing 1.11 GiB of samples plus tables, channels and voice state.
 // malloc/realloc can still fail below this ceiling on memory-constrained devices.
-static const size_t budget = (size_t)1536u * 1024u * 1024u;
+static const size_t budget = (size_t)3072u * 1024u * 1024u;
 
 static void* bounded_malloc(size_t bytes) {
     if (bytes > budget - allocated || bytes > SIZE_MAX - sizeof(allocation_header)) return NULL;

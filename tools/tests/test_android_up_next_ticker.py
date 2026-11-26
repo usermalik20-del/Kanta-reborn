@@ -31,7 +31,13 @@ class UpNextTickerTests(unittest.TestCase):
                                    ('StageSurface.java', 'session.queue.snapshot()')]:
             with self.subTest(filename=filename):
                 source = (JAVA / filename).read_text()
-                self.assertIn('upNextTicker.updateFromSnapshot(' + snapshot + ')', source)
+                if filename == 'StageSurface.java':
+                    # The interlude's "Show Up Next" toggle may blank the projection,
+                    # but the source is always the session queue snapshot, unmodified.
+                    self.assertIn(snapshot, source)
+                    self.assertIn('upNextTicker.updateFromSnapshot(', source)
+                else:
+                    self.assertIn('upNextTicker.updateFromSnapshot(' + snapshot + ')', source)
                 self.assertIn('tickerParams.gravity = ', source)
                 self.assertIn('Gravity.BOTTOM', source)
                 if filename == 'StageSurface.java':

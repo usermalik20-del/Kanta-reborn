@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lyrics_font_default">KANTA Default</string>
+    <string name="lyrics_font_bold_videoke">Bold Videoke</string>
+    <string name="lyrics_font_clean_sans">Clean Sans</string>
+    <string name="lyrics_font_retro_led">Retro LED</string>
+    <string name="lyrics_font_classic_serif">Classic Serif</string>
+    <string name="lyrics_font_import">Import custom font</string>
+    <string name="lyrics_styling_heading">Text styling</string>
+    <string name="lyrics_all_caps">ALL CAPS</string>
+    <string name="lyrics_bold">Bold</string>
+    <string name="lyrics_outline">Text outline</string>
+    <string name="lyrics_outline_none">None</string>
+    <string name="lyrics_outline_thin">Thin</string>
+    <string name="lyrics_outline_thick">Thick</string>
+    <string name="lyrics_active_color">Active lyric color</string>
+    <string name="lyrics_upcoming_dim">Upcoming lyric dim</string>
+    <string name="lyrics_layout_heading">Layout</string>
+    <string name="lyrics_alignment">Alignment</string>
+    <string name="lyrics_align_center">Center</string>
+    <string name="lyrics_align_bottom">Bottom</string>
+    <string name="lyrics_align_left">Left</string>
+    <string name="lyrics_lines">Lines</string>
+    <string name="lyrics_lines_two">2 lines</string>
+    <string name="lyrics_lines_multi">Multi-line</string>
+    <string name="lyrics_overlays_heading">Stage overlays</string>
+    <string name="lyrics_show_title">Show song title</string>
+    <string name="lyrics_show_watermark">Show KANTA watermark</string>
+    <string name="lyrics_show_countdown">Vocal countdown dots</string>
+    <string name="lyrics_reset">Reset lyrics style</string>
+    <string name="interlude_presets">Quick messages</string>
+    <string name="interlude_preset_ready">Ready for Next Song</string>
+    <string name="interlude_preset_birthday">Happy Birthday!</string>
+    <string name="interlude_preset_singer">Next Singer Ready!</string>
+    <string name="interlude_color">Message color</string>
+    <string name="interlude_animation">Animation</string>
+    <string name="interlude_anim_static">Static</string>
+    <string name="interlude_anim_pulse">Pulse</string>
+    <string name="interlude_anim_marquee">Scrolling Marquee</string>
+    <string name="interlude_image_size">Image size</string>
+    <string name="interlude_placement">Image placement</string>
+    <string name="interlude_placement_above">Above Message</string>
+    <string name="interlude_placement_background">Dimmed Full Background</string>
+    <string name="interlude_show_up_next">Show Up Next song banner</string>
+    <string name="interlude_show_visualizer">Reactive audio visualizer bars</string>
+    <string name="interlude_show_watermark">Show KANTA watermark</string>
+</resources>

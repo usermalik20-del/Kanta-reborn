@@ -64,7 +64,8 @@ final class BundledLyricFonts {
       new Option("playfairdisplay-regular", "Playfair Display", "playfairdisplay", 400),
       new Option("robotocondensed-regular", "Roboto Condensed", "robotocondensed", 400),
       new Option("sora-regular", "Sora", "sora", 400),
-      new Option("spacegrotesk-regular", "Space Grotesk", "spacegrotesk", 400)));
+      new Option("spacegrotesk-regular", "Space Grotesk", "spacegrotesk", 400),
+      new Option("vt323-regular", "VT323", "vt323", 0)));
 
   static Typeface load(Context context, Uri uri) {
     for (Option option : OPTIONS) {

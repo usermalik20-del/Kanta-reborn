@@ -2178,15 +2178,263 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     MenuSurface.setLeadingIcon(autoLyrics[0], R.drawable.kanta_submenu_lyrics);
     target.addView(autoLyrics[0]);
     target.addView(MenuSurface.detail(this, getString(R.string.auto_lyrics_details)));
+
+    target.addView(sectionHeader(getString(R.string.visuals_lyrics_font)));
+    addLyricsFontChips(target);
     visualsFontLabel = text(getString(R.string.visuals_lyrics_font_value,
         getString(R.string.visuals_lyrics_font), currentLyricsFontName()), 15, KantaTheme.TEXT_PRIMARY);
     visualsFontLabel.setTag("kanta.visuals.lyrics.font");
     visualsFontLabel.setMinHeight(dp(48));
     target.addView(visualsFontLabel);
-    Button change = actionButton(getString(R.string.visuals_lyrics_change),
-        R.drawable.kanta_submenu_type, this::chooseLyricFont);
-    change.setTag("kanta.visuals.lyrics.font.change");
-    target.addView(change);
+
+    target.addView(sectionHeader(getString(R.string.lyrics_styling_heading)));
+    target.addView(styleToggle("kanta.lyrics.allcaps", getString(R.string.lyrics_all_caps),
+        session.lyricAllCaps(), (button, checked) -> {
+          session.setLyricAllCaps(checked);
+          refreshVisualsPreview();
+        }));
+    target.addView(styleToggle("kanta.lyrics.bold", getString(R.string.lyrics_bold),
+        session.lyricBold(), (button, checked) -> {
+          session.setLyricBold(checked);
+          refreshVisualsPreview();
+        }));
+    target.addView(text(getString(R.string.lyrics_outline), 15, KantaTheme.TEXT_PRIMARY));
+    target.addView(pillGroup("kanta.lyrics.outline",
+        new String[] {getString(R.string.lyrics_outline_none), getString(R.string.lyrics_outline_thin),
+            getString(R.string.lyrics_outline_thick)},
+        session.lyricOutline(), index -> {
+          session.setLyricOutline(index);
+          refreshVisualsPreview();
+        }));
+
+    target.addView(sectionHeader(getString(R.string.lyrics_active_color)));
+    addColorSwatches(target, "kanta.lyrics.color", session.lyricActiveColor(), color -> {
+      session.setLyricActiveColor(color);
+      refreshVisualsPreview();
+    });
+    target.addView(text(getString(R.string.lyrics_upcoming_dim), 15, KantaTheme.TEXT_PRIMARY));
+    SeekBar dim = new SeekBar(this);
+    dim.setTag("kanta.lyrics.upcoming.dim");
+    dim.setMax(80);
+    dim.setProgress(Math.round((session.lyricUpcomingOpacity() - 0.2f) * 100));
+    dim.setOnSeekBarChangeListener(seekListener(value -> {
+      session.setLyricUpcomingOpacity(0.2f + value / 100f);
+      refreshVisualsPreview();
+    }));
+    target.addView(dim);
+
+    target.addView(sectionHeader(getString(R.string.lyrics_layout_heading)));
+    target.addView(text(getString(R.string.lyrics_alignment), 15, KantaTheme.TEXT_PRIMARY));
+    String alignment = session.lyricAlignment();
+    target.addView(pillGroup("kanta.lyrics.alignment",
+        new String[] {getString(R.string.lyrics_align_center), getString(R.string.lyrics_align_bottom),
+            getString(R.string.lyrics_align_left)},
+        "bottom".equals(alignment) ? 1 : "left".equals(alignment) ? 2 : 0, index -> {
+          session.setLyricAlignment(index == 0 ? "center" : index == 1 ? "bottom" : "left");
+          refreshVisualsPreview();
+        }));
+    target.addView(text(getString(R.string.lyrics_lines), 15, KantaTheme.TEXT_PRIMARY));
+    target.addView(pillGroup("kanta.lyrics.lines",
+        new String[] {getString(R.string.lyrics_lines_two), getString(R.string.lyrics_lines_multi)},
+        "multi".equals(session.lyricLines()) ? 1 : 0, index -> {
+          session.setLyricLines(index == 1 ? "multi" : "two");
+          refreshVisualsPreview();
+        }));
+
+    target.addView(sectionHeader(getString(R.string.lyrics_overlays_heading)));
+    target.addView(styleToggle("kanta.lyrics.title", getString(R.string.lyrics_show_title),
+        session.lyricShowTitle(), (button, checked) -> {
+          session.setLyricShowTitle(checked);
+          refreshVisualsPreview();
+        }));
+    target.addView(styleToggle("kanta.lyrics.watermark", getString(R.string.lyrics_show_watermark),
+        session.lyricShowWatermark(), (button, checked) -> {
+          session.setLyricShowWatermark(checked);
+          refreshVisualsPreview();
+        }));
+    target.addView(styleToggle("kanta.lyrics.countdown", getString(R.string.lyrics_show_countdown),
+        session.lyricShowCountdown(), (button, checked) -> {
+          session.setLyricShowCountdown(checked);
+          refreshVisualsPreview();
+        }));
+
+    Button reset = actionButton(getString(R.string.lyrics_reset), R.drawable.kanta_submenu_reset,
+        () -> { session.resetLyricStyle(); render(); });
+    reset.setTag("kanta.lyrics.reset");
+    target.addView(reset);
+  }
+
+  /** Named quick-pick fonts, each rendered in its own face, plus custom import. */
+  private void addLyricsFontChips(LinearLayout target) {
+    ph.kanta.reborn.font.FontStore fonts = ph.kanta.reborn.font.FontStore.getInstance(this);
+    String saved = new SettingsStore(this).getLyricFont();
+    HorizontalScrollView scroller = new HorizontalScrollView(this);
+    scroller.setFillViewport(true);
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    fontChip(row, "kanta.lyrics.font.default", getString(R.string.lyrics_font_default),
+        null, saved, fonts);
+    fontChip(row, "kanta.lyrics.font.bold_videoke", getString(R.string.lyrics_font_bold_videoke),
+        FONT_CHIP_IDS[1], saved, fonts);
+    fontChip(row, "kanta.lyrics.font.clean_sans", getString(R.string.lyrics_font_clean_sans),
+        FONT_CHIP_IDS[2], saved, fonts);
+    fontChip(row, "kanta.lyrics.font.retro_led", getString(R.string.lyrics_font_retro_led),
+        FONT_CHIP_IDS[3], saved, fonts);
+    fontChip(row, "kanta.lyrics.font.classic_serif", getString(R.string.lyrics_font_classic_serif),
+        FONT_CHIP_IDS[4], saved, fonts);
+    Button importChip = KantaTheme.secondaryButton(this, getString(R.string.lyrics_font_import),
+        v -> chooseLyricFont());
+    importChip.setTag("kanta.lyrics.font.import");
+    importChip.setAllCaps(false);
+    importChip.setTextSize(12);
+    importChip.setMinWidth(0);
+    importChip.setMinHeight(dp(44));
+    importChip.setPadding(dp(10), dp(8), dp(10), dp(8));
+    LinearLayout.LayoutParams importParams = new LinearLayout.LayoutParams(-2, -2);
+    importParams.setMargins(dp(4), 0, dp(4), 0);
+    row.addView(importChip, importParams);
+    scroller.addView(row, new HorizontalScrollView.LayoutParams(-2, -2));
+    target.addView(scroller, new LinearLayout.LayoutParams(-1, -2));
+  }
+
+  private static final String[] FONT_CHIP_IDS = {null, "kanta-font://anton-regular",
+      "kanta-font://sora-regular", "kanta-font://vt323-regular", "kanta-font://lora-regular"};
+
+  private void fontChip(LinearLayout row, String tag, String label, String fontId,
+      String saved, ph.kanta.reborn.font.FontStore fonts) {
+    Button chip = KantaTheme.secondaryButton(this, label, v -> {
+      String target = fontId == null ? "" : fontId;
+      fonts.select(fontId == null ? null : Uri.parse(fontId), ok -> {
+        if (ok) {
+          noteLyricsFontChanged();
+          restyleFontChips(row, target);
+        } else {
+          restyleFontChips(row, new SettingsStore(this).getLyricFont());
+        }
+      });
+    });
+    chip.setTag(tag);
+    chip.setAllCaps(false);
+    chip.setTextSize(13);
+    chip.setMinWidth(0);
+    chip.setMinHeight(dp(44));
+    chip.setPadding(dp(10), dp(8), dp(10), dp(8));
+    if (fontId != null) {
+      boolean selected = fontId.equals(saved);
+      chip.setSelected(selected);
+      if (selected) chip.setTextColor(KantaTheme.PRIMARY_CYAN);
+      fonts.preview(Uri.parse(fontId), face -> {
+        if (face != null) chip.setTypeface(face);
+      });
+    }
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+    params.setMargins(dp(4), 0, dp(4), 0);
+    row.addView(chip, params);
+  }
+
+  private void restyleFontChips(LinearLayout row, String saved) {
+    for (int i = 0; i < row.getChildCount() && i < FONT_CHIP_IDS.length; i++) {
+      Button chip = (Button) row.getChildAt(i);
+      boolean selected = FONT_CHIP_IDS[i] != null && FONT_CHIP_IDS[i].equals(saved);
+      chip.setSelected(selected);
+      chip.setTextColor(selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_PRIMARY);
+    }
+  }
+
+  private Switch styleToggle(String tag, String label, boolean checked,
+      Switch.OnCheckedChangeListener change) {
+    Switch toggle = new Switch(this);
+    toggle.setTag(tag);
+    toggle.setText(label);
+    toggle.setTextColor(KantaTheme.TEXT_PRIMARY);
+    toggle.setMinHeight(dp(48));
+    toggle.setChecked(checked);
+    toggle.setOnCheckedChangeListener(change);
+    return toggle;
+  }
+
+  private LinearLayout pillGroup(String tagPrefix, String[] labels, int selected,
+      java.util.function.IntConsumer onPick) {
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    for (int i = 0; i < labels.length; i++) {
+      final int index = i;
+      Button pill = KantaTheme.secondaryButton(this, labels[i], v -> {
+        onPick.accept(index);
+        restylePills(row, index);
+      });
+      pill.setTag(tagPrefix + "." + index);
+      pill.setAllCaps(false);
+      pill.setTextSize(12);
+      pill.setMinWidth(0);
+      pill.setMinimumWidth(0);
+      pill.setMinHeight(dp(44));
+      pill.setPadding(dp(6), dp(8), dp(6), dp(8));
+      pill.setSelected(index == selected);
+      if (index == selected) pill.setTextColor(KantaTheme.PRIMARY_CYAN);
+      LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1f);
+      params.setMargins(dp(3), 0, dp(3), 0);
+      row.addView(pill, params);
+    }
+    return row;
+  }
+
+  private void restylePills(LinearLayout row, int selected) {
+    for (int i = 0; i < row.getChildCount(); i++) {
+      Button pill = (Button) row.getChildAt(i);
+      pill.setSelected(i == selected);
+      pill.setTextColor(i == selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.TEXT_PRIMARY);
+    }
+  }
+
+  private static final String[] STAGE_SWATCH_NAMES = {"yellow", "cyan", "neon", "pink", "white"};
+  private static final int[] STAGE_SWATCH_COLORS = {0xFFFFEB3B, 0xFF00E5FF, 0xFF39FF14,
+      0xFFFF3D8B, 0xFFFFFFFF};
+
+  private void addColorSwatches(LinearLayout target, String tagPrefix, int stored,
+      java.util.function.IntConsumer onPick) {
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    for (int i = 0; i < STAGE_SWATCH_COLORS.length; i++) {
+      final int color = STAGE_SWATCH_COLORS[i];
+      View swatch = new View(this);
+      swatch.setTag(tagPrefix + "." + STAGE_SWATCH_NAMES[i]);
+      swatch.setMinimumWidth(dp(30));
+      swatch.setMinimumHeight(dp(30));
+      boolean selected = stored == color;
+      swatch.setBackground(KantaTheme.backgroundDrawable(color, 15,
+          selected ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER, selected ? 3 : 1,
+          getResources().getDisplayMetrics().density));
+      swatch.setContentDescription(STAGE_SWATCH_NAMES[i]);
+      swatch.setOnClickListener(v -> {
+        onPick.accept(color);
+        restyleSwatches(row, color);
+      });
+      LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(30), 1f);
+      params.setMargins(dp(4), dp(2), dp(4), dp(2));
+      row.addView(swatch, params);
+    }
+    target.addView(row);
+  }
+
+  private void restyleSwatches(LinearLayout row, int selected) {
+    for (int i = 0; i < row.getChildCount() && i < STAGE_SWATCH_COLORS.length; i++) {
+      View swatch = row.getChildAt(i);
+      boolean is = STAGE_SWATCH_COLORS[i] == selected;
+      swatch.setBackground(KantaTheme.backgroundDrawable(STAGE_SWATCH_COLORS[i], 15,
+          is ? KantaTheme.PRIMARY_CYAN : KantaTheme.BORDER, is ? 3 : 1,
+          getResources().getDisplayMetrics().density));
+    }
+  }
+
+  private SeekBar.OnSeekBarChangeListener seekListener(java.util.function.IntConsumer onChange) {
+    return new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onProgressChanged(SeekBar bar, int value, boolean fromUser) {
+        onChange.accept(value);
+      }
+      @Override public void onStartTrackingTouch(SeekBar bar) { }
+      @Override public void onStopTrackingTouch(SeekBar bar) { }
+    };
   }
 
   private String currentLyricsFontName() {
@@ -2223,11 +2471,57 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     message.setBackground(KantaTheme.backgroundDrawable(KantaTheme.SURFACE, 13, KantaTheme.BORDER, 1,
         getResources().getDisplayMetrics().density));
     message.setPadding(dp(12), dp(10), dp(12), dp(10));
+    // Live: every keystroke lands in the session and repaints the stage preview.
+    message.addTextChangedListener(new TextWatcher() {
+      @Override public void afterTextChanged(Editable edited) {
+        session.setInterludeText(edited.toString());
+        refreshVisualsPreview();
+      }
+      @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+      @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+    });
     target.addView(message, new LinearLayout.LayoutParams(-1, -2));
-    Button save = actionButton(getString(R.string.visuals_interlude_save), R.drawable.kanta_submenu_check,
-        () -> { session.setInterludeText(message.getText().toString()); refreshVisualsPreview(); });
-    save.setTag("kanta.visuals.interlude.save");
-    target.addView(save);
+
+    target.addView(text(getString(R.string.interlude_presets), 15, KantaTheme.TEXT_PRIMARY));
+    LinearLayout presets = new LinearLayout(this);
+    presets.setOrientation(LinearLayout.HORIZONTAL);
+    String[] presetMessages = {getString(R.string.interlude_preset_ready),
+        getString(R.string.interlude_preset_birthday), getString(R.string.interlude_preset_singer)};
+    for (int i = 0; i < presetMessages.length; i++) {
+      final String preset = presetMessages[i];
+      Button chip = KantaTheme.secondaryButton(this, preset, v -> {
+        message.setText(preset);
+        session.setInterludeText(preset);
+        refreshVisualsPreview();
+      });
+      chip.setTag("kanta.interlude.preset." + i);
+      chip.setAllCaps(false);
+      chip.setTextSize(11);
+      chip.setMinWidth(0);
+      chip.setMinHeight(dp(44));
+      chip.setPadding(dp(6), dp(8), dp(6), dp(8));
+      LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1f);
+      params.setMargins(dp(3), 0, dp(3), 0);
+      presets.addView(chip, params);
+    }
+    target.addView(presets);
+
+    target.addView(sectionHeader(getString(R.string.interlude_color)));
+    addColorSwatches(target, "kanta.interlude.color", session.interludeTextColor(), color -> {
+      session.setInterludeTextColor(color);
+      refreshVisualsPreview();
+    });
+
+    target.addView(text(getString(R.string.interlude_animation), 15, KantaTheme.TEXT_PRIMARY));
+    String animation = session.interludeAnimation();
+    target.addView(pillGroup("kanta.interlude.animation",
+        new String[] {getString(R.string.interlude_anim_static),
+            getString(R.string.interlude_anim_pulse), getString(R.string.interlude_anim_marquee)},
+        "pulse".equals(animation) ? 1 : "marquee".equals(animation) ? 2 : 0, index -> {
+          session.setInterludeAnimation(index == 0 ? "static" : index == 1 ? "pulse" : "marquee");
+          refreshVisualsPreview();
+        }));
+
     target.addView(text(getString(R.string.interlude_size), 15, KantaTheme.TEXT_PRIMARY));
     TextView sizeLabel = text(interludeSizeLabel(session.interludeTextSizeSp()), 15, KantaTheme.TEXT_PRIMARY);
     sizeLabel.setTag("kanta.visuals.interlude.size");
@@ -2251,13 +2545,32 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       imageSet.setTag("kanta.visuals.interlude.image");
       imageSet.setMinHeight(dp(48));
       target.addView(imageSet);
+      target.addView(text(getString(R.string.interlude_image_size), 15, KantaTheme.TEXT_PRIMARY));
+      SeekBar imageSize = new SeekBar(this);
+      imageSize.setTag("kanta.visuals.interlude.image.scale");
+      imageSize.setMax(140);
+      imageSize.setProgress(Math.round((session.interludeImageScale() - 0.2f) * 100));
+      imageSize.setOnSeekBarChangeListener(seekListener(value -> {
+        session.setInterludeImageScale(0.2f + value / 100f);
+        refreshVisualsPreview();
+      }));
+      target.addView(imageSize);
+      target.addView(text(getString(R.string.interlude_placement), 15, KantaTheme.TEXT_PRIMARY));
+      String placement = session.interludeImagePlacement();
+      target.addView(pillGroup("kanta.interlude.image.placement",
+          new String[] {getString(R.string.interlude_placement_above),
+              getString(R.string.interlude_placement_background)},
+          "background".equals(placement) ? 1 : 0, index -> {
+            session.setInterludeImagePlacement(index == 1 ? "background" : "above");
+            refreshVisualsPreview();
+          }));
       Button remove = actionButton(getString(R.string.interlude_remove_image),
           R.drawable.kanta_submenu_remove, () -> constrainDialog(new AlertDialog.Builder(this)
               .setTitle(R.string.visuals_interlude_remove_title)
               .setMessage(R.string.visuals_interlude_remove_message)
               .setPositiveButton(getString(R.string.interlude_remove_image), (d, w) -> {
                 session.clearInterludeImage();
-                refreshVisualsPreview();
+                render();
               })
               .setNegativeButton("Cancel", null).show()));
       remove.setTag("kanta.visuals.interlude.image.remove");
@@ -2270,8 +2583,28 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       target.addView(add);
       target.addView(text(getString(R.string.interlude_image_summary), 14, KantaTheme.TEXT_SECONDARY));
     }
-    Button reset = actionButton(getString(R.string.visuals_interlude_reset), R.drawable.kanta_submenu_reset,
-        () -> { session.resetInterlude(); refreshVisualsPreview(); });
+
+    target.addView(sectionHeader(getString(R.string.lyrics_overlays_heading)));
+    target.addView(styleToggle("kanta.interlude.up_next", getString(R.string.interlude_show_up_next),
+        session.interludeShowUpNext(), (button, checked) -> {
+          session.setInterludeShowUpNext(checked);
+          refreshVisualsPreview();
+        }));
+    target.addView(styleToggle("kanta.interlude.visualizer",
+        getString(R.string.interlude_show_visualizer),
+        session.interludeShowVisualizer(), (button, checked) -> {
+          session.setInterludeShowVisualizer(checked);
+          refreshVisualsPreview();
+        }));
+    target.addView(styleToggle("kanta.interlude.watermark",
+        getString(R.string.interlude_show_watermark),
+        session.interludeShowWatermark(), (button, checked) -> {
+          session.setInterludeShowWatermark(checked);
+          refreshVisualsPreview();
+        }));
+
+    Button reset = actionButton(getString(R.string.visuals_interlude_reset),
+        R.drawable.kanta_submenu_reset, () -> { session.resetInterlude(); render(); });
     reset.setTag("kanta.visuals.interlude.reset");
     target.addView(reset);
   }
@@ -2288,11 +2621,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     preview.setChip(song == null ? "" : song.title);
     // The Intermission page keeps its own editor tab selection.
     int tab = MENU_INTERMISSION.equals(this.tab) ? intermissionSelectedTab : visualsSelectedTab;
+    ph.kanta.reborn.font.FontStore fonts = ph.kanta.reborn.font.FontStore.getInstance(this);
     if (tab == KantaVisualsScreen.INTERLUDE) {
       preview.setPlaceholder("");
       preview.setBackground(previewBackgroundBitmap(tab));
-      preview.setInterlude(session.interludeText(), session.interludeImage(),
-          ph.kanta.reborn.font.FontStore.getInstance(this).typeface());
+      preview.setInterlude(session.interludeText(), session.interludeImage(), fonts.typeface(),
+          session.interludeTextColor(), session.interludeAnimation(),
+          session.interludeImageScale(), session.interludeImagePlacement(),
+          session.interludeShowWatermark());
       return;
     }
     if (tab == KantaVisualsScreen.VIDEOS) {
@@ -2306,8 +2642,26 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       preview.setPlaceholder(getString(R.string.visuals_preview_photo));
     }
     preview.setBackground(previewBackgroundBitmap(tab));
-    preview.setLyricLines(sampleLyricLine(), "",
-        ph.kanta.reborn.font.FontStore.getInstance(this).typeface(), 1f);
+    boolean upcomingVisible = session.lyricShowUpcoming()
+        && !"multi".equals(session.lyricLines());
+    MiniStagePreview.LyricStyle style = new MiniStagePreview.LyricStyle();
+    style.activeColor = session.lyricActiveColor();
+    style.upcomingAlpha = session.lyricUpcomingOpacity();
+    style.allCaps = session.lyricAllCaps();
+    style.bold = session.lyricBold();
+    style.outline = session.lyricOutline();
+    style.alignment = session.lyricAlignment();
+    style.showUpcoming = upcomingVisible;
+    style.showTitle = session.lyricShowTitle();
+    style.title = song == null ? "" : song.title;
+    style.showWatermark = session.lyricShowWatermark();
+    preview.applyLyricStyle(style);
+    String currentLine = sampleLyricLine();
+    if (session.lyricAllCaps()) currentLine = currentLine.toUpperCase(java.util.Locale.ROOT);
+    String nextLine = upcomingVisible ? nextSampleLine() : "";
+    if (session.lyricAllCaps() && !nextLine.isEmpty())
+      nextLine = nextLine.toUpperCase(java.util.Locale.ROOT);
+    preview.setLyricLines(currentLine, nextLine, fonts.typeface(), 1f);
   }
 
   private String sampleLyricLine() {
@@ -2317,6 +2671,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (index >= 0 && index < session.lyrics.size()) return session.lyrics.get(index).line;
     if (!session.lyrics.isEmpty()) return session.lyrics.get(0).line;
     return song.title;
+  }
+
+  private String nextSampleLine() {
+    Song song = session.currentSong();
+    if (song == null) return "The room is waiting.";
+    int index = MidiLyrics.activeIndex(session.lyrics, session.position());
+    if (index + 1 < session.lyrics.size()) return session.lyrics.get(index + 1).line;
+    if (!session.lyrics.isEmpty()) return session.lyrics.get(Math.max(0, index)).line;
+    return "";
   }
 
   private Bitmap previewBackgroundBitmap(int tab) {

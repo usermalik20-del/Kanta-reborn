@@ -7,7 +7,7 @@
 
 static void allocation_checks(void) {
     assert(allocated == 0);
-    assert(budget == (size_t)1536u * 1024u * 1024u);
+    assert(budget == (size_t)3072u * 1024u * 1024u);
     // The full piano's decoded samples fit, with headroom for loader metadata.
     assert(budget > (size_t)1163416536u + 64u * 1024u * 1024u);
     assert(!bounded_malloc(budget + 1));
@@ -42,7 +42,7 @@ static void allocation_checks(void) {
     allocated = 0; // Retire the simulated allocations, not real heap pointers.
     bounded_free(NULL);
     assert(allocated == 0);
-    puts("SoundFont: 1536 MiB cap, exact boundary, realloc/overflow accounting passed");
+    puts("SoundFont: 3072 MiB cap, exact boundary, realloc/overflow accounting passed");
 }
 
 static double frequency(kanta_soundfont* bank, float tuning) {

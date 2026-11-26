@@ -35,7 +35,14 @@ public final class StageLyricLayout {
 
   public static StageLyricLayout fit(String text, TextPaint style, String preview,
       TextPaint previewStyle, int width, int height, int gap, float minimumPreviewSize) {
-    StaticLayout full = fitLine(text, style, style.getTextSize(), width, height);
+    return fit(text, style, preview, previewStyle, width, height, gap, minimumPreviewSize,
+        Layout.Alignment.ALIGN_CENTER);
+  }
+
+  public static StageLyricLayout fit(String text, TextPaint style, String preview,
+      TextPaint previewStyle, int width, int height, int gap, float minimumPreviewSize,
+      Layout.Alignment alignment) {
+    StaticLayout full = fitLine(text, style, style.getTextSize(), width, height, alignment);
     if (preview.isEmpty()) return new StageLyricLayout(full, null, 0);
 
     // Try the preview without reducing the active cue first. If that fails, reserve
@@ -44,12 +51,12 @@ public final class StageLyricLayout {
     float ratio = previewStyle.getTextSize() / style.getTextSize();
     float fullSize = full.getPaint().getTextSize();
     if (fullSize * ratio < minimumPreviewSize) return new StageLyricLayout(full, null, 0);
-    StaticLayout minimum = create(preview, previewStyle, width, minimumPreviewSize);
+    StaticLayout minimum = create(preview, previewStyle, width, minimumPreviewSize, alignment);
     if (!fits(minimum, width, previewBudget)) return new StageLyricLayout(full, null, 0);
 
     StaticLayout current = full;
     if (full.getHeight() + gap + minimum.getHeight() > height) {
-      current = fitLine(text, style, fullSize, width, height - gap - minimum.getHeight());
+      current = fitLine(text, style, fullSize, width, height - gap - minimum.getHeight(), alignment);
       float size = current.getPaint().getTextSize();
       if (current.getHeight() + gap + minimum.getHeight() > height
           || size < fullSize * .82f || size * ratio < minimumPreviewSize) {
@@ -58,23 +65,24 @@ public final class StageLyricLayout {
     }
     int remaining = Math.min(previewBudget, height - current.getHeight() - gap);
     StaticLayout next = fitLine(preview, previewStyle, current.getPaint().getTextSize() * ratio,
-        width, remaining);
+        width, remaining, alignment);
     if (next.getPaint().getTextSize() < minimumPreviewSize) next = minimum;
     return new StageLyricLayout(current, next, gap);
   }
 
   private static StaticLayout fitLine(
-      String text, TextPaint paint, float preferred, int width, int height) {
-    StaticLayout best = create(text, paint, width, preferred);
+      String text, TextPaint paint, float preferred, int width, int height,
+      Layout.Alignment alignment) {
+    StaticLayout best = create(text, paint, width, preferred, alignment);
     if (fits(best, width, height)) return best;
 
     // StaticLayout wraps at natural break opportunities. No maxLines/ellipsis: a timed
     // cue must remain complete. Search actual glyph metrics, including custom fonts.
     float low = Math.min(1f, preferred), high = preferred;
-    best = create(text, paint, width, low);
+    best = create(text, paint, width, low, alignment);
     for (int i = 0; i < 9 && high - low > .25f; i++) {
       float size = (low + high) / 2f;
-      StaticLayout candidate = create(text, paint, width, size);
+      StaticLayout candidate = create(text, paint, width, size, alignment);
       if (fits(candidate, width, height)) {
         low = size;
         best = candidate;
@@ -93,11 +101,12 @@ public final class StageLyricLayout {
     return true;
   }
 
-  private static StaticLayout create(String text, TextPaint prototype, int width, float size) {
+  private static StaticLayout create(String text, TextPaint prototype, int width, float size,
+      Layout.Alignment alignment) {
     TextPaint paint = new TextPaint(prototype);
     paint.setTextSize(size);
     StaticLayout.Builder builder = StaticLayout.Builder.obtain(text, 0, text.length(), paint, width)
-        .setAlignment(Layout.Alignment.ALIGN_CENTER)
+        .setAlignment(alignment)
         .setIncludePad(true);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) builder.setUseLineSpacingFromFallbacks(true);
     return builder.build();

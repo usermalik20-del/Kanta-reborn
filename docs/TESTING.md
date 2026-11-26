@@ -1,3 +1,23 @@
+## Stage style editor coverage (2026-11-26)
+
+`tools/tests/test_stage_style_upgrade.py` pins the new editors: the five
+named font chips plus custom import (resolving through `FONT_CHIP_IDS` to
+real bundled faces), VT323's asset/license/provenance integrity, every
+Lyrics/Interlude control tag, the `SessionController` accessors, the
+`StageView` render hooks (including the length-preserving ALL CAPS and the
+animation frame loop), the alignment-aware `StageLyricLayout`, the
+`MiniStagePreview.LyricStyle` mirror, the live interlude TextWatcher, the
+countdown state exposure, and the 3072 MiB SoundFont budget in both
+`soundfont.c` and `tests/soundfont-test.c`. Two older contracts moved with
+the architecture: the font-picker contract now pins the chip row's import
+action, and the Up Next projection contract accepts the interlude toggle's
+blanked snapshot while still requiring the session queue as the source.
+Measured device behavior (preview repaint, marquee motion, countdown dots)
+belongs to the emulator RuntimeChecks walk. Sandbox note: this environment's
+JDK 17 exposes a JDK-8 API surface to the Gradle test compile, so the core
+suite is run by compiling the host test sources with the full JDK 17 API and
+executing `CoreRegressionTests` with the party assets, a scratch file, and
+the androidTest song fixtures — 73,285 checks pass.
 ## PiP surface validation (2026-11-26)
 
 No host Python contract asserts on the PiP layout (no test references

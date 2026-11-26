@@ -1,3 +1,17 @@
+## Stage style editors for Lyrics and Interlude (2026-11-26)
+
+The Lyrics tab now offers a horizontal font row (KANTA Default, Bold Videoke,
+Clean Sans, Retro LED, Classic Serif, plus custom font import), ALL CAPS /
+Bold / outline toggles, active-lyric color swatches, an upcoming-lyric dim
+slider, Center/Bottom/Left alignment, 2-lines vs Multi-line, stage overlays
+(song title, KANTA watermark, vocal countdown dots) and a reset. The Interlude
+tab saves the message as you type, adds quick-message presets, message color,
+Static/Pulse/Scrolling-Marquee animation, image size and placement controls,
+and toggles for the Up Next banner, reactive visualizer bars and watermark.
+Every control updates the live Stage preview and persists across restarts.
+
+The SoundFont memory budget raised from 1.5 to 3 GiB per worker so the larger
+bundled GM banks keep full headroom; allocation failures still fail safely.
 ## PiP shows only the Stage (2026-11-26)
 
 Minimizing during a song now opens the Picture-in-Picture window with just the

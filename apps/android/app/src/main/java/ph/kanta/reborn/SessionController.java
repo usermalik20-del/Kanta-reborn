@@ -229,7 +229,94 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     settings.setInterludeText("");
     settings.setInterludeTextSize(0);
     settings.setInterludeMode("text");
+    settings.clearInterludeStyle();
     interludeImageCache = null;
+    publish();
+  }
+
+  /** Milliseconds remaining on the vocal countdown, or -1 when none is running. */
+  public synchronized long countdownRemainingMs() {
+    if (countdownEndsAt < 0) return -1;
+    return Math.max(0, countdownEndsAt - SystemClock.elapsedRealtime());
+  }
+
+  // ---- Lyric stage style (persisted in SettingsStore, applied by StageView) ----
+  public synchronized boolean lyricAllCaps() { return settings.getLyricAllCaps(); }
+  public synchronized void setLyricAllCaps(boolean value) { settings.setLyricAllCaps(value); publish(); }
+  public synchronized boolean lyricBold() { return settings.getLyricBold(); }
+  public synchronized void setLyricBold(boolean value) { settings.setLyricBold(value); publish(); }
+  public synchronized int lyricOutline() { return settings.getLyricOutline(); }
+  public synchronized void setLyricOutline(int value) { settings.setLyricOutline(value); publish(); }
+  public synchronized int lyricActiveColor() { return settings.getLyricActiveColor(); }
+  public synchronized void setLyricActiveColor(int value) { settings.setLyricActiveColor(value); publish(); }
+  public synchronized float lyricUpcomingOpacity() { return settings.getLyricUpcomingOpacity(); }
+  public synchronized void setLyricUpcomingOpacity(float value) {
+    settings.setLyricUpcomingOpacity(value);
+    publish();
+  }
+  public synchronized boolean lyricShowUpcoming() { return settings.getLyricShowUpcoming(); }
+  public synchronized void setLyricShowUpcoming(boolean value) {
+    settings.setLyricShowUpcoming(value);
+    publish();
+  }
+  public synchronized String lyricAlignment() { return settings.getLyricAlignment(); }
+  public synchronized void setLyricAlignment(String value) {
+    settings.setLyricAlignment(value);
+    publish();
+  }
+  public synchronized String lyricLines() { return settings.getLyricLines(); }
+  public synchronized void setLyricLines(String value) { settings.setLyricLines(value); publish(); }
+  public synchronized boolean lyricShowTitle() { return settings.getLyricShowTitle(); }
+  public synchronized void setLyricShowTitle(boolean value) {
+    settings.setLyricShowTitle(value);
+    publish();
+  }
+  public synchronized boolean lyricShowWatermark() { return settings.getLyricShowWatermark(); }
+  public synchronized void setLyricShowWatermark(boolean value) {
+    settings.setLyricShowWatermark(value);
+    publish();
+  }
+  public synchronized boolean lyricShowCountdown() { return settings.getLyricShowCountdown(); }
+  public synchronized void setLyricShowCountdown(boolean value) {
+    settings.setLyricShowCountdown(value);
+    publish();
+  }
+  public synchronized void resetLyricStyle() { settings.clearLyricStyle(); publish(); }
+
+  // ---- Interlude style ----
+  public synchronized int interludeTextColor() { return settings.getInterludeTextColor(); }
+  public synchronized void setInterludeTextColor(int value) {
+    settings.setInterludeTextColor(value);
+    publish();
+  }
+  public synchronized String interludeAnimation() { return settings.getInterludeAnimation(); }
+  public synchronized void setInterludeAnimation(String value) {
+    settings.setInterludeAnimation(value);
+    publish();
+  }
+  public synchronized float interludeImageScale() { return settings.getInterludeImageScale(); }
+  public synchronized void setInterludeImageScale(float value) {
+    settings.setInterludeImageScale(value);
+    publish();
+  }
+  public synchronized String interludeImagePlacement() { return settings.getInterludeImagePlacement(); }
+  public synchronized void setInterludeImagePlacement(String value) {
+    settings.setInterludeImagePlacement(value);
+    publish();
+  }
+  public synchronized boolean interludeShowUpNext() { return settings.getInterludeShowUpNext(); }
+  public synchronized void setInterludeShowUpNext(boolean value) {
+    settings.setInterludeShowUpNext(value);
+    publish();
+  }
+  public synchronized boolean interludeShowVisualizer() { return settings.getInterludeShowVisualizer(); }
+  public synchronized void setInterludeShowVisualizer(boolean value) {
+    settings.setInterludeShowVisualizer(value);
+    publish();
+  }
+  public synchronized boolean interludeShowWatermark() { return settings.getInterludeShowWatermark(); }
+  public synchronized void setInterludeShowWatermark(boolean value) {
+    settings.setInterludeShowWatermark(value);
     publish();
   }
 
@@ -290,6 +377,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private CountdownHost countdownHost;
   private Runnable cancelCountdownView;
   private ReservationQueue.Entry countingEntry;
+  /** elapsedRealtime millis at which the running vocal countdown ends; -1 when none. */
+  private long countdownEndsAt = -1;
   private boolean countingQueued;
   private boolean pendingHasFocus;
 
@@ -332,6 +421,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   private void clearCountdown() {
     countingEntry = null;
+    countdownEndsAt = -1;
     Runnable cancel = cancelCountdownView;
     cancelCountdownView = null;
     if (cancel != null) cancel.run();
@@ -1587,6 +1677,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                             // first and starts the audio when the count ends.
                             Runnable dismiss = countdownHost.show(countdownSeconds,
                                 () -> startReady(candidate));
+                            countdownEndsAt = SystemClock.elapsedRealtime()
+                                + countdownSeconds * 1000L;
                             if (token == generation && pending == candidate)
                               cancelCountdownView = dismiss;
                             else dismiss.run();
@@ -1607,6 +1699,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                                       || (player != candidate && pending != candidate)) return;
                                   Runnable showDismiss = countdownHost.show(countdownSeconds,
                                       () -> {});
+                                  countdownEndsAt = SystemClock.elapsedRealtime()
+                                      + countdownSeconds * 1000L;
                                   if (startToken == generation) cancelCountdownView = showDismiss;
                                   else showDismiss.run();
                                 };
@@ -1616,6 +1710,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                         }
 
                         private void startReady(PlaybackBackend candidate) {
+                          countdownEndsAt = -1;
                           if (!stillPending(candidate)) return;
                           if (audio.requestAudioFocus(focus)
                               != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {

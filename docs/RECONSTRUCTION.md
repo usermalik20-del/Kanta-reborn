@@ -1,3 +1,18 @@
+## VT323 retro face and SoundFont budget (2026-11-26)
+
+The Retro LED option of the font row is VT323 (peter.hull@oikoi.com), taken
+from the google/fonts repository `ofl/vt323/VT323-Regular.ttf` (git blob
+afa69098f15bf64849d397f133d9467486904053, OFL-1.1) into
+`assets/lyric-fonts/vt323.ttf` (sha256 cf4de751ada78ceac033dbe16a687742939995
+b77bc2a052ae17a4957958594d), recorded in PROVENANCE.json like every other
+bundled face. The font list grows by one bundled id (`vt323-regular`); custom
+SAF import is unchanged.
+
+`soundfont.c`'s tracked-allocation budget moved from 1536 MiB to 3072 MiB
+per worker. The cap still allocates nothing up front, never changes Android
+heap/process limits, and every over-budget allocation remains a failure; the
+128-voice bound and malformed-bank checks are untouched. Large-bank
+memory-pressure acceptance still requires a capable physical device.
 ## PiP surface showed the menu chrome (2026-11-26)
 
 The first PiP pass only hid the utility scroll and the navigation dock, so the

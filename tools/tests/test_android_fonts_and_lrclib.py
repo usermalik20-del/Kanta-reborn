@@ -48,8 +48,11 @@ class FontContractTests(unittest.TestCase):
         visuals = activity.split('private void addStageVisualControls(', 1)[1].split('\n  }', 1)[0]
         settings = activity.split('private void control()', 1)[1].split('\n  }', 1)[0]
         lyrics_editor = activity.split('private void addLyricsVisualControls(', 1)[1].split('\n  }', 1)[0]
-        # The lyric font picker moved from Settings to the Intermission lyrics editor.
-        self.assertIn('this::chooseLyricFont', lyrics_editor)
+        font_chips = activity.split('private void addLyricsFontChips(', 1)[1].split('\n  }', 1)[0]
+        # The font picker moved from Settings to the Intermission lyrics editor,
+        # where the chip row's custom-import action drives the SAF discovery chain.
+        self.assertIn('addLyricsFontChips(target)', lyrics_editor)
+        self.assertIn('chooseLyricFont', font_chips)
         self.assertNotIn('this::chooseLyricFont', settings)
         self.assertNotIn('this::chooseLyricFont', visuals)
         self.assertNotIn('this::chooseLyricFont', my_set)

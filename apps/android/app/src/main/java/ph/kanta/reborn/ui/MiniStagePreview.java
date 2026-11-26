@@ -42,8 +42,27 @@ public final class MiniStagePreview extends FrameLayout {
   private String placeholder = "Background photo";
   private Bitmap background;
   private Drawable artwork;
-  private Typeface face = Typeface.DEFAULT_BOLD;
+  private Typeface baseFace = Typeface.DEFAULT_BOLD;
   private float scale = 1f;
+  private LyricStyle style = new LyricStyle();
+  private int interludeColor = 0xFFFFFFFF;
+  private float imageScale = 1f;
+  private String imagePlacement = "above";
+  private boolean interludeWatermark = true;
+
+  /** Style snapshot pushed by the editor; every field mirrors the real StageView. */
+  public static final class LyricStyle {
+    public int activeColor = 0xFFFFFFFF;
+    public float upcomingAlpha = 0.8f;
+    public boolean allCaps = false;
+    public boolean bold = true;
+    public int outline = 1;
+    public String alignment = "center";
+    public boolean showUpcoming = true;
+    public boolean showTitle = false;
+    public String title = "";
+    public boolean showWatermark = true;
+  }
 
   public MiniStagePreview(Context context) {
     super(context);
@@ -82,15 +101,24 @@ public final class MiniStagePreview extends FrameLayout {
   public void setLyricLines(String line1, String line2, Typeface typeface, float size) {
     primary = line1 == null ? "" : line1;
     secondary = line2 == null ? "" : line2;
-    if (typeface != null) face = typeface;
+    if (typeface != null) baseFace = typeface;
     scale = size <= 0 ? 1f : size;
     mode = MODE_LYRICS;
     invalidate();
   }
-  public void setInterlude(String text, Drawable image, Typeface typeface) {
+  public void applyLyricStyle(LyricStyle value) {
+    style = value == null ? new LyricStyle() : value;
+    invalidate();
+  }
+  public void setInterlude(String text, Drawable image, Typeface typeface, int color,
+      String animation, float scale, String placement, boolean showWatermark) {
     primary = text == null ? "" : text;
     artwork = image;
-    if (typeface != null) face = typeface;
+    if (typeface != null) baseFace = typeface;
+    interludeColor = color;
+    imageScale = scale <= 0 ? 1f : scale;
+    imagePlacement = placement == null ? "above" : placement;
+    interludeWatermark = showWatermark;
     mode = MODE_INTERLUDE;
     invalidate();
   }
@@ -102,22 +130,56 @@ public final class MiniStagePreview extends FrameLayout {
     if (w <= 0 || h <= 0) return;
     drawBackground(canvas, w, h);
     float pad = 12 * density;
+    if (mode == MODE_LYRICS && style.showTitle && !style.title.isEmpty()) {
+      titlePaint.setTextSize(11 * density);
+      titlePaint.setTextAlign(Paint.Align.CENTER);
+      titlePaint.setColor(0xCCFFFFFF);
+      canvas.drawText(style.title, w / 2f, pad + 9 * density, titlePaint);
+      titlePaint.setColor(KantaTheme.TEXT_SECONDARY);
+      titlePaint.setTextAlign(Paint.Align.RIGHT);
+    }
     if (!chip.isEmpty()) {
       titlePaint.setTextSize(11 * density);
       canvas.drawText(chip, w - pad, pad + 9 * density, titlePaint);
     }
-    wordmarkPaint.setTextSize(10 * density);
-    canvas.drawText("KANTA", pad, h - pad, wordmarkPaint);
-    if (mode == MODE_INTERLUDE) drawArtwork(canvas, w, h);
-    float ty = (mode == MODE_INTERLUDE) ? h * 0.82f : h * 0.45f;
-    drawLine(canvas, primary, primaryPaint, w, ty, 15 * density * scale);
-    if (!secondary.isEmpty()) {
-      drawLine(canvas, secondary, secondaryPaint, w, h * 0.60f, 13 * density * scale);
+    boolean showWordmark = mode == MODE_INTERLUDE ? interludeWatermark : style.showWatermark;
+    if (showWordmark) {
+      wordmarkPaint.setTextSize(10 * density);
+      canvas.drawText("KANTA", pad, h - pad, wordmarkPaint);
+    }
+    if (mode == MODE_INTERLUDE) {
+      if ("background".equals(imagePlacement)) drawArtworkFull(canvas, w, h);
+      else drawArtwork(canvas, w, h);
+      applyStyleTo(primaryPaint, interludeColor, true);
+      drawLine(canvas, primary, primaryPaint, w, h * 0.82f, 15 * density * scale, false);
+      return;
+    }
+    boolean left = "left".equals(style.alignment);
+    applyStyleTo(primaryPaint, style.activeColor, !left);
+    applyStyleTo(secondaryPaint,
+        ((int) Math.round(style.upcomingAlpha * 255) << 24) | 0xFFB9D8E8, !left);
+    float ty = "bottom".equals(style.alignment) ? h * 0.66f : h * 0.45f;
+    drawLine(canvas, primary, primaryPaint, w, ty, 15 * density * scale, left);
+    if (style.showUpcoming && !secondary.isEmpty()) {
+      drawLine(canvas, secondary, secondaryPaint, w, h * 0.60f, 13 * density * scale, left);
     }
   }
 
-  private void drawLine(Canvas c, String text, Paint p, int w, float y, float size) {
+  private void applyStyleTo(Paint p, int color, boolean centered) {
+    p.setTypeface(style.bold ? Typeface.create(baseFace, Typeface.BOLD) : baseFace);
+    p.setColor(color);
+    switch (style.outline) {
+      case 0: p.setShadowLayer(0, 0, 0, 0); break;
+      case 2: p.setShadowLayer(5 * density, 0, 5 * density, 0xFF000000); break;
+      default: p.setShadowLayer(2 * density, 0, 2 * density, 0xFF000000);
+    }
+    p.setTextAlign(centered ? Paint.Align.CENTER : Paint.Align.LEFT);
+  }
+
+  private void drawLine(Canvas c, String text, Paint p, int w, float y, float size,
+      boolean left) {
     if (text.isEmpty()) return;
+    if (style.allCaps) text = text.toUpperCase(java.util.Locale.ROOT);
     p.setTextSize(size);
     float max = w - 24 * density;
     if (p.measureText(text) > max) {
@@ -126,7 +188,7 @@ public final class MiniStagePreview extends FrameLayout {
       }
       text += "...";
     }
-    c.drawText(text, w / 2f, y, p);
+    c.drawText(text, left ? 12 * density : w / 2f, y, p);
   }
 
   private void drawBackground(Canvas canvas, int w, int h) {
@@ -150,11 +212,22 @@ public final class MiniStagePreview extends FrameLayout {
     if (artwork == null) return;
     int bw = artwork.getIntrinsicWidth(), bh = artwork.getIntrinsicHeight();
     if (bw <= 0 || bh <= 0) return;
-    int maxW = Math.round(w * 0.7f), maxH = Math.round(h * 0.45f);
+    int maxW = Math.round(w * 0.7f * imageScale), maxH = Math.round(h * 0.45f * imageScale);
     float s = Math.min((float) maxW / bw, (float) maxH / bh);
     int fw = Math.round(bw * s), fh = Math.round(bh * s);
     int top = Math.round(h * 0.20f);
     artwork.setBounds((w - fw) / 2, top, (w + fw) / 2, top + fh);
     artwork.draw(canvas);
+  }
+
+  private void drawArtworkFull(Canvas canvas, int w, int h) {
+    if (artwork == null) return;
+    int bw = artwork.getIntrinsicWidth(), bh = artwork.getIntrinsicHeight();
+    if (bw <= 0 || bh <= 0) return;
+    float s = Math.max((float) w / bw, (float) h / bh) * imageScale;
+    int fw = Math.round(bw * s), fh = Math.round(bh * s);
+    artwork.setBounds((w - fw) / 2, (h - fh) / 2, (w + fw) / 2, (h + fh) / 2);
+    artwork.draw(canvas);
+    canvas.drawRect(0, 0, w, h, scrimPaint);
   }
 }

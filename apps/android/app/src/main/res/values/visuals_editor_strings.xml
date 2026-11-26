@@ -5,8 +5,6 @@
     <string name="visuals_lyrics_font">Lyric font</string>
     <string name="visuals_lyrics_font_default">KANTA default</string>
     <string name="visuals_lyrics_font_value">%1$s · %2$s</string>
-    <string name="visuals_lyrics_change">Change font</string>
-    <string name="visuals_interlude_save">Save message</string>
     <string name="visuals_interlude_size_default">Default</string>
     <string name="visuals_interlude_size_value">%1$d sp</string>
     <string name="visuals_interlude_image_set">Image set</string>

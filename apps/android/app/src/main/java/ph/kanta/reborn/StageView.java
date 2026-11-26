@@ -17,7 +17,7 @@ final class StageView extends View {
   private final SessionController session;
   private final FontStore fontStore;
   private Typeface appliedTypeface;
-  private final Typeface builtInTypeface = Typeface.create("sans-serif", Typeface.BOLD);
+  private boolean appliedBold;
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
   private String lastDescription = "";
   private final Rect source = new Rect();
@@ -30,6 +30,8 @@ final class StageView extends View {
   private String cachedCurrent = "", cachedNext = "";
   private int cachedWidth = -1;
   private float cachedSize;
+  private int cachedColor = -1, cachedUpcomingColor = -1;
+  private String cachedAlign = "center";
   private boolean externalMedia;
   private boolean fullscreenMode;
   private int contentTop, contentBottom;
@@ -97,10 +99,13 @@ final class StageView extends View {
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
+    boolean wantBold = session.lyricBold();
     Typeface selected = fontStore.typeface();
-    if (selected != appliedTypeface) {
+    if (selected != appliedTypeface || wantBold != appliedBold) {
       appliedTypeface = selected;
-      Typeface face = selected != null ? selected : builtInTypeface;
+      appliedBold = wantBold;
+      Typeface face = selected != null ? selected : Typeface.create("sans-serif", Typeface.NORMAL);
+      if (wantBold) face = Typeface.create(face, Typeface.BOLD);
       lyricPaint.setTypeface(face);
       wavePaint.setTypeface(face);
       cachedWidth = -1;
@@ -144,64 +149,112 @@ final class StageView extends View {
           : nextCue == null ? "" : nextCue.line;
       float font = StageLyricLayout.preferredSize(getResources(), getWidth(), true)
           * session.lyricScale;
-      if (session.preSongInterludeActive() && session.interludeTextSizeSp() > 0) {
+      boolean interlude = session.preSongInterludeActive();
+      if (interlude && session.interludeTextSizeSp() > 0) {
         font = session.interludeTextSizeSp() * getResources().getDisplayMetrics().scaledDensity;
       }
+      int lineColor = interlude ? session.interludeTextColor() : session.lyricActiveColor();
+      String align = session.lyricAlignment();
+      boolean showUpcoming = session.lyricShowUpcoming()
+          && !"multi".equals(session.lyricLines());
+      if (session.lyricAllCaps()) {
+        current = oneToOneUpper(current);
+        next = oneToOneUpper(next);
+      }
+      int upcomingColor = argb(
+          (int) Math.round(session.lyricUpcomingOpacity() * 255), 0xB9, 0xD8, 0xE8);
+      String upcomingLine = showUpcoming ? next : "";
       boolean echo = nextCue != null && nextCue.echo;
       int width = getWidth() - dp(36);
       int padding = Math.min(dp(18), lyricHeight / 10);
       int height = lyricHeight - 2 * padding;
       if (width > 0) {
-        if (!current.equals(cachedCurrent) || !next.equals(cachedNext) || echo != cachedEcho
-            || width != cachedWidth || height != cachedHeight || font != cachedSize) {
+        if (!current.equals(cachedCurrent) || !upcomingLine.equals(cachedNext)
+            || echo != cachedEcho || width != cachedWidth || height != cachedHeight
+            || font != cachedSize || lineColor != cachedColor
+            || upcomingColor != cachedUpcomingColor || !align.equals(cachedAlign)) {
           cachedCurrent = current;
-          cachedNext = next;
+          cachedNext = upcomingLine;
           cachedEcho = echo;
           cachedWidth = width;
           cachedHeight = height;
           cachedSize = font;
+          cachedColor = lineColor;
+          cachedUpcomingColor = upcomingColor;
+          cachedAlign = align;
           lyricPaint.setTextSize(font);
-          lyricPaint.setColor(Color.WHITE);
+          lyricPaint.setColor(lineColor);
+          applyOutline(lyricPaint, session.lyricOutline());
           TextPaint preview = new TextPaint(lyricPaint);
           preview.setTextSize(font * .65f);
-          preview.setColor(echo ? 0x55FFFFFF : 0xFFB9D8E8);
-          visibleLyrics = StageLyricLayout.fit(current, lyricPaint, next, preview, width, height,
-              dp(12), dp(18));
+          preview.setColor(echo ? 0x55FFFFFF : upcomingColor);
+          Layout.Alignment la = "left".equals(align)
+              ? Layout.Alignment.ALIGN_NORMAL : Layout.Alignment.ALIGN_CENTER;
+          visibleLyrics = StageLyricLayout.fit(current, lyricPaint, upcomingLine, preview,
+              width, height, dp(12), dp(18), la);
         }
         float x = (w - width) / 2f;
-        float y = contentTop + padding + Math.max(0, height - visibleLyrics.height())
+        float blockTop = contentTop + padding + Math.max(0, height - visibleLyrics.height())
             * (fullscreenMode ? .45f : .5f);
+        if ("bottom".equals(align)) {
+          blockTop = contentTop + padding + Math.max(0, height - visibleLyrics.height());
+        }
+        if ("left".equals(align)) x = dp(18);
         canvas.save();
         canvas.clipRect(0, contentTop, w, h - contentBottom);
-        if (session.preSongInterludeActive()
-            && "image".equals(session.interludeMode())) {
-          android.graphics.drawable.Drawable interlude = session.interludeImage();
-          if (interlude != null) {
-            int iw = interlude.getIntrinsicWidth();
-            int ih = interlude.getIntrinsicHeight();
-            if (iw > 0 && ih > 0) {
-              float maxW = width * .8f;
-              float maxH = lyricHeight * .45f;
-              float scale = Math.min(maxW / iw, maxH / ih);
-              int dw = Math.round(iw * scale);
-              int dh = Math.round(ih * scale);
-              int left = Math.round((w - dw) / 2f);
-              int top = Math.round(contentTop + (lyricHeight - dh) / 2f - dh * .18f);
-              interlude.setBounds(left, top, left + dw, top + dh);
-              interlude.draw(canvas);
-            }
-          }
+        if (interlude) drawInterludeImage(canvas, w, h, width, lyricHeight);
+        String anim = interlude ? session.interludeAnimation() : "static";
+        long now = SystemClock.elapsedRealtime();
+        float t = now / 1000f;
+        if ("pulse".equals(anim)) {
+          float pulse = 1f + .05f * (float) Math.sin(t * 2.4);
+          float cx = x + width / 2f, cy = blockTop + visibleLyrics.height() / 2f;
+          canvas.save();
+          canvas.translate(cx, cy);
+          canvas.scale(pulse, pulse);
+          canvas.translate(-cx, -cy);
+          visibleLyrics.draw(canvas, x, blockTop, 0, 0);
+          canvas.restore();
+        } else if ("marquee".equals(anim)) {
+          float textW = visibleLyrics.current.getWidth();
+          float total = width + textW;
+          float speed = 80f * getResources().getDisplayMetrics().density;
+          double offset = total <= 0 ? 0 : ((double) now * speed) % total;
+          float startX = width - (float) offset;
+          visibleLyrics.draw(canvas, startX, blockTop, 0, 0);
+          visibleLyrics.draw(canvas, startX + total, blockTop, 0, 0);
+        } else {
+          visibleLyrics.draw(canvas, x, blockTop,
+              LyricWordAnimation.highlightedCharacters(cue, position), highlightColor(lineColor));
         }
-        visibleLyrics.draw(canvas, x, y, LyricWordAnimation.highlightedCharacters(cue, position),
-            0xFFFFD700);
-        if (cue != null) drawPitchWave(canvas, visibleLyrics.current, x, y, cue, position);
+        if (cue != null) drawPitchWave(canvas, visibleLyrics.current, x, blockTop, cue, position);
+        if (interlude && session.interludeShowVisualizer())
+          drawVisualizerBars(canvas, w, h, t);
         canvas.restore();
       }
+      if (session.lyricShowTitle() && session.current != null) drawSongTitle(canvas, w);
+      if (session.lyricShowCountdown() && session.countdownRemainingMs() >= 0) {
+        drawCountdownDots(canvas, w);
+      }
     }
-    paint.setTextSize(dp(11));
-    paint.setTextAlign(Paint.Align.RIGHT);
-    paint.setColor(0xBFF6CE77);
-    canvas.drawText("KANTA", w - dp(14), h - contentBottom - dp(8), paint);
+    boolean showWatermark = session.preSongInterludeActive()
+        ? session.interludeShowWatermark() : session.lyricShowWatermark();
+    if (showWatermark) {
+      paint.setTextSize(dp(11));
+      paint.setTextAlign(Paint.Align.RIGHT);
+      paint.setColor(0xBFF6CE77);
+      canvas.drawText("KANTA", w - dp(14), h - contentBottom - dp(8), paint);
+    }
+    // Animated interlude states and the vocal countdown need continuous frames; the
+    // session clock alone is too slow for a marquee.
+    boolean interludeFrames = session.preSongInterludeActive()
+        && (!"static".equals(session.interludeAnimation())
+            || session.interludeShowVisualizer());
+    if (isAttachedToWindow()
+        && (interludeFrames
+            || (session.lyricShowCountdown() && session.countdownRemainingMs() >= 0))) {
+      postInvalidateOnAnimation();
+    }
   }
 
   private void drawPitchWave(
@@ -259,6 +312,113 @@ final class StageView extends View {
       paint.setColor((alpha << 24) | 0x6FE5E8);
       if (x >= 0 && y >= 0 && x <= width && y <= height) canvas.drawCircle(x, y, radius, paint);
     }
+  }
+
+  /** Interlude image: above the message, or a dimmed full-bleed background. */
+  private void drawInterludeImage(Canvas canvas, float w, float h, int width, int lyricHeight) {
+    if (!"image".equals(session.interludeMode())) return;
+    android.graphics.drawable.Drawable interlude = session.interludeImage();
+    if (interlude == null) return;
+    int iw = interlude.getIntrinsicWidth();
+    int ih = interlude.getIntrinsicHeight();
+    if (iw <= 0 || ih <= 0) return;
+    float factor = session.interludeImageScale();
+    if ("background".equals(session.interludeImagePlacement())) {
+      float scale = Math.max(w / iw, h / ih) * factor;
+      int dw = Math.round(iw * scale), dh = Math.round(ih * scale);
+      int left = Math.round((w - dw) / 2f), top = Math.round((h - dh) / 2f);
+      interlude.setBounds(left, top, left + dw, top + dh);
+      interlude.draw(canvas);
+      paint.setColor(0x99000000);
+      canvas.drawRect(0, 0, w, h, paint);
+      return;
+    }
+    float maxW = width * .8f * factor;
+    float maxH = lyricHeight * .45f * factor;
+    float scale = Math.min(maxW / iw, maxH / ih);
+    int dw = Math.round(iw * scale);
+    int dh = Math.round(ih * scale);
+    int left = Math.round((w - dw) / 2f);
+    int top = Math.round(contentTop + (lyricHeight - dh) / 2f - dh * .18f);
+    interlude.setBounds(left, top, left + dw, top + dh);
+    interlude.draw(canvas);
+  }
+
+  /** Reactive bars along the bottom of the interlude, driven by the shared pitch energy. */
+  private void drawVisualizerBars(Canvas canvas, float w, float h, float t) {
+    float energy = LyricWordAnimation.pitchEnergy(
+        session.currentPitchHz(), session.measuredAtMs(), SystemClock.elapsedRealtime());
+    int bars = 24;
+    float density = getResources().getDisplayMetrics().density;
+    float barW = 4f * density, gap = 3f * density;
+    float totalW = bars * barW + (bars - 1) * gap;
+    float x0 = (w - totalW) / 2f;
+    float baseY = h - contentBottom - dp(26);
+    paint.setStyle(Paint.Style.FILL);
+    paint.setColor(0xCC76E4FF);
+    for (int b = 0; b < bars; b++) {
+      float wob = .5f + .5f * (float) Math.sin(t * 3.1 + b * .83);
+      float amp = (.15f + .85f * wob) * Math.max(.18f, energy);
+      float barH = Math.max(3f * density, amp * dp(34));
+      canvas.drawRect(x0 + b * (barW + gap), baseY - barH, x0 + b * (barW + gap) + barW, baseY, paint);
+    }
+  }
+
+  /** Optional song title header above the lyric block. */
+  private void drawSongTitle(Canvas canvas, float w) {
+    String title = session.current.title;
+    paint.setTextSize(dp(14));
+    paint.setTextAlign(Paint.Align.CENTER);
+    paint.setColor(0xCCFFFFFF);
+    float max = w - dp(48);
+    if (paint.measureText(title) > max) {
+      while (title.length() > 1 && paint.measureText(title + "\u2026") > max)
+        title = title.substring(0, title.length() - 1);
+      title += "\u2026";
+    }
+    canvas.drawText(title, w / 2f, contentTop + dp(24), paint);
+  }
+
+  /** Vocal countdown dots: one per remaining second, centered above the stage. */
+  private void drawCountdownDots(Canvas canvas, float w) {
+    int seconds = (int) Math.ceil(session.countdownRemainingMs() / 1000.0);
+    seconds = Math.max(1, Math.min(8, seconds));
+    float gapX = dp(16);
+    float x0 = (w - (seconds - 1) * gapX) / 2f;
+    float y0 = contentTop + (session.lyricShowTitle() ? dp(48) : dp(32));
+    paint.setStyle(Paint.Style.FILL);
+    paint.setColor(0xE676E4FF);
+    for (int d = 0; d < seconds; d++) canvas.drawCircle(x0 + d * gapX, y0, dp(5), paint);
+  }
+
+  /** Per-character upper case: preserves length so cue offsets stay valid. */
+  private static String oneToOneUpper(String value) {
+    if (value == null || value.isEmpty()) return value;
+    char[] out = value.toCharArray();
+    for (int i = 0; i < out.length; i++) out[i] = Character.toUpperCase(out[i]);
+    return new String(out);
+  }
+
+  private static int argb(int alpha, int r, int g, int b) {
+    return (alpha & 0xFF) << 24 | (r << 16) | (g << 8) | b;
+  }
+
+  private void applyOutline(TextPaint p, int outline) {
+    switch (outline) {
+      case 0: p.setShadowLayer(0, 0, 0, 0xFF000000); break;
+      case 2: p.setShadowLayer(dp(5), 0, dp(5), 0xFF000000); break;
+      default: p.setShadowLayer(dp(2), 0, dp(2), 0xFF000000);
+    }
+  }
+
+  /** Sung-portion highlight: classic gold over the default white, else a lightened color. */
+  private static int highlightColor(int lineColor) {
+    if (lineColor == 0xFFFFFFFF) return 0xFFFFD700;
+    int r = (lineColor >> 16) & 0xFF, g = (lineColor >> 8) & 0xFF, b = lineColor & 0xFF;
+    r += (255 - r) * 45 / 100;
+    g += (255 - g) * 45 / 100;
+    b += (255 - b) * 45 / 100;
+    return 0xFF000000 | (r << 16) | (g << 8) | b;
   }
 
   private boolean standbyMode;
