@@ -465,7 +465,10 @@ public class HomeScreen extends LinearLayout {
       LinearLayout result = new LinearLayout(context);
       result.setBackgroundColor(0);
       result.setGravity(Gravity.CENTER_VERTICAL);
-      TextView title = reservationText(song.code + " · " + song.title);
+      String matchLabel = song.artist == null || song.artist.isEmpty()
+          ? song.code + " · " + song.title
+          : song.code + " · " + song.title + " · " + song.artist;
+      TextView title = reservationText(matchLabel);
       title.setMaxLines(2);
       title.setTextColor(KantaTheme.TEXT_PRIMARY);
       title.setEllipsize(android.text.TextUtils.TruncateAt.END);

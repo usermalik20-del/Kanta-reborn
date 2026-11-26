@@ -226,7 +226,7 @@ public final class SettingsStore {
     prefs.edit().putString(KEY_LYRIC_LINES, v == null ? "two" : v).apply();
   }
 
-  public boolean getLyricShowTitle() { return prefs.getBoolean(KEY_LYRIC_SHOW_TITLE, false); }
+  public boolean getLyricShowTitle() { return prefs.getBoolean(KEY_LYRIC_SHOW_TITLE, true); }
   public void setLyricShowTitle(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_SHOW_TITLE, v).apply(); }
 
   public boolean getLyricShowWatermark() { return prefs.getBoolean(KEY_LYRIC_SHOW_WATERMARK, true); }

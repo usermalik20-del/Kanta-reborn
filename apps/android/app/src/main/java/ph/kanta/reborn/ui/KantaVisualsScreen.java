@@ -146,10 +146,16 @@ public final class KantaVisualsScreen extends LinearLayout {
     content.setPadding(dp(16), 0, dp(16), dp(24));
     // MainActivity's outer ScrollView handles the whole destination, including short screens.
     addView(content);
-    MiniStagePreview preview = new MiniStagePreview(context);
-    LayoutParams previewParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(168));
-    previewParams.setMargins(0, dp(8), 0, dp(12));
-    content.addView(preview, previewParams);
+    // The live stage preview only earns its space on the editor tabs; the photo
+    // and video grids are self-evident without a second stage surface.
+    boolean editorTab = selectedTab == LYRICS || selectedTab == INTERLUDE;
+    MiniStagePreview preview = null;
+    if (editorTab) {
+      preview = new MiniStagePreview(context);
+      LayoutParams previewParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(168));
+      previewParams.setMargins(0, dp(8), 0, dp(12));
+      content.addView(preview, previewParams);
+    }
     if (selectedTab == VIDEOS) {
       content.addView(KantaTheme.titleText(context, "Realm · Built-in videos", 16));
       content.addView(KantaTheme.bodyText(context, "Choose a silent video for your stage.", 13));

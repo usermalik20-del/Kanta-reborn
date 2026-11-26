@@ -1,24 +1,35 @@
-## Header search relocation (2026-11-27)
+## Stage search strip, typing fix, results with singers (2026-11-27)
 
-The global song search field was moved from the Home dashboard into the app header,
-in line with the KANTA brand mark. It is a translucent navy strip (0xCC12203A fill,
-1dp cyan border) so it reads as header chrome rather than a card. Shown only on the
-Home tab; hidden on every other destination and when a utility accessory is active.
-The legacy search row inside HomeScreen is hidden, and HomeScreen was restructured so
-the transport button row and inline keypad are FIXED at the bottom (weight 0) while
-the queue panel absorbs the remaining space (weight 1) - the controls no longer scroll
-or squeeze the Stage. Both locations share the same homeEntry buffer and
-homeSubmitGeneration fence; openStageSearch() focuses the header field.
+The app-header search field was removed as the Stage tab never shows the app header;
+the search affordance now lives on the Stage itself. A transparent, single-line strip
+sits on the stage's bottom line in line with the Controls anchor (tag
+kanta.stage.search). It shows a soft visible hint ("Search songs, artists, or enter
+code") and, while typing, the in-progress entry; the entry auto-clears 5 s after the
+last keystroke (scheduleStageSearchClear). Tapping it opens the dashboard search
+(openStageSearch) - it is a trigger, never a second input, and never shows the system
+keyboard; the dashboard search field plus the inline keypad remain the only typing
+surface. Search results now include the singer when known (code · title · artist),
+the Title · Singer stage header is on by default (SettingsStore lyric.showTitle
+default true) and also renders on the embedded stage's no-lyrics placeholder branch,
+and the Intermission mini-stage preview no longer occupies the Photo/Video grid tabs.
+Intermission message typing is fixed: while the interlude message field holds focus,
+session publishes refresh only the live preview instead of rebuilding the page
+(intermissionMessageFocused guard in render()), so the IME session survives every
+keystroke.
 
 Files changed:
-- apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java - header search
-  creation in constructWindow(), visibility in render(), sync in homeDashboard(),
-  focus in openStageSearch().
-- apps/android/app/src/main/java/ph/kanta/reborn/ui/HomeScreen.java - searchRow
-  hidden, queuePanel weight 1, action row + keypad fixed at bottom, compact
-  paddings/heights.
-- apps/android/gradle.properties - kantaVersionCode=958, aapt2 override to native
-  build-tools aapt2.
+- apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java - stage search
+  strip in addStageChrome, auto-clear + sync helpers, intermission focus guard,
+  header search removal.
+- apps/android/app/src/main/java/ph/kanta/reborn/ui/HomeScreen.java - results show
+  code · title · artist.
+- apps/android/app/src/main/java/ph/kanta/reborn/ui/KantaVisualsScreen.java -
+  preview only on Lyrics/Interlude tabs.
+- apps/android/app/src/main/java/ph/kanta/reborn/settings/SettingsStore.java -
+  lyric.showTitle defaults on.
+- apps/android/app/src/main/java/ph/kanta/reborn/stage/LyricStage.java - title
+  header on the no-lyrics branch.
+- apps/android/app/src/main/res/values/strings.xml - stage_search_hint.
 
 ## Round-2 stage contracts (2026-11-26)
 

@@ -178,6 +178,19 @@ public final class LyricStage extends View {
     super.onDraw(canvas);
     if (standby) return;
     if (cues.length == 0) {
+      // The current song's title and singer still own the header line while the
+      // stage has no timed lyrics to render.
+      if (style.showTitle && !style.title.isEmpty()) {
+        float d = getResources().getDisplayMetrics().density;
+        String header = style.title;
+        float max = getWidth() - 40 * d;
+        if (titlePaint.measureText(header) > max) {
+          while (!header.isEmpty() && titlePaint.measureText(header + "\u2026") > max)
+            header = header.substring(0, header.length() - 1);
+          header += "\u2026";
+        }
+        canvas.drawText(header, getWidth() / 2f, 18 * d, titlePaint);
+      }
       canvas.drawText("No timed lyrics for this song", getWidth() / 2f, getHeight() / 2f,
           placeholderPaint);
       return;

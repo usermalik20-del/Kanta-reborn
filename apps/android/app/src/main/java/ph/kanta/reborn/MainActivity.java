@@ -73,7 +73,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private LinearLayout root, body, stagePane, navigationTabs;
   private NestedScrollView pageScroll;
   private View appHeader;
-    private EditText headerSearchInput;
+    private TextView stageSearchField;
+    private Runnable stageSearchClearTask;
+    private boolean intermissionMessageFocused;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -449,6 +451,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       stagePane = null;
       navigationTabs = null;
       appHeader = null;
+      stageSearchField = null;
+      stageSearchClearTask = null;
+      intermissionMessageFocused = false;
       buildWindow(newOrient);
       render();
       // An orientation change while in Picture-in-Picture rebuilds the full window;
@@ -646,11 +651,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // Keep the renderer mounted, but let utility pages use the whole viewport.
     updatePrimaryStageVisibility();
     if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
-    // Show/hide header search based on current tab
-    if (headerSearchInput != null) {
-        boolean showSearch = "Home".equals(tab) && lowerUtilityAccessory == null;
-        headerSearchInput.setVisibility(showSearch ? View.VISIBLE : View.GONE);
-    }
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       Button nav = entry.getValue();
       boolean active = "Home".equals(entry.getKey()) == showsPrimaryStage();
@@ -691,6 +691,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         && micVoiceScreen != null && micVoiceScreen.getParent() == body) {
       refreshMicrophoneReading();
       refreshMicVoiceOptions();
+      return;
+    }
+    // Intermission editors: the interlude message field publishes the session on
+    // every keystroke. Rebuilding the page would detach the focused field and drop
+    // the IME session mid-word, so while that field holds focus refresh only the
+    // live stage preview.
+    if (MENU_INTERMISSION.equals(tab) && lowerUtilityAccessory == null
+        && intermissionMessageFocused
+        && body.findViewWithTag("kanta.screen.intermission-editors") != null) {
+      refreshVisualsPreview();
+      if (stagePresenter != null) stagePresenter.refresh();
       return;
     }
     if ("Control".equals(tab) && lowerUtilityAccessory == null
@@ -791,30 +802,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     brandTagline.setLetterSpacing(0.16f);
     brandBlock.addView(brandTagline);
     header.addView(brandBlock, new LinearLayout.LayoutParams(0, -2, 1));
-    // Header search field (transparent, next to logo)
-    headerSearchInput = new EditText(this);
-    headerSearchInput.setSingleLine(true);
-    headerSearchInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-        | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-    headerSearchInput.setShowSoftInputOnFocus(false);
-    headerSearchInput.setTextColor(KantaTheme.TEXT_PRIMARY);
-    headerSearchInput.setHintTextColor(KantaTheme.TEXT_MUTED);
-    headerSearchInput.setHint("Search songs, artists, or enter code");
-    headerSearchInput.setTextSize(16);
-    headerSearchInput.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-    headerSearchInput.setPaddingRelative(dp(14), dp(8), dp(10), dp(8));
-    Drawable searchIcon = getDrawable(R.drawable.kanta_search_color).mutate();
-    searchIcon.setAlpha(220);
-    headerSearchInput.setCompoundDrawablesRelativeWithIntrinsicBounds(searchIcon, null, null, null);
-    headerSearchInput.setCompoundDrawablePadding(dp(10));
-    // Transparent background with subtle border
-    headerSearchInput.setBackground(KantaTheme.backgroundDrawable(
-        0xCC12203A, 14, KantaTheme.BORDER, 1, getResources().getDisplayMetrics().density));
-    headerSearchInput.setMinHeight(dp(44));
-    headerSearchInput.setTag("kanta.header.search");
-    headerSearchInput.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-    header.addView(headerSearchInput);
-
     header.addView(button(getString(R.string.menu_help), () -> openPage(MENU_HELP)));
     boolean landscape =
         orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
@@ -985,6 +972,24 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     anchor.setMarginStart(dp(4));
     anchor.bottomMargin = dp(28);
     stageLayers.addView(controls, anchor);
+
+    // Transparent search strip on the stage's bottom line, in line with the
+    // Controls anchor. It triggers the Home search (dashboard search field +
+    // keypad); it is not a second input and never shows the system keyboard.
+    stageSearchField = text("", 14, KantaTheme.TEXT_MUTED);
+    stageSearchField.setTag("kanta.stage.search");
+    stageSearchField.setSingleLine(true);
+    stageSearchField.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    stageSearchField.setGravity(Gravity.CENTER_VERTICAL);
+    stageSearchField.setPaddingRelative(dp(12), dp(6), dp(12), dp(6));
+    stageSearchField.setShadowLayer(dp(3), 0, dp(1), 0xCC000000);
+    stageSearchField.setContentDescription(getString(R.string.stage_search_hint));
+    stageSearchField.setOnClickListener(v -> openStageSearch());
+    FrameLayout.LayoutParams searchParams =
+        new FrameLayout.LayoutParams(0, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+    searchParams.setMargins(dp(100), 0, dp(116), dp(28));
+    stageLayers.addView(stageSearchField, searchParams);
+    updateStageSearchField();
 
     // Icon-only camera action at the top right; the status dot stays, the caption goes.
     stageCameraToggle = stageChromeButton(R.string.stage_camera, R.drawable.kanta_stage_action_camera,
@@ -1837,11 +1842,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (homeScreen != null) {
       homeScreen.focusSongSearch();
       homeScreen.reopenSongLookup();
-      // Also focus header search
-      if (headerSearchInput != null) {
-          headerSearchInput.requestFocus();
-          headerSearchInput.setSelection(headerSearchInput.length());
-      }
       refreshStageEntry();
     }
   }
@@ -2497,6 +2497,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     target.addView(text(getString(R.string.interlude_message), 15, KantaTheme.TEXT_PRIMARY));
     EditText message = new EditText(this);
     message.setTag("kanta.visuals.interlude.message");
+    message.setOnFocusChangeListener((v, has) -> intermissionMessageFocused = has);
     message.setHint(R.string.interlude_message_hint);
     message.setMinLines(2);
     message.setSingleLine(false);
@@ -3262,6 +3263,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 // Cancel pending RES work even if the user edits back to the same text.
                 homeSubmitGeneration++;
                 homeEntry = typed;
+                scheduleStageSearchClear();
                 refreshStageEntry();
               }
               @Override public void onSearchSubmitted(String typed) { submitHomeEntry(typed); }
@@ -3292,37 +3294,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onRealm() { openPage("Realm"); }
             });
     homeScreen.showSongLookup(stagePane);
-    // Connect header search to same listener
-    if (headerSearchInput != null) {
-        headerSearchInput.setText(homeEntry);
-        headerSearchInput.addTextChangedListener(new android.text.TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
-            public void onTextChanged(CharSequence s, int a, int b, int c) {}
-            public void afterTextChanged(android.text.Editable e) {
-                String typed = e.toString();
-                if (!typed.equals(homeEntry)) {
-                    homeEntry = typed;
-                    homeSubmitGeneration++;
-                    refreshStageEntry();
-                    // Forward to HomeScreen listener if available
-                    if (homeScreen != null) {
-                        // The listener is internal, but we can call the same logic
-                        // HomeScreen's listener.onSearchQueryChanged(typed)
-                    }
-                }
-            }
-        });
-        headerSearchInput.setOnEditorActionListener((v, actionId, event) -> {
-            submitHomeEntry(headerSearchInput.getText().toString());
-            return true;
-        });
-    }
     homeScreen.restoreSearchText(homeEntry);
-    // Sync header search text
-    if (headerSearchInput != null) {
-        headerSearchInput.setText(homeEntry);
-        headerSearchInput.setSelection(homeEntry.length());
-    }
     refreshStageEntry();
     body.addView(homeScreen, new LinearLayout.LayoutParams(-1, 0, 1));
     // Hide HomeScreen's built-in search row since we have header search
@@ -3340,7 +3312,38 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     return "Home".equals(tab) && lowerUtilityAccessory == null;
   }
 
+  /** Transparent stage search strip: a visible hint, or the in-progress entry. */
+  private void updateStageSearchField() {
+    if (stageSearchField == null) return;
+    String entry = homeEntry == null ? "" : homeEntry;
+    if (entry.isEmpty()) {
+      stageSearchField.setText(R.string.stage_search_hint);
+      stageSearchField.setTextColor(0x80B9D8E8);
+    } else {
+      stageSearchField.setText(entry);
+      stageSearchField.setTextColor(0xE6FFFFFF);
+    }
+  }
+
+  /** The in-progress entry auto-clears a few seconds after the last keystroke. */
+  private void scheduleStageSearchClear() {
+    if (stageSearchField == null) return;
+    if (stageSearchClearTask == null) {
+      stageSearchClearTask = () -> {
+        stageSearchClearTask = null;
+        if (homeEntry == null || homeEntry.isEmpty()) return;
+        homeSubmitGeneration++;
+        homeEntry = "";
+        if (homeScreen != null) homeScreen.clearSearchText();
+        refreshStageEntry();
+      };
+    }
+    stageSearchField.removeCallbacks(stageSearchClearTask);
+    stageSearchField.postDelayed(stageSearchClearTask, 5000);
+  }
+
   private void refreshStageEntry() {
+    updateStageSearchField();
     if (stagePresenter == null) return;
     boolean home = isHomeLookupOpen();
     stagePresenter.presenceOverlay().setEnteredCode(home ? homeEntry : "");
