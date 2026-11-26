@@ -89,10 +89,11 @@ public class HomeScreen extends LinearLayout {
     // The KANTA brand block lives in the app header (MainActivity) so the dashboard
     // does not stack a second logo and tagline above the search bar.
 
-    // Persistent search with inline keyboard
+    // Persistent search with inline keyboard (now hidden, search moved to header)
     searchRow = new LinearLayout(context);
     searchRow.setOrientation(HORIZONTAL);
     searchRow.setGravity(Gravity.CENTER_VERTICAL);
+    searchRow.setVisibility(GONE);  // Hidden - search is in header now
 
     searchInput = new EditText(context);
     searchInput.setTag("kanta.home.search");
@@ -121,7 +122,7 @@ public class HomeScreen extends LinearLayout {
     searchInput.setBackground(null);
     searchRow.setBackground(KantaTheme.backgroundDrawable(
         KantaTheme.SURFACE_ELEVATED, 14, KantaTheme.BORDER, 1, density));
-    searchInput.setMinHeight(dp(54));
+    searchInput.setMinHeight(dp(48));
     searchRow.addView(searchInput, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
     clearSearch = stageAction(R.string.stage_clear, R.string.stage_clear_search, "cancel", true, () -> {
       clearSearchText();
@@ -146,15 +147,13 @@ public class HomeScreen extends LinearLayout {
     android.widget.HorizontalScrollView actionScroll = new android.widget.HorizontalScrollView(context);
     actionScroll.setFillViewport(true);
     actionScroll.addView(actions, new android.widget.FrameLayout.LayoutParams(-2, -2));
-    addView(actionScroll, new LayoutParams(-1, -2));
-    addView(searchRow, new LayoutParams(-1, -2));
 
-    // Use spare height for the queue, leaving the keypad at the bottom. WRAP_CONTENT
-    // preserves the queue's minimum content height when the outer ScrollView is short.
+    // Use spare height for the queue, leaving the keypad at the bottom.
+    // queuePanel gets weight 1 to take remaining space; actionScroll and keyboard are fixed at bottom.
     queuePanel = new LinearLayout(context);
     queuePanel.setOrientation(VERTICAL);
-    queuePanel.setMinimumHeight(dp(112));
-    queuePanel.setPadding(dp(14), dp(6), dp(14), dp(10));
+    queuePanel.setMinimumHeight(dp(90));
+    queuePanel.setPadding(dp(12), dp(4), dp(12), dp(8));
     queuePanel.setTag("kanta.home.reservations");
     queuePanel.setBackground(KantaTheme.backgroundDrawable(
         KantaTheme.SURFACE, 14, KantaTheme.BORDER, 1, density));
@@ -185,8 +184,8 @@ public class HomeScreen extends LinearLayout {
     matchesScroll.setVerticalScrollBarEnabled(true);
     matchesScroll.addView(reservedSongs, new android.widget.ScrollView.LayoutParams(-1, -2));
     queuePanel.addView(matchesScroll, new LayoutParams(-1, -2));
-    LayoutParams queueParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-    queueParams.setMargins(0, dp(10), 0, dp(10));
+    LayoutParams queueParams = new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f);
+    queueParams.setMargins(0, dp(8), 0, dp(8));
     addView(queuePanel, queueParams);
     setReservedSongs(java.util.Collections.emptyList(), 0);
     // Landscape already shows the Stage's Up next ticker, so the duplicate queue card is
@@ -197,7 +196,10 @@ public class HomeScreen extends LinearLayout {
       queuePanel.setVisibility(landscape ? GONE : VISIBLE);
     }
 
-    // Inline keyboard
+    // Add action buttons FIXED at bottom (above keyboard)
+    addView(actionScroll, new LayoutParams(-1, -2));
+
+    // Inline keyboard - FIXED at bottom
     keyboard = new InlineKeyboard(context, new InlineKeyboard.Listener() {
       @Override public void onText(String value) {
         if (listener != null && value.length() == 1 && Character.isDigit(value.charAt(0))) {
@@ -257,25 +259,26 @@ public class HomeScreen extends LinearLayout {
         == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
     // Landscape already presents the Stage's Up next ticker; omit the duplicate queue card.
     if (!lookupDocked) queuePanel.setVisibility(landscape ? GONE : VISIBLE);
-    // Let portrait use spare height, but keep the landscape keypad clear of the Stage dock.
+    // keyboard is now FIXED at bottom (weight 0), queuePanel has weight 1
     LayoutParams keyboardParams = (LayoutParams) keyboard.getLayoutParams();
-    keyboardParams.weight = lookupDocked && !landscape ? 1 : 0;
+    keyboardParams.weight = 0;
     keyboardParams.gravity = Gravity.CENTER_HORIZONTAL;
     int paneWidth = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight();
     int widthCap = dp(LANDSCAPE_KEYBOARD_MAX_WIDTH_DP);
     keyboardParams.width = landscape && paneWidth > widthCap ? widthCap : LayoutParams.MATCH_PARENT;
     keyboard.setVisibility(fullscreenLandscape && landscape ? GONE : VISIBLE);
+    // queuePanel already has weight 1 in layout params
 
     boolean shortLandscape = CompactLandscape.applies(this, heightMeasureSpec);
     boolean changed = shortLandscape != compact;
     if (changed) {
       compact = shortLandscape;
-      searchInput.setMinHeight(dp(compact ? 48 : 54));
+      searchInput.setMinHeight(dp(compact ? 44 : 48));
       keyboard.setCompact(compact);
-      queuePanel.setMinimumHeight(lookupDocked ? 0 : compact ? 0 : dp(112));
-      if (!lookupDocked) queuePanel.setPadding(dp(14), dp(compact ? 2 : 6), dp(14), dp(compact ? 4 : 10));
+      queuePanel.setMinimumHeight(lookupDocked ? 0 : compact ? 0 : dp(90));
+      if (!lookupDocked) queuePanel.setPadding(dp(12), dp(compact ? 2 : 4), dp(12), dp(compact ? 3 : 8));
       LayoutParams queueParams = (LayoutParams) queuePanel.getLayoutParams();
-      queueParams.setMargins(0, dp(compact ? 4 : 10), 0, dp(compact ? 4 : 10));
+      queueParams.setMargins(0, dp(compact ? 3 : 8), 0, dp(compact ? 3 : 8));
       // Keep the editor and keyboard instances (and their focus/selection) during resize.
       arrangeMatchPanel();
     }

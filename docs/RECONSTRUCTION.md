@@ -1,3 +1,25 @@
+## Header search relocation (2026-11-27)
+
+The global song search field was moved from the Home dashboard into the app header,
+in line with the KANTA brand mark. It is a translucent navy strip (0xCC12203A fill,
+1dp cyan border) so it reads as header chrome rather than a card. Shown only on the
+Home tab; hidden on every other destination and when a utility accessory is active.
+The legacy search row inside HomeScreen is hidden, and HomeScreen was restructured so
+the transport button row and inline keypad are FIXED at the bottom (weight 0) while
+the queue panel absorbs the remaining space (weight 1) - the controls no longer scroll
+or squeeze the Stage. Both locations share the same homeEntry buffer and
+homeSubmitGeneration fence; openStageSearch() focuses the header field.
+
+Files changed:
+- apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java - header search
+  creation in constructWindow(), visibility in render(), sync in homeDashboard(),
+  focus in openStageSearch().
+- apps/android/app/src/main/java/ph/kanta/reborn/ui/HomeScreen.java - searchRow
+  hidden, queuePanel weight 1, action row + keypad fixed at bottom, compact
+  paddings/heights.
+- apps/android/gradle.properties - kantaVersionCode=958, aapt2 override to native
+  build-tools aapt2.
+
 ## What the local test round exposed in the stage renderers (2026-11-26)
 
 Testing on the device showed three rendering gaps the host suites could not

@@ -73,6 +73,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private LinearLayout root, body, stagePane, navigationTabs;
   private NestedScrollView pageScroll;
   private View appHeader;
+    private EditText headerSearchInput;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -645,6 +646,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // Keep the renderer mounted, but let utility pages use the whole viewport.
     updatePrimaryStageVisibility();
     if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
+    // Show/hide header search based on current tab
+    if (headerSearchInput != null) {
+        boolean showSearch = "Home".equals(tab) && lowerUtilityAccessory == null;
+        headerSearchInput.setVisibility(showSearch ? View.VISIBLE : View.GONE);
+    }
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       Button nav = entry.getValue();
       boolean active = "Home".equals(entry.getKey()) == showsPrimaryStage();
@@ -785,6 +791,30 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     brandTagline.setLetterSpacing(0.16f);
     brandBlock.addView(brandTagline);
     header.addView(brandBlock, new LinearLayout.LayoutParams(0, -2, 1));
+    // Header search field (transparent, next to logo)
+    headerSearchInput = new EditText(this);
+    headerSearchInput.setSingleLine(true);
+    headerSearchInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+        | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    headerSearchInput.setShowSoftInputOnFocus(false);
+    headerSearchInput.setTextColor(KantaTheme.TEXT_PRIMARY);
+    headerSearchInput.setHintTextColor(KantaTheme.TEXT_MUTED);
+    headerSearchInput.setHint("Search songs, artists, or enter code");
+    headerSearchInput.setTextSize(16);
+    headerSearchInput.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+    headerSearchInput.setPaddingRelative(dp(14), dp(8), dp(10), dp(8));
+    Drawable searchIcon = getDrawable(R.drawable.kanta_search_color).mutate();
+    searchIcon.setAlpha(220);
+    headerSearchInput.setCompoundDrawablesRelativeWithIntrinsicBounds(searchIcon, null, null, null);
+    headerSearchInput.setCompoundDrawablePadding(dp(10));
+    // Transparent background with subtle border
+    headerSearchInput.setBackground(KantaTheme.backgroundDrawable(
+        0xCC12203A, 14, KantaTheme.BORDER, 1, getResources().getDisplayMetrics().density));
+    headerSearchInput.setMinHeight(dp(44));
+    headerSearchInput.setTag("kanta.header.search");
+    headerSearchInput.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
+    header.addView(headerSearchInput);
+
     header.addView(button(getString(R.string.menu_help), () -> openPage(MENU_HELP)));
     boolean landscape =
         orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
@@ -1807,6 +1837,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (homeScreen != null) {
       homeScreen.focusSongSearch();
       homeScreen.reopenSongLookup();
+      // Also focus header search
+      if (headerSearchInput != null) {
+          headerSearchInput.requestFocus();
+          headerSearchInput.setSelection(headerSearchInput.length());
+      }
       refreshStageEntry();
     }
   }
@@ -3257,9 +3292,48 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onRealm() { openPage("Realm"); }
             });
     homeScreen.showSongLookup(stagePane);
+    // Connect header search to same listener
+    if (headerSearchInput != null) {
+        headerSearchInput.setText(homeEntry);
+        headerSearchInput.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            public void afterTextChanged(android.text.Editable e) {
+                String typed = e.toString();
+                if (!typed.equals(homeEntry)) {
+                    homeEntry = typed;
+                    homeSubmitGeneration++;
+                    refreshStageEntry();
+                    // Forward to HomeScreen listener if available
+                    if (homeScreen != null) {
+                        // The listener is internal, but we can call the same logic
+                        // HomeScreen's listener.onSearchQueryChanged(typed)
+                    }
+                }
+            }
+        });
+        headerSearchInput.setOnEditorActionListener((v, actionId, event) -> {
+            submitHomeEntry(headerSearchInput.getText().toString());
+            return true;
+        });
+    }
     homeScreen.restoreSearchText(homeEntry);
+    // Sync header search text
+    if (headerSearchInput != null) {
+        headerSearchInput.setText(homeEntry);
+        headerSearchInput.setSelection(homeEntry.length());
+    }
     refreshStageEntry();
     body.addView(homeScreen, new LinearLayout.LayoutParams(-1, 0, 1));
+    // Hide HomeScreen's built-in search row since we have header search
+    if (homeScreen != null) {
+        try {
+            java.lang.reflect.Field f = homeScreen.getClass().getDeclaredField("searchRow");
+            f.setAccessible(true);
+            View sr = (View) f.get(homeScreen);
+            if (sr != null) sr.setVisibility(View.GONE);
+        } catch (Exception e) { /* ignore */ }
+    }
   }
 
   private boolean isHomeLookupOpen() {
