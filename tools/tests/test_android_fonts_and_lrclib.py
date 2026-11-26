@@ -28,8 +28,11 @@ class FontContractTests(unittest.TestCase):
                 self.assertNotIn('openInputStream', source)
         self.assertIn('cachedWidth = -1', (JAVA / 'StageView.java').read_text())
         source = (JAVA / 'stage/LyricStage.java').read_text()
-        for paint in ('activePaint', 'upcomingPaint', 'echoPaint', 'pitchWavePaint'):
-            self.assertIn(f'{paint}.setTypeface(selected)', source)
+        # The renderer derives every face from the single FontStore-cached
+        # typeface (bold via create), never a per-line file decode.
+        self.assertIn('Typeface selected = fontStore.typeface();', source)
+        self.assertIn('activePaint.setTypeface(face)', source)
+        self.assertIn('upcomingPaint.setTypeface(face)', source)
 
     def test_saf_traversal_and_picker_permission(self):
         scanner = (JAVA / 'content/ContentScanner.java').read_text()

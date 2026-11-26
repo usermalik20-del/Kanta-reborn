@@ -1,4 +1,19 @@
-## Stage style ownership (2026-11-26)
+## StageStyle snapshot and the dynamic SoundFont budget (2026-11-26)
+
+`stage/StageStyle` is an immutable 14-field value snapshot (active color,
+upcoming opacity, ALL CAPS, bold, outline, alignment, show-upcoming,
+title+singer header, interlude color, animation, size, image scale and
+placement). Every renderer consumes the same shape: `LyricStage` (embedded
+stage) receives it from `StagePresenterImpl.refresh()`, `StageView`
+(fullscreen/PiP) builds it from the session, and `MiniStagePreview`
+(editor) builds it from the draft. `sameAs` lets renderers skip repaints.
+
+The SoundFont tracked-allocation cap is no longer a constant:
+`bounded_malloc`/`bounded_realloc` compare against
+`sf_effective_budget(totalMemory)`, which is the greater of the 3 GiB floor
+and 92.4% of the device's total RAM. Allocation failures remain failures, the
+accounting is unchanged, and the C contract pins both the floor and the
+scaling against a supplied memory figure.
 
 All Lyrics/Interlude stage style state lives in `SettingsStore` (groups
 `lyric.*` / `interlude.*`, with `clearLyricStyle()` / `clearInterludeStyle()`
@@ -29,6 +44,7 @@ the single source of truth for stage-pane visibility, the header, the brand
 tags and the presenter's visual-active flag. While in PiP the presenter is
 forced visually active and `session.foreground` stays true (the activity is
 started, not stopped), so the Stage keeps animating in the floating window.
+
 
 ## Stage & Visual editor ownership (2026-11-26)
 

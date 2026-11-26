@@ -1,4 +1,19 @@
-## Stage style editors for Lyrics and Interlude (2026-11-26)
+## Embedded Stage gets the full style, and the stage motion calms down (2026-11-26)
+
+The Stage that sits under Menu now renders exactly what the fullscreen/PiP
+stage and the Intermission preview show: the selected font, ALL CAPS/Bold and
+outline, the active and upcoming colors, alignment, line mode, the song
+title with the singer, the vocal-countdown dots and the styled interlude.
+
+Two readability fixes: the sung lyric line now fades out **in place** while
+the next line fades in on the same row (nothing jumps up), and the standby
+interlude fades out across the vocal countdown so it no longer blocks the
+first sung line. The scrolling-marquee interlude scrolls at a readable
+text-proportional speed, and the score celebration sound (about 12 seconds)
+now plays to natural completion instead of stopping when the next song starts.
+The SoundFont memory cap is now dynamic: a 3 GiB floor that grows with the
+device's RAM, so large banks (for example a 4.2 GiB file) can be imported on
+phones with enough memory.
 
 The Lyrics tab now offers a horizontal font row (KANTA Default, Bold Videoke,
 Clean Sans, Retro LED, Classic Serif, plus custom font import), ALL CAPS /
@@ -20,6 +35,7 @@ bottom navigation are hidden while the app is in PiP, and the full window
 returns when you tap the PiP window. Leaving the app while the fullscreen
 Stage is open falls back to the embedded Stage first, so no dialog stays
 pinned over the PiP window.
+
 
 ## Android visual editors, interlude, unified folder import (2026-11-26)
 

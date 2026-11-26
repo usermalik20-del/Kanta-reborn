@@ -24,7 +24,7 @@
     <string name="lyrics_lines_two">2 lines</string>
     <string name="lyrics_lines_multi">Multi-line</string>
     <string name="lyrics_overlays_heading">Stage overlays</string>
-    <string name="lyrics_show_title">Show song title</string>
+    <string name="lyrics_show_title">Show song title &amp; singer</string>
     <string name="lyrics_show_watermark">Show KANTA watermark</string>
     <string name="lyrics_show_countdown">Vocal countdown dots</string>
     <string name="lyrics_reset">Reset lyrics style</string>

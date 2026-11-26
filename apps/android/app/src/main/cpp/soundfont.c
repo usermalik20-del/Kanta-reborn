@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -10,13 +11,45 @@
 
 typedef union allocation_header { size_t size; max_align_t alignment; } allocation_header;
 static _Thread_local size_t allocated;
-// Ceiling for tracked TinySoundFont allocations on this worker, not reserved RAM.
-// Full-tail banks may decode to more than 1 GiB of floats; keep a finite cap
-// while allowing 1.11 GiB of samples plus tables, channels and voice state.
-// malloc/realloc can still fail below this ceiling on memory-constrained devices.
-static const size_t budget = (size_t)3072u * 1024u * 1024u;
+// Floor for the tracked-allocation ceiling: full-tail banks decode to well over
+// 1 GiB of floats, so 3 GiB is the minimum headroom a worker gets for samples,
+// tables, channels and voice state.
+static const size_t MIN_BUDGET = (size_t)3072u * 1024u * 1024u;
+
+// The ceiling is dynamic, not a hard file-size wall: a bank may use up to 90%
+// of the RAM the kernel reports as available (10% stays free for the rest of
+// the process), never less than MIN_BUDGET. This is still a ceiling on tracked
+// allocations, not reserved RAM: malloc/realloc can fail below it, every
+// over-ceiling allocation returns NULL, and a bank that does not fit fails the
+// load cleanly instead of driving the OOM killer.
+size_t sf_effective_budget(size_t available_bytes) {
+    if (available_bytes == 0) return MIN_BUDGET;
+    size_t headroom = available_bytes / 10;
+    size_t dynamic = available_bytes > headroom ? available_bytes - headroom : 0;
+    return dynamic > MIN_BUDGET ? dynamic : MIN_BUDGET;
+}
+
+static size_t read_available_bytes(void) {
+    FILE* file = fopen("/proc/meminfo", "r");
+    if (!file) return 0;
+    char line[128];
+    unsigned long kb = 0;
+    int found = 0;
+    while (fgets(line, sizeof line, file)) {
+        if (sscanf(line, "MemAvailable: %lu", &kb) == 1) { found = 1; break; }
+    }
+    fclose(file);
+    return found ? (size_t)kb * 1024u : 0;
+}
+
+static size_t current_budget(void) {
+    static size_t cached = 0;
+    if (cached == 0) cached = sf_effective_budget(read_available_bytes());
+    return cached;
+}
 
 static void* bounded_malloc(size_t bytes) {
+    size_t budget = current_budget();
     if (bytes > budget - allocated || bytes > SIZE_MAX - sizeof(allocation_header)) return NULL;
     allocation_header* p = malloc(sizeof(*p) + bytes);
     if (!p) return NULL;
@@ -34,6 +67,7 @@ static void* bounded_realloc(void* value, size_t bytes) {
     if (!value) return bounded_malloc(bytes);
     allocation_header* p = (allocation_header*)value - 1;
     size_t old = p->size;
+    size_t budget = current_budget();
     if (bytes > budget - (allocated - old) || bytes > SIZE_MAX - sizeof(*p)) return NULL;
     p = realloc(p, sizeof(*p) + bytes);
     if (!p) return NULL;

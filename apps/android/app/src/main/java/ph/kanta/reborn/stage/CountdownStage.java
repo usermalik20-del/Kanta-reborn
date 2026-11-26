@@ -46,6 +46,15 @@ public final class CountdownStage extends View {
   private CountdownListener listener;
   private boolean reducedMotion = false;
   private boolean running = false;
+  /** The vocal-countdown visual can be switched off from the lyrics editor; the
+   *  countdown itself (animator and listener) always keeps running. */
+  private boolean visualsEnabled = true;
+
+  public void setVisualsEnabled(boolean enabled) {
+    if (visualsEnabled == enabled) return;
+    visualsEnabled = enabled;
+    invalidate();
+  }
 
   private int maxSeconds = 4;
   private int currentStep = 0; // counts down: maxSeconds..1, then 0 = "Go"
@@ -209,6 +218,7 @@ public final class CountdownStage extends View {
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
+    if (!visualsEnabled) return;
 
     int w = getWidth();
     int h = getHeight();

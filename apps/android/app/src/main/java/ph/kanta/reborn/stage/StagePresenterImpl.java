@@ -288,6 +288,10 @@ public final class StagePresenterImpl extends FrameLayout
   public void startCountdown(int countdownSeconds, CountdownListener listener) {
     // The title card stays mounted until GO — the count ends where the melody starts.
     countdownStage.bringToFront();
+    // The waiting interlude fades out across the count, clearing the embedded
+    // stage for the first sung line (the renderer owns the fade clock).
+    lyricStage.setCountdownFade(android.os.SystemClock.elapsedRealtime(),
+        countdownSeconds * 1000L);
     countdownStage.start(countdownSeconds, new CountdownListener() {
       @Override public void onTick(int remaining) {
         if (listener != null) listener.onTick(remaining);
@@ -308,6 +312,7 @@ public final class StagePresenterImpl extends FrameLayout
 
   public void cancelCountdown() {
     countdownStage.cancel();
+    lyricStage.setCountdownFade(-1, 0);
   }
 
   /**
@@ -701,6 +706,18 @@ public final class StagePresenterImpl extends FrameLayout
         interlude instanceof android.graphics.drawable.BitmapDrawable
             ? ((android.graphics.drawable.BitmapDrawable) interlude).getBitmap()
             : null);
+    // The persisted stage style reaches the embedded renderer the same way it
+    // reaches the fullscreen/PiP surfaces: a value snapshot pushed on publish.
+    ph.kanta.reborn.core.Song styleSong = session.currentSong();
+    lyricStage.setStyle(new StageStyle(
+        session.lyricActiveColor(), session.lyricUpcomingOpacity(), session.lyricAllCaps(),
+        session.lyricBold(), session.lyricOutline(), session.lyricAlignment(),
+        session.lyricShowUpcoming() && !"multi".equals(session.lyricLines()),
+        session.lyricShowTitle(), songTitleHeader(styleSong),
+        session.interludeTextColor(), session.interludeAnimation(),
+        session.interludeTextSizeSp(), session.interludeImageScale(),
+        session.interludeImagePlacement()));
+    countdownStage.setVisualsEnabled(session.lyricShowCountdown());
     // Update lyrics if playing
     if (session.isPlaying() && session.lyrics != null && !session.lyrics.isEmpty()) {
       MidiLyrics.Cue[] cues = session.lyrics.toArray(new MidiLyrics.Cue[0]);
@@ -717,8 +734,18 @@ public final class StagePresenterImpl extends FrameLayout
     // This would be updated from CompanionControl
 
     // Playback already consumes its reservation. Preserve intentional repeated songs in FIFO.
-    upNextTicker.updateFromSnapshot(queue.snapshot());
+    java.util.List<ph.kanta.reborn.core.ReservationQueue.Entry> next = queue.snapshot();
+    if (session.preSongInterludeActive() && !session.interludeShowUpNext())
+      next = java.util.Collections.emptyList();
+    upNextTicker.updateFromSnapshot(next);
     updateTickerInsets();
+  }
+
+  /** Stage header text: song title with the singer when known. */
+  public static String songTitleHeader(ph.kanta.reborn.core.Song song) {
+    if (song == null) return "";
+    if (song.artist == null || song.artist.isEmpty()) return song.title;
+    return song.title + " \u00B7 " + song.artist;
   }
 
   private void updateTickerInsets() {
@@ -829,6 +856,7 @@ public final class StagePresenterImpl extends FrameLayout
     cancelPendingReveal();
     stopFrameTicker();
     countdownStage.cancel();
+    lyricStage.setCountdownFade(-1, 0);
     pitchGameOverlay.shutdown();
     learningAssistantOverlay.shutdown();
   }

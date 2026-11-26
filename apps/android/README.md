@@ -1,4 +1,15 @@
-## Stage style editors and SoundFont budget (2026-11-26)
+## Embedded renderer receives the persisted style (2026-11-26)
+
+`StagePresenterImpl.refresh()` pushes a `StageStyle` value snapshot into
+`LyricStage` on every session publish, exactly the way the fullscreen/PiP
+`StageView` reads the session directly. The `songTitleHeader(Song)` helper
+("Title · Singer") is shared by all renderers, and the presenter hands the
+vocal-countdown window to `LyricStage.setCountdownFade(startMs, durationMs)`
+so the renderer owns the interlude fade clock; both countdown cancel paths
+reset it. `StageView` and `LyricStage` both apply the fixed-row cross-fade
+(previous sung pair dissolves in place while the successor fades in at the
+same anchor) and the interlude fade across the countdown. The embedded
+marquee keeps its seconds-based time base, matching the fullscreen stage.
 
 `MainActivity` builds the upgraded Lyrics/Interlude editors (font chips via
 `addLyricsFontChips`, styling toggles, swatches, pills, overlay switches);
@@ -33,6 +44,7 @@ all tab-dependent state to `updatePrimaryStageVisibility()`.
 the fullscreen Stage is a separate dialog window that would remain pinned
 over the PiP surface, and `onConfigurationChanged` re-applies
 `applyPipLayout(true)` after an in-PiP orientation rebuild.
+
 
 ## Visual editors with live stage preview (2026-11-26)
 

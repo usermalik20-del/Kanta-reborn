@@ -34,6 +34,10 @@ final class StageView extends View {
   private String cachedAlign = "center";
   private boolean externalMedia;
   private boolean fullscreenMode;
+  private static final long LINE_FADE_MS = 450;
+  private StageLyricLayout ghostLyrics;
+  private float ghostX, ghostTop, lastX, lastTop;
+  private long fadeStartMs = -1;
   private int contentTop, contentBottom;
   private final Bitmap portraitArtwork;
   private final Bitmap landscapeArtwork;
@@ -141,19 +145,26 @@ final class StageView extends View {
       long position = session.position();
       int index = session.current == null ? -1 : MidiLyrics.activeIndex(session.lyrics, position);
       MidiLyrics.Cue cue = index >= 0 ? session.lyrics.get(index) : null;
+      boolean interlude = session.preSongInterludeActive();
+      // The waiting interlude fades out across the vocal countdown so the stage
+      // is clear where the first sung line lands.
+      float interludeAlpha = interlude ? interludeFadeAlpha() : 1f;
+      boolean interludeVisible = interlude && interludeAlpha > 0f;
       String current = session.current == null ? "Your music. Your stage." : cue != null ? cue.line
-          : session.lyrics.isEmpty() ? session.current.title : session.interludeText();
+          : session.lyrics.isEmpty() ? session.current.title
+          : (interludeVisible ? session.interludeText() : "");
       MidiLyrics.Cue nextCue = cue != null && index + 1 < session.lyrics.size()
           ? session.lyrics.get(index + 1) : null;
       String next = session.current == null ? "Reserve your next song in CONTROL"
           : nextCue == null ? "" : nextCue.line;
       float font = StageLyricLayout.preferredSize(getResources(), getWidth(), true)
           * session.lyricScale;
-      boolean interlude = session.preSongInterludeActive();
-      if (interlude && session.interludeTextSizeSp() > 0) {
+      if (interludeVisible && session.interludeTextSizeSp() > 0) {
         font = session.interludeTextSizeSp() * getResources().getDisplayMetrics().scaledDensity;
       }
-      int lineColor = interlude ? session.interludeTextColor() : session.lyricActiveColor();
+      int lineColor = interludeVisible
+          ? fadeColor(session.interludeTextColor(), interludeAlpha)
+          : session.lyricActiveColor();
       String align = session.lyricAlignment();
       boolean showUpcoming = session.lyricShowUpcoming()
           && !"multi".equals(session.lyricLines());
@@ -173,6 +184,15 @@ final class StageView extends View {
             || echo != cachedEcho || width != cachedWidth || height != cachedHeight
             || font != cachedSize || lineColor != cachedColor
             || upcomingColor != cachedUpcomingColor || !align.equals(cachedAlign)) {
+          // Fixed rows: when the sung line changes, the previous pair dissolves in
+          // place while the new pair fades in at the same anchor.
+          if (visibleLyrics != null && !current.equals(cachedCurrent)
+              && !cachedCurrent.isEmpty()) {
+            ghostLyrics = visibleLyrics;
+            ghostX = lastX;
+            ghostTop = lastTop;
+            fadeStartMs = SystemClock.elapsedRealtime();
+          }
           cachedCurrent = current;
           cachedNext = upcomingLine;
           cachedEcho = echo;
@@ -194,42 +214,75 @@ final class StageView extends View {
               width, height, dp(12), dp(18), la);
         }
         float x = (w - width) / 2f;
-        float blockTop = contentTop + padding + Math.max(0, height - visibleLyrics.height())
+        // The row anchor uses a fixed reference height, not the current pair's
+        // measured height, so a short line never drags the rows it replaces.
+        float refHeight = font * 2.4f + dp(18);
+        float blockTop = contentTop + padding + Math.max(0, height - refHeight)
             * (fullscreenMode ? .45f : .5f);
         if ("bottom".equals(align)) {
           blockTop = contentTop + padding + Math.max(0, height - visibleLyrics.height());
         }
         if ("left".equals(align)) x = dp(18);
+        lastX = x;
+        lastTop = blockTop;
+        long fadeAge = fadeStartMs >= 0 ? SystemClock.elapsedRealtime() - fadeStartMs
+            : Long.MAX_VALUE;
+        float fadeIn = fadeAge < LINE_FADE_MS ? fadeAge / (float) LINE_FADE_MS : 1f;
+        final float drawX = x, drawTop = blockTop;
         canvas.save();
         canvas.clipRect(0, contentTop, w, h - contentBottom);
-        if (interlude) drawInterludeImage(canvas, w, h, width, lyricHeight);
-        String anim = interlude ? session.interludeAnimation() : "static";
+        if (interludeVisible)
+          drawInterludeImage(canvas, w, h, width, lyricHeight, interludeAlpha);
+        String anim = interludeVisible ? session.interludeAnimation() : "static";
         long now = SystemClock.elapsedRealtime();
         float t = now / 1000f;
+        if (ghostLyrics != null) {
+          if (fadeAge >= LINE_FADE_MS) {
+            ghostLyrics = null;
+            fadeStartMs = -1;
+          } else {
+            withAlpha(canvas, 1f - fadeIn,
+                () -> ghostLyrics.draw(canvas, ghostX, ghostTop, 0, 0));
+          }
+        }
         if ("pulse".equals(anim)) {
-          float pulse = 1f + .05f * (float) Math.sin(t * 2.4);
-          float cx = x + width / 2f, cy = blockTop + visibleLyrics.height() / 2f;
-          canvas.save();
-          canvas.translate(cx, cy);
-          canvas.scale(pulse, pulse);
-          canvas.translate(-cx, -cy);
-          visibleLyrics.draw(canvas, x, blockTop, 0, 0);
-          canvas.restore();
+          withAlpha(canvas, fadeIn, () -> {
+            float pulse = 1f + .05f * (float) Math.sin(t * 2.4);
+            float cx = drawX + width / 2f, cy = drawTop + visibleLyrics.height() / 2f;
+            canvas.save();
+            canvas.translate(cx, cy);
+            canvas.scale(pulse, pulse);
+            canvas.translate(-cx, -cy);
+            visibleLyrics.draw(canvas, drawX, drawTop, 0, 0);
+            canvas.restore();
+          });
         } else if ("marquee".equals(anim)) {
-          float textW = visibleLyrics.current.getWidth();
-          float total = width + textW;
-          float speed = 80f * getResources().getDisplayMetrics().density;
-          double offset = total <= 0 ? 0 : ((double) now * speed) % total;
-          float startX = width - (float) offset;
-          visibleLyrics.draw(canvas, startX, blockTop, 0, 0);
-          visibleLyrics.draw(canvas, startX + total, blockTop, 0, 0);
+          withAlpha(canvas, fadeIn, () -> {
+            float textW = visibleLyrics.current.getWidth();
+            float total = width + textW;
+            // Slow readable scroll: px per second scaled to the text size, with
+            // seconds (not milliseconds) as the time base.
+            float densityPx = getResources().getDisplayMetrics().density;
+            float speed = 40f * densityPx
+                * (lyricPaint.getTextSize() / (40f * densityPx));
+            double offset = total <= 0 ? 0 : (now / 1000.0 * speed) % total;
+            float startX = width - (float) offset;
+            visibleLyrics.draw(canvas, startX, drawTop, 0, 0);
+            visibleLyrics.draw(canvas, startX + total, drawTop, 0, 0);
+          });
         } else {
-          visibleLyrics.draw(canvas, x, blockTop,
-              LyricWordAnimation.highlightedCharacters(cue, position), highlightColor(lineColor));
+          withAlpha(canvas, fadeIn,
+              () -> visibleLyrics.draw(canvas, drawX, drawTop,
+                  LyricWordAnimation.highlightedCharacters(cue, position),
+                  highlightColor(lineColor)));
         }
         if (cue != null) drawPitchWave(canvas, visibleLyrics.current, x, blockTop, cue, position);
-        if (interlude && session.interludeShowVisualizer())
+        if (interludeVisible && session.interludeShowVisualizer())
           drawVisualizerBars(canvas, w, h, t);
+        if ((ghostLyrics != null || (interlude && session.countdownRemainingMs() >= 0))
+            && isAttachedToWindow()) {
+          postInvalidateOnAnimation();
+        }
         canvas.restore();
       }
       if (session.lyricShowTitle() && session.current != null) drawSongTitle(canvas, w);
@@ -249,7 +302,8 @@ final class StageView extends View {
     // session clock alone is too slow for a marquee.
     boolean interludeFrames = session.preSongInterludeActive()
         && (!"static".equals(session.interludeAnimation())
-            || session.interludeShowVisualizer());
+            || session.interludeShowVisualizer()
+            || session.countdownRemainingMs() >= 0);
     if (isAttachedToWindow()
         && (interludeFrames
             || (session.lyricShowCountdown() && session.countdownRemainingMs() >= 0))) {
@@ -315,10 +369,24 @@ final class StageView extends View {
   }
 
   /** Interlude image: above the message, or a dimmed full-bleed background. */
-  private void drawInterludeImage(Canvas canvas, float w, float h, int width, int lyricHeight) {
+  private void drawInterludeImage(Canvas canvas, float w, float h, int width, int lyricHeight,
+      float alpha) {
     if (!"image".equals(session.interludeMode())) return;
     android.graphics.drawable.Drawable interlude = session.interludeImage();
     if (interlude == null) return;
+    if (alpha < 1f) {
+      android.graphics.Paint layer = new android.graphics.Paint();
+      layer.setAlpha((int) (Math.max(0f, alpha) * 255));
+      canvas.saveLayer(null, layer);
+      drawInterludeImageInner(canvas, w, h, width, lyricHeight, interlude);
+      canvas.restore();
+      return;
+    }
+    drawInterludeImageInner(canvas, w, h, width, lyricHeight, interlude);
+  }
+
+  private void drawInterludeImageInner(Canvas canvas, float w, float h, int width,
+      int lyricHeight, android.graphics.drawable.Drawable interlude) {
     int iw = interlude.getIntrinsicWidth();
     int ih = interlude.getIntrinsicHeight();
     if (iw <= 0 || ih <= 0) return;
@@ -344,6 +412,32 @@ final class StageView extends View {
     interlude.draw(canvas);
   }
 
+  private static void withAlpha(Canvas canvas, float alpha, Runnable draw) {
+    float clamped = Math.max(0f, Math.min(1f, alpha));
+    if (clamped >= 1f) {
+      draw.run();
+      return;
+    }
+    android.graphics.Paint layer = new android.graphics.Paint();
+    layer.setAlpha((int) (clamped * 255));
+    canvas.saveLayer(null, layer);
+    draw.run();
+    canvas.restore();
+  }
+
+  private static int fadeColor(int color, float alpha) {
+    int a = (int) (Math.max(0f, Math.min(1f, alpha)) * 255) & 0xFF;
+    return (color & 0x00FFFFFF) | (a << 24);
+  }
+
+  /** 1 before the countdown, 0 the moment the first sung cue can land. */
+  private float interludeFadeAlpha() {
+    long remaining = session.countdownRemainingMs();
+    long total = session.countdownTotalMs();
+    if (remaining < 0 || total <= 0) return 1f;
+    return Math.max(0f, remaining / (float) total);
+  }
+
   /** Reactive bars along the bottom of the interlude, driven by the shared pitch energy. */
   private void drawVisualizerBars(Canvas canvas, float w, float h, float t) {
     float energy = LyricWordAnimation.pitchEnergy(
@@ -366,7 +460,7 @@ final class StageView extends View {
 
   /** Optional song title header above the lyric block. */
   private void drawSongTitle(Canvas canvas, float w) {
-    String title = session.current.title;
+    String title = ph.kanta.reborn.stage.StagePresenterImpl.songTitleHeader(session.current);
     paint.setTextSize(dp(14));
     paint.setTextAlign(Paint.Align.CENTER);
     paint.setColor(0xCCFFFFFF);

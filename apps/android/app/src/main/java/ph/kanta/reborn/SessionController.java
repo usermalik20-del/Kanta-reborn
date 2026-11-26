@@ -240,6 +240,11 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     return Math.max(0, countdownEndsAt - SystemClock.elapsedRealtime());
   }
 
+  /** Milliseconds the running vocal countdown was given; 0 when none is running.
+   *  Renderers fade the pre-song interlude across this window so the stage is
+   *  clear where the first sung line lands. */
+  public synchronized long countdownTotalMs() { return countdownTotalMs; }
+
   // ---- Lyric stage style (persisted in SettingsStore, applied by StageView) ----
   public synchronized boolean lyricAllCaps() { return settings.getLyricAllCaps(); }
   public synchronized void setLyricAllCaps(boolean value) { settings.setLyricAllCaps(value); publish(); }
@@ -379,6 +384,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private ReservationQueue.Entry countingEntry;
   /** elapsedRealtime millis at which the running vocal countdown ends; -1 when none. */
   private long countdownEndsAt = -1;
+  private long countdownTotalMs = 0;
   private boolean countingQueued;
   private boolean pendingHasFocus;
 
@@ -422,6 +428,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private void clearCountdown() {
     countingEntry = null;
     countdownEndsAt = -1;
+    countdownTotalMs = 0;
     Runnable cancel = cancelCountdownView;
     cancelCountdownView = null;
     if (cancel != null) cancel.run();
@@ -429,7 +436,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   private void startLocal(ReservationQueue.Entry entry, boolean queued) {
     cancelAutoAdvance();
-    party.stopCelebration();
+    // The score celebration runs to natural completion across the song boundary;
+    // only Stop, focus loss or leaving the app silences it.
     int seconds = countdownHost == null ? 0 : settings.getCountdownLength();
     if (seconds > 0) {
       // Track cancellation during decoding too; the view is only created in ready().
@@ -1231,7 +1239,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
               applausePlayed);
       scoreSink.onScoreCompleted(sinkScore);
     }
-    // The user's celebration track layers over the party cues until the next song or Stop.
+    // The user's celebration track layers over the party cues until Stop or focus loss.
     if (foreground && !auxiliaryInterrupted
         && audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       party.playCelebration();
@@ -1679,6 +1687,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                                 () -> startReady(candidate));
                             countdownEndsAt = SystemClock.elapsedRealtime()
                                 + countdownSeconds * 1000L;
+                            countdownTotalMs = countdownSeconds * 1000L;
                             if (token == generation && pending == candidate)
                               cancelCountdownView = dismiss;
                             else dismiss.run();
@@ -1701,6 +1710,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                                       () -> {});
                                   countdownEndsAt = SystemClock.elapsedRealtime()
                                       + countdownSeconds * 1000L;
+                                  countdownTotalMs = countdownSeconds * 1000L;
                                   if (startToken == generation) cancelCountdownView = showDismiss;
                                   else showDismiss.run();
                                 };
@@ -1711,6 +1721,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
                         private void startReady(PlaybackBackend candidate) {
                           countdownEndsAt = -1;
+                          countdownTotalMs = 0;
                           if (!stillPending(candidate)) return;
                           if (audio.requestAudioFocus(focus)
                               != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {

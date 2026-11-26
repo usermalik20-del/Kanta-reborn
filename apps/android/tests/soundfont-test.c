@@ -5,9 +5,22 @@
 #include <unistd.h>
 #include "../app/src/main/cpp/soundfont.c"
 
+static void budget_checks(void) {
+    // The cap is dynamic: a tested 3 GiB floor, and 90% of whatever RAM the
+    // kernel reports when that is larger. The live budget must never drop
+    // below the floor regardless of what /proc/meminfo says on this host.
+    const size_t gib = (size_t)1024u * 1024u * 1024u;
+    assert(sf_effective_budget(0) == 3072u * 1024u * 1024u);
+    assert(sf_effective_budget(2u * gib) == 3072u * 1024u * 1024u);
+    assert(sf_effective_budget(4u * gib) == 4u * gib - 4u * gib / 10);
+    assert(sf_effective_budget(16u * gib) == 16u * gib - 16u * gib / 10);
+    assert(sf_effective_budget(8u * gib) >= sf_effective_budget(4u * gib));
+    assert(current_budget() >= 3072u * 1024u * 1024u);
+}
+
 static void allocation_checks(void) {
     assert(allocated == 0);
-    assert(budget == (size_t)3072u * 1024u * 1024u);
+    size_t budget = current_budget();
     // The full piano's decoded samples fit, with headroom for loader metadata.
     assert(budget > (size_t)1163416536u + 64u * 1024u * 1024u);
     assert(!bounded_malloc(budget + 1));
@@ -42,7 +55,7 @@ static void allocation_checks(void) {
     allocated = 0; // Retire the simulated allocations, not real heap pointers.
     bounded_free(NULL);
     assert(allocated == 0);
-    puts("SoundFont: 3072 MiB cap, exact boundary, realloc/overflow accounting passed");
+    puts("SoundFont: dynamic cap (3072 MiB floor), exact boundary, realloc/overflow accounting passed");
 }
 
 static double frequency(kanta_soundfont* bank, float tuning) {
@@ -67,6 +80,7 @@ static double frequency(kanta_soundfont* bank, float tuning) {
 }
 int main(int argc, char** argv) {
     assert(argc == 2);
+    budget_checks();
     allocation_checks();
     kanta_soundfont* bank = kanta_sf_open(argv[1]);
     assert(bank);

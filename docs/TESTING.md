@@ -1,4 +1,20 @@
-## Stage style editor coverage (2026-11-26)
+## Round-2 stage contracts (2026-11-26)
+
+`tools/tests/test_stage_style_upgrade.py` grows `InterludeFadeAndFixedRowsTests`:
+the session exposes the countdown window (set at both countdown sites, cleared
+at both clear sites), both renderers fade the interlude across it, both use a
+fixed row anchor with the ghost cross-fade, the marquee time base is seconds,
+and the score celebration is no longer stopped by `startLocal` (the bundled
+`score-celebration.mp3` digest is pinned - the owner's uploaded 12-second
+sound is byte-identical to it). `SoundFontBudgetContractTests` now pins the
+dynamic budget (3 GiB floor, 92.4% scaling, `current_budget` used by the
+bounded allocators) and the C suite prints the dynamic-cap result. Validation
+in this sandbox: compile + androidTest, 73,285 coreRegression (manual JDK17
+run; the sandbox gradle unit-test worker compiles against a JDK8 API and
+cannot run two legacy test files - pre-existing), lint 0 + zero-debt gate,
+the native C soundfont test (boundary + SF3 + mutation), 320 Python
+contracts. The embedded cross-fade and the interlude fade remain
+device-acceptance items for the owner's local test round.
 
 `tools/tests/test_stage_style_upgrade.py` pins the new editors: the five
 named font chips plus custom import (resolving through `FONT_CHIP_IDS` to
@@ -29,6 +45,7 @@ the stage renders), from the More tab (the Stage appears in PiP and the More
 surface returns on resume), and from the fullscreen Stage (the dialog closes
 and the embedded Stage enters PiP). Tapping the PiP window restores the
 pre-leave tab state, including the 50/50 portrait split.
+
 
 ## Host contracts for the unified folder import and visual editors (2026-11-26)
 

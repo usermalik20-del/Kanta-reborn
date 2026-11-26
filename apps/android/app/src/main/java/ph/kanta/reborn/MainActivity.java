@@ -2653,7 +2653,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     style.alignment = session.lyricAlignment();
     style.showUpcoming = upcomingVisible;
     style.showTitle = session.lyricShowTitle();
-    style.title = song == null ? "" : song.title;
+    style.title = ph.kanta.reborn.stage.StagePresenterImpl.songTitleHeader(song);
     style.showWatermark = session.lyricShowWatermark();
     preview.applyLyricStyle(style);
     String currentLine = sampleLyricLine();

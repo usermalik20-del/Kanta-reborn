@@ -200,14 +200,138 @@ class InterludeStyleContractTests(unittest.TestCase):
 
 
 class SoundFontBudgetContractTests(unittest.TestCase):
-    def test_budget_is_three_gib_in_code_and_tests(self):
+    def test_budget_is_dynamic_with_three_gib_floor(self):
         c = (ROOT / 'apps/android/app/src/main/cpp/soundfont.c').read_text(encoding='utf-8')
-        self.assertIn('static const size_t budget = (size_t)3072u * 1024u * 1024u;', c)
-        self.assertNotIn('1536u * 1024u * 1024u', c)
+        self.assertIn('static const size_t MIN_BUDGET = (size_t)3072u * 1024u * 1024u;', c)
+        self.assertNotIn('static const size_t budget =', c)
+        for marker in ('size_t sf_effective_budget(size_t available_bytes)',
+                       'available_bytes / 10',
+                       'dynamic > MIN_BUDGET ? dynamic : MIN_BUDGET',
+                       'MemAvailable:',
+                       'current_budget()'):
+            self.assertIn(marker, c)
+        # Both allocation paths must consult the live budget.
+        self.assertEqual(c.count('size_t budget = current_budget();'), 2)
         test = (ROOT / 'apps/android/tests/soundfont-test.c').read_text(encoding='utf-8')
-        self.assertIn('assert(budget == (size_t)3072u * 1024u * 1024u);', test)
-        self.assertIn('SoundFont: 3072 MiB cap', test)
+        for marker in ('sf_effective_budget(0) == 3072u * 1024u * 1024u',
+                       'sf_effective_budget(2u * gib) == 3072u * 1024u * 1024u',
+                       'sf_effective_budget(4u * gib) == 4u * gib - 4u * gib / 10',
+                       'current_budget() >= 3072u * 1024u * 1024u',
+                       'budget_checks()'):
+            self.assertIn(marker, test)
 
+    def test_embedded_stage_receives_the_style(self):
+        # The embedded renderer must not hardcode the old white/gold look.
+        lyric = (JAVA / 'stage/LyricStage.java').read_text(encoding='utf-8')
+        for marker in ('public void setStyle(StageStyle style)',
+                       'fadeColor(style.interludeColor, interludeAlpha)',
+                       'android.text.Layout.Alignment align',
+                       'oneToOneUpper(cue.line)',
+                       '"background".equals(style.imagePlacement)',
+                       'postInvalidateOnAnimation()'):
+            self.assertIn(marker, lyric)
+        presenter = (JAVA / 'stage/StagePresenterImpl.java').read_text(encoding='utf-8')
+        for marker in ('lyricStage.setStyle(new StageStyle(',
+                       'session.lyricActiveColor()',
+                       'session.interludeTextSizeSp()',
+                       'countdownStage.setVisualsEnabled(session.lyricShowCountdown())',
+                       'songTitleHeader(styleSong)',
+                       'session.preSongInterludeActive() && !session.interludeShowUpNext()'):
+            self.assertIn(marker, presenter)
+        import re
+        snapshot = (JAVA / 'stage/StageStyle.java').read_text(encoding='utf-8')
+        for field in ('activeColor', 'upcomingAlpha', 'allCaps', 'bold', 'outline', 'alignment',
+                      'showUpcoming', 'showTitle', 'title', 'interludeColor', 'animation',
+                      'interludeSizeSp', 'imageScale', 'imagePlacement'):
+            self.assertRegex(
+                snapshot, r'public final \w+ ' + field + r';')
+
+    def test_title_header_includes_the_singer(self):
+        presenter = (JAVA / 'stage/StagePresenterImpl.java').read_text(encoding='utf-8')
+        header = presenter.split('public static String songTitleHeader', 1)[1].split('}', 1)[0]
+        self.assertIn('song.title', header)
+        self.assertIn('song.artist', header)
+        surface = (JAVA / 'StageView.java').read_text(encoding='utf-8')
+        self.assertIn('StagePresenterImpl.songTitleHeader(session.current)', surface)
+        activity = (JAVA / 'MainActivity.java').read_text(encoding='utf-8')
+        self.assertIn('StagePresenterImpl.songTitleHeader(song)', activity)
+
+    def test_marquee_uses_a_readable_pace(self):
+        surface = (JAVA / 'StageView.java').read_text(encoding='utf-8')
+        # Seconds, not milliseconds, as the time base; px/s scaled to text size.
+        self.assertIn('(now / 1000.0 * speed) % total', surface)
+        self.assertNotIn('(double) now * speed', surface)
+        lyric = (JAVA / 'stage/LyricStage.java').read_text(encoding='utf-8')
+        self.assertIn('30f * density * (activePaint.getTextSize() / (40f * density))', lyric)
+
+    def test_countdown_visual_can_be_disabled(self):
+        countdown = (JAVA / 'stage/CountdownStage.java').read_text(encoding='utf-8')
+        self.assertIn('public void setVisualsEnabled(boolean enabled)', countdown)
+        self.assertIn('if (!visualsEnabled) return;', countdown)
+
+
+class InterludeFadeAndFixedRowsTests(unittest.TestCase):
+    def test_session_exposes_countdown_window(self):
+        session = src('SessionController.java')
+        self.assertIn('private long countdownTotalMs = 0;', session)
+        self.assertIn('public synchronized long countdownTotalMs()', session)
+        self.assertEqual(
+            session.count('countdownTotalMs = countdownSeconds * 1000L;'), 2)
+        self.assertIn('countdownTotalMs = 0;', session)
+
+    def test_interlude_fades_across_the_countdown(self):
+        surface = src('StageView.java')
+        for marker in ('interludeFadeAlpha()', 'boolean interludeVisible',
+                       'fadeColor(session.interludeTextColor(), interludeAlpha)',
+                       'drawInterludeImage(canvas, w, h, width, lyricHeight, interludeAlpha)',
+                       'session.countdownTotalMs()'):
+            self.assertIn(marker, surface)
+        lyric = src('stage/LyricStage.java')
+        for marker in ('public void setCountdownFade(long startMs, long durationMs)',
+                       'countdownFadeDurationMs',
+                       'fadeColor(style.interludeColor, interludeAlpha)',
+                       'withAlpha(canvas, interludeAlpha'):
+            self.assertIn(marker, lyric)
+        presenter = src('stage/StagePresenterImpl.java')
+        self.assertIn('lyricStage.setCountdownFade(android.os.SystemClock.elapsedRealtime(),', presenter)
+        self.assertEqual(presenter.count('lyricStage.setCountdownFade(-1, 0);'), 2)
+
+    def test_lyric_rows_are_fixed_and_cross_fade(self):
+        # The sung line dissolves in place; the waiting line never moves up.
+        for path, ref in [('StageView.java', 'float refHeight = font * 2.4f + dp(18);'),
+                          ('stage/LyricStage.java',
+                           'float refHeight = activePaint.getTextSize() * 2.4f + 16 * density;')]:
+            source = src(path)
+            self.assertIn(ref, source)
+            self.assertIn('LINE_FADE_MS = 450', source)
+            self.assertIn('ghostLyrics', source)
+            self.assertIn('float fadeIn', source)
+            self.assertIn('withAlpha', source)
+        # The sung line fades out while the successor fades in at the same anchor.
+        surface = src('StageView.java')
+        self.assertIn('withAlpha(canvas, 1f - fadeIn,', surface)
+        self.assertIn('() -> ghostLyrics.draw(canvas, ghostX, ghostTop, 0, 0)', surface)
+
+    def test_marquee_time_base_is_seconds(self):
+        lyric = src('stage/LyricStage.java')
+        self.assertIn('(((now / 1000.0) * speed) % span)', lyric)
+        self.assertNotIn('(float) (now / 1000.0) * speed % span', lyric)
+        surface = src('StageView.java')
+        self.assertIn('(now / 1000.0 * speed) % total', surface)
+
+    def test_score_sound_runs_to_completion(self):
+        # The celebration no longer stops at the song boundary; only Stop /
+        # focus loss / leaving the app silences it.
+        session = src('SessionController.java')
+        start_local = session.split('private void startLocal(ReservationQueue.Entry entry', 1)[1]
+        self.assertNotIn('party.stopCelebration()', start_local)
+        self.assertIn('runs to natural completion across the song boundary', session)
+        # The uploaded sound is the bundled one (byte-identical, 16.25 s container
+        # with ~12 s of audible content) - it must stay in the party assets.
+        asset = ROOT / 'apps/android/app/src/main/assets/party/score-celebration.mp3'
+        self.assertTrue(asset.exists())
+        self.assertEqual(hashlib.sha256(asset.read_bytes()).hexdigest(),
+                         '3d828f5a127e714b2d79e5feabb93d4034c91cf5af0f54c35896920b5f6fadf1')
 
 if __name__ == '__main__':
     unittest.main()

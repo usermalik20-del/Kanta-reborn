@@ -1,4 +1,20 @@
-## VT323 retro face and SoundFont budget (2026-11-26)
+## What the local test round exposed in the stage renderers (2026-11-26)
+
+Testing on the device showed three rendering gaps the host suites could not
+see. First, the **embedded** stage (the one visible under Menu) is a separate
+renderer (`StagePresenterImpl` + `LyricStage`) from the fullscreen/PiP
+`StageView`, and it still hardcoded the old white/gold look, so the style
+editors only appeared in fullscreen. Second, the active/inactive lyric rows
+**swapped vertical positions** on every line change, which the owner reported
+as an eye-sear: the fix is a fixed row anchor (a reference height, not the
+measured pair height) plus a cross-fade where the sung line dissolves in
+place and the successor fades in. Third, the standby interlude sat over the
+first sung line during the countdown; it now fades out across the countdown
+window (the presenter pushes the window, the renderer owns the clock). Also
+fixed in the round: the marquee used milliseconds where seconds were intended
+(1000x too fast), the score celebration was stopped at the song boundary
+(`startLocal` called `stopCelebration`), and the Song Title header now
+includes the singer.
 
 The Retro LED option of the font row is VT323 (peter.hull@oikoi.com), taken
 from the google/fonts repository `ofl/vt323/VT323-Regular.ttf` (git blob
@@ -25,6 +41,7 @@ because a Dialog is a separate window that PiP cannot host. The fix is the
 `applyPipLayout` Stage-only surface described in apps/android/README.md, the
 tab-forced-visible Stage pane, and `closeFullscreen()` before
 `enterStagePip()` in `onUserLeaveHint`.
+
 
 ## Feature batch: visual editors, interlude, unified folder import (2026-11-26)
 
