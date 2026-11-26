@@ -146,6 +146,38 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
 
   /** Read-only stage state for the presenter in the stage subpackage. */
   public synchronized String stageKind() { return stageKind; }
+  public synchronized int stageDimAlpha() { return settings.getStageDimAlpha(); }
+  public synchronized void setStageDimAlpha(int percent) {
+    settings.setStageDimAlpha(Math.max(0, Math.min(85, percent)));
+    publish();
+  }
+  public synchronized int stageBlurDp() { return settings.getStageBlurDp(); }
+  public synchronized void setStageBlurDp(int dp) {
+    settings.setStageBlurDp(Math.max(0, Math.min(20, dp)));
+    publish();
+  }
+  public synchronized boolean stageSlideshow() { return settings.getStageSlideshow(); }
+  public synchronized void setStageSlideshow(boolean on) {
+    settings.setStageSlideshow(on);
+    publish();
+  }
+  /** Slideshow interval snapped to the supported 5/10/20 second steps. */
+  public synchronized int slideshowIntervalSec() {
+    int v = settings.getSlideshowIntervalSec();
+    return v == 5 || v == 20 ? v : 10;
+  }
+  public synchronized void setSlideshowIntervalSec(int v) {
+    settings.setSlideshowIntervalSec(v == 5 || v == 20 ? v : 10);
+    publish();
+  }
+  /** Imported photo files eligible for the slideshow, in import order. */
+  public synchronized java.util.List<java.io.File> slideshowPhotoFiles() {
+    java.util.List<java.io.File> files = new java.util.ArrayList<>();
+    if (stageSelection != null)
+      for (StageMediaStore.Entry entry : stageSelection.imports)
+        if (!entry.video && entry.file != null && entry.file.exists()) files.add(entry.file);
+    return files;
+  }
   public synchronized boolean cameraPreviewEnabled() { return cameraPreviewEnabled; }
   public synchronized android.graphics.Bitmap scenicBitmap() { return scenic; }
   public synchronized File stageVideo() {

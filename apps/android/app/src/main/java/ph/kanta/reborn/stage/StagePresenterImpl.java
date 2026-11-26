@@ -680,8 +680,16 @@ public final class StagePresenterImpl extends FrameLayout
     // the presenter's existing background renderer, never into a second stage.
     // Camera opt-in is authoritative for the visible source. Scenic selection must
     // never clobber a live preview during the 100ms refresh tick.
+    backgroundStage.setDimAlpha(session.stageDimAlpha() / 100f);
+    backgroundStage.setBlurDp(session.stageBlurDp());
+    java.util.List<java.io.File> slides =
+        session.stageSlideshow() ? session.slideshowPhotoFiles() : null;
+    boolean slideshow = slides != null && slides.size() >= 2
+        && !"camera".equals(session.stageKind()) && !session.cameraPreviewEnabled();
     if ("camera".equals(session.stageKind()) || session.cameraPreviewEnabled()) {
       backgroundStage.setSource(BackgroundStage.Source.CAMERA);
+    } else if (slideshow) {
+      backgroundStage.setSlideshow(slides, session.slideshowIntervalSec());
     } else if (("photo".equals(session.stageKind()) || "scenic".equals(session.stageKind()))
         && session.scenicBitmap() != null) {
       backgroundStage.setPhoto(session.scenicBitmap());

@@ -56,6 +56,12 @@ public final class SettingsStore {
   public static final String KEY_INTERLUDE_SHOW_VISUALIZER = "interlude.showVisualizer";
   public static final String KEY_INTERLUDE_SHOW_WATERMARK = "interlude.showWatermark";
 
+  // Group: stage readability
+  public static final String KEY_STAGE_DIM_ALPHA = "stage.dimAlpha";
+  public static final String KEY_STAGE_BLUR_DP = "stage.blurDp";
+  public static final String KEY_STAGE_SLIDESHOW = "stage.slideshow";
+  public static final String KEY_SLIDESHOW_INTERVAL_SEC = "stage.slideshowIntervalSec";
+
   // Group: mic
   public static final String KEY_MIC_MONITOR_LEVEL = "mic.monitorLevel";
   public static final String KEY_MIC_GATE_THRESHOLD = "mic.gateThreshold";
@@ -247,6 +253,20 @@ public final class SettingsStore {
       return null;
     }
   }
+  /** Background dim in percent (0-85). */
+  public int getStageDimAlpha() { return prefs.getInt(KEY_STAGE_DIM_ALPHA, 0); }
+  public void setStageDimAlpha(int v) { prefs.edit().putInt(KEY_STAGE_DIM_ALPHA, v).apply(); }
+
+  /** Background blur radius in dp (0-20); API 31+ only, no-op elsewhere. */
+  public int getStageBlurDp() { return prefs.getInt(KEY_STAGE_BLUR_DP, 0); }
+  public void setStageBlurDp(int v) { prefs.edit().putInt(KEY_STAGE_BLUR_DP, v).apply(); }
+
+  public boolean getStageSlideshow() { return prefs.getBoolean(KEY_STAGE_SLIDESHOW, false); }
+  public void setStageSlideshow(boolean v) { prefs.edit().putBoolean(KEY_STAGE_SLIDESHOW, v).apply(); }
+
+  public int getSlideshowIntervalSec() { return prefs.getInt(KEY_SLIDESHOW_INTERVAL_SEC, 10); }
+  public void setSlideshowIntervalSec(int v) { prefs.edit().putInt(KEY_SLIDESHOW_INTERVAL_SEC, v).apply(); }
+
   public void setLyricSyncOffsetOverride(String songId, int ms) {
     if (songId == null || songId.isEmpty()) return;
     String raw = prefs.getString(KEY_LYRIC_SYNC_OFFSET_OVERRIDES, "");

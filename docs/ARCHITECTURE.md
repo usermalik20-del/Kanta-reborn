@@ -1,3 +1,37 @@
+## Stage backgrounds: dim, blur, photo slideshow (2026-11-27)
+
+The Stage & Visual Photos tab gained a "Stage readability" section: a Dim slider
+(0-85%) that projects a top-level scrim over any background source (photo, BGV video,
+camera, gradient) in both the embedded BackgroundStage (a dedicated scrim child added
+above the swapped media views, re-attached after setSource) and the fullscreen StageView
+canvas (dimPaint rect after the base scrims, before the lyrics), and a Blur slider
+(0-20dp) applied as a RenderEffect on the whole BackgroundStage subtree on API 31+
+(no-op below). A Photo slideshow toggle cycles the imported photos every 5/10/20s
+(interval pills) with a 400ms crossfade between two ImageViews; BackgroundStage owns
+the timer (Handler on the main looper), pauses it when the stage is not visually
+active or detached, and keeps its position across refresh() re-invocations via a
+file-signature guard (same slides + interval only reschedules). Slideshow needs at
+least two imported photos and is overridden by an explicit camera or video selection;
+single photo/video imports clear it. The seekListener now flags draggingVisualsControl
+and the render() editor fast-path was generalized to the Stage & Visual page as well as
+Intermission, so dragging any of these sliders live-refreshes only the preview instead
+of rebuilding the page.
+
+Files changed:
+- apps/android/app/src/main/java/ph/kanta/reborn/settings/SettingsStore.java -
+  stage.dimAlpha, stage.blurDp, stage.slideshow, stage.slideshowIntervalSec.
+- apps/android/app/src/main/java/ph/kanta/reborn/SessionController.java - clamped
+  accessors + slideshowPhotoFiles() from the imported photo entries.
+- apps/android/app/src/main/java/ph/kanta/reborn/stage/BackgroundStage.java -
+  dim scrim child, RenderEffect blur, slideshow state machine.
+- apps/android/app/src/main/java/ph/kanta/reborn/stage/StagePresenterImpl.java -
+  projects dim/blur/slideshow into the background renderer on refresh.
+- apps/android/app/src/main/java/ph/kanta/reborn/StageView.java - fullscreen dim
+  scrim (dimPaint).
+- apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java - readability UI,
+  drag flag, generalized editor guard.
+- apps/android/app/src/main/res/values/strings.xml - readability labels.
+
 ## Lyric sync offset with stage HUD pill (2026-11-27)
 
 Singers can now correct lyric timing without re-importing. The Lyrics editor gained a

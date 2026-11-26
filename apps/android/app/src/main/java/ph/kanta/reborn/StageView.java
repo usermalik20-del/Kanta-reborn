@@ -19,6 +19,7 @@ final class StageView extends View {
   private Typeface appliedTypeface;
   private boolean appliedBold;
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+  private final Paint dimPaint;
   private String lastDescription = "";
   private final Rect source = new Rect();
   private final RectF target = new RectF();
@@ -63,6 +64,8 @@ final class StageView extends View {
     // Gold timing highlight (no red/pink)
     wavePaint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
     wavePaint.setShadowLayer(dp(3), 0, 0, 0x66FFD700);
+    dimPaint = new Paint();
+    dimPaint.setColor(0xFF000000);
     setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
   }
 
@@ -137,6 +140,11 @@ final class StageView extends View {
     if (externalMedia) {
       paint.setColor(0x88000000);
       canvas.drawRect(0, 0, w, h, paint);
+    }
+    int dimPercent = session.stageDimAlpha();
+    if (dimPercent > 0) {
+      dimPaint.setAlpha(Math.round(dimPercent * 2.55f));
+      canvas.drawRect(0, 0, w, h, dimPaint);
     }
     if (session.realm) realm(canvas, w, h);
     int lyricHeight = getHeight() - contentTop - contentBottom;

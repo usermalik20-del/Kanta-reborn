@@ -77,6 +77,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     private Runnable stageSearchClearTask;
     private boolean intermissionMessageFocused;
     private boolean draggingLyricSync;
+    private boolean draggingVisualsControl;
     private LinearLayout stageSyncPill;
     private TextView stageSyncValue;
   private StagePresenterImpl stagePresenter;
@@ -703,9 +704,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // every keystroke. Rebuilding the page would detach the focused field and drop
     // the IME session mid-word, so while that field holds focus refresh only the
     // live stage preview.
-    if (MENU_INTERMISSION.equals(tab) && lowerUtilityAccessory == null
-        && (intermissionMessageFocused || draggingLyricSync)
-        && body.findViewWithTag("kanta.screen.intermission-editors") != null) {
+    boolean editorPageLive = (MENU_INTERMISSION.equals(tab)
+            && body.findViewWithTag("kanta.screen.intermission-editors") != null)
+        || (MENU_STAGE_VISUAL.equals(tab)
+            && body.findViewWithTag("kanta.screen.visuals") != null);
+    if (editorPageLive && lowerUtilityAccessory == null
+        && (intermissionMessageFocused || draggingLyricSync || draggingVisualsControl)) {
       refreshVisualsPreview();
       if (stagePresenter != null) stagePresenter.refresh();
       return;
@@ -2258,6 +2262,55 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         return item;
       });
     }
+    if (!video) {
+      target.addView(sectionHeader(getString(R.string.stage_readability_heading)));
+      TextView dimLabel = text(getString(R.string.stage_dim_value,
+          session.stageDimAlpha()), 15, KantaTheme.TEXT_PRIMARY);
+      dimLabel.setTag("kanta.visuals.dim");
+      SeekBar dimSeek = new SeekBar(this);
+      dimSeek.setTag("kanta.visuals.dim.slider");
+      dimSeek.setMax(85);
+      dimSeek.setProgress(session.stageDimAlpha());
+      dimSeek.setOnSeekBarChangeListener(seekListener(v -> {
+        session.setStageDimAlpha(v);
+        dimLabel.setText(getString(R.string.stage_dim_value, v));
+      }));
+      target.addView(dimLabel);
+      target.addView(dimSeek);
+      TextView blurLabel = text(getString(R.string.stage_blur_value,
+          session.stageBlurDp()), 15, KantaTheme.TEXT_PRIMARY);
+      blurLabel.setTag("kanta.visuals.blur");
+      SeekBar blurSeek = new SeekBar(this);
+      blurSeek.setTag("kanta.visuals.blur.slider");
+      blurSeek.setMax(20);
+      blurSeek.setProgress(session.stageBlurDp());
+      blurSeek.setOnSeekBarChangeListener(seekListener(v -> {
+        session.setStageBlurDp(v);
+        blurLabel.setText(getString(R.string.stage_blur_value, v));
+      }));
+      target.addView(blurLabel);
+      target.addView(blurSeek);
+      boolean canSlideshow = entries.size() >= 2;
+      Switch slideshow = new Switch(this);
+      slideshow.setTag("kanta.visuals.slideshow");
+      slideshow.setText(R.string.stage_slideshow);
+      slideshow.setTextColor(KantaTheme.TEXT_PRIMARY);
+      slideshow.setMinHeight(dp(48));
+      MenuSurface.setLeadingIcon(slideshow, R.drawable.kanta_submenu_photo);
+      slideshow.setEnabled(canSlideshow);
+      slideshow.setChecked(canSlideshow && session.stageSlideshow());
+      slideshow.setOnCheckedChangeListener((button, checked) -> session.setStageSlideshow(checked));
+      target.addView(slideshow);
+      target.addView(text(getString(R.string.stage_slideshow_help), 14, KantaTheme.TEXT_SECONDARY));
+      if (canSlideshow && session.stageSlideshow()) {
+        int seconds = session.slideshowIntervalSec();
+        target.addView(sectionHeader(getString(R.string.stage_slideshow_interval)));
+        target.addView(pillGroup("kanta.visuals.slideshow.interval",
+            new String[] { "5s", "10s", "20s" },
+            seconds == 5 ? 0 : seconds == 20 ? 2 : 1,
+            index -> session.setSlideshowIntervalSec(new int[] { 5, 10, 20 }[index])));
+      }
+    }
     if (session.importing) {
       target.addView(actionButton("Cancel import", R.drawable.kanta_submenu_cancel, session::cancelImports));
     }
@@ -2585,8 +2638,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onProgressChanged(SeekBar bar, int value, boolean fromUser) {
         onChange.accept(value);
       }
-      @Override public void onStartTrackingTouch(SeekBar bar) { }
-      @Override public void onStopTrackingTouch(SeekBar bar) { }
+      @Override public void onStartTrackingTouch(SeekBar bar) { draggingVisualsControl = true; }
+      @Override public void onStopTrackingTouch(SeekBar bar) {
+        draggingVisualsControl = false;
+        render();
+      }
     };
   }
 

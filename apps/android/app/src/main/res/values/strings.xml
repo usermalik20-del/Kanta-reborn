@@ -67,6 +67,12 @@
     <string name="lyrics_sync_intro">Nudge lyric timing without re-importing. Range is +-2000ms; tapping the value resets it to 0.</string>
     <string name="lyrics_sync_value">%1$dms</string>
     <string name="lyrics_sync_zero">0ms</string>
+    <string name="stage_readability_heading">Stage readability</string>
+    <string name="stage_dim_value">Dim: %1$d%%</string>
+    <string name="stage_blur_value">Blur: %1$d dp</string>
+    <string name="stage_slideshow">Photo slideshow</string>
+    <string name="stage_slideshow_help">Crossfades through your imported photos. Import at least two photos to enable.</string>
+    <string name="stage_slideshow_interval">Slide interval</string>
     <string name="stage_search_preview_loading">Finding songs…</string>
     <string name="stage_search_preview_empty">No matching songs</string>
     <string name="nav_stage">Stage</string>
