@@ -716,7 +716,7 @@ public final class StagePresenterImpl extends FrameLayout
         session.lyricShowTitle(), songTitleHeader(styleSong),
         session.interludeTextColor(), session.interludeAnimation(),
         session.interludeTextSizeSp(), session.interludeImageScale(),
-        session.interludeImagePlacement()));
+        session.interludeImagePlacement(), session.lyricOffsetForCurrentSong()));
     countdownStage.setVisualsEnabled(session.lyricShowCountdown());
     // Update lyrics if playing
     if (session.isPlaying() && session.lyrics != null && !session.lyrics.isEmpty()) {

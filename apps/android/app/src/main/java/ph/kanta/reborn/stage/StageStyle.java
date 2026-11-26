@@ -20,11 +20,13 @@ public final class StageStyle {
   public final int interludeSizeSp;
   public final float imageScale;
   public final String imagePlacement;
+  /** Effective lyric sync offset in milliseconds for the timed cues. */
+  public final int syncOffsetMs;
 
   public StageStyle(int activeColor, float upcomingAlpha, boolean allCaps, boolean bold,
       int outline, String alignment, boolean showUpcoming, boolean showTitle, String title,
       int interludeColor, String animation, int interludeSizeSp, float imageScale,
-      String imagePlacement) {
+      String imagePlacement, int syncOffsetMs) {
     this.activeColor = activeColor;
     this.upcomingAlpha = upcomingAlpha;
     this.allCaps = allCaps;
@@ -39,6 +41,7 @@ public final class StageStyle {
     this.interludeSizeSp = interludeSizeSp;
     this.imageScale = imageScale;
     this.imagePlacement = imagePlacement;
+    this.syncOffsetMs = syncOffsetMs;
   }
 
   /** Value equality so renderers can skip repaints when nothing changed. */
@@ -57,6 +60,7 @@ public final class StageStyle {
         && animation.equals(other.animation)
         && interludeSizeSp == other.interludeSizeSp
         && imageScale == other.imageScale
-        && imagePlacement.equals(other.imagePlacement);
+        && imagePlacement.equals(other.imagePlacement)
+        && syncOffsetMs == other.syncOffsetMs;
   }
 }

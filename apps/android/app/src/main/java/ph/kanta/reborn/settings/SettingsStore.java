@@ -46,6 +46,8 @@ public final class SettingsStore {
   public static final String KEY_LYRIC_SHOW_TITLE = "lyric.showTitle";
   public static final String KEY_LYRIC_SHOW_WATERMARK = "lyric.showWatermark";
   public static final String KEY_LYRIC_SHOW_COUNTDOWN = "lyric.showCountdown";
+  public static final String KEY_LYRIC_SYNC_OFFSET_MS = "lyric.syncOffsetMs";
+  public static final String KEY_LYRIC_SYNC_OFFSET_OVERRIDES = "lyric.syncOffsetOverrides";
   public static final String KEY_INTERLUDE_TEXT_COLOR = "interlude.textColor";
   public static final String KEY_INTERLUDE_ANIMATION = "interlude.animation";
   public static final String KEY_INTERLUDE_IMAGE_SCALE = "interlude.imageScale";
@@ -228,6 +230,38 @@ public final class SettingsStore {
 
   public boolean getLyricShowTitle() { return prefs.getBoolean(KEY_LYRIC_SHOW_TITLE, true); }
   public void setLyricShowTitle(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_SHOW_TITLE, v).apply(); }
+
+  /** Global lyric sync offset in milliseconds; clamped to +-2000 by the session. */
+  public int getLyricSyncOffsetMs() { return prefs.getInt(KEY_LYRIC_SYNC_OFFSET_MS, 0); }
+  public void setLyricSyncOffsetMs(int ms) { prefs.edit().putInt(KEY_LYRIC_SYNC_OFFSET_MS, ms).apply(); }
+
+  /** Per-song override keyed by stable song id; null when the song has none. */
+  public Integer getLyricSyncOffsetOverride(String songId) {
+    if (songId == null || songId.isEmpty()) return null;
+    String raw = prefs.getString(KEY_LYRIC_SYNC_OFFSET_OVERRIDES, "");
+    if (raw == null || raw.isEmpty()) return null;
+    try {
+      org.json.JSONObject map = new org.json.JSONObject(raw);
+      return map.isNull(songId) ? null : map.optInt(songId);
+    } catch (Exception unavailable) {
+      return null;
+    }
+  }
+  public void setLyricSyncOffsetOverride(String songId, int ms) {
+    if (songId == null || songId.isEmpty()) return;
+    String raw = prefs.getString(KEY_LYRIC_SYNC_OFFSET_OVERRIDES, "");
+    org.json.JSONObject map;
+    try {
+      map = new org.json.JSONObject(raw == null || raw.isEmpty() ? "{}" : raw);
+    } catch (Exception unavailable) {
+      map = new org.json.JSONObject();
+    }
+    try {
+      if (ms == 0) map.remove(songId); else map.put(songId, ms);
+      prefs.edit().putString(KEY_LYRIC_SYNC_OFFSET_OVERRIDES, map.toString()).apply();
+    } catch (Exception unavailable) {
+    }
+  }
 
   public boolean getLyricShowWatermark() { return prefs.getBoolean(KEY_LYRIC_SHOW_WATERMARK, true); }
   public void setLyricShowWatermark(boolean v) { prefs.edit().putBoolean(KEY_LYRIC_SHOW_WATERMARK, v).apply(); }

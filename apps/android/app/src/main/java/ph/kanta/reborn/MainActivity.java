@@ -76,6 +76,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     private TextView stageSearchField;
     private Runnable stageSearchClearTask;
     private boolean intermissionMessageFocused;
+    private boolean draggingLyricSync;
+    private LinearLayout stageSyncPill;
+    private TextView stageSyncValue;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -453,6 +456,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       appHeader = null;
       stageSearchField = null;
       stageSearchClearTask = null;
+      stageSyncPill = null;
+      stageSyncValue = null;
+      draggingLyricSync = false;
       intermissionMessageFocused = false;
       buildWindow(newOrient);
       render();
@@ -698,7 +704,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     // the IME session mid-word, so while that field holds focus refresh only the
     // live stage preview.
     if (MENU_INTERMISSION.equals(tab) && lowerUtilityAccessory == null
-        && intermissionMessageFocused
+        && (intermissionMessageFocused || draggingLyricSync)
         && body.findViewWithTag("kanta.screen.intermission-editors") != null) {
       refreshVisualsPreview();
       if (stagePresenter != null) stagePresenter.refresh();
@@ -991,6 +997,32 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     stageLayers.addView(stageSearchField, searchParams);
     updateStageSearchField();
 
+    // Compact lyric-sync pill on the stage HUD: +-50ms mid-song without opening
+    // the Menu. It adjusts the per-song override; tapping the value clears it
+    // back to the global default.
+    stageSyncPill = new LinearLayout(this);
+    stageSyncPill.setOrientation(LinearLayout.HORIZONTAL);
+    stageSyncPill.setGravity(Gravity.CENTER_VERTICAL);
+    stageSyncPill.setTag("kanta.stage.sync");
+    stageSyncPill.setBackground(KantaTheme.backgroundDrawable(0x66000000, 14,
+        0x3341DF91, 1, getResources().getDisplayMetrics().density));
+    stageSyncPill.setPaddingRelative(dp(4), dp(2), dp(4), dp(2));
+    stageSyncPill.setVisibility(View.GONE);
+    stageSyncPill.addView(stageSyncPillButton("\u2212", "kanta.stage.sync.minus", () ->
+        session.setSongLyricOffsetMs(session.lyricOffsetForCurrentSong() - 50)));
+    stageSyncValue = text("", 12, KantaTheme.TEXT_PRIMARY);
+    stageSyncValue.setTag("kanta.stage.sync.value");
+    stageSyncValue.setPaddingRelative(dp(8), 0, dp(8), 0);
+    stageSyncValue.setOnClickListener(v -> session.setSongLyricOffsetMs(0));
+    stageSyncPill.addView(stageSyncValue, new LinearLayout.LayoutParams(-2, -2));
+    stageSyncPill.addView(stageSyncPillButton("+", "kanta.stage.sync.plus", () ->
+        session.setSongLyricOffsetMs(session.lyricOffsetForCurrentSong() + 50)));
+    FrameLayout.LayoutParams syncPillParams =
+        new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+    syncPillParams.setMarginEnd(dp(2));
+    syncPillParams.topMargin = dp(46);
+    stageLayers.addView(stageSyncPill, syncPillParams);
+
     // Icon-only camera action at the top right; the status dot stays, the caption goes.
     stageCameraToggle = stageChromeButton(R.string.stage_camera, R.drawable.kanta_stage_action_camera,
         "kanta.stage.camera", this::toggleCamera);
@@ -1053,6 +1085,43 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     refreshStageControls(embeddedControls);
     refreshStageControls(fullscreenControls);
+    refreshStageSyncPill();
+  }
+
+  /** The sync pill shows only while a song with timed lyrics is on the stage. */
+  private void refreshStageSyncPill() {
+    if (stageSyncPill == null || stageSyncValue == null) return;
+    boolean show = session.current != null && session.lyrics != null
+        && !session.lyrics.isEmpty();
+    stageSyncPill.setVisibility(show ? View.VISIBLE : View.GONE);
+    if (show) stageSyncValue.setText(syncOffsetLabel(session.lyricOffsetForCurrentSong()));
+  }
+
+  /** Applies a +-50ms step to the global lyric sync offset from the editor stepper. */
+  private void adjustLyricSync(int delta, TextView label, SeekBar seek) {
+    int next = Math.max(-2000, Math.min(2000, session.lyricSyncOffsetMs() + delta));
+    session.setLyricSyncOffsetMs(next);
+    label.setText(syncOffsetLabel(next));
+    seek.setProgress(next + 2000);
+    refreshVisualsPreview();
+  }
+
+  /** Compact pill button used by the stage sync HUD. */
+  private Button stageSyncPillButton(String label, String tag, Runnable action) {
+    Button button = KantaTheme.secondaryButton(this, label, v -> action.run());
+    button.setTag(tag);
+    button.setAllCaps(false);
+    button.setTextSize(13);
+    button.setMinWidth(0);
+    button.setMinimumWidth(0);
+    button.setMinHeight(dp(32));
+    button.setPaddingRelative(dp(8), 0, dp(8), 0);
+    return button;
+  }
+
+  private String syncOffsetLabel(int ms) {
+    return ms == 0 ? getString(R.string.lyrics_sync_zero)
+        : getString(R.string.lyrics_sync_value, ms);
   }
 
   /** Icon-only camera action: the status dot stays, the caption text does not. */
@@ -2293,6 +2362,55 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           refreshVisualsPreview();
         }));
 
+    target.addView(sectionHeader(getString(R.string.lyrics_sync_heading)));
+    target.addView(text(getString(R.string.lyrics_sync_intro), 14, KantaTheme.TEXT_SECONDARY));
+    SeekBar syncSeek = new SeekBar(this);
+    syncSeek.setTag("kanta.lyrics.sync.slider");
+    syncSeek.setMax(4000);
+    syncSeek.setProgress(session.lyricSyncOffsetMs() + 2000);
+    TextView syncLabel = text(syncOffsetLabel(session.lyricSyncOffsetMs()), 15, KantaTheme.TEXT_PRIMARY);
+    syncLabel.setTag("kanta.lyrics.sync");
+    syncLabel.setOnClickListener(v -> {
+      session.setLyricSyncOffsetMs(0);
+      syncLabel.setText(syncOffsetLabel(0));
+      syncSeek.setProgress(2000);
+      refreshVisualsPreview();
+    });
+    target.addView(syncLabel);
+    syncSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onProgressChanged(SeekBar bar, int value, boolean fromUser) {
+        if (!fromUser) return;
+        int offset = value - 2000;
+        session.setLyricSyncOffsetMs(offset);
+        syncLabel.setText(syncOffsetLabel(offset));
+        refreshVisualsPreview();
+      }
+      @Override public void onStartTrackingTouch(SeekBar bar) { draggingLyricSync = true; }
+      @Override public void onStopTrackingTouch(SeekBar bar) {
+        draggingLyricSync = false;
+        render();
+      }
+    });
+    LinearLayout syncStepper = row();
+    syncStepper.setPadding(dp(6), dp(2), dp(6), dp(10));
+    Button syncMinus = KantaTheme.secondaryButton(this, "\u2212 50ms",
+        v -> adjustLyricSync(-50, syncLabel, syncSeek));
+    syncMinus.setTag("kanta.lyrics.sync.minus");
+    syncMinus.setAllCaps(false);
+    syncMinus.setTextSize(12);
+    syncMinus.setMinWidth(0);
+    syncMinus.setMinimumWidth(0);
+    Button syncPlus = KantaTheme.secondaryButton(this, "+50ms",
+        v -> adjustLyricSync(50, syncLabel, syncSeek));
+    syncPlus.setTag("kanta.lyrics.sync.plus");
+    syncPlus.setAllCaps(false);
+    syncPlus.setTextSize(12);
+    syncPlus.setMinWidth(0);
+    syncPlus.setMinimumWidth(0);
+    syncStepper.addView(syncMinus, new LinearLayout.LayoutParams(0, -2, 1f));
+    syncStepper.addView(syncPlus, new LinearLayout.LayoutParams(0, -2, 1f));
+    target.addView(syncStepper);
+    target.addView(syncSeek);
     Button reset = actionButton(getString(R.string.lyrics_reset), R.drawable.kanta_submenu_reset,
         () -> { session.resetLyricStyle(); render(); });
     reset.setTag("kanta.lyrics.reset");

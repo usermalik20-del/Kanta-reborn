@@ -276,6 +276,36 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     settings.setLyricShowTitle(value);
     publish();
   }
+  /** Global lyric sync offset in milliseconds (persisted default). */
+  public synchronized int lyricSyncOffsetMs() { return settings.getLyricSyncOffsetMs(); }
+  public synchronized void setLyricSyncOffsetMs(int ms) {
+    settings.setLyricSyncOffsetMs(Math.max(-2000, Math.min(2000, ms)));
+    publish();
+  }
+  /** The offset that applies to the current song: per-song override, else the global default. */
+  public synchronized int lyricOffsetForCurrentSong() {
+    Song song = currentSong();
+    if (song != null) {
+      Integer override = settings.getLyricSyncOffsetOverride(song.id);
+      if (override != null) return Math.max(-2000, Math.min(2000, override));
+    }
+    return lyricSyncOffsetMs();
+  }
+  /** Mid-song adjustment: stored as a per-song override; 0 clears it back to the default. */
+  public synchronized void setSongLyricOffsetMs(int ms) {
+    Song song = currentSong();
+    int clamped = Math.max(-2000, Math.min(2000, ms));
+    if (song == null) {
+      setLyricSyncOffsetMs(clamped);
+      return;
+    }
+    settings.setLyricSyncOffsetOverride(song.id, clamped);
+    publish();
+  }
+  /** Playback position with the effective sync offset applied; lyric lookups only. */
+  public synchronized long lyricPositionMs() {
+    return position() + lyricOffsetForCurrentSong();
+  }
   public synchronized boolean lyricShowWatermark() { return settings.getLyricShowWatermark(); }
   public synchronized void setLyricShowWatermark(boolean value) {
     settings.setLyricShowWatermark(value);

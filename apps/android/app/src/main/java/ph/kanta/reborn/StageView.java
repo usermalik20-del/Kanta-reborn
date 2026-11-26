@@ -88,7 +88,7 @@ final class StageView extends View {
   }
 
   void refresh() {
-    int i = MidiLyrics.activeIndex(session.lyrics, session.position());
+    int i = MidiLyrics.activeIndex(session.lyrics, session.lyricPositionMs());
     String description =
         ((session.current == null ? "KANTA stage" : session.current.title)
             + ". "
@@ -142,7 +142,9 @@ final class StageView extends View {
     int lyricHeight = getHeight() - contentTop - contentBottom;
     if (lyricHeight < 1) return;
     if (!standbyMode) {
-      long position = session.position();
+      // The effective position carries the singer's sync offset so cue selection,
+      // word highlighting and the pitch wave all move together.
+      long position = session.lyricPositionMs();
       int index = session.current == null ? -1 : MidiLyrics.activeIndex(session.lyrics, position);
       MidiLyrics.Cue cue = index >= 0 ? session.lyrics.get(index) : null;
       boolean interlude = session.preSongInterludeActive();

@@ -1,3 +1,37 @@
+## Lyric sync offset with stage HUD pill (2026-11-27)
+
+Singers can now correct lyric timing without re-importing. The Lyrics editor gained a
+"Lyric sync" section: a -50/+50ms stepper, a 0..4000 slider (mapped to -2000..+2000ms)
+and a tap-to-reset value label. The same correction is available mid-song from a compact
+pill on the Stage HUD (tag kanta.stage.sync, top-right): -/value/+ where the value
+applies a per-song override (keyed by song id in SettingsStore lyric.syncOffsetOverrides)
+and tapping the value clears it back to the global default (lyric.syncOffsetMs, clamped
++-2000). The engine applies the effective offset to the timed-cue lookup only:
+SessionController.lyricPositionMs() feeds StageView's activeIndex/highlight and
+LyricStage receives the per-song offset through the StageStyle snapshot
+(syncOffsetMs field), so cue selection, word highlighting and pitch marking all move
+together while audio position, scoring and countdown stay on raw playback time. The
+pill renders only while a song with timed cues is on stage and refreshes on every
+render. While the slider is dragged the Intermission fast-path in render() also skips
+the rebuild (draggingLyricSync), keeping the page and preview alive.
+
+Files changed:
+- apps/android/app/src/main/java/ph/kanta/reborn/settings/SettingsStore.java -
+  lyric.syncOffsetMs + JSON override map with clamped accessors.
+- apps/android/app/src/main/java/ph/kanta/reborn/SessionController.java -
+  lyricSyncOffsetMs, lyricOffsetForCurrentSong, setSongLyricOffsetMs, lyricPositionMs.
+- apps/android/app/src/main/java/ph/kanta/reborn/stage/StageStyle.java - syncOffsetMs
+  snapshot field.
+- apps/android/app/src/main/java/ph/kanta/reborn/stage/LyricStage.java - offset in the
+  two cue-position reads; default snapshot updated.
+- apps/android/app/src/main/java/ph/kanta/reborn/stage/StagePresenterImpl.java -
+  pushes the effective offset into the snapshot.
+- apps/android/app/src/main/java/ph/kanta/reborn/StageView.java - lyricPositionMs in
+  refresh + draw.
+- apps/android/app/src/main/java/ph/kanta/reborn/MainActivity.java - editor section,
+  HUD pill, refresh + helpers, drag guard.
+- apps/android/app/src/main/res/values/strings.xml - lyrics_sync_* labels.
+
 ## Stage search strip, typing fix, results with singers (2026-11-27)
 
 The app-header search field was removed as the Stage tab never shows the app header;

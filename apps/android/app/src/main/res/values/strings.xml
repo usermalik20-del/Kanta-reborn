@@ -63,6 +63,10 @@
     <string name="companion_host_port">%1$s:%2$d</string>
     <string name="stage_search_preview_title">Search results</string>
     <string name="stage_search_hint">Search songs, artists, or enter code</string>
+    <string name="lyrics_sync_heading">Lyric sync</string>
+    <string name="lyrics_sync_intro">Nudge lyric timing without re-importing. Range is +-2000ms; tapping the value resets it to 0.</string>
+    <string name="lyrics_sync_value">%1$dms</string>
+    <string name="lyrics_sync_zero">0ms</string>
     <string name="stage_search_preview_loading">Finding songs…</string>
     <string name="stage_search_preview_empty">No matching songs</string>
     <string name="nav_stage">Stage</string>

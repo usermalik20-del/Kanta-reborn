@@ -37,7 +37,7 @@ public final class LyricStage extends View {
   private final Paint titlePaint;
   private final Paint scrimPaint;
   private StageStyle style = new StageStyle(0xFFFFFFFF, 0.8f, false, true, 1, "center", true,
-      false, "", 0xFFFFFFFF, "static", 0, 1f, "above");
+      false, "", 0xFFFFFFFF, "static", 0, 1f, "above", 0);
   private static final long LINE_FADE_MS = 450;
   private StageLyricLayout ghostLyrics;
   private float ghostX, ghostY, lastX, lastY;
