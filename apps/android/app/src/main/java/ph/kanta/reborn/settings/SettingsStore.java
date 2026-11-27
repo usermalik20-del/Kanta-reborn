@@ -62,6 +62,15 @@ public final class SettingsStore {
   public static final String KEY_STAGE_SLIDESHOW = "stage.slideshow";
   public static final String KEY_SLIDESHOW_INTERVAL_SEC = "stage.slideshowIntervalSec";
 
+  // Group: themes
+  public static final String KEY_THEMES_PRESETS = "themes.presets";
+
+  // Group: display & session
+  public static final String KEY_DISPLAY_ORIENTATION = "display.orientation";
+  public static final String KEY_KEEP_SCREEN_ON = "display.keepScreenOn";
+  public static final String KEY_OLED_SHIFT = "display.oledShift";
+  public static final String KEY_SAFE_ZONE_PERCENT = "display.safeZonePercent";
+
   // Group: mic
   public static final String KEY_MIC_MONITOR_LEVEL = "mic.monitorLevel";
   public static final String KEY_MIC_GATE_THRESHOLD = "mic.gateThreshold";
@@ -266,6 +275,30 @@ public final class SettingsStore {
 
   public int getSlideshowIntervalSec() { return prefs.getInt(KEY_SLIDESHOW_INTERVAL_SEC, 10); }
   public void setSlideshowIntervalSec(int v) { prefs.edit().putInt(KEY_SLIDESHOW_INTERVAL_SEC, v).apply(); }
+
+  /** User theme presets as a raw JSON array; the session parses it. */
+  public String getThemePresetsRaw() { return prefs.getString(KEY_THEMES_PRESETS, ""); }
+  public void setThemePresetsRaw(String raw) { prefs.edit().putString(KEY_THEMES_PRESETS, raw).apply(); }
+
+  public String getDisplayOrientation() {
+    String o = prefs.getString(KEY_DISPLAY_ORIENTATION, "auto");
+    return "landscape".equals(o) || "portrait".equals(o) ? o : "auto";
+  }
+  public void setDisplayOrientation(String v) {
+    prefs.edit().putString(KEY_DISPLAY_ORIENTATION,
+        "landscape".equals(v) || "portrait".equals(v) ? v : "auto").apply();
+  }
+  public boolean getKeepScreenOn() { return prefs.getBoolean(KEY_KEEP_SCREEN_ON, true); }
+  public void setKeepScreenOn(boolean v) { prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, v).apply(); }
+  public boolean getOledShift() { return prefs.getBoolean(KEY_OLED_SHIFT, true); }
+  public void setOledShift(boolean v) { prefs.edit().putBoolean(KEY_OLED_SHIFT, v).apply(); }
+  public int getSafeZonePercent() {
+    int v = prefs.getInt(KEY_SAFE_ZONE_PERCENT, 0);
+    return Math.max(0, Math.min(10, v));
+  }
+  public void setSafeZonePercent(int v) {
+    prefs.edit().putInt(KEY_SAFE_ZONE_PERCENT, Math.max(0, Math.min(10, v))).apply();
+  }
 
   public void setLyricSyncOffsetOverride(String songId, int ms) {
     if (songId == null || songId.isEmpty()) return;

@@ -52,6 +52,9 @@ public final class LyricStage extends View {
   private long playedFrames;
   private StageLyricLayout visibleLyrics;
   private float pitchEnergy = 0f;
+  private int safeZonePercent;
+  private int safeInset;
+  private int burnShiftX, burnShiftY;
 
   public LyricStage(Context context) {
     this(context, null);
@@ -167,6 +170,9 @@ public final class LyricStage extends View {
   }
 
   /** Countdown window for the interlude fade; (-1, 0) resets to fully visible. */
+  public void setSafeZonePercent(int percent) { safeZonePercent = Math.max(0, Math.min(10, percent)); }
+  public void setBurnShift(int dxPx, int dyPx) { burnShiftX = dxPx; burnShiftY = dyPx; }
+
   public void setCountdownFade(long startMs, long durationMs) {
     countdownFadeStartMs = startMs;
     countdownFadeDurationMs = durationMs;
@@ -189,7 +195,7 @@ public final class LyricStage extends View {
             header = header.substring(0, header.length() - 1);
           header += "\u2026";
         }
-        canvas.drawText(header, getWidth() / 2f, 18 * d, titlePaint);
+        canvas.drawText(header, getWidth() / 2f + burnShiftX, 18 * d + burnShiftY, titlePaint);
       }
       canvas.drawText("No timed lyrics for this song", getWidth() / 2f, getHeight() / 2f,
           placeholderPaint);
@@ -210,7 +216,8 @@ public final class LyricStage extends View {
     }
     float density = getResources().getDisplayMetrics().density;
     long now = SystemClock.elapsedRealtime();
-    int index = findCurrentLine(clock != null ? clock.position(playedFrames) : 0L);
+    int index = findCurrentLine(clock != null
+        ? clock.position(playedFrames) + style.syncOffsetMs : 0L);
     boolean interlude = index < 0 && interludeText != null && !interludeText.isEmpty();
     // The waiting interlude fades out across the vocal countdown (the presenter
     // pushes the countdown window), clearing the stage for the first sung line.
@@ -220,11 +227,12 @@ public final class LyricStage extends View {
       interludeAlpha = Math.max(0f, Math.min(1f, remaining / (float) countdownFadeDurationMs));
     }
     if (interlude && interludeAlpha <= 0f) return;
-    int width = getWidth() - 2 * (int) (20 * density);
+    safeInset = (int) (getWidth() * safeZonePercent / 100f);
+    int width = getWidth() - 2 * (int) (20 * density) - 2 * safeInset;
     int padding = Math.min((int) (12 * density), getHeight() / 12);
-    int height = getHeight() - 2 * padding;
+    int height = getHeight() - 2 * padding - 2 * safeInset;
     if (width < 1 || height < 1) return;
-    long position = clock != null ? clock.position(playedFrames) : 0L;
+    long position = clock != null ? clock.position(playedFrames) + style.syncOffsetMs : 0L;
     MidiLyrics.Cue cue = cues[Math.max(0, index)];
     // Before the first cue the reserved song's standby interlude owns the primary line.
     String primary = interlude
@@ -243,7 +251,7 @@ public final class LyricStage extends View {
           header = header.substring(0, header.length() - 1);
         header += "\u2026";
       }
-      canvas.drawText(header, getWidth() / 2f, 18 * density, titlePaint);
+      canvas.drawText(header, getWidth() / 2f + burnShiftX, 18 * density + burnShiftY, titlePaint);
     }
     if (visibleLyrics == null || index != currentLineIndex || interludeDirty) {
       // Fixed rows: the previous sung pair dissolves in place as the new pair
@@ -339,7 +347,8 @@ public final class LyricStage extends View {
         float offset = textWidth
             - (float) (((now / 1000.0) * speed) % span);
         canvas.save();
-        canvas.clipRect(20 * density, padding, getWidth() - 20 * density, height + padding);
+        canvas.clipRect(20 * density + safeInset, padding + safeInset,
+            getWidth() - 20 * density - safeInset, height + padding - safeInset);
         visibleLyrics.draw(canvas, drawX + offset, drawY, 0f, highlightColor(activeColor));
         canvas.restore();
       });

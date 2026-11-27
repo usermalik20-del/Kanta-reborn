@@ -1,3 +1,44 @@
+## Theme presets + display & session controls (2026-11-27)
+
+User theme presets: a horizontal preset bar sits above the Intermission editors with a
+"Save current" chip and one chip per preset. Three built-ins ship non-deletable
+(Classic Videoke, High-Contrast TV, Minimal Dark); user presets are unlimited and
+persist as a JSON array in SettingsStore (no new storage backend). Tapping a chip
+applies it instantly to both the live preview and the active stage; long-press opens
+Rename / Overwrite / Delete (built-ins only allow Overwrite). A preset captures every
+lyric-styling property (font, alignment, lines, caps, bold, outline, colors, upcoming
+opacity, title, sync offset) plus interlude/background settings (color, animation,
+size, image scale/placement, dim, blur, slideshow, safe zone) via KantaThemePreset
+capture/apply over SettingsStore.
+
+Display & session controls: a new Display section in the Control page holds an
+orientation lock (Auto / Landscape / Portrait, applied via setRequestedOrientation at
+start and on change), a keep-screen-on toggle (the previously unconditional
+FLAG_KEEP_SCREEN_ON is now held only while the toggle is on and a song is playing or
+loaded, refreshed from render()), an OLED burn-in shift toggle (a 60-second handler in
+both the embedded StagePresenterImpl and the fullscreen StageView randomizes the
+static chrome - song title header and KANTA watermark - by up to +-4dp without moving
+the lyric rows), and a TV safe-zone margin slider (0-10% inset applied to the lyric
+layout width/height, clip rect and chrome anchors in both LyricStage and StageView so
+mirrored/overscanned displays keep the text inside the picture). The embedded
+LyricStage also finally consumes the Batch A sync offset (cue index and word position
+now add style.syncOffsetMs), so the offset shift works on the primary stage, not only
+the fullscreen surface.
+
+Files changed:
+- apps/android/app/src/main/java/ph/kanta/reborn/settings/KantaThemePreset.java (new)
+  - JSON value model + 3 built-ins + capture/apply over SettingsStore.
+- settings/SettingsStore.java - themes.presets key + display.orientation,
+  display.keepScreenOn, display.oledShift, display.safeZonePercent.
+- SessionController.java - preset list/save/rename/overwrite/delete/apply + display
+  accessors.
+- stage/LyricStage.java - safeZonePercent/safeInset + burnShift fields, geometry
+  insets, title shift, sync-offset consumption.
+- stage/StagePresenterImpl.java - safe zone + OLED armed state pushed on refresh.
+- StageView.java - safe inset, chrome shifts, 60s OLED roll.
+- MainActivity.java - preset bar + menu, Display section, orientation + wake lock.
+- res/values/strings.xml - preset + display labels.
+
 ## Stage backgrounds: dim, blur, photo slideshow (2026-11-27)
 
 The Stage & Visual Photos tab gained a "Stage readability" section: a Dim slider

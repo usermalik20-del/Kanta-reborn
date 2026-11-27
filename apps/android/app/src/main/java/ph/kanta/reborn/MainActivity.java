@@ -21,6 +21,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
+import ph.kanta.reborn.settings.KantaThemePreset;
 import ph.kanta.reborn.content.ContentRoot;
 import ph.kanta.reborn.content.ContentScanner;
 import ph.kanta.reborn.core.catalog.SongCatalog;
@@ -219,6 +220,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         };
     getOnBackPressedDispatcher().addCallback(this, workspaceBackCallback);
     session = ((KantaApplication) getApplication()).session;
+    applyRequestedOrientation();
     settingsBackup = new SettingsBackupActions(this, session);
     pdfSongbooks = new PdfSongbooks(this, saved, IMPORT_PDF, session.diagnostics::record);
     camera = new CameraStage(this, session);
@@ -247,7 +249,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           : saved.getString("homeEntry", "");
       singer = saved.getString("singer", "");
     }
-    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    refreshScreenWakeLock();
     displays = (DisplayManager) getSystemService(DISPLAY_SERVICE);
     if (session.scenic == null && "scenic".equals(session.stageKind()))
       session.scene(session.scenicName);
@@ -657,6 +659,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       workspaceBackCallback.setEnabled(destination);
     // Keep the renderer mounted, but let utility pages use the whole viewport.
     updatePrimaryStageVisibility();
+    refreshScreenWakeLock();
     if (navigationTabs != null) navigationTabs.setVisibility(View.VISIBLE);
     for (Map.Entry<String, Button> entry : navigationButtons.entrySet()) {
       Button nav = entry.getValue();
@@ -2186,7 +2189,112 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }, intermissionSelectedTab, null, null, false, usesMenuSurface(),
         new int[] {KantaVisualsScreen.LYRICS, KantaVisualsScreen.INTERLUDE}, false);
     screen.setTag("kanta.screen.intermission-editors");
+    addThemePresetBar();
     body.addView(screen, new LinearLayout.LayoutParams(-1, -2));
+  }
+
+  /** Horizontal preset bar above the intermission editors: save current + chips. */
+  private void addThemePresetBar() {
+    HorizontalScrollView presetScroll = new HorizontalScrollView(this);
+    presetScroll.setTag("kanta.themes.bar");
+    presetScroll.setHorizontalScrollBarEnabled(false);
+    presetScroll.setPaddingRelative(dp(8), dp(8), dp(8), 0);
+    LinearLayout presetRow = new LinearLayout(this);
+    presetRow.setOrientation(LinearLayout.HORIZONTAL);
+    Button savePreset = KantaTheme.secondaryButton(this,
+        getString(R.string.themes_save_current),
+        button -> showSaveThemePresetDialog());
+    savePreset.setTag("kanta.themes.save");
+    savePreset.setAllCaps(false);
+    savePreset.setTextSize(12);
+    savePreset.setMinWidth(0);
+    presetRow.addView(savePreset, themeChipParams());
+    for (KantaThemePreset preset : session.themePresets()) {
+      final KantaThemePreset picked = preset;
+      Button chip = KantaTheme.secondaryButton(this, picked.name,
+          button -> session.applyThemePreset(picked));
+      chip.setTag("kanta.themes.preset." + picked.name);
+      chip.setAllCaps(false);
+      chip.setTextSize(12);
+      chip.setMinWidth(0);
+      if (!picked.builtin) {
+        chip.setOnLongClickListener(v -> { showThemePresetMenu(picked); return true; });
+      }
+      presetRow.addView(chip, themeChipParams());
+    }
+    presetScroll.addView(presetRow);
+    body.addView(presetScroll, new LinearLayout.LayoutParams(-1, -2));
+  }
+
+  private LinearLayout.LayoutParams themeChipParams() {
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+    params.setMargins(dp(4), 0, dp(4), 0);
+    return params;
+  }
+
+  private void showSaveThemePresetDialog() {
+    EditText input = new EditText(this);
+    input.setHint(R.string.themes_preset_name_hint);
+    input.setSingleLine(true);
+    AlertDialog dialog = constrainDialog(new AlertDialog.Builder(this)
+        .setTitle(R.string.themes_save_current)
+        .setView(input)
+        .setPositiveButton(android.R.string.ok, (d, w) -> {
+          String error = session.saveThemePreset(input.getText().toString());
+          if (error != null) {
+            Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+            d.cancel();
+            return;
+          }
+          render();
+        })
+        .setNegativeButton(android.R.string.cancel, null)
+        .create());
+    dialog.show();
+  }
+
+  private void showThemePresetMenu(KantaThemePreset preset) {
+    new AlertDialog.Builder(this)
+        .setTitle(preset.name)
+        .setItems(new String[] {
+            getString(R.string.themes_preset_rename),
+            getString(R.string.themes_preset_overwrite),
+            getString(R.string.themes_preset_delete) },
+            (d, which) -> {
+              if (which == 0) showRenameThemePresetDialog(preset);
+              else if (which == 1) {
+                String error = session.overwriteThemePreset(preset.name);
+                if (error != null) Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                render();
+              } else {
+                String error = session.deleteThemePreset(preset.name);
+                if (error != null) Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                render();
+              }
+            })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
+  }
+
+  private void showRenameThemePresetDialog(KantaThemePreset preset) {
+    EditText input = new EditText(this);
+    input.setText(preset.name);
+    input.setSingleLine(true);
+    AlertDialog dialog = constrainDialog(new AlertDialog.Builder(this)
+        .setTitle(R.string.themes_preset_rename)
+        .setView(input)
+        .setPositiveButton(android.R.string.ok, (d, w) -> {
+          String error = session.renameThemePreset(preset.name, input.getText().toString());
+          if (error != null) {
+            Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+            d.cancel();
+            return;
+          }
+          render();
+        })
+        .setNegativeButton(android.R.string.cancel, null)
+        .create());
+    dialog.show();
   }
 
   private void addStageVisualControls(int section, LinearLayout target) {
@@ -3781,8 +3889,64 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private SeekBar musicVolumeSlider;
   private boolean draggingMusicVolume;
 
+  /** Applies the user's orientation lock; auto keeps free rotation. */
+  private void applyRequestedOrientation() {
+    setRequestedOrientation("landscape".equals(session.displayOrientation())
+        ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        : "portrait".equals(session.displayOrientation())
+            ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+  }
+
+  /** Holds the wake lock while the toggle is on and a song is active. */
+  private void refreshScreenWakeLock() {
+    boolean keep = session.keepScreenOn()
+        && (session.isPlaying() || session.currentSong() != null);
+    if (keep) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+  }
+
   private void control() {
     // Music volume moved to Voice & Scoring; lyrics and interlude moved to Intermission.
+    LinearLayout display = MenuSurface.section(body, getString(R.string.menu_display));
+    display.addView(text(getString(R.string.display_orientation), 15, KantaTheme.TEXT_PRIMARY));
+    String orientation = session.displayOrientation();
+    display.addView(pillGroup("kanta.display.orientation",
+        new String[] {getString(R.string.display_auto),
+            getString(R.string.display_landscape), getString(R.string.display_portrait)},
+        "landscape".equals(orientation) ? 1 : "portrait".equals(orientation) ? 2 : 0, index -> {
+          session.setDisplayOrientation(index == 0 ? "auto" : index == 1 ? "landscape" : "portrait");
+          applyRequestedOrientation();
+        }));
+    display.addView(styleToggle("kanta.display.keep_screen_on",
+        getString(R.string.display_keep_screen_on), session.keepScreenOn(), (button, checked) -> {
+          session.setKeepScreenOn(checked);
+          refreshScreenWakeLock();
+        }));
+    display.addView(styleToggle("kanta.display.oled_shift",
+        getString(R.string.display_oled_shift), session.oledShift(), (button, checked) -> {
+          session.setOledShift(checked);
+        }));
+    display.addView(text(getString(R.string.display_safe_zone), 15, KantaTheme.TEXT_PRIMARY));
+    TextView safeZoneLabel = text(
+        getString(R.string.display_safe_zone_value, session.safeZonePercent()),
+        15, KantaTheme.TEXT_PRIMARY);
+    display.addView(safeZoneLabel);
+    SeekBar safeZoneSeek = new SeekBar(this);
+    safeZoneSeek.setMax(10);
+    safeZoneSeek.setProgress(session.safeZonePercent());
+    safeZoneSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        if (fromUser) {
+          session.setSafeZonePercent(progress);
+          safeZoneLabel.setText(getString(R.string.display_safe_zone_value, progress));
+          if (stagePresenter != null) stagePresenter.refresh();
+        }
+      }
+      @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+      @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+    });
+    display.addView(safeZoneSeek);
     LinearLayout diagnosticsSection = MenuSurface.section(body, getString(R.string.menu_diagnostics));
     diagnosticsSection.addView(menuAction("Diagnostics", R.drawable.kanta_submenu_check,
         () -> diagnostics(true)));

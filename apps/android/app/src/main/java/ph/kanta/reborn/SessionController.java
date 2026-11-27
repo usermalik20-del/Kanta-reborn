@@ -10,6 +10,7 @@ import java.util.concurrent.*;
 import ph.kanta.reborn.core.*;
 import ph.kanta.reborn.core.companion.KantaConnectHost;
 import ph.kanta.reborn.score.ScoreSink;
+import ph.kanta.reborn.settings.KantaThemePreset;
 import ph.kanta.reborn.settings.SettingsStore;
 import ph.kanta.reborn.score.ScoreSink.CompletedScore;
 import ph.kanta.reborn.core.RenderedPlaybackClock;
@@ -170,6 +171,100 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     settings.setSlideshowIntervalSec(v == 5 || v == 20 ? v : 10);
     publish();
   }
+  // ----- Theme presets -----
+
+  /** Built-ins first, then user presets in saved order. */
+  public synchronized java.util.List<KantaThemePreset> themePresets() {
+    java.util.List<KantaThemePreset> all = new java.util.ArrayList<>(KantaThemePreset.builtIns());
+    String raw = settings.getThemePresetsRaw();
+    if (raw != null && !raw.isEmpty()) {
+      try {
+        org.json.JSONArray arr = new org.json.JSONArray(raw);
+        for (int i = 0; i < arr.length(); i++) {
+          org.json.JSONObject obj = arr.getJSONObject(i);
+          all.add(new KantaThemePreset(obj.optString("name"), false,
+              obj.optJSONObject("data")));
+        }
+      } catch (Exception unavailable) {
+      }
+    }
+    return all;
+  }
+
+  /** Returns null on success, otherwise the user-facing reason. */
+  public synchronized String saveThemePreset(String name) {
+    if (name == null || name.trim().isEmpty()) return "Name the preset first.";
+    name = name.trim();
+    for (KantaThemePreset preset : themePresets())
+      if (preset.name.equals(name)) return "A preset named " + name + " already exists.";
+    try {
+      org.json.JSONArray arr = userPresetArray();
+      org.json.JSONObject obj = new org.json.JSONObject();
+      obj.put("name", name);
+      obj.put("data", KantaThemePreset.capture(settings));
+      arr.put(obj);
+      settings.setThemePresetsRaw(arr.toString());
+      publish();
+      return null;
+    } catch (Exception unavailable) {
+      return "Could not save the preset.";
+    }
+  }
+
+  public synchronized String renameThemePreset(String oldName, String newName) {
+    if (newName == null || newName.trim().isEmpty()) return "Keep the preset name.";
+    newName = newName.trim();
+    for (KantaThemePreset preset : themePresets())
+      if (!preset.builtin && !preset.name.equals(oldName) && preset.name.equals(newName))
+        return "A preset named " + newName + " already exists.";
+    return rewriteUserPresets(oldName, newName, null, false);
+  }
+
+  public synchronized String overwriteThemePreset(String name) {
+    return rewriteUserPresets(name, null, KantaThemePreset.capture(settings), false);
+  }
+
+  public synchronized String deleteThemePreset(String name) {
+    return rewriteUserPresets(name, null, null, true);
+  }
+
+  private org.json.JSONArray userPresetArray() throws org.json.JSONException {
+    String raw = settings.getThemePresetsRaw();
+    return raw == null || raw.isEmpty() ? new org.json.JSONArray() : new org.json.JSONArray(raw);
+  }
+
+  private String rewriteUserPresets(String targetName, String newName,
+      org.json.JSONObject newData, boolean remove) {
+    try {
+      org.json.JSONArray arr = userPresetArray();
+      org.json.JSONArray out = new org.json.JSONArray();
+      boolean found = false;
+      for (int i = 0; i < arr.length(); i++) {
+        org.json.JSONObject obj = arr.getJSONObject(i);
+        if (obj.optString("name").equals(targetName)) {
+          found = true;
+          if (remove) continue;
+          if (newName != null) obj.put("name", newName);
+          if (newData != null) obj.put("data", newData);
+        }
+        out.put(obj);
+      }
+      if (!found) return "That preset no longer exists.";
+      settings.setThemePresetsRaw(out.toString());
+      publish();
+      return null;
+    } catch (Exception unavailable) {
+      return "Could not update the preset.";
+    }
+  }
+
+  /** Applies a preset snapshot and publishes once. */
+  public synchronized void applyThemePreset(KantaThemePreset preset) {
+    if (preset == null) return;
+    preset.applyTo(settings);
+    publish();
+  }
+
   /** Imported photo files eligible for the slideshow, in import order. */
   public synchronized java.util.List<java.io.File> slideshowPhotoFiles() {
     java.util.List<java.io.File> files = new java.util.ArrayList<>();
@@ -338,6 +433,15 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   public synchronized long lyricPositionMs() {
     return position() + lyricOffsetForCurrentSong();
   }
+
+  public synchronized String displayOrientation() { return settings.getDisplayOrientation(); }
+  public synchronized void setDisplayOrientation(String v) { settings.setDisplayOrientation(v); }
+  public synchronized boolean keepScreenOn() { return settings.getKeepScreenOn(); }
+  public synchronized void setKeepScreenOn(boolean v) { settings.setKeepScreenOn(v); }
+  public synchronized boolean oledShift() { return settings.getOledShift(); }
+  public synchronized void setOledShift(boolean v) { settings.setOledShift(v); }
+  public synchronized int safeZonePercent() { return settings.getSafeZonePercent(); }
+  public synchronized void setSafeZonePercent(int v) { settings.setSafeZonePercent(v); }
   public synchronized boolean lyricShowWatermark() { return settings.getLyricShowWatermark(); }
   public synchronized void setLyricShowWatermark(boolean value) {
     settings.setLyricShowWatermark(value);

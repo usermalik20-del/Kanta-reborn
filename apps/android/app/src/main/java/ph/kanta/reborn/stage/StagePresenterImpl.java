@@ -54,6 +54,11 @@ public final class StagePresenterImpl extends FrameLayout
 
   // Stage overlays
   private final LyricStage lyricStage;
+  private boolean oledArmed;
+  private final android.os.Handler oledHandler =
+      new android.os.Handler(android.os.Looper.getMainLooper());
+  private final Runnable oledRoll = this::rollBurnShift;
+  private final java.util.Random oledRandom = new java.util.Random(0x4f3653);
   private final CountdownStage countdownStage;
   private final ScoreOverlay scoreOverlay;
   private final ScoreCelebrationView celebration;
@@ -725,6 +730,8 @@ public final class StagePresenterImpl extends FrameLayout
         session.interludeTextColor(), session.interludeAnimation(),
         session.interludeTextSizeSp(), session.interludeImageScale(),
         session.interludeImagePlacement(), session.lyricOffsetForCurrentSong()));
+    lyricStage.setSafeZonePercent(session.safeZonePercent());
+    setOledArmed(session.oledShift());
     countdownStage.setVisualsEnabled(session.lyricShowCountdown());
     // Update lyrics if playing
     if (session.isPlaying() && session.lyrics != null && !session.lyrics.isEmpty()) {
@@ -858,8 +865,26 @@ public final class StagePresenterImpl extends FrameLayout
     if (isPlaying) startFrameTicker();
   }
 
+  /** Arms/disarms the 60-second static-chrome drift for OLED protection. */
+  private void setOledArmed(boolean enabled) {
+    if (enabled == oledArmed) return;
+    oledArmed = enabled;
+    oledHandler.removeCallbacks(oledRoll);
+    if (enabled) rollBurnShift();
+    else lyricStage.setBurnShift(0, 0);
+  }
+
+  private void rollBurnShift() {
+    int max = (int) (4 * getResources().getDisplayMetrics().density);
+    lyricStage.setBurnShift(
+        oledRandom.nextInt(2 * max + 1) - max,
+        oledRandom.nextInt(2 * max + 1) - max);
+    oledHandler.postDelayed(oledRoll, 60_000L);
+  }
+
   @Override
   protected void onDetachedFromWindow() {
+    oledHandler.removeCallbacks(oledRoll);
     super.onDetachedFromWindow();
     cancelPendingReveal();
     stopFrameTicker();

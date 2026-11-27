@@ -43,6 +43,11 @@ final class StageView extends View {
   private final Bitmap portraitArtwork;
   private final Bitmap landscapeArtwork;
   private final float[] stars = new float[192];
+  private int safeInset;
+  private int burnShiftX, burnShiftY;
+  private final android.os.Handler burnHandler =
+      new android.os.Handler(android.os.Looper.getMainLooper());
+  private final Runnable burnRoll = this::rollBurnShift;
 
   StageView(Context context, SessionController session) {
     super(context);
@@ -118,6 +123,7 @@ final class StageView extends View {
       cachedWidth = -1;
     }
     float w = getWidth(), h = getHeight();
+    safeInset = (int) (w * session.safeZonePercent() / 100f);
     if (!externalMedia) canvas.drawColor(Color.rgb(13, 18, 42));
     Bitmap selectedScene = session.scenic;
     Bitmap scene = selectedScene != null && !selectedScene.isRecycled()
@@ -147,7 +153,7 @@ final class StageView extends View {
       canvas.drawRect(0, 0, w, h, dimPaint);
     }
     if (session.realm) realm(canvas, w, h);
-    int lyricHeight = getHeight() - contentTop - contentBottom;
+    int lyricHeight = getHeight() - contentTop - contentBottom - 2 * safeInset;
     if (lyricHeight < 1) return;
     if (!standbyMode) {
       // The effective position carries the singer's sync offset so cue selection,
@@ -167,7 +173,8 @@ final class StageView extends View {
           ? session.lyrics.get(index + 1) : null;
       String next = session.current == null ? "Reserve your next song in CONTROL"
           : nextCue == null ? "" : nextCue.line;
-      float font = StageLyricLayout.preferredSize(getResources(), getWidth(), true)
+      float font = StageLyricLayout.preferredSize(
+          getResources(), Math.max(0, getWidth() - 2 * safeInset), true)
           * session.lyricScale;
       if (interludeVisible && session.interludeTextSizeSp() > 0) {
         font = session.interludeTextSizeSp() * getResources().getDisplayMetrics().scaledDensity;
@@ -186,7 +193,7 @@ final class StageView extends View {
           (int) Math.round(session.lyricUpcomingOpacity() * 255), 0xB9, 0xD8, 0xE8);
       String upcomingLine = showUpcoming ? next : "";
       boolean echo = nextCue != null && nextCue.echo;
-      int width = getWidth() - dp(36);
+      int width = getWidth() - dp(36) - 2 * safeInset;
       int padding = Math.min(dp(18), lyricHeight / 10);
       int height = lyricHeight - 2 * padding;
       if (width > 0) {
@@ -227,12 +234,13 @@ final class StageView extends View {
         // The row anchor uses a fixed reference height, not the current pair's
         // measured height, so a short line never drags the rows it replaces.
         float refHeight = font * 2.4f + dp(18);
-        float blockTop = contentTop + padding + Math.max(0, height - refHeight)
-            * (fullscreenMode ? .45f : .5f);
+        float blockTop = contentTop + safeInset + padding
+            + Math.max(0, height - refHeight) * (fullscreenMode ? .45f : .5f);
         if ("bottom".equals(align)) {
-          blockTop = contentTop + padding + Math.max(0, height - visibleLyrics.height());
+          blockTop = contentTop + safeInset + padding
+              + Math.max(0, height - visibleLyrics.height());
         }
-        if ("left".equals(align)) x = dp(18);
+        if ("left".equals(align)) x = dp(18) + safeInset;
         lastX = x;
         lastTop = blockTop;
         long fadeAge = fadeStartMs >= 0 ? SystemClock.elapsedRealtime() - fadeStartMs
@@ -240,7 +248,8 @@ final class StageView extends View {
         float fadeIn = fadeAge < LINE_FADE_MS ? fadeAge / (float) LINE_FADE_MS : 1f;
         final float drawX = x, drawTop = blockTop;
         canvas.save();
-        canvas.clipRect(0, contentTop, w, h - contentBottom);
+        canvas.clipRect(safeInset, contentTop + safeInset,
+            w - safeInset, h - contentBottom - safeInset);
         if (interludeVisible)
           drawInterludeImage(canvas, w, h, width, lyricHeight, interludeAlpha);
         String anim = interludeVisible ? session.interludeAnimation() : "static";
@@ -306,7 +315,8 @@ final class StageView extends View {
       paint.setTextSize(dp(11));
       paint.setTextAlign(Paint.Align.RIGHT);
       paint.setColor(0xBFF6CE77);
-      canvas.drawText("KANTA", w - dp(14), h - contentBottom - dp(8), paint);
+      canvas.drawText("KANTA", w - dp(14) - safeInset + burnShiftX,
+          h - contentBottom - dp(8) - safeInset + burnShiftY, paint);
     }
     // Animated interlude states and the vocal countdown need continuous frames; the
     // session clock alone is too slow for a marquee.
@@ -480,7 +490,7 @@ final class StageView extends View {
         title = title.substring(0, title.length() - 1);
       title += "\u2026";
     }
-    canvas.drawText(title, w / 2f, contentTop + dp(24), paint);
+    canvas.drawText(title, w / 2f + burnShiftX, contentTop + safeInset + dp(24) + burnShiftY, paint);
   }
 
   /** Vocal countdown dots: one per remaining second, centered above the stage. */
@@ -529,5 +539,25 @@ final class StageView extends View {
 
   /** Standby means the presence card owns the empty stage, so draw no placeholder text. */
   void setStandbyMode(boolean standby) { standbyMode = standby; }
+
+  /** Shifts the static overlay chrome a few px for OLED protection. */
+  private void rollBurnShift() {
+    int max = dp(4);
+    burnShiftX = (int) (Math.random() * 2 * max) - max;
+    burnShiftY = (int) (Math.random() * 2 * max) - max;
+    invalidate();
+  }
+
+  @Override
+  protected void onAttachedToWindow() {
+    super.onAttachedToWindow();
+    if (session.oledShift()) burnHandler.postDelayed(burnRoll, 60_000L);
+  }
+
+  @Override
+  protected void onDetachedFromWindow() {
+    burnHandler.removeCallbacks(burnRoll);
+    super.onDetachedFromWindow();
+  }
 
 }
