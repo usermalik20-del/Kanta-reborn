@@ -231,6 +231,9 @@ final class StageView extends View {
               width, height, dp(12), dp(18), la);
         }
         float x = (w - width) / 2f;
+        if (interludeVisible && "side".equals(session.interludeImagePlacement())
+            && w > h)
+          x += width * .25f;
         // The row anchor uses a fixed reference height, not the current pair's
         // measured height, so a short line never drags the rows it replaces.
         float refHeight = font * 2.4f + dp(18);
@@ -250,8 +253,19 @@ final class StageView extends View {
         canvas.save();
         canvas.clipRect(safeInset, contentTop + safeInset,
             w - safeInset, h - contentBottom - safeInset);
-        if (interludeVisible)
+        if (interludeVisible) {
+          // Interlude legibility: glow halo or drop shadow replace the lyric
+          // outline for interlude frames (shadow layers read at draw time).
+          if (session.interludeGlow())
+            lyricPaint.setShadowLayer(dp(10), 0, 0, 0x8076E4FF);
+          else if (session.interludeShadowDp() > 0)
+            lyricPaint.setShadowLayer(
+                session.interludeShadowDp()
+                    * getResources().getDisplayMetrics().density, 0,
+                dp(2), 0xB0000000);
+          else applyOutline(lyricPaint, session.lyricOutline());
           drawInterludeImage(canvas, w, h, width, lyricHeight, interludeAlpha);
+        }
         String anim = interludeVisible ? session.interludeAnimation() : "static";
         long now = SystemClock.elapsedRealtime();
         float t = now / 1000f;
@@ -280,12 +294,17 @@ final class StageView extends View {
             float textW = visibleLyrics.current.getWidth();
             float total = width + textW;
             // Slow readable scroll: px per second scaled to the text size, with
-            // seconds (not milliseconds) as the time base.
+            // seconds (not milliseconds) as the time base. The speed selector
+            // scales it; direction flips the entry side.
             float densityPx = getResources().getDisplayMetrics().density;
+            float speedMul = session.interludeMarqueeSpeed() == 0 ? .5f
+                : session.interludeMarqueeSpeed() == 2 ? 2f : 1f;
             float speed = 40f * densityPx
-                * (lyricPaint.getTextSize() / (40f * densityPx));
-            double offset = total <= 0 ? 0 : (now / 1000.0 * speed) % total;
-            float startX = width - (float) offset;
+                * (lyricPaint.getTextSize() / (40f * densityPx)) * speedMul;
+            double progress = total <= 0 ? 0 : (now / 1000.0 * speed) % total;
+            float startX = "ltr".equals(session.interludeMarqueeDir())
+                ? -(float) progress
+                : width - (float) progress;
             visibleLyrics.draw(canvas, startX, drawTop, 0, 0);
             visibleLyrics.draw(canvas, startX + total, drawTop, 0, 0);
           });
@@ -419,6 +438,17 @@ final class StageView extends View {
       interlude.draw(canvas);
       paint.setColor(0x99000000);
       canvas.drawRect(0, 0, w, h, paint);
+      return;
+    }
+    if ("side".equals(session.interludeImagePlacement()) && w > h) {
+      // Side-by-side in landscape: clip in the left band, message on the right.
+      float scale = Math.min(width * .4f * factor / iw, h * .8f * factor / ih);
+      int dw = Math.round(iw * scale);
+      int dh = Math.round(ih * scale);
+      int left = Math.round(dp(18) + (width * .35f - dw) / 2f);
+      int top = Math.round(contentTop + (lyricHeight - dh) / 2f);
+      interlude.setBounds(left, top, left + dw, top + dh);
+      interlude.draw(canvas);
       return;
     }
     float maxW = width * .8f * factor;

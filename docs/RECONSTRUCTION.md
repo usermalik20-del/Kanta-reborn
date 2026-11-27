@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude typography and media (964)
+Batch F reconstructed the interlude editor UI (font button, glow/shadow, marquee speed+dir, image scale, placement, video slot) and the video slot in InterludeStore + an InterludeVideoHost in StageSurface.
+
 ## Editable interlude quick messages + live tokens (2026-11-27)
 
 The three static interlude quick-message chips became a horizontal editable set: the

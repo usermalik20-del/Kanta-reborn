@@ -19,7 +19,9 @@ import java.io.RandomAccessFile;
  */
 public final class InterludeStore {
   public static final String FILE_NAME = "interlude-image";
+  public static final String VIDEO_FILE_NAME = "interlude-video";
   static final long MAX_BYTES = 16L * 1024 * 1024;
+  static final long MAX_VIDEO_BYTES = 64L * 1024 * 1024;
 
   private InterludeStore() {}
 
@@ -118,6 +120,59 @@ public final class InterludeStore {
     }
     Bitmap decoded = firstFrame(candidate);
     return decoded == null ? null : new BitmapDrawable(context.getResources(), decoded);
+  }
+
+
+  public static File videoFile(Context context) {
+    File f = new File(context.getFilesDir(), VIDEO_FILE_NAME);
+    return f.isFile() ? f : null;
+  }
+
+  /**
+   * Installs a short looping interlude clip (MP4/WebM). The file is copied into
+   * app-private storage; the source document is never modified.
+   */
+  public static boolean installVideo(Context context, Uri source) {
+    String type = context.getContentResolver().getType(source);
+    String suffix = suffixOf(source);
+    boolean typeOk =
+        "video/mp4".equals(type)
+            || "video/webm".equals(type)
+            || (type == null
+                && (".mp4".equals(suffix) || ".webm".equals(suffix)));
+    if (!typeOk) return false;
+    try {
+      try (InputStream input = context.getContentResolver().openInputStream(source)) {
+        if (input == null) return false;
+        File destination = new File(context.getFilesDir(), VIDEO_FILE_NAME);
+        File temporary = new File(context.getFilesDir(), VIDEO_FILE_NAME + ".importing");
+        long written = 0;
+        byte[] buffer = new byte[64 * 1024];
+        int read;
+        try (OutputStream out = new FileOutputStream(temporary)) {
+          while ((read = input.read(buffer)) >= 0) {
+            written += read;
+            if (written > MAX_VIDEO_BYTES) {
+              out.write(buffer, 0, Math.min(read, (int) (written - MAX_VIDEO_BYTES)));
+              return false;
+            }
+            out.write(buffer, 0, read);
+          }
+        }
+        if (destination.exists() && !destination.delete()) return false;
+        if (!temporary.renameTo(destination)) {
+          temporary.delete();
+          return false;
+        }
+        return true;
+      }
+    } catch (Exception failure) {
+      return false;
+    }
+  }
+
+  public static void deleteVideo(Context context) {
+    new File(context.getFilesDir(), VIDEO_FILE_NAME).delete();
   }
 
   public static void delete(Context context) {

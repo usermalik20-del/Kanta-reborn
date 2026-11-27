@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude typography and media (964)
+Interlude typography and media (964): font picker shared with Lyrics, glow + drop-shadow, marquee speed/direction, image scale 50-150%, placement Above/Background/Side (landscape), and a muted looping-video slot (InterludeStore) behind embedded + fullscreen interludes.
+
 ## Editable interlude quick messages + live tokens (2026-11-27)
 
 The three static interlude quick-message chips became a horizontal editable set: the

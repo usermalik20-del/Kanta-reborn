@@ -22,6 +22,7 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
   private long generation = -1;
   private boolean active = true, prepared, mediaLive, cameraLive;
   private final ph.kanta.reborn.stage.StagePresenceOverlay presence;
+  private final ph.kanta.reborn.stage.InterludeVideoHost interludeVideoHost;
   private android.widget.TextView standbyPrompt;
   private final UpNextTicker upNextTicker;
   private int topOverlayInset, bottomOverlayInset;
@@ -36,6 +37,8 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
     video.setSurfaceTextureListener(this);
     video.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
     addView(video, new FrameLayout.LayoutParams(-1, -1));
+    interludeVideoHost = new ph.kanta.reborn.stage.InterludeVideoHost(context, session);
+    addView(interludeVideoHost.view(), 1, new FrameLayout.LayoutParams(-1, -1));
     lyrics = new StageView(context, session);
     lyrics.setTag("kanta.fullscreen.lyrics");
     addView(lyrics, new FrameLayout.LayoutParams(-1, -1));
@@ -81,6 +84,8 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
   }
 
   void refresh() {
+    // The interlude clip sits behind the text and only follows the session here.
+    interludeVideoHost.sync();
     // Fullscreen standby: shown while no song is on the stage. It sits above the rendered
     // video, so the moving background stays the evidence of a live stage.
     boolean standby = session.current == null && !session.isPlaying();
@@ -260,6 +265,7 @@ final class StageSurface extends FrameLayout implements TextureView.SurfaceTextu
 
   @Override
   protected void onDetachedFromWindow() {
+    interludeVideoHost.release();
     closeVideo();
     attempted = null;
     super.onDetachedFromWindow();

@@ -14,7 +14,10 @@ class HomeLayoutTests(unittest.TestCase):
         source = (JAVA / 'ui/HomeScreen.java').read_text()
         self.assertLess(source.index('addView(queuePanel, queueParams)'), source.index('addView(keyboard,'))
         self.assertIn('LayoutParams.WRAP_CONTENT, 1)', source)
-        self.assertIn('queuePanel.setMinimumHeight(dp(112))', source)
+        # Batch F (959): compact queue card; transport row + keypad are fixed
+        # at the bottom, so the queue keeps its min height small.
+        self.assertIn('queuePanel.setMinimumHeight(dp(90))', source)
+        self.assertIn('keyboardParams.weight = 0', source)
         self.assertIn('kanta.home.queue.empty', source)
         self.assertIn('listener.onQueue()', source)
 
@@ -57,7 +60,10 @@ class HomeLayoutTests(unittest.TestCase):
         for label in ('stage_play', 'stage_reserve', 'stage_next', 'stage_stop'):
             self.assertIn(f'addSongAction(actions, R.string.{label}', source)
         self.assertIn('searchRow.addView(clearSearch,', source)
-        self.assertLess(source.index('addView(actionScroll,'), source.index('addView(searchRow,'))
+        # Batch F (959): the dashboard search field is retired (header/stage
+        # search replaced it); the transport row is fixed just above the keypad.
+        self.assertIn('searchRow.setVisibility(GONE)', source)
+        self.assertLess(source.index('addView(actionScroll,'), source.index('addView(keyboard,'))
         self.assertIn('addAdjustments(actions, R.string.stage_key_short', keyboard)
         self.assertIn('R.string.stage_tempo_short', keyboard)
         self.assertIn('context.getString(R.string.keyboard_space)', keyboard)
@@ -73,7 +79,9 @@ class HomeLayoutTests(unittest.TestCase):
         self.assertIn('queuePanel.setBackground(null)', screen)
         self.assertIn('lookupDocked ? dp(96)', screen)
         self.assertIn('reservedSongs.addView(result, new LayoutParams(-1, -2))', screen)
-        self.assertIn('keyboardParams.weight = lookupDocked && !landscape ? 1 : 0', screen)
+        # Batch F (959): the keypad is fixed (weight 0) in every configuration;
+        # the queue absorbs spare height instead of the keyboard growing.
+        self.assertIn('keyboardParams.weight = 0', screen)
         self.assertIn('LANDSCAPE_KEYBOARD_MAX_WIDTH_DP = 500', screen)
         self.assertIn('landscape && paneWidth > widthCap ? widthCap : LayoutParams.MATCH_PARENT', screen)
 

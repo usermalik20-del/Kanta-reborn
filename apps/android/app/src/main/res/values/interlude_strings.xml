@@ -10,4 +10,21 @@
     <string name="interlude_image_summary">Shown above the message on the Stage</string>
     <string name="interlude_remove_image">Remove image</string>
     <string name="interlude_image_failed">That image could not be used. Use a PNG, JPEG, WebP, or GIF up to 16 MB.</string>
+    <string name="interlude_font">Font</string>
+    <string name="interlude_font_button">Change font</string>
+    <string name="interlude_glow">Glow outline</string>
+    <string name="interlude_shadow">Drop shadow</string>
+    <string name="interlude_marquee_speed">Marquee speed</string>
+    <string name="interlude_speed_slow">Slow</string>
+    <string name="interlude_speed_normal">Normal</string>
+    <string name="interlude_speed_fast">Fast</string>
+    <string name="interlude_marquee_dir">Marquee direction</string>
+    <string name="interlude_dir_rtl">Right to left</string>
+    <string name="interlude_dir_ltr">Left to right</string>
+    <string name="interlude_placement_side">Side by side</string>
+    <string name="interlude_video">Add looping video (MP4/WebM)</string>
+    <string name="interlude_video_summary">Plays muted behind the message during the interlude</string>
+    <string name="interlude_remove_video">Remove looping video</string>
+    <string name="interlude_video_added">Video added to the interlude</string>
+    <string name="interlude_video_failed">That video could not be used. Use an MP4 or WebM up to 64 MB.</string>
 </resources>

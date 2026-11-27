@@ -308,6 +308,44 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     return stored.isEmpty() ? context.getString(R.string.interlude_default) : stored;
   }
 
+  public synchronized boolean interludeGlow() { return settings.getInterludeGlow(); }
+  public synchronized void setInterludeGlow(boolean v) { settings.setInterludeGlow(v); publish(); }
+  public synchronized int interludeShadowDp() { return settings.getInterludeShadowDp(); }
+  public synchronized void setInterludeShadowDp(int v) { settings.setInterludeShadowDp(v); publish(); }
+  public synchronized int interludeMarqueeSpeed() { return settings.getInterludeMarqueeSpeed(); }
+  public synchronized void setInterludeMarqueeSpeed(int v) { settings.setInterludeMarqueeSpeed(v); publish(); }
+  public synchronized String interludeMarqueeDir() { return settings.getInterludeMarqueeDir(); }
+  public synchronized void setInterludeMarqueeDir(String v) { settings.setInterludeMarqueeDir(v); publish(); }
+
+  /** True while the standby message owns the stage (no sung cue active). */
+  public synchronized boolean interludeShownNow() {
+    String message = interludeText();
+    if (message == null || message.isEmpty()) return false;
+    int idx = current == null ? -1 : MidiLyrics.activeIndex(lyrics, position());
+    return idx < 0;
+  }
+
+  /** The installed looping interlude clip, or null for image-only interludes. */
+  public synchronized java.io.File interludeVideoFile() {
+    return ph.kanta.reborn.core.media.InterludeStore.videoFile(context);
+  }
+
+  /** Whether the stage surface should render live (activity in foreground). */
+  public synchronized boolean foregroundActive() { return foreground; }
+
+  /** Installs (or clears, with a null uri) the looping interlude clip. */
+  public synchronized boolean setInterludeVideo(android.net.Uri uri) {
+    boolean ok;
+    if (uri == null) {
+      ph.kanta.reborn.core.media.InterludeStore.deleteVideo(context);
+      ok = true;
+    } else {
+      ok = ph.kanta.reborn.core.media.InterludeStore.installVideo(context, uri);
+    }
+    if (ok) publish();
+    return ok;
+  }
+
   public synchronized boolean preSongInterludeActive() {
     return current != null && !lyrics.isEmpty()
         && MidiLyrics.activeIndex(lyrics, position()) < 0;

@@ -37,7 +37,8 @@ public final class LyricStage extends View {
   private final Paint titlePaint;
   private final Paint scrimPaint;
   private StageStyle style = new StageStyle(0xFFFFFFFF, 0.8f, false, true, 1, "center", true,
-      false, "", 0xFFFFFFFF, "static", 0, 1f, "above", 0);
+      false, "", 0xFFFFFFFF, "static", 0, 1f, "above", 0,
+      false, 0, 1, "rtl");
   private static final long LINE_FADE_MS = 450;
   private StageLyricLayout ghostLyrics;
   private float ghostX, ghostY, lastX, lastY;
@@ -281,6 +282,8 @@ public final class LyricStage extends View {
           (int) (8 * density), 16 * density, align);
     }
     float x = "left".equals(style.alignment) ? 20 * density : (getWidth() - width) / 2f;
+    if (interlude && "side".equals(style.imagePlacement) && getWidth() > getHeight())
+      x += width * .25f;
     // The row anchor uses a fixed reference height, not the current pair's
     // measured height, so a short line never drags the rows it replaces.
     float refHeight = activePaint.getTextSize() * 2.4f + 16 * density;
@@ -303,6 +306,17 @@ public final class LyricStage extends View {
               (getWidth() + dw) / 2f, (getHeight() + dh) / 2f);
           canvas.drawBitmap(interludeImage, null, interludeRect, null);
           canvas.drawRect(0, 0, getWidth(), getHeight(), scrimPaint);
+        } else if ("side".equals(style.imagePlacement) && getWidth() > getHeight()) {
+          // Side-by-side in landscape: clip in the left band, message on the right.
+          float scale = Math.min((width * .4f * style.imageScale)
+              / interludeImage.getWidth(),
+              (height * .8f * style.imageScale) / interludeImage.getHeight());
+          int dw = Math.max(1, Math.round(interludeImage.getWidth() * scale));
+          int dh = Math.max(1, Math.round(interludeImage.getHeight() * scale));
+          int left = Math.round(20 * density + (width * .35f - dw) / 2f);
+          int top = Math.round(padding + (height - dh) / 2f);
+          interludeRect.set(left, top, left + dw, top + dh);
+          canvas.drawBitmap(interludeImage, null, interludeRect, null);
         } else {
           float scale = Math.min((width * .8f * style.imageScale) / interludeImage.getWidth(),
               (height * .45f * style.imageScale) / interludeImage.getHeight());
@@ -324,6 +338,15 @@ public final class LyricStage extends View {
             () -> ghostLyrics.draw(canvas, ghostX, ghostY, 0f, 0));
       }
     }
+    // Interlude legibility: the glow halo and drop shadow replace the plain
+    // lyric outline on the same paint for interlude frames only.
+    if (interlude) {
+      if (style.interludeGlow) activePaint.setShadowLayer(10 * density, 0, 0, 0x8076E4FF);
+      else if (style.interludeShadowDp > 0)
+        activePaint.setShadowLayer(style.interludeShadowDp * density, 0, 2 * density,
+            0xB0000000);
+      else applyOutline(activePaint, style.outline, density);
+    }
     // Interlude motion: pulse breathes around the block center; the marquee scrolls
     // at a text-size-proportional speed so large text is not rushed off screen.
     String animation = interlude ? style.animation : "static";
@@ -342,10 +365,14 @@ public final class LyricStage extends View {
     } else if ("marquee".equals(animation)) {
       withAlpha(canvas, fadeIn, () -> {
         float textWidth = visibleLyrics.current.getWidth() + 16 * density;
-        float speed = 30f * density * (activePaint.getTextSize() / (40f * density));
+        float speedMul = style.marqueeSpeed == 0 ? .5f
+            : style.marqueeSpeed == 2 ? 2f : 1f;
+        float speed = 30f * density
+            * (activePaint.getTextSize() / (40f * density)) * speedMul;
         float span = Math.max(1f, textWidth + width);
-        float offset = textWidth
-            - (float) (((now / 1000.0) * speed) % span);
+        float progress = (float) (((now / 1000.0) * speed) % span);
+        float offset = "ltr".equals(style.marqueeDir)
+            ? -textWidth + progress : textWidth - progress;
         canvas.save();
         canvas.clipRect(20 * density + safeInset, padding + safeInset,
             getWidth() - 20 * density - safeInset, height + padding - safeInset);

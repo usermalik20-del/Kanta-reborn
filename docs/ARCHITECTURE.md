@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude typography and media (964)
+Interlude media/typography (964): InterludeStore owns the video slot (muted, REPEAT_MODE_ONE, backgrounded); StageSurface hosts an InterludeVideoHost TextureView (fullscreen/PiP); LyricStage/StageView draw glow/shadow, marquee speedMul, image scale, and side-by-side placement from StageStyle.
+
 ## Editable interlude quick messages + live tokens (2026-11-27)
 
 The three static interlude quick-message chips became a horizontal editable set: the

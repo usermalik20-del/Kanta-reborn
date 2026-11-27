@@ -139,12 +139,27 @@ class InterludeStyleContractTests(unittest.TestCase):
         for marker in (
             'addTextChangedListener',
             'session.setInterludeText(edited.toString())',
-            'kanta.interlude.preset.',
+            'addQuickMessageChips(target, message)',
+        ):
+            self.assertIn(marker, controls)
+        # Batch F replaces the static preset chips with editable quick messages:
+        # built-ins + custom chips live in the helper, tokens resolve per render.
+        quick = activity.split('private void addQuickMessageChips(', 1)[1].split(
+            '\n  }', 1)[0]
+        for marker in (
+            'kanta.interlude.preset.add',
+            'kanta.interlude.preset',
             'interlude_preset_ready',
             'interlude_preset_birthday',
             'interlude_preset_singer',
+            'promptQuickMessageEdit',
+            'removeQuickMessage',
         ):
-            self.assertIn(marker, controls)
+            self.assertIn(marker, quick)
+        session = src('SessionController.java')
+        for marker in ('resolveInterludeTokens', 'resolvedInterludeText',
+                       '{next_song}', '{next_artist}', '{queue_count}', '{time}'):
+            self.assertIn(marker, session)
         # The separate Save button is gone; typing is the save.
         self.assertNotIn('kanta.visuals.interlude.save', activity)
 
@@ -262,7 +277,12 @@ class SoundFontBudgetContractTests(unittest.TestCase):
         self.assertIn('(now / 1000.0 * speed) % total', surface)
         self.assertNotIn('(double) now * speed', surface)
         lyric = (JAVA / 'stage/LyricStage.java').read_text(encoding='utf-8')
-        self.assertIn('30f * density * (activePaint.getTextSize() / (40f * density))', lyric)
+        # Batch F: the readable base pace is kept; the user's Slow/Normal/Fast
+        # selector only scales it (0.5x / 1x / 2x).
+        self.assertIn('float speed = 30f * density', lyric)
+        self.assertIn('(activePaint.getTextSize() / (40f * density)) * speedMul;', lyric)
+        self.assertIn('style.marqueeSpeed == 0 ? .5f', lyric)
+        self.assertIn('style.marqueeSpeed == 2 ? 2f : 1f', lyric)
 
     def test_countdown_visual_can_be_disabled(self):
         countdown = (JAVA / 'stage/CountdownStage.java').read_text(encoding='utf-8')

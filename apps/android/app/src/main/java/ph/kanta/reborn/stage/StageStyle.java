@@ -22,11 +22,20 @@ public final class StageStyle {
   public final String imagePlacement;
   /** Effective lyric sync offset in milliseconds for the timed cues. */
   public final int syncOffsetMs;
+  /** Cyan halo behind the interlude message instead of the plain outline. */
+  public final boolean interludeGlow;
+  /** Drop shadow radius behind the interlude message in dp (0 = none). */
+  public final int interludeShadowDp;
+  /** Marquee speed: 0 slow, 1 normal, 2 fast. */
+  public final int marqueeSpeed;
+  /** Marquee scroll direction: rtl (classic) or ltr. */
+  public final String marqueeDir;
 
   public StageStyle(int activeColor, float upcomingAlpha, boolean allCaps, boolean bold,
       int outline, String alignment, boolean showUpcoming, boolean showTitle, String title,
       int interludeColor, String animation, int interludeSizeSp, float imageScale,
-      String imagePlacement, int syncOffsetMs) {
+      String imagePlacement, int syncOffsetMs, boolean interludeGlow,
+      int interludeShadowDp, int marqueeSpeed, String marqueeDir) {
     this.activeColor = activeColor;
     this.upcomingAlpha = upcomingAlpha;
     this.allCaps = allCaps;
@@ -42,6 +51,10 @@ public final class StageStyle {
     this.imageScale = imageScale;
     this.imagePlacement = imagePlacement;
     this.syncOffsetMs = syncOffsetMs;
+    this.interludeGlow = interludeGlow;
+    this.interludeShadowDp = interludeShadowDp;
+    this.marqueeSpeed = marqueeSpeed;
+    this.marqueeDir = marqueeDir;
   }
 
   /** Value equality so renderers can skip repaints when nothing changed. */
@@ -61,6 +74,10 @@ public final class StageStyle {
         && interludeSizeSp == other.interludeSizeSp
         && imageScale == other.imageScale
         && imagePlacement.equals(other.imagePlacement)
-        && syncOffsetMs == other.syncOffsetMs;
+        && syncOffsetMs == other.syncOffsetMs
+        && interludeGlow == other.interludeGlow
+        && interludeShadowDp == other.interludeShadowDp
+        && marqueeSpeed == other.marqueeSpeed
+        && marqueeDir.equals(other.marqueeDir);
   }
 }

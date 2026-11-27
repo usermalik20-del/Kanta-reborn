@@ -51,6 +51,10 @@ public final class SettingsStore {
   public static final String KEY_INTERLUDE_TEXT_COLOR = "interlude.textColor";
   public static final String KEY_INTERLUDE_ANIMATION = "interlude.animation";
   public static final String KEY_INTERLUDE_IMAGE_SCALE = "interlude.imageScale";
+  public static final String KEY_INTERLUDE_GLOW = "interlude.glow";
+  public static final String KEY_INTERLUDE_SHADOW_DP = "interlude.shadowDp";
+  public static final String KEY_INTERLUDE_MARQUEE_SPEED = "interlude.marqueeSpeed";
+  public static final String KEY_INTERLUDE_MARQUEE_DIR = "interlude.marqueeDir";
   public static final String KEY_INTERLUDE_IMAGE_PLACEMENT = "interlude.imagePlacement";
   public static final String KEY_INTERLUDE_SHOW_UP_NEXT = "interlude.showUpNext";
   public static final String KEY_INTERLUDE_SHOW_VISUALIZER = "interlude.showVisualizer";
@@ -342,7 +346,15 @@ public final class SettingsStore {
     prefs.edit().putString(KEY_INTERLUDE_ANIMATION, v == null ? "static" : v).apply();
   }
 
-  public float getInterludeImageScale() { return prefs.getFloat(KEY_INTERLUDE_IMAGE_SCALE, 1.0f); }
+  public float getInterludeImageScale() { return prefs.getFloat(KEY_INTERLUDE_IMAGE_SCALE, 1f); }
+  public boolean getInterludeGlow() { return prefs.getBoolean(KEY_INTERLUDE_GLOW, false); }
+  public void setInterludeGlow(boolean v) { prefs.edit().putBoolean(KEY_INTERLUDE_GLOW, v).apply(); }
+  public int getInterludeShadowDp() { return prefs.getInt(KEY_INTERLUDE_SHADOW_DP, 0); }
+  public void setInterludeShadowDp(int v) { prefs.edit().putInt(KEY_INTERLUDE_SHADOW_DP, Math.max(0, Math.min(24, v))).apply(); }
+  public int getInterludeMarqueeSpeed() { int v = prefs.getInt(KEY_INTERLUDE_MARQUEE_SPEED, 1); return Math.max(0, Math.min(2, v)); }
+  public void setInterludeMarqueeSpeed(int v) { prefs.edit().putInt(KEY_INTERLUDE_MARQUEE_SPEED, Math.max(0, Math.min(2, v))).apply(); }
+  public String getInterludeMarqueeDir() { return "ltr".equals(prefs.getString(KEY_INTERLUDE_MARQUEE_DIR, "rtl")) ? "ltr" : "rtl"; }
+  public void setInterludeMarqueeDir(String v) { prefs.edit().putString(KEY_INTERLUDE_MARQUEE_DIR, "ltr".equals(v) ? "ltr" : "rtl").apply(); }
   public void setInterludeImageScale(float v) {
     prefs.edit().putFloat(KEY_INTERLUDE_IMAGE_SCALE, Math.max(0.2f, Math.min(1.6f, v))).apply();
   }

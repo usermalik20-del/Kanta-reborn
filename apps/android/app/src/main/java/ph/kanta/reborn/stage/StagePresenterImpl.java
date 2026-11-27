@@ -54,6 +54,7 @@ public final class StagePresenterImpl extends FrameLayout
 
   // Stage overlays
   private final LyricStage lyricStage;
+  private final InterludeVideoHost interludeVideoHost;
   private boolean oledArmed;
   private final android.os.Handler oledHandler =
       new android.os.Handler(android.os.Looper.getMainLooper());
@@ -163,6 +164,9 @@ public final class StagePresenterImpl extends FrameLayout
 
     // Add overlays in z-order (background first, topmost last)
     addView(backgroundStage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+    interludeVideoHost = new InterludeVideoHost(context, session);
+    addView(interludeVideoHost.view(), 1, new LayoutParams(
+        LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     // The standby presence sits above the background video and below every functional
     // overlay, so live lyrics, countdown, score and search always win.
     addView(presenceOverlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -729,7 +733,10 @@ public final class StagePresenterImpl extends FrameLayout
         session.lyricShowTitle(), songTitleHeader(styleSong),
         session.interludeTextColor(), session.interludeAnimation(),
         session.interludeTextSizeSp(), session.interludeImageScale(),
-        session.interludeImagePlacement(), session.lyricOffsetForCurrentSong()));
+        session.interludeImagePlacement(), session.lyricOffsetForCurrentSong(),
+        session.interludeGlow(), session.interludeShadowDp(),
+        session.interludeMarqueeSpeed(), session.interludeMarqueeDir()));
+    interludeVideoHost.sync();
     lyricStage.setSafeZonePercent(session.safeZonePercent());
     setOledArmed(session.oledShift());
     countdownStage.setVisualsEnabled(session.lyricShowCountdown());
@@ -884,6 +891,7 @@ public final class StagePresenterImpl extends FrameLayout
 
   @Override
   protected void onDetachedFromWindow() {
+    interludeVideoHost.release();
     oledHandler.removeCallbacks(oledRoll);
     super.onDetachedFromWindow();
     cancelPendingReveal();

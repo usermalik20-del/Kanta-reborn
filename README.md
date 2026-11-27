@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude typography and media (964)
+Batch F: the Interlude tab shares the lyric font picker (KANTA Default/Bold Videoke/Clean Sans/Retro LED/Classic Serif/custom .ttf), adds a glow toggle and a drop-shadow slider for text over bright media, a marquee speed (Slow/Normal/Fast) and direction (RTL/LTR) selector, an image scale slider (50%-150%), and image placement Above/Dimmed background/Side-by-side (landscape). A new looping-video slot (silent, muted, REPEAT_MODE_ONE, backgrounded with the app) renders behind interludes in the embedded stage and fullscreen.
+
 ## Editable interlude quick messages + live tokens (2026-11-27)
 
 The three static interlude quick-message chips became a horizontal editable set: the

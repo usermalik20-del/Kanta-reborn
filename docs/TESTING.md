@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude typography and media (964)
+Updated test_stage_style_upgrade.py (quick-message chips + tokens in SessionController; marquee speedMul base pace) and test_android_home_layout.py (compact fixed-bottom keypad, retired dashboard search field). javac/java PATH pinned to JDK17 for subprocess contracts.
+
 ## Editable interlude quick messages + live tokens (2026-11-27)
 
 The three static interlude quick-message chips became a horizontal editable set: the

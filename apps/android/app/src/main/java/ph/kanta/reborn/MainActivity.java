@@ -62,6 +62,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private static final int MICROPHONE = 17;
   private static final int LEGACY_FOLDER = 21;
   private static final int INTERLUDE_IMAGE = 22;
+  private static final int INTERLUDE_VIDEO = 23;
   private static final int NAVY = KantaTheme.BG_MAIN;
   private static final int PANEL = KantaTheme.SURFACE_ELEVATED;
   private static final int CYAN = KantaTheme.PRIMARY_CYAN;
@@ -2931,6 +2932,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     target.addView(text(getString(R.string.interlude_presets), 15, KantaTheme.TEXT_PRIMARY));
     addQuickMessageChips(target, message);
 
+    target.addView(text(getString(R.string.interlude_font), 15, KantaTheme.TEXT_PRIMARY));
+    Button font = actionButton(getString(R.string.interlude_font_button),
+        R.drawable.kanta_submenu_lyrics, () -> chooseLyricFont());
+    font.setTag("kanta.visuals.interlude.font");
+    target.addView(font);
+
     target.addView(sectionHeader(getString(R.string.interlude_color)));
     addColorSwatches(target, "kanta.interlude.color", session.interludeTextColor(), color -> {
       session.setInterludeTextColor(color);
@@ -2944,6 +2951,24 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             getString(R.string.interlude_anim_pulse), getString(R.string.interlude_anim_marquee)},
         "pulse".equals(animation) ? 1 : "marquee".equals(animation) ? 2 : 0, index -> {
           session.setInterludeAnimation(index == 0 ? "static" : index == 1 ? "pulse" : "marquee");
+          refreshVisualsPreview();
+        }));
+
+    target.addView(text(getString(R.string.interlude_marquee_speed), 15, KantaTheme.TEXT_PRIMARY));
+    target.addView(pillGroup("kanta.interlude.marquee.speed",
+        new String[] {getString(R.string.interlude_speed_slow),
+            getString(R.string.interlude_speed_normal),
+            getString(R.string.interlude_speed_fast)},
+        session.interludeMarqueeSpeed(), index -> {
+          session.setInterludeMarqueeSpeed(index);
+          refreshVisualsPreview();
+        }));
+    target.addView(text(getString(R.string.interlude_marquee_dir), 15, KantaTheme.TEXT_PRIMARY));
+    target.addView(pillGroup("kanta.interlude.marquee.dir",
+        new String[] {getString(R.string.interlude_dir_rtl),
+            getString(R.string.interlude_dir_ltr)},
+        "ltr".equals(session.interludeMarqueeDir()) ? 1 : 0, index -> {
+          session.setInterludeMarqueeDir(index == 1 ? "ltr" : "rtl");
           refreshVisualsPreview();
         }));
 
@@ -2965,6 +2990,22 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       @Override public void onStopTrackingTouch(SeekBar bar) { }
     });
     target.addView(size);
+
+    target.addView(styleToggle("kanta.interlude.glow", getString(R.string.interlude_glow),
+        session.interludeGlow(), (button, checked) -> {
+          session.setInterludeGlow(checked);
+          refreshVisualsPreview();
+        }));
+    target.addView(text(getString(R.string.interlude_shadow), 15, KantaTheme.TEXT_PRIMARY));
+    SeekBar shadow = new SeekBar(this);
+    shadow.setTag("kanta.visuals.interlude.shadow");
+    shadow.setMax(24);
+    shadow.setProgress(Math.max(0, Math.min(24, session.interludeShadowDp())));
+    shadow.setOnSeekBarChangeListener(seekListener(value -> {
+      session.setInterludeShadowDp(value);
+      refreshVisualsPreview();
+    }));
+    target.addView(shadow);
     if (session.interludeImage() != null) {
       TextView imageSet = text(getString(R.string.visuals_interlude_image_set), 15, KantaTheme.TEXT_PRIMARY);
       imageSet.setTag("kanta.visuals.interlude.image");
@@ -2973,10 +3014,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       target.addView(text(getString(R.string.interlude_image_size), 15, KantaTheme.TEXT_PRIMARY));
       SeekBar imageSize = new SeekBar(this);
       imageSize.setTag("kanta.visuals.interlude.image.scale");
-      imageSize.setMax(140);
-      imageSize.setProgress(Math.round((session.interludeImageScale() - 0.2f) * 100));
+      imageSize.setMax(100);
+      imageSize.setProgress(Math.max(0, Math.min(100,
+          Math.round((session.interludeImageScale() - 0.5f) * 100))));
       imageSize.setOnSeekBarChangeListener(seekListener(value -> {
-        session.setInterludeImageScale(0.2f + value / 100f);
+        session.setInterludeImageScale(0.5f + value / 100f);
         refreshVisualsPreview();
       }));
       target.addView(imageSize);
@@ -2984,9 +3026,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       String placement = session.interludeImagePlacement();
       target.addView(pillGroup("kanta.interlude.image.placement",
           new String[] {getString(R.string.interlude_placement_above),
-              getString(R.string.interlude_placement_background)},
-          "background".equals(placement) ? 1 : 0, index -> {
-            session.setInterludeImagePlacement(index == 1 ? "background" : "above");
+              getString(R.string.interlude_placement_background),
+              getString(R.string.interlude_placement_side)},
+          "background".equals(placement) ? 1 : "side".equals(placement) ? 2 : 0, index -> {
+            session.setInterludeImagePlacement(
+                index == 1 ? "background" : index == 2 ? "side" : "above");
             refreshVisualsPreview();
           }));
       Button remove = actionButton(getString(R.string.interlude_remove_image),
@@ -3007,6 +3051,22 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       add.setTag("kanta.visuals.interlude.image.add");
       target.addView(add);
       target.addView(text(getString(R.string.interlude_image_summary), 14, KantaTheme.TEXT_SECONDARY));
+    }
+
+    if (session.interludeVideoFile() != null) {
+      Button removeVideo = actionButton(getString(R.string.interlude_remove_video),
+          R.drawable.kanta_submenu_remove, () -> session.setInterludeVideo(null));
+      removeVideo.setTag("kanta.visuals.interlude.video.remove");
+      target.addView(removeVideo);
+    } else {
+      Button addVideo = actionButton(getString(R.string.interlude_video),
+          R.drawable.kanta_submenu_upload, () -> startActivityForResult(
+              new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                  .addCategory(Intent.CATEGORY_OPENABLE).setType("video/*"), INTERLUDE_VIDEO));
+      addVideo.setTag("kanta.visuals.interlude.video.add");
+      target.addView(addVideo);
+      target.addView(text(getString(R.string.interlude_video_summary), 14,
+          KantaTheme.TEXT_SECONDARY));
     }
 
     target.addView(sectionHeader(getString(R.string.lyrics_overlays_heading)));
@@ -5446,6 +5506,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       Toast.makeText(this, ok ? R.string.visuals_interlude_image_added
           : R.string.interlude_image_failed, Toast.LENGTH_LONG).show();
       refreshVisualsPreview();
+      return;
+    }
+    if (request == INTERLUDE_VIDEO && data.getData() != null) {
+      boolean ok = session.setInterludeVideo(data.getData());
+      Toast.makeText(this, ok ? R.string.interlude_video_added
+          : R.string.interlude_video_failed, Toast.LENGTH_LONG).show();
+      render();
       return;
     }
     if (request == LEGACY_FOLDER && data.getData() != null) {
