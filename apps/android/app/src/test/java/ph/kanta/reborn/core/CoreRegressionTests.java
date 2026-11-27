@@ -1031,6 +1031,7 @@ public final class CoreRegressionTests {
 
   public static void main(String[] args) throws Exception {
     microphonePitchChecks();
+    checks += MicrophoneInputRegressionTests.run();
     checks += SpectrumRegressionTests.run();
     checks += LrcLyricsRegressionTests.run();
     monitorChecks();

@@ -75,8 +75,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private LinearLayout root, body, stagePane, navigationTabs;
   private NestedScrollView pageScroll;
   private View appHeader;
-    private TextView stageSearchField;
-    private Runnable stageSearchClearTask;
     private boolean intermissionMessageFocused;
     private boolean draggingLyricSync;
     private boolean draggingVisualsControl;
@@ -99,7 +97,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private CameraStage camera;
   private boolean cameraPermissionPending, microphonePermissionPending;
   private android.media.AudioDeviceInfo pendingMonitorOutput;
-  private AlertDialog monitorOutputDialog;
+  private AlertDialog monitorOutputDialog, microphoneInputDialog;
   private Presentation presentation;
   private DisplayManager displays;
   private String tab = "Home", singer = "";
@@ -159,6 +157,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private boolean pipSurfaceActive;
   private MiniStagePreview visualsPreview;
   private TextView visualsFontLabel;
+  private LinearLayout lyricsFontChipRow;
   private final Map<String, Integer> mediaListPositions = new HashMap<>();
   private final android.util.LruCache<File, android.graphics.Bitmap> visualThumbnails =
       new android.util.LruCache<>(32);
@@ -321,6 +320,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     cameraPermissionPending = false;
     microphonePermissionPending = false;
     clearMonitorSetup();
+    if (microphoneInputDialog != null) microphoneInputDialog.dismiss();
     camera.stop();
     session.listen(null);
     session.setCountdownHost(null);
@@ -462,8 +462,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       stagePane = null;
       navigationTabs = null;
       appHeader = null;
-      stageSearchField = null;
-      stageSearchClearTask = null;
       stageSyncPill = null;
       stageSyncValue = null;
       stageTimerPill = null;
@@ -884,9 +882,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     addStageChrome(stageLayers);
     // Portrait: the expanded controls sit between the Stage and the utility scroll (a sibling
     // of stagePane), so opening them pushes the lower buttons instead of squeezing the Stage.
-    if (!landscape) {
-      embeddedControls.limitTo(stagePane);
-    }
+    embeddedControls.limitTo(stagePane);
     // Split the available main area instead of reserving a fixed landscape height;
     // compact displays must leave usable space for the lower utility destination.
     stagePane.setMinimumHeight(dp(140));
@@ -913,7 +909,14 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     LinearLayout.LayoutParams contentParams = landscape
         ? new LinearLayout.LayoutParams(0, -1, .40f)
         : new LinearLayout.LayoutParams(-1, 0, .40f);
-    main.addView(scroll, contentParams);
+    if (landscape) {
+      LinearLayout utilityPane = column();
+      utilityPane.addView(embeddedControls, new LinearLayout.LayoutParams(-1, -2));
+      utilityPane.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+      main.addView(utilityPane, contentParams);
+    } else {
+      main.addView(scroll, contentParams);
+    }
     // Bottom navigation is one continuous floating dock with text labels,
     // muted when inactive, cyan + a subtle glow pill when the destination is active.
     LinearLayout tabs = row();
@@ -984,33 +987,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     LinearLayout stageHeader = row();
     stageHeader.addView(stageIdentity, new LinearLayout.LayoutParams(-2, -2));
     stageLayers.addView(stageHeader, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
-    Button controls = stageChromeButton(R.string.stage_controls, R.drawable.kanta_stage_action_controls,
-        "kanta.stage.controls", null);
-    bindStageControls(embeddedControls, controls);
-    // Landscape has no embedded controls tray; hide the anchor with it.
-    controls.setVisibility(isLandscape() ? View.GONE : View.VISIBLE);
-    FrameLayout.LayoutParams anchor = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.START);
-    anchor.setMarginStart(dp(4));
-    anchor.bottomMargin = dp(28);
-    stageLayers.addView(controls, anchor);
-
-    // Transparent search strip on the stage's bottom line, in line with the
-    // Controls anchor. It triggers the Home search (dashboard search field +
-    // keypad); it is not a second input and never shows the system keyboard.
-    stageSearchField = text("", 14, KantaTheme.TEXT_MUTED);
-    stageSearchField.setTag("kanta.stage.search");
-    stageSearchField.setSingleLine(true);
-    stageSearchField.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    stageSearchField.setGravity(Gravity.CENTER_VERTICAL);
-    stageSearchField.setPaddingRelative(dp(12), dp(6), dp(12), dp(6));
-    stageSearchField.setShadowLayer(dp(3), 0, dp(1), 0xCC000000);
-    stageSearchField.setContentDescription(getString(R.string.stage_search_hint));
-    stageSearchField.setOnClickListener(v -> openStageSearch());
-    FrameLayout.LayoutParams searchParams =
-        new FrameLayout.LayoutParams(0, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-    searchParams.setMargins(dp(100), 0, dp(116), dp(28));
-    stageLayers.addView(stageSearchField, searchParams);
-    updateStageSearchField();
+    // Controls/search/fullscreen are mounted together above Home's transport row.
+    // Keep this surface for video/lyrics and noninteractive playback readouts.
 
     // Compact lyric-sync pill on the stage HUD: +-50ms mid-song without opening
     // the Menu. It adjusts the per-song override; tapping the value clears it
@@ -1086,26 +1064,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     cameraParams.setMarginEnd(dp(2));
     cameraParams.topMargin = dp(2);
     stageLayers.addView(stageCameraToggle, cameraParams);
-    // Icon-only fullscreen action at the lower right stage edge.
-    Button expand = stageChromeButton(R.string.stage_fullscreen_label, R.drawable.kanta_stage_action_fullscreen,
-        "kanta.stage.fullscreen", this::fullscreen);
-    expand.setText("");
-    expand.setPaddingRelative(0, 0, 0, 0);
-    expand.setMinWidth(dp(40));
-    expand.setMinimumWidth(dp(40));
-    expand.setContentDescription(getString(R.string.stage_fullscreen));
-    // Sits on the same line as the Controls anchor so the bottom edge reads as one row
-    // and never sits on the Up Next ticker.
-    FrameLayout.LayoutParams expandParams = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
-    expandParams.setMarginEnd(dp(4));
-    expandParams.bottomMargin = dp(28);
-    stageLayers.addView(expand, expandParams);
     refreshStageToggleIndicators();
 
     stagePlaybackTime = text("", 14, KantaTheme.TEXT_PRIMARY);
     stagePlaybackTime.setTag("kanta.stage.time");
     stagePlaybackTime.setShadowLayer(dp(3), 0, dp(1), 0xFF000000);
-    // Same bottom line as the fullscreen icon and Controls anchor.
+    // Playback time stays on the video, never over the search editor.
     FrameLayout.LayoutParams timerParams = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
     timerParams.setMarginEnd(dp(48));
     timerParams.bottomMargin = dp(28);
@@ -1962,7 +1926,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     selectMainMenu("Home");
     if (homeScreen != null) {
       homeScreen.focusSongSearch();
-      homeScreen.reopenSongLookup();
+      homeScreen.reopenSearchFromEditor();
       refreshStageEntry();
     }
   }
@@ -2631,6 +2595,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     scroller.setFillViewport(true);
     LinearLayout row = new LinearLayout(this);
     row.setOrientation(LinearLayout.HORIZONTAL);
+    lyricsFontChipRow = row;
     fontChip(row, "kanta.lyrics.font.default", getString(R.string.lyrics_font_default),
         null, saved, fonts);
     fontChip(row, "kanta.lyrics.font.bold_videoke", getString(R.string.lyrics_font_bold_videoke),
@@ -2662,12 +2627,15 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void fontChip(LinearLayout row, String tag, String label, String fontId,
       String saved, ph.kanta.reborn.font.FontStore fonts) {
     Button chip = KantaTheme.secondaryButton(this, label, v -> {
-      String target = fontId == null ? "" : fontId;
       fonts.select(fontId == null ? null : Uri.parse(fontId), ok -> {
+        if (isFinishing() || isDestroyed()) return;
         if (ok) {
           noteLyricsFontChanged();
-          restyleFontChips(row, target);
         } else {
+          Toast.makeText(this, "This font could not be loaded. Using the default font.",
+              Toast.LENGTH_LONG).show();
+        }
+        if (row.isAttachedToWindow()) {
           restyleFontChips(row, new SettingsStore(this).getLyricFont());
         }
       });
@@ -2814,6 +2782,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (visualsFontLabel != null) {
       visualsFontLabel.setText(getString(R.string.visuals_lyrics_font_value,
           getString(R.string.visuals_lyrics_font), currentLyricsFontName()));
+    }
+    if (lyricsFontChipRow != null && lyricsFontChipRow.isAttachedToWindow()) {
+      restyleFontChips(lyricsFontChipRow, new SettingsStore(this).getLyricFont());
     }
     refreshVisualsPreview();
   }
@@ -3471,6 +3442,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             new ph.kanta.reborn.ui.KantaMicVoiceScreen.Listener() {
               @Override public void onBack() { navigateBack(); }
               @Override public void onMicToggle() { toggleMicrophone(); }
+              @Override public void onInputDevicePicker() { chooseMicrophoneInput(); }
+              @Override public void onInputGainChanged(int decibels) {
+                session.microphoneParameters(decibels, session.microphone.gateDb());
+              }
+              @Override public void onInputGateChanged(int decibels) {
+                session.microphoneParameters(session.microphone.gainDb(), decibels);
+              }
               @Override public void onMonitorToggle() { toggleMonitoring(); }
               @Override public void onMonitorGainChanged(float value) {
                 session.monitor.gain(value);
@@ -3812,13 +3790,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
               @Override public void onSettings() { openPage("More"); }
               @Override public void onSearch() { openStageSearch(); }
               @Override public void onSearchQueryChanged(String typed) {
-                // Cancel pending RES work even if the user edits back to the same text.
+                // The editor is the single source; cancel stale RES work and refresh
+                // the lookup projection without adding a delayed second write.
                 homeSubmitGeneration++;
                 homeEntry = typed;
-                scheduleStageSearchClear();
                 refreshStageEntry();
               }
               @Override public void onSearchSubmitted(String typed) { submitHomeEntry(typed); }
+              @Override public void onControls(View anchor) {
+                if (embeddedControls == null) return;
+                bindStageControls(embeddedControls, (Button) anchor);
+                setStageControlsExpanded(embeddedControls, !controlsOpen(embeddedControls));
+              }
+              @Override public void onFullscreen() { fullscreen(); }
               @Override public void onKeySound(String key) { session.playKeypadSound(key); }
               @Override public void onQueue() { openPage("Queue"); }
               @Override public void onVisuals() { openPage(MENU_STAGE_VISUAL); }
@@ -3849,53 +3833,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     homeScreen.restoreSearchText(homeEntry);
     refreshStageEntry();
     body.addView(homeScreen, new LinearLayout.LayoutParams(-1, 0, 1));
-    // Hide HomeScreen's built-in search row since we have header search
-    if (homeScreen != null) {
-        try {
-            java.lang.reflect.Field f = homeScreen.getClass().getDeclaredField("searchRow");
-            f.setAccessible(true);
-            View sr = (View) f.get(homeScreen);
-            if (sr != null) sr.setVisibility(View.GONE);
-        } catch (Exception e) { /* ignore */ }
-    }
   }
 
   private boolean isHomeLookupOpen() {
     return "Home".equals(tab) && lowerUtilityAccessory == null;
   }
 
-  /** Transparent stage search strip: a visible hint, or the in-progress entry. */
-  private void updateStageSearchField() {
-    if (stageSearchField == null) return;
-    String entry = homeEntry == null ? "" : homeEntry;
-    if (entry.isEmpty()) {
-      stageSearchField.setText(R.string.stage_search_hint);
-      stageSearchField.setTextColor(0x80B9D8E8);
-    } else {
-      stageSearchField.setText(entry);
-      stageSearchField.setTextColor(0xE6FFFFFF);
-    }
-  }
-
-  /** The in-progress entry auto-clears a few seconds after the last keystroke. */
-  private void scheduleStageSearchClear() {
-    if (stageSearchField == null) return;
-    if (stageSearchClearTask == null) {
-      stageSearchClearTask = () -> {
-        stageSearchClearTask = null;
-        if (homeEntry == null || homeEntry.isEmpty()) return;
-        homeSubmitGeneration++;
-        homeEntry = "";
-        if (homeScreen != null) homeScreen.clearSearchText();
-        refreshStageEntry();
-      };
-    }
-    stageSearchField.removeCallbacks(stageSearchClearTask);
-    stageSearchField.postDelayed(stageSearchClearTask, 5000);
-  }
-
   private void refreshStageEntry() {
-    updateStageSearchField();
     if (stagePresenter == null) return;
     boolean home = isHomeLookupOpen();
     stagePresenter.presenceOverlay().setEnteredCode(home ? homeEntry : "");
@@ -4727,6 +4671,25 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (micVoiceScreen == null) Toast.makeText(this, notice, Toast.LENGTH_LONG).show();
   }
 
+  private void chooseMicrophoneInput() {
+    if (!session.foreground || microphonePermissionPending || microphoneInputDialog != null) return;
+    List<android.media.AudioDeviceInfo> inputs = session.microphone.inputs();
+    String[] labels = new String[inputs.size() + 1];
+    labels[0] = "Automatic (Android chooses)";
+    for (int i = 0; i < inputs.size(); i++) labels[i + 1] = MicrophoneInput.deviceLabel(inputs.get(i));
+    microphoneInputDialog = new AlertDialog.Builder(this)
+        .setTitle("Choose microphone")
+        .setItems(labels, (dialog, selected) -> {
+          if (!session.foreground) return;
+          clearMonitorSetup();
+          session.selectMicrophone(selected == 0 ? null : inputs.get(selected - 1));
+        })
+        .setNegativeButton("Cancel", null).create();
+    microphoneInputDialog.setOnDismissListener(dialog -> microphoneInputDialog = null);
+    microphoneInputDialog.show();
+    constrainDialog(microphoneInputDialog);
+  }
+
   void toggleMicrophone() {
     if (session.microphone.enabled()) {
       clearMonitorSetup();
@@ -4751,8 +4714,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void refreshMicrophoneReading() {
     if (micVoiceScreen != null && MENU_VOICE_SCORING.equals(tab)) {
       MicrophoneInput.Reading reading = session.microphone.reading();
+      micVoiceScreen.setInputControls(session.microphone.gainDb(), session.microphone.gateDb(),
+          session.microphone.inputStatus(), session.microphone.clipping());
       micVoiceScreen.setInputLevel(
-          reading == null ? 0f : (float) reading.rms,
+          (float) session.microphone.inputRms(),
           !session.microphone.enabled()
               ? "Microphone off"
               : !session.microphone.capturing()
@@ -5073,22 +5038,42 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
   private void showLyricFontOptions(
       java.util.List<ph.kanta.reborn.font.FontStore.FontEntry> entries, boolean bundled) {
     String saved = new SettingsStore(this).getLyricFont();
-    String[] labels = new String[entries.size() + 1];
-    labels[0] = (saved.isEmpty() ? "✓ " : "") + "KANTA default";
-    for (int i = 0; i < entries.size(); i++) {
-      var entry = entries.get(i);
-      labels[i + 1] = (entry.uri.toString().equals(saved) ? "✓ " : "") + entry.name;
-    }
-    constrainDialog(new AlertDialog.Builder(this).setTitle(bundled ? "Lyric font" : "Custom lyric fonts")
-        .setItems(labels, (dialog, index) -> previewLyricFont(
-            index == 0 ? null : entries.get(index - 1).uri,
-            index == 0 ? "KANTA default" : entries.get(index - 1).name))
+    ph.kanta.reborn.font.FontStore fonts = ph.kanta.reborn.font.FontStore.getInstance(this);
+    ph.kanta.reborn.ui.components.KantaFontPicker picker =
+        new ph.kanta.reborn.ui.components.KantaFontPicker(this, fonts, entries, bundled, saved,
+            (pickerView, uri, entry) -> {
+              if (bundled) {
+                selectBundledFont(fonts, uri, pickerView);
+              } else {
+                previewLyricFont(entry.uri, entry.name, pickerView);
+              }
+            });
+    AlertDialog dialog = new AlertDialog.Builder(this)
+        .setTitle(bundled ? "Lyric font" : "Custom lyric fonts")
+        .setView(picker)
         .setNeutralButton(bundled ? "Custom fonts" : "Choose folder",
             (d, w) -> { if (bundled) chooseCustomLyricFont(); else chooseFontFolder(); })
-        .setNegativeButton("Cancel", null).show());
+        .setNegativeButton("Cancel", null).show();
+    constrainDialog(dialog);
   }
 
-  private void previewLyricFont(Uri uri, String name) {
+  /** One-tap select for rows already shown in their own face; live preview refreshes. */
+  private void selectBundledFont(ph.kanta.reborn.font.FontStore fonts, Uri uri,
+      ph.kanta.reborn.ui.components.KantaFontPicker picker) {
+    fonts.select(uri, success -> {
+      if (isFinishing() || isDestroyed()) return;
+      Toast.makeText(this, success ? "Lyric font updated."
+          : "This font could not be loaded. Using the default font.", Toast.LENGTH_LONG).show();
+      noteLyricsFontChanged();
+      if (picker.isAttachedToWindow()) {
+        picker.setSelected(success ? (uri == null ? "" : uri.toString())
+            : new SettingsStore(this).getLyricFont());
+      }
+    });
+  }
+
+  private void previewLyricFont(Uri uri, String name,
+      ph.kanta.reborn.ui.components.KantaFontPicker picker) {
     var fonts = ph.kanta.reborn.font.FontStore.getInstance(this);
     TextView sample = text("Sing more, together.", 32, KantaTheme.TEXT_PRIMARY);
     sample.setGravity(Gravity.CENTER);
@@ -5101,6 +5086,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           Toast.makeText(this, success ? "Lyric font updated."
               : "This font could not be loaded. Using the default font.", Toast.LENGTH_LONG).show();
           noteLyricsFontChanged();
+          if (picker != null && picker.isAttachedToWindow()) {
+            picker.setSelected(success ? uri.toString() : new SettingsStore(this).getLyricFont());
+          }
         })).show();
     constrainDialog(preview);
     if (uri != null) {

@@ -12,8 +12,10 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -29,11 +31,18 @@ public final class FontStore {
   private static FontStore instance;
   private static final long MAX_FONT_BYTES = 8L * 1024 * 1024;
   private static final int MAX_FONTS = 64;
+  // Bundled faces are small OFL assets; caching keeps chips, picker rows and
+  // stage renderers on one shared instance instead of re-decoding per rebuild.
+  private static final Map<String, Typeface> BUNDLED_CACHE = new HashMap<>();
   private final Context context;
   private final SettingsStore settings;
   private final Handler main = new Handler(Looper.getMainLooper());
+  // One worker keeps provider I/O serial. The queue is unbounded on purpose:
+  // with a 1-slot queue, a select() submitted while chip previews were pending
+  // was rejected, the saved font reset silently, and the stage preview never
+  // changed. A queued tap must always win once earlier loads finish.
   private final ThreadPoolExecutor worker = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS,
-      new ArrayBlockingQueue<>(1), new ThreadPoolExecutor.AbortPolicy());
+      new LinkedBlockingQueue<Runnable>(), new ThreadPoolExecutor.AbortPolicy());
   private volatile Typeface typeface;
   private long selectionGeneration;
 
@@ -55,7 +64,8 @@ public final class FontStore {
   public static final class FontEntry {
     public final Uri uri;
     public final String name;
-    private FontEntry(Uri uri, String name) { this.uri = uri; this.name = name; }
+    // Package-private so device regression checks can build synthetic entries.
+    FontEntry(Uri uri, String name) { this.uri = uri; this.name = name; }
   }
 
   /** Called on main. Latest selection wins; malformed/inaccessible fonts reset to built-in. */
@@ -64,6 +74,12 @@ public final class FontStore {
     typeface = null;
     settings.setLyricFont(uri == null ? "" : uri.toString());
     if (uri == null) { completed.accept(true); return; }
+    Typeface cached = cachedBundled(uri);
+    if (cached != null) {
+      typeface = cached; // No I/O on the main thread; refresh is immediate.
+      completed.accept(true);
+      return;
+    }
     submit(() -> {
       Typeface loaded = load(context, uri);
       main.post(() -> {
@@ -116,17 +132,41 @@ public final class FontStore {
 
   public void preview(Uri uri, Consumer<Typeface> completed) {
     if (uri == null) { completed.accept(null); return; }
+    Typeface cached = cachedBundled(uri);
+    if (cached != null) {
+      main.post(() -> completed.accept(cached));
+      return;
+    }
     submit(() -> {
       Typeface face = load(context, uri);
       main.post(() -> completed.accept(face));
     }, () -> completed.accept(null));
   }
 
+  /** Cached bundled face, or null when it has not loaded yet. Never does I/O. */
+  Typeface cachedBundled(Uri uri) {
+    if (uri == null || !BundledLyricFonts.SCHEME.equals(uri.getScheme())) return null;
+    synchronized (BUNDLED_CACHE) {
+      return BUNDLED_CACHE.get(uri.toString());
+    }
+  }
+
   static Typeface load(Context context, Uri uri) {
     File temporary = null;
     try {
       if (BundledLyricFonts.SCHEME.equals(uri.getScheme())) {
-        return BundledLyricFonts.load(context, uri);
+        String key = uri.toString();
+        synchronized (BUNDLED_CACHE) {
+          Typeface cached = BUNDLED_CACHE.get(key);
+          if (cached != null) return cached;
+        }
+        Typeface bundled = BundledLyricFonts.load(context, uri);
+        if (bundled != null) {
+          synchronized (BUNDLED_CACHE) {
+            BUNDLED_CACHE.put(key, bundled);
+          }
+        }
+        return bundled;
       }
       temporary = File.createTempFile("lyric-font-", ".tmp", context.getCacheDir());
       long copied = 0;

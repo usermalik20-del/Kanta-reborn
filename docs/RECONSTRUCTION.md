@@ -1,3 +1,6 @@
+## 2026-11-28 - Search row, mic DSP, SoundFont caps, font store (967)
+The search pill was reconstructed as the Home EditText inside a presentation row rather than a mirror field, so every query safeguard stays with its owner. The mic increment keeps the existing capture owner and inserts bounded DSP in the documented order; Bluetooth input selection is best-effort and fails visibly when the platform does not honour it. The SoundFont validator was reconciled with the pinned loader's real invariants - each relaxation is paired with a loader proof and a regression fixture - and the over-strict loop guards were split from the genuine out-of-bounds rejection. The font store fix removes the aborting 1-slot queue that silently dropped selections; the failure path now toasts and resets, matching the monitor's behaviour.
+
 ## 2026-11-27 - Interlude timer (966)
 G4 replaced the fixed 3 s post-song auto-advance (nextIfReserved) with a configurable interlude timer (Off/5s/10s/15s/30s). No new scheduling stack: the same autoAdvance runnable and publish() guards (queue peek, foreground, loading, current) apply, the countdown clock is one elapsedRealtime field cleared by cancelAutoAdvance(), and the UI is one HUD bar view in stageLayers (embedded stage) mirroring the sync-pill pattern.
 

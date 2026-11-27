@@ -17,6 +17,9 @@ public final class KantaMicVoiceScreen extends LinearLayout {
   public interface Listener {
     void onBack();
     void onMicToggle();
+    void onInputDevicePicker();
+    void onInputGainChanged(int decibels);
+    void onInputGateChanged(int decibels);
     void onMonitorToggle();
     void onMonitorGainChanged(float value);
     void onMonitorModeSelected(String mode);
@@ -29,7 +32,9 @@ public final class KantaMicVoiceScreen extends LinearLayout {
   private final boolean menuSurface;
   private TextView micStatus, monitorStatus, levelLabel, gainValue, scoreStatus;
   private Button micToggle, monitorToggle, scoringToggle;
-  private SeekBar gainSlider;
+  private SeekBar gainSlider, inputGainSlider, inputGateSlider;
+  private TextView inputRoute, inputGainLabel, inputGateLabel, clipIndicator;
+  private boolean clipLit;
   /**
    * Monitor-effect presets, taken straight from the engine so a chip can never desynchronise from
    * the preset it selects. The label is the engine's own user-facing name.
@@ -103,9 +108,50 @@ public final class KantaMicVoiceScreen extends LinearLayout {
       meter.addView(bar, p);
     }
     meter.setTag("kanta.mic.level-meter");
-    micCard.addView(meter);
-    TextView inputNote = bodyText("Android chooses the microphone. Speak and check the input "
-        + "meter. If it does not move, check microphone access in Android Settings.");
+    LinearLayout meterRow = new LinearLayout(context);
+    meterRow.setGravity(Gravity.CENTER_VERTICAL);
+    meterRow.addView(meter, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
+    clipIndicator = bodyText("● CLIP");
+    clipIndicator.setPadding(dp(8), 0, 0, 0);
+    clipIndicator.setTag("kanta.mic.clip");
+    clipIndicator.setContentDescription("Microphone not clipping");
+    meterRow.addView(clipIndicator);
+    micCard.addView(meterRow);
+    inputRoute = bodyText("Selected: Automatic");
+    inputRoute.setTag("kanta.mic.input-route");
+    micCard.addView(inputRoute);
+    Button chooseInput = actionButton("Choose microphone");
+    chooseInput.setTag("kanta.mic.input-device");
+    chooseInput.setOnClickListener(v -> { if (listener != null) listener.onInputDevicePicker(); });
+    micCard.addView(chooseInput);
+    inputGainLabel = bodyText("Input gain · 0 dB");
+    micCard.addView(inputGainLabel);
+    inputGainSlider = inputSlider("kanta.mic.input-gain", "Microphone input gain, minus 12 to plus 18 decibels", 30);
+    inputGainSlider.setProgress(12);
+    inputGainSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onStartTrackingTouch(SeekBar bar) {}
+      @Override public void onStopTrackingTouch(SeekBar bar) {}
+      @Override public void onProgressChanged(SeekBar bar, int value, boolean user) {
+        if (user && listener != null) listener.onInputGainChanged(value - 12);
+      }
+    });
+    micCard.addView(inputGainSlider);
+    inputGateLabel = bodyText("Noise gate · Off");
+    micCard.addView(inputGateLabel);
+    inputGateSlider = inputSlider("kanta.mic.input-gate", "Monitor noise gate, off or minus 60 to minus 20 decibels", 41);
+    inputGateSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override public void onStartTrackingTouch(SeekBar bar) {}
+      @Override public void onStopTrackingTouch(SeekBar bar) {}
+      @Override public void onProgressChanged(SeekBar bar, int value, boolean user) {
+        if (user && listener != null) listener.onInputGateChanged(value == 0 ? -80 : value - 61);
+      }
+    });
+    micCard.addView(inputGateSlider);
+    TextView inputNote = bodyText("Choose Automatic or a connected microphone. Changing input stops "
+        + "voice playback; turn the microphone on again to check the route. Android may not honor "
+        + "every input, including Bluetooth. Gain affects input and scoring; the noise gate only "
+        + "quiets monitored voice between phrases. If CLIP lights up, lower gain or move away "
+        + "from the mic. Nothing is saved or uploaded.");
     inputNote.setTextSize(12);
     micCard.addView(inputNote);
     addViewCard(content, micCard);
@@ -259,6 +305,32 @@ public final class KantaMicVoiceScreen extends LinearLayout {
     view.setTextColor(KantaTheme.TEXT_SECONDARY);
     view.setLineSpacing(dp(2), 1f);
     return view;
+  }
+
+  private SeekBar inputSlider(String tag, String description, int maximum) {
+    SeekBar slider = KantaTheme.adjustmentSlider(context);
+    slider.setTag(tag);
+    slider.setContentDescription(description);
+    slider.setMax(maximum);
+    slider.setKeyProgressIncrement(1);
+    return slider;
+  }
+
+  public void setInputControls(int gainDb, int gateDb, String route, boolean clipping) {
+    if (!String.valueOf(inputRoute.getText()).equals(route)) inputRoute.setText(route);
+    String gainText = "Input gain · " + (gainDb > 0 ? "+" : "") + gainDb + " dB";
+    String gateText = "Noise gate · " + (gateDb == -80 ? "Off" : gateDb + " dB");
+    if (!String.valueOf(inputGainLabel.getText()).equals(gainText)) inputGainLabel.setText(gainText);
+    if (!String.valueOf(inputGateLabel.getText()).equals(gateText)) inputGateLabel.setText(gateText);
+    if (!inputGainSlider.isPressed()) inputGainSlider.setProgress(gainDb + 12);
+    if (!inputGateSlider.isPressed()) inputGateSlider.setProgress(gateDb == -80 ? 0 : gateDb + 61);
+    if (clipLit != clipping) {
+      clipLit = clipping;
+      clipIndicator.setTextColor(clipping ? 0xFFFF5252 : KantaTheme.TEXT_SECONDARY);
+      clipIndicator.setContentDescription(clipping
+          ? "Microphone clipping. Lower input gain or move away from the microphone."
+          : "Microphone not clipping");
+    }
   }
 
   private int dp(int value) { return (int) (value * density); }

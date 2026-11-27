@@ -17,12 +17,18 @@ class MenuFinishTest(unittest.TestCase):
 
     def test_stage_chrome_uses_icon_actions_and_camera_state(self):
         activity = (JAVA / 'MainActivity.java').read_text()
-        self.assertIn('stageChromeButton(R.string.stage_fullscreen_label', activity)
+        home = (JAVA / 'ui/HomeScreen.java').read_text()
+        self.assertIn('addStageRowAction(searchRow, R.string.stage_fullscreen', home)
+        self.assertIn('button.setText(controls ? context.getString(R.string.stage_controls) : "")', home)
+        self.assertIn('listener.onFullscreen()', home)
         # Camera and fullscreen are icon-only; the camera keeps its status dot.
         self.assertIn('refreshCameraIndicator()', activity)
         self.assertIn('R.string.stage_state_on : R.string.stage_state_off', activity)
-        # Fullscreen sits at the lower right stage edge, not the header row.
-        self.assertIn('Gravity.BOTTOM | Gravity.END', activity)
+        # Fullscreen follows the real search editor in the shared row, not on the video.
+        self.assertLess(home.index('searchRow.addView(searchInput, searchParams)'),
+                        home.index('addStageRowAction(searchRow, R.string.stage_fullscreen'))
+        chrome = activity.split('private void addStageChrome(', 1)[1].split('private void refreshStage', 1)[0]
+        self.assertNotIn('"kanta.stage.fullscreen"', chrome)
 
     def test_menu_destinations_are_direct_and_settings_stay_separate(self):
         activity = (JAVA / 'MainActivity.java').read_text()

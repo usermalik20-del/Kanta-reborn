@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "../app/src/main/cpp/soundfont.c"
+#include "soundfont-validation-test.h"
 
 static void budget_checks(void) {
     // The cap is dynamic: a tested 3 GiB floor, and 90% of whatever RAM the
@@ -78,12 +79,21 @@ static double frequency(kanta_soundfont* bank, float tuning) {
     assert(peak > .001f);
     return crossings * 44100.0 / (512 * 100);
 }
+static void open_reason_checks(void) {
+    // A failed open must leave a truthful reason the importer can surface.
+    assert(kanta_sf_open("/nonexistent/kanta-soundfont-test.sf2") == NULL);
+    assert(kanta_sf_last_open_reason() == KANTA_SF_OPEN_UNREADABLE);
+}
+
 int main(int argc, char** argv) {
     assert(argc == 2);
     budget_checks();
     allocation_checks();
+    open_reason_checks();
     kanta_soundfont* bank = kanta_sf_open(argv[1]);
     assert(bank);
+    // A successful open resets the reason so a later failure is never stale.
+    assert(kanta_sf_last_open_reason() == KANTA_SF_OPEN_OK);
     double base = frequency(bank, 0), raised = frequency(bank, 12);
     assert(base > 430 && base < 450);
     assert(raised > 860 && raised < 900);
@@ -138,6 +148,7 @@ int main(int argc, char** argv) {
     assert(original && mutation && fread(original, 1, size, file) == size);
     fclose(file);
     assert(sf_validate(original, size));
+    validation_compatibility_checks(original, size);
     for (size_t cut = 0; cut < size; cut += 17) assert(!sf_validate(original, cut));
     char path[] = "/tmp/kanta-sf-test-XXXXXX";
     int fd = mkstemp(path);

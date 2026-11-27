@@ -203,11 +203,27 @@ public final class RuntimeChecks extends Instrumentation {
           View queue = sample.findViewWithTag("kanta.home.reservations");
           View keyboard = sample.findViewWithTag("kanta.home.keyboard");
           View searchField = sample.findViewWithTag("kanta.home.search");
-          check(queue.getWidth() == w && keyboard.getWidth() == w && searchField.getWidth() == w,
-              "Home search, reservation panel or keyboard has a side gutter");
+          ViewGroup searchRow = (ViewGroup) searchField.getParent();
+          View controls = sample.findViewWithTag("kanta.stage.controls");
+          View fullscreen = sample.findViewWithTag("kanta.stage.fullscreen");
+          check(queue.getWidth() == w && keyboard.getWidth() == w && searchRow.getWidth() == w,
+              "Home search row, reservation panel or keyboard has a side gutter");
+          check(searchRow.getChildCount() == 3 && searchRow.getChildAt(0) == controls
+              && searchRow.getChildAt(1) == searchField && searchRow.getChildAt(2) == fullscreen,
+              "Stage row must contain Controls, the real editor, then fullscreen");
+          int edge = Math.round(16 * density), margin = Math.round(12 * density);
+          check(searchRow.getPaddingStart() == edge && searchRow.getPaddingEnd() == edge
+              && searchField.getHeight() == Math.round(40 * density)
+              && searchField.getWidth() > 0, "Stage search pill dimensions are incorrect");
+          android.widget.LinearLayout.LayoutParams fieldParams =
+              (android.widget.LinearLayout.LayoutParams) searchField.getLayoutParams();
+          check(fieldParams.width == 0 && fieldParams.weight == 1f
+              && fieldParams.getMarginStart() == margin && fieldParams.getMarginEnd() == margin,
+              "Stage search must fill remaining width with 12dp horizontal margins");
           View actions = sample.findViewWithTag("kanta.stage.transport");
-          check(actions.getBottom() <= ((View) searchField.getParent()).getTop(),
-              "Stage transport is not above Search");
+          View actionScroll = (View) actions.getParent();
+          check(searchRow.getBottom() == actionScroll.getTop(),
+              "Stage search row is not immediately above transport");
           check(keyboard.findViewWithTag("kanta.keyboard.key.down") != null
               && keyboard.findViewWithTag("kanta.keyboard.tempo.up") != null,
               "Inline key and tempo buttons are missing");
@@ -232,8 +248,8 @@ public final class RuntimeChecks extends Instrumentation {
             "Wrong action in Stage transport row: " + actions[i]);
         checkStageTextButton(action, labels[i]);
       }
-      View clear = decor.findViewWithTag("kanta.stage.song-action.cancel");
-      checkStageTextButton(clear, R.string.stage_clear);
+      check(decor.findViewWithTag("kanta.stage.song-action.cancel") == null,
+          "Stage row must not add a fourth clear action beside the editor");
       // Icon-only fullscreen action: the accessible name stays, the caption text does not.
       View fullscreenAction = decor.findViewWithTag("kanta.stage.fullscreen");
       boolean fullscreenIconOnly = fullscreenAction instanceof Button
@@ -242,8 +258,9 @@ public final class RuntimeChecks extends Instrumentation {
               .equals(activity.getString(R.string.stage_fullscreen));
       check(fullscreenIconOnly, "Fullscreen shortcut must be icon-only with its accessible label");
       checkStageTextButton(decor.findViewWithTag("kanta.stage.controls"), R.string.stage_controls);
-      check(clear.getParent() == search.getParent() && clear.getVisibility() == View.GONE,
-          "Clear search must be inside the field and hidden when empty");
+      check(fullscreenAction.getParent() == search.getParent()
+          && decor.findViewWithTag("kanta.stage.controls").getParent() == search.getParent(),
+          "Controls, search and fullscreen must share one row");
       View logo = decor.findViewWithTag("kanta.header.logo");
       View remote = decor.findViewWithTag("kanta.stage.remote-status");
       check(remote != null && remote.getParent() == logo.getParent() && remote.getTop() >= logo.getBottom(),
@@ -267,10 +284,11 @@ public final class RuntimeChecks extends Instrumentation {
           && Math.abs(session.tempo - originalTempo - .05f) < .001f, "TEM plus did not raise tempo");
       session.controls(session.volume, originalTempo, originalPitch);
       search.setText("test");
-      check(clear.getVisibility() == View.VISIBLE && clear.performClick(),
-          "Clear search did not become available while typing");
-      check(search.length() == 0 && search.hasFocus() && clear.getVisibility() == View.GONE,
-          "Clear search did not empty and refocus the field");
+      search.setSelection(0, search.length());
+      check(decor.findViewWithTag("kanta.keyboard.delete").performClick(),
+          "Inline Delete did not accept the selected search text");
+      check(search.length() == 0 && search.hasFocus(),
+          "Deleting selected search text did not empty and refocus the field");
       search.setText("1234");
       search.setSelection(4);
       activity.getWindow().getDecorView().findViewWithTag("kanta.keyboard.delete").performClick();
@@ -1383,7 +1401,10 @@ public final class RuntimeChecks extends Instrumentation {
       runOnMainSync(() -> {
         View decor = activity.getWindow().getDecorView();
         decor.findViewWithTag("kanta.nav.Home").performClick();
-        decor.findViewWithTag("kanta.stage.song-action.cancel").performClick();
+        android.widget.EditText entry = decor.findViewWithTag("kanta.home.search");
+        entry.setSelection(0, entry.length());
+        check(decor.findViewWithTag("kanta.keyboard.delete").performClick()
+            && entry.length() == 0, "Inline Delete did not clear the selected query");
         check(decor.findViewWithTag("kanta.stage.song-action.play") == null,
             "Stage still has a redundant standalone Play");
         check(decor.findViewWithTag("kanta.stage.song-action.pause-resume").performClick(),
@@ -1847,8 +1868,11 @@ public final class RuntimeChecks extends Instrumentation {
       check(decor.<View>findViewWithTag("kanta.stage.search-dock").getVisibility() == View.GONE
           && decor.<ViewGroup>findViewWithTag("kanta.stage.search-results").getChildCount() == 0,
           "A late Stage result or session publication reopened the expired list");
-      home.reopenSongLookup();
-      session.publish();
+      int selection = entry.get().getSelectionStart();
+      check(entry.get().performClick(), "Stage search editor did not accept a tap");
+      check(song.code.contentEquals(entry.get().getText())
+          && entry.get().getSelectionStart() == selection,
+          "Reopening Stage search replaced the query or cursor");
       check(home.activeSongLookupGeneration() != 0
           && home.activeSongLookupGeneration() != generation[0], "Explicit search did not open a new window");
       home.showMatches(generation[0], java.util.Collections.emptyList(), ignored -> {}, ignored -> {});

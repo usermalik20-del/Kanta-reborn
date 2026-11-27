@@ -757,6 +757,13 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     microphone =
         new MicrophoneInput(context, this::publish, this::setMicrophoneNotice, monitor::offer);
     options = context.getSharedPreferences("stage-options-v1", Context.MODE_PRIVATE);
+    // Only scalar DSP settings survive recreation; hardware IDs and activation never do.
+    int inputGain = 0, inputGate = ph.kanta.reborn.core.MicrophoneInputDsp.GATE_OFF;
+    try { inputGain = options.getInt("micInputGainDb", 0); }
+    catch (ClassCastException invalid) { /* Malformed/imported preference: neutral fallback. */ }
+    try { inputGate = options.getInt("micInputGateDb", inputGate); }
+    catch (ClassCastException invalid) { /* Malformed/imported preference: gate remains off. */ }
+    microphone.parameters(inputGain, inputGate);
     settings = new SettingsStore(context);
     equalizer = new MusicEqualizer(settings);
     volume = Math.min(1f, Math.max(0f, settings.getMasterVolume()));
@@ -1523,6 +1530,24 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   void setMonitorNotice(String notice) {
     monitorNotice = notice;
     if (notice != null) message = notice;
+  }
+
+  void microphoneParameters(int gain, int gate) {
+    microphone.parameters(gain, gate);
+    options.edit().putInt("micInputGainDb", microphone.gainDb())
+        .putInt("micInputGateDb", microphone.gateDb()).apply();
+    publish();
+  }
+
+  void selectMicrophone(AudioDeviceInfo device) {
+    if (!foreground) return;
+    // Hardware changes retire monitoring/correction and require a fresh explicit input start.
+    stopMicrophone();
+    if (!microphone.selectInput(device))
+      setMicrophoneNotice("That microphone is no longer connected. Choose an input again.");
+    else setMicrophoneNotice("Input selected. Turn on the microphone when ready.");
+    resetScore();
+    publish();
   }
 
   void startMicrophone() {

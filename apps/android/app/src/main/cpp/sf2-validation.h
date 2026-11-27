@@ -24,7 +24,7 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
     static const size_t strides[9] = {38, 4, 10, 4, 22, 4, 10, 4, 46};
     // The full-tail SGM bank has 29,744 instrument generators and 27,746
     // expanded sample regions. Keep finite caps without rejecting stock banks.
-    static const size_t max_instrument_generators = 32768, max_regions = 32768;
+    static const size_t max_instrument_generators = 65536, max_regions = 32768;
     sf_table tables[9] = {{0}};
     size_t samples = 0, compressedBytes = 0;
     int pdta = 0, sdta = 0;
@@ -72,7 +72,8 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
         pos = end;
     }
     for (int i = 0; i < 9; ++i) if (!tables[i].data) return 0;
-    if ((!samples && !compressedBytes) || tables[0].count < 2 || tables[0].count > 1025 ||
+    /* HiDef has 1328 presets. Keep a finite cap: the loader sorts quadratically. */
+    if ((!samples && !compressedBytes) || tables[0].count < 2 || tables[0].count > 2049 ||
         tables[4].count < 2 || tables[8].count < 2) return 0;
     if (!sf_indices(tables[0], 38, 24, tables[1].count) ||
         !sf_indices(tables[4], 22, 20, tables[5].count) ||
@@ -84,14 +85,19 @@ static size_t sf_validate(const unsigned char* data, size_t size) {
         for (size_t i = 0; i + 1 < tables[table].count; ++i) {
             const unsigned char* gen = tables[table].data + i * 4;
             unsigned op = sf_u16(gen), value = sf_u16(gen + 2);
-            /* The pinned loader shifts signed coarse offsets; reject negative values before that operation. */
-            if ((op == 4 || op == 12 || op == 45 || op == 50) && (value & 0x8000)) return 0;
+            /* The pinned loader multiplies signed coarse offsets by 32768 safely;
+               negative offsets are valid. Decoded region bounds are checked on load. */
             int signed_value = (int16_t)value;
             if ((op == 51 && (signed_value < -120 || signed_value > 120)) ||
-                (op == 52 && (signed_value < -99 || signed_value > 99)) ||
+                /* Some banks use fine tuning beyond +/-99 cents (HiDef uses 150).
+                   Bound it to one octave rather than rejecting safe pitch math. */
+                (op == 52 && (signed_value < -1200 || signed_value > 1200)) ||
                 (op == 56 && signed_value > 1200) ||
                 (op == 58 && (signed_value < -1 || signed_value > 127))) return 0;
-            if (op > 60 || ((op == 43 || op == 44) && (gen[2] > gen[3] || gen[3] > 127))) return 0;
+            /* Reversed key ranges are inert (no MIDI key can match), not an
+               indexing hazard. Still reject non-MIDI endpoints and bad velocities. */
+            if (op > 60 || (op == 43 && (gen[2] > 127 || gen[3] > 127)) ||
+                (op == 44 && (gen[2] > gen[3] || gen[3] > 127))) return 0;
             if ((op == 41 && (table != 3 || value >= tables[4].count - 1)) ||
                 (op == 53 && (table != 7 || value >= tables[8].count - 1))) return 0;
         }

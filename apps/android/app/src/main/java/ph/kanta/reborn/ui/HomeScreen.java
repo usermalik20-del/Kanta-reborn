@@ -30,6 +30,8 @@ public class HomeScreen extends LinearLayout {
     /** Editing invalidates a pending submission without navigating away from Home. */
     void onSearchQueryChanged(String query);
     void onSearchSubmitted(String query);
+    default void onControls(View anchor) {}
+    default void onFullscreen() {}
     default void onPauseResumeSong() {}
     default void onNextSong() {}
     default void onStopSong() {}
@@ -58,7 +60,7 @@ public class HomeScreen extends LinearLayout {
   private final Runnable expireSongLookup = this::dismissSongLookup;
   private LinearLayout searchRow, queuePanel, reservedSongs;
   private android.widget.ScrollView matchesScroll;
-  private Button clearSearch, pauseResume;
+  private Button pauseResume;
   private boolean liveMatchesVisible, lookupDocked, restoringSearchText, fullscreenLandscape;
   private long songLookupDeadline, songLookupGeneration;
   private String previousSearchText = "";
@@ -89,11 +91,15 @@ public class HomeScreen extends LinearLayout {
     // The KANTA brand block lives in the app header (MainActivity) so the dashboard
     // does not stack a second logo and tagline above the search bar.
 
-    // Persistent search with inline keyboard (now hidden, search moved to header)
+    // One editor and one query owner for touch, hardware keys and the inline keyboard.
     searchRow = new LinearLayout(context);
+    searchRow.setTag("kanta.stage.search");
     searchRow.setOrientation(HORIZONTAL);
     searchRow.setGravity(Gravity.CENTER_VERTICAL);
-    searchRow.setVisibility(GONE);  // Hidden - search is in header now
+    searchRow.setPaddingRelative(dp(16), dp(4), dp(16), dp(4));
+    addStageRowAction(searchRow, R.string.stage_controls_expand,
+        R.drawable.kanta_stage_action_controls, "kanta.stage.controls",
+        v -> { if (listener != null) listener.onControls(v); });
 
     searchInput = new EditText(context);
     searchInput.setTag("kanta.home.search");
@@ -110,26 +116,35 @@ public class HomeScreen extends LinearLayout {
               ? dest.subSequence(dstart, dend) : null;
         }
     });
-    searchInput.setTextColor(KantaTheme.TEXT_PRIMARY);
-    searchInput.setHintTextColor(KantaTheme.TEXT_MUTED);
-    searchInput.setHint("Search songs, artists, or enter code");
-    searchInput.setTextSize(16);
+    searchInput.setTextColor(android.graphics.Color.WHITE);
+    searchInput.setHintTextColor(0xFF94A3B8);
+    searchInput.setHint(R.string.stage_search_hint);
+    searchInput.setContentDescription(context.getString(R.string.stage_search_description));
+    searchInput.setTextSize(14);
     searchInput.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-    searchInput.setPaddingRelative(dp(14), 0, dp(10), 0);
-    Drawable searchIcon = context.getDrawable(R.drawable.kanta_search_color).mutate();
-    searchInput.setCompoundDrawablesRelativeWithIntrinsicBounds(searchIcon, null, null, null);
-    searchInput.setCompoundDrawablePadding(dp(10));
-    searchInput.setBackground(null);
-    searchRow.setBackground(KantaTheme.backgroundDrawable(
-        KantaTheme.SURFACE_ELEVATED, 14, KantaTheme.BORDER, 1, density));
-    searchInput.setMinHeight(dp(48));
-    searchRow.addView(searchInput, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
-    clearSearch = stageAction(R.string.stage_clear, R.string.stage_clear_search, "cancel", true, () -> {
-      clearSearchText();
-      searchInput.requestFocus();
+    searchInput.setPaddingRelative(dp(12), 0, dp(12), 0);
+    Drawable searchIcon = context.getDrawable(R.drawable.kanta_stage_search).mutate();
+    searchIcon.setBounds(0, 0, dp(18), dp(18));
+    searchInput.setCompoundDrawablesRelative(searchIcon, null, null, null);
+    searchInput.setCompoundDrawablePadding(dp(8));
+    searchInput.setBackground(KantaTheme.backgroundDrawable(
+        0x8C0F172A, 22, 0x2EFFFFFF, 1, density));
+    searchInput.setMinWidth(0);
+    searchInput.setMinimumWidth(0);
+    searchInput.setMinHeight(0);
+    searchInput.setMinimumHeight(0);
+    LayoutParams searchParams = new LayoutParams(0, dp(40), 1f);
+    searchParams.setMarginStart(dp(12));
+    searchParams.setMarginEnd(dp(12));
+    searchRow.addView(searchInput, searchParams);
+    // Reopen expired results on an explicit tap/focus, never by replacing editor text.
+    searchInput.setOnClickListener(v -> reopenSearchFromEditor());
+    searchInput.setOnFocusChangeListener((v, focused) -> {
+      if (focused) reopenSearchFromEditor();
     });
-    clearSearch.setVisibility(GONE);
-    searchRow.addView(clearSearch, new LayoutParams(-2, -2));
+    addStageRowAction(searchRow, R.string.stage_fullscreen,
+        R.drawable.kanta_stage_action_fullscreen, "kanta.stage.fullscreen",
+        v -> { if (listener != null) listener.onFullscreen(); });
 
     LinearLayout actions = new LinearLayout(context);
     actions.setTag("kanta.stage.transport");
@@ -196,7 +211,8 @@ public class HomeScreen extends LinearLayout {
       queuePanel.setVisibility(landscape ? GONE : VISIBLE);
     }
 
-    // Add action buttons FIXED at bottom (above keyboard)
+    // Fixed chrome row directly above transport in portrait and the landscape utility pane.
+    addView(searchRow, new LayoutParams(-1, dp(48)));
     addView(actionScroll, new LayoutParams(-1, -2));
 
     // Inline keyboard - FIXED at bottom
@@ -237,7 +253,6 @@ public class HomeScreen extends LinearLayout {
       public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
       public void onTextChanged(CharSequence s, int a, int b, int c) {}
       public void afterTextChanged(android.text.Editable e) {
-        clearSearch.setVisibility(e.length() == 0 ? GONE : VISIBLE);
         String typed = e.toString();
         boolean changed = !typed.equals(previousSearchText);
         previousSearchText = typed;
@@ -273,7 +288,6 @@ public class HomeScreen extends LinearLayout {
     boolean changed = shortLandscape != compact;
     if (changed) {
       compact = shortLandscape;
-      searchInput.setMinHeight(dp(compact ? 44 : 48));
       keyboard.setCompact(compact);
       queuePanel.setMinimumHeight(lookupDocked ? 0 : compact ? 0 : dp(90));
       if (!lookupDocked) queuePanel.setPadding(dp(12), dp(compact ? 2 : 4), dp(12), dp(compact ? 3 : 8));
@@ -307,6 +321,37 @@ public class HomeScreen extends LinearLayout {
         : KantaTheme.backgroundDrawable(KantaTheme.SURFACE_ELEVATED, 12, KantaTheme.BORDER, 1, density));
     button.setBackground(background);
     button.setOnClickListener(v -> { if (v.isEnabled()) action.run(); });
+    return button;
+  }
+
+  private Button addStageRowAction(LinearLayout row, int description, int icon, String tag,
+      View.OnClickListener action) {
+    Button button = new Button(context);
+    boolean controls = "kanta.stage.controls".equals(tag);
+    button.setText(controls ? context.getString(R.string.stage_controls) : "");
+    button.setAllCaps(false);
+    button.setTextSize(14);
+    button.setTextColor(KantaTheme.TEXT_PRIMARY);
+    android.util.TypedValue ripple = new android.util.TypedValue();
+    context.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless,
+        ripple, true);
+    button.setBackgroundResource(ripple.resourceId != 0 ? ripple.resourceId
+        : android.graphics.Color.TRANSPARENT);
+    button.setPadding(0, 0, 0, 0);
+    button.setMinWidth(dp(40));
+    button.setMinimumWidth(dp(40));
+    button.setMinHeight(0);
+    button.setMinimumHeight(0);
+    Drawable iconDrawable = context.getDrawable(icon).mutate();
+    int size = dp(22);
+    iconDrawable.setBounds(0, 0, size, size);
+    button.setCompoundDrawablesRelative(iconDrawable, null, null, null);
+    button.setCompoundDrawablePadding(controls ? dp(4) : 0);
+    if (!controls) button.setPaddingRelative(dp(9), 0, dp(9), 0);
+    button.setContentDescription(context.getString(description));
+    button.setTag(tag);
+    button.setOnClickListener(v -> { if (v.isEnabled()) action.onClick(v); });
+    row.addView(button, new LayoutParams(-2, dp(40)));
     return button;
   }
 
@@ -407,6 +452,14 @@ public class HomeScreen extends LinearLayout {
   /** Explicit Stage Search can open retained text again; ordinary refreshes cannot. */
   public void reopenSongLookup() {
     if (activeSongLookupGeneration() == 0) beginSongLookup();
+  }
+
+  public void reopenSearchFromEditor() {
+    if (activeSongLookupGeneration() != 0) return;
+    reopenSongLookup();
+    if (activeSongLookupGeneration() != 0 && listener != null) {
+      listener.onSearchQueryChanged(getSearchText());
+    }
   }
 
   @Override protected void onDetachedFromWindow() {

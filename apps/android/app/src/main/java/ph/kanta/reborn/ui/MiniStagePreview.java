@@ -101,7 +101,8 @@ public final class MiniStagePreview extends FrameLayout {
   public void setLyricLines(String line1, String line2, Typeface typeface, float size) {
     primary = line1 == null ? "" : line1;
     secondary = line2 == null ? "" : line2;
-    if (typeface != null) baseFace = typeface;
+    // null means the KANTA default: reset instead of keeping the previous face.
+    baseFace = typeface == null ? Typeface.DEFAULT_BOLD : typeface;
     scale = size <= 0 ? 1f : size;
     mode = MODE_LYRICS;
     invalidate();
@@ -114,7 +115,8 @@ public final class MiniStagePreview extends FrameLayout {
       String animation, float scale, String placement, boolean showWatermark) {
     primary = text == null ? "" : text;
     artwork = image;
-    if (typeface != null) baseFace = typeface;
+    // null means the KANTA default: reset instead of keeping the previous face.
+    baseFace = typeface == null ? Typeface.DEFAULT_BOLD : typeface;
     interludeColor = color;
     imageScale = scale <= 0 ? 1f : scale;
     imagePlacement = placement == null ? "above" : placement;

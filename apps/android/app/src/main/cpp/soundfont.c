@@ -10,6 +10,15 @@
 #include "sf2-validation.h"
 
 typedef union allocation_header { size_t size; max_align_t alignment; } allocation_header;
+
+// Reason codes for the most recent failed kanta_sf_open; 0 after a success.
+#define KANTA_SF_OPEN_OK 0
+#define KANTA_SF_OPEN_UNREADABLE 1
+#define KANTA_SF_OPEN_ADDRESS_SPACE 2
+#define KANTA_SF_OPEN_BAD_STRUCTURE 3
+#define KANTA_SF_OPEN_NO_MEMORY 4
+static int s_last_open_reason = KANTA_SF_OPEN_OK;
+int kanta_sf_last_open_reason(void) { return s_last_open_reason; }
 static _Thread_local size_t allocated;
 // Floor for the tracked-allocation ceiling: full-tail banks decode to well over
 // 1 GiB of floats, so 3 GiB is the minimum headroom a worker gets for samples,
@@ -104,7 +113,10 @@ struct kanta_soundfont { tsf* synth; };
 
 kanta_soundfont* kanta_sf_open(const char* path) {
     struct stat info;
-    if (!path || stat(path, &info) || !S_ISREG(info.st_mode) || info.st_size < 12) return NULL;
+    if (!path || stat(path, &info) || !S_ISREG(info.st_mode) || info.st_size < 12) {
+        s_last_open_reason = KANTA_SF_OPEN_UNREADABLE;
+        return NULL;
+    }
 
     // Validate the cross-table references before the third-party loader dereferences them. The
     // file is mapped for this rather than read, so a large bank costs address space instead of
@@ -113,18 +125,18 @@ kanta_soundfont* kanta_sf_open(const char* path) {
     // pinned loader keeps no such count of its own.
     size_t size = (size_t)info.st_size;
     int descriptor = open(path, O_RDONLY | O_CLOEXEC);
-    if (descriptor < 0) return NULL;
+    if (descriptor < 0) { s_last_open_reason = KANTA_SF_OPEN_UNREADABLE; return NULL; }
     void* mapped = mmap(NULL, size, PROT_READ, MAP_PRIVATE, descriptor, 0);
     close(descriptor);
-    if (mapped == MAP_FAILED) return NULL;
+    if (mapped == MAP_FAILED) { s_last_open_reason = KANTA_SF_OPEN_ADDRESS_SPACE; return NULL; }
     size_t sample_count = sf_validate((const unsigned char*)mapped, size);
     munmap(mapped, size);
-    if (!sample_count) return NULL;
+    if (!sample_count) { s_last_open_reason = KANTA_SF_OPEN_BAD_STRUCTURE; return NULL; }
 
     // The sample data is streamed into the loader instead of being read into a second copy of
     // the whole file.
     FILE* file = fopen(path, "rb");
-    if (!file) return NULL;
+    if (!file) { s_last_open_reason = KANTA_SF_OPEN_UNREADABLE; return NULL; }
     struct tsf_stream stream = {
         .data = file,
         .read = (int(*)(void*, void*, unsigned int))&tsf_stream_stdio_read,
@@ -135,7 +147,8 @@ kanta_soundfont* kanta_sf_open(const char* path) {
     tsf* synth = tsf_load_internal(&stream, sample_count > 1);
     fclose(file);
 
-    if (!synth || tsf_get_presetcount(synth) == 0) { if (synth) tsf_close(synth); return NULL; }
+    if (!synth) { s_last_open_reason = KANTA_SF_OPEN_NO_MEMORY; return NULL; }
+    if (tsf_get_presetcount(synth) == 0) { tsf_close(synth); s_last_open_reason = KANTA_SF_OPEN_BAD_STRUCTURE; return NULL; }
 
     // Second line of defence: every decoded region must stay inside the decoded sample
     // buffer. sampleTotal is the post-decode frame count, so SF3/Ogg banks (which expand
@@ -147,27 +160,34 @@ kanta_soundfont* kanta_sf_open(const char* path) {
             // the loader keeps only one pad float after the decoded buffer, so a region
             // whose end (or loop end) comes within one float of the buffer end cannot be
             // rendered safely and must be rejected instead of reading past the pad.
+            // Loop points cannot escape the sample buffer: the loader clamps
+            // loop_start/loop_end to [0, end] and a loop is only enabled when
+            // start < end, so a disabled loop (start >= end) or a loop ending
+            // exactly at the region end (both occur in professional banks) is
+            // memory-safe. Only the region end can reach the buffer end:
+            // reject it, with the two extra floats Catmull-Rom reads ahead.
             if (region->offset >= region->end ||
                 (long)region->end + 2 > (long)synth->sampleTotal ||
-                (region->loop_mode &&
-                 (region->loop_start >= region->loop_end ||
-                  region->loop_end >= region->end))) {
+                (region->loop_mode && region->loop_start < region->loop_end &&
+                 region->loop_end > region->end)) {
                 tsf_close(synth);
+                s_last_open_reason = KANTA_SF_OPEN_BAD_STRUCTURE;
                 return NULL;
             }
         }
     }
 
     tsf_set_output(synth, TSF_STEREO_INTERLEAVED, 44100, -9.0f);
-    if (!tsf_set_max_voices(synth, 128)) { tsf_close(synth); return NULL; }
+    if (!tsf_set_max_voices(synth, 128)) { tsf_close(synth); s_last_open_reason = KANTA_SF_OPEN_NO_MEMORY; return NULL; }
     for (int channel = 0; channel < 16; ++channel) {
-        if (!tsf_channel_set_presetindex(synth, channel, 0)) { tsf_close(synth); return NULL; }
+        if (!tsf_channel_set_presetindex(synth, channel, 0)) { tsf_close(synth); s_last_open_reason = KANTA_SF_OPEN_NO_MEMORY; return NULL; }
     }
     tsf_channel_set_presetnumber(synth, 9, 0, 1);
 
     kanta_soundfont* result = malloc(sizeof(*result));
-    if (!result) { tsf_close(synth); return NULL; }
+    if (!result) { tsf_close(synth); s_last_open_reason = KANTA_SF_OPEN_NO_MEMORY; return NULL; }
     result->synth = synth;
+    s_last_open_reason = KANTA_SF_OPEN_OK;
     return result;
 }
 void kanta_sf_close(kanta_soundfont* bank) {

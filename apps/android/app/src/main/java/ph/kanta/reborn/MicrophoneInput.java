@@ -36,6 +36,75 @@ final class MicrophoneInput {
   }
 
   private static final int RATE = 48000;
+  private volatile int gainDb;
+  private volatile int gateDb = ph.kanta.reborn.core.MicrophoneInputDsp.GATE_OFF;
+  // Foreground-only selection, never persisted. Cleared on stop/failure/background.
+  private android.media.AudioDeviceInfo preferred;
+
+  int gainDb() { return gainDb; }
+  int gateDb() { return gateDb; }
+  void parameters(int gain, int gate) {
+    gainDb = ph.kanta.reborn.core.MicrophoneInputDsp.gainDb(gain);
+    gateDb = ph.kanta.reborn.core.MicrophoneInputDsp.gateDb(gate);
+  }
+
+  java.util.List<android.media.AudioDeviceInfo> inputs() {
+    java.util.List<android.media.AudioDeviceInfo> result = new java.util.ArrayList<>();
+    AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+    try {
+      for (android.media.AudioDeviceInfo device : audio.getDevices(AudioManager.GET_DEVICES_INPUTS))
+        if (device.isSource()) result.add(device);
+    } catch (RuntimeException unavailable) {
+      // Android can deny access to some device metadata; automatic selection remains available.
+    }
+    return result;
+  }
+
+  boolean selectInput(android.media.AudioDeviceInfo device) {
+    if (enabled()) return false;
+    preferred = null;
+    if (device == null) return true;
+    for (android.media.AudioDeviceInfo available : inputs()) {
+      if (available.getId() == device.getId() && available.getType() == device.getType()) {
+        preferred = available;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static String deviceLabel(android.media.AudioDeviceInfo device) {
+    if (device == null) return "Automatic";
+    String name = String.valueOf(device.getProductName()).replaceAll("[\\p{Cntrl}]", " ").trim();
+    if (name.isEmpty()) name = "Microphone";
+    String kind;
+    switch (device.getType()) {
+      case android.media.AudioDeviceInfo.TYPE_BUILTIN_MIC: kind = "Phone mic"; break;
+      case android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET: kind = "Wired headset mic"; break;
+      case android.media.AudioDeviceInfo.TYPE_USB_DEVICE:
+      case android.media.AudioDeviceInfo.TYPE_USB_HEADSET:
+      case android.media.AudioDeviceInfo.TYPE_USB_ACCESSORY: kind = "USB mic"; break;
+      case android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO: kind = "Bluetooth call mic"; break;
+      default: kind = "Microphone";
+    }
+    return kind + " · " + name.substring(0, Math.min(60, name.length())) + " (" + device.getId() + ")";
+  }
+
+  String inputStatus() {
+    Run run = active;
+    if (run != null) return run.routeLabel;
+    return "Selected: " + deviceLabel(preferred);
+  }
+
+  double inputRms() {
+    Run run = active;
+    return run != null && SystemClock.elapsedRealtime() - run.levelAt <= 750 ? run.level : 0;
+  }
+
+  boolean clipping() {
+    Run run = active;
+    return run != null && SystemClock.elapsedRealtime() < run.clipUntil;
+  }
   private final Context context;
   private final Handler main = new Handler(Looper.getMainLooper());
   private final ExecutorService capture =
@@ -65,7 +134,15 @@ final class MicrophoneInput {
     volatile boolean capturing;
     volatile Reading reading;
     volatile SpicePitchEstimator spice;
+    volatile double level;
+    volatile long levelAt, clipUntil;
+    volatile String routeLabel = "Checking microphone route…";
+    final android.media.AudioDeviceInfo preferred;
+    final ph.kanta.reborn.core.MicrophoneInputDsp dsp =
+        new ph.kanta.reborn.core.MicrophoneInputDsp(RATE);
     final float[] analysisFrame = new float[DryPitchDetector.FRAME_SIZE];
+
+    Run(android.media.AudioDeviceInfo preferred) { this.preferred = preferred; }
   }
 
   MicrophoneInput(Context context, Runnable changed, Consumer<String> notice, DrySink sink) {
@@ -73,6 +150,24 @@ final class MicrophoneInput {
     this.changed = changed;
     this.notice = notice;
     this.sink = sink;
+    // This service shares SessionController's application lifetime. Invalidate selections even
+    // while capture is off, so a disconnected device ID cannot silently be reused on reconnect.
+    AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+    audio.registerAudioDeviceCallback(new android.media.AudioDeviceCallback() {
+      @Override public void onAudioDevicesRemoved(android.media.AudioDeviceInfo[] removed) {
+        for (android.media.AudioDeviceInfo device : removed) {
+          if (!device.isSource()) continue;
+          Run run = active;
+          if (preferred != null && preferred.getId() == device.getId()) {
+            preferred = null;
+            if (run != null) stop();
+            notice.accept("Selected microphone disconnected. Choose an input again.");
+            changed.run();
+            return;
+          }
+        }
+      }
+    }, main);
   }
 
   boolean enabled() {
@@ -112,7 +207,7 @@ final class MicrophoneInput {
     if (enabled()
         || context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) return;
-    Run run = new Run();
+    Run run = new Run(preferred);
     active = run;
     capture.execute(() -> capture(run));
     changed.run();
@@ -121,6 +216,7 @@ final class MicrophoneInput {
   void stop() {
     Run run = active;
     active = null;
+    preferred = null;
     if (run != null) run.cancelled = true;
   }
 
@@ -170,6 +266,10 @@ final class MicrophoneInput {
       input = builder.build();
       if (input.getState() != AudioRecord.STATE_INITIALIZED) throw new IllegalStateException();
       if (!current(run)) return;
+      if (run.preferred != null && !input.setPreferredDevice(run.preferred)) {
+        fail(run, "Android could not select that microphone. Choose an input and try again.");
+        return;
+      }
       input.startRecording();
       if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
         throw new IllegalStateException();
@@ -180,11 +280,27 @@ final class MicrophoneInput {
         run.spice = null;
       }
       long lastData = SystemClock.elapsedRealtime(), lastAnalysis = 0, lastConfig = 0;
+      ph.kanta.reborn.core.InputRouteGuard route = new ph.kanta.reborn.core.InputRouteGuard(
+          run.preferred == null ? 0 : run.preferred.getId(), lastData);
       int filled = 0;
       while (current(run)) {
         int count = input.read(block, 0, block.length, AudioRecord.READ_NON_BLOCKING);
         long now = SystemClock.elapsedRealtime();
         if (count < 0) throw new IllegalStateException();
+        android.media.AudioDeviceInfo actual = input.getRoutedDevice();
+        ph.kanta.reborn.core.InputRouteGuard.State routeState =
+            route.observe(actual == null ? 0 : actual.getId(), now);
+        if (routeState == ph.kanta.reborn.core.InputRouteGuard.State.REJECTED) {
+          run.capturing = false;
+          run.reading = null;
+          fail(run, "Microphone route changed or could not be verified. Choose the input again.");
+          return;
+        }
+        if (routeState == ph.kanta.reborn.core.InputRouteGuard.State.WAITING) {
+          SystemClock.sleep(4);
+          continue; // Discard unverified PCM; never feed the monitor or scoring.
+        }
+        if (!run.capturing) run.routeLabel = "Using: " + deviceLabel(actual);
         if (now - lastConfig >= 200 && Build.VERSION.SDK_INT >= 29) {
           AudioRecordingConfiguration configuration = input.getActiveRecordingConfiguration();
           if (configuration != null && configuration.isClientSilenced()) {
@@ -202,7 +318,10 @@ final class MicrophoneInput {
         lastData = now;
         if (!current(run)) break;
         run.capturing = true;
-        sink.offer(block, count);
+        run.dsp.applyGain(block, count, gainDb);
+        run.level = run.dsp.rms();
+        run.levelAt = now;
+        if (run.dsp.clipped()) run.clipUntil = now + 1000;
         SpicePitchEstimator estimator = run.spice;
         if (estimator != null) estimator.offer(block, count);
         for (int i = 0; i < count; i++) {
@@ -216,6 +335,10 @@ final class MicrophoneInput {
             filled = 0;
           }
         }
+        // Dry analysis/scoring and SPICE have copied the gained, ungated input above.
+        // Only the independent monitor receives the smoothly gated signal.
+        run.dsp.applyMonitorGate(block, count, gateDb);
+        if (current(run)) sink.offer(block, count);
       }
     } catch (RuntimeException failure) {
       if (current(run))

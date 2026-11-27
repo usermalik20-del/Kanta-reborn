@@ -44,8 +44,10 @@ class HomeLayoutTests(unittest.TestCase):
 
     def test_placeholder_is_not_submitted_as_query(self):
         source = (JAVA / 'ui/HomeScreen.java').read_text()
-        self.assertIn('searchInput.setHint("Search songs, artists, or enter code")', source)
-        self.assertNotIn('searchInput.setText("Search songs, artists, or enter code")', source)
+        self.assertIn('searchInput.setHint(R.string.stage_search_hint)', source)
+        self.assertNotIn('searchInput.setText(R.string.stage_search_hint)', source)
+        strings = (ROOT / 'apps/android/app/src/main/res/values/strings.xml').read_text()
+        self.assertIn('<string name="stage_search_hint">Search song…</string>', strings)
 
     def test_home_keyboard_has_number_row_and_qwerty_without_toggle(self):
         source = (JAVA / 'ui/HomeScreen.java').read_text()
@@ -59,10 +61,14 @@ class HomeLayoutTests(unittest.TestCase):
             self.assertNotIn(f'"{action}"', keyboard)
         for label in ('stage_play', 'stage_reserve', 'stage_next', 'stage_stop'):
             self.assertIn(f'addSongAction(actions, R.string.{label}', source)
-        self.assertIn('searchRow.addView(clearSearch,', source)
-        # Batch F (959): the dashboard search field is retired (header/stage
-        # search replaced it); the transport row is fixed just above the keypad.
-        self.assertIn('searchRow.setVisibility(GONE)', source)
+        self.assertIn('searchRow.addView(searchInput, searchParams)', source)
+        self.assertNotIn('searchRow.setVisibility(GONE)', source)
+        self.assertEqual(1, source.count('new EditText(context)'))
+        self.assertLess(source.index('addView(searchRow,'), source.index('addView(actionScroll,'))
+        self.assertIn('searchRow.setPaddingRelative(dp(16), dp(4), dp(16), dp(4))', source)
+        self.assertIn('new LayoutParams(0, dp(40), 1f)', source)
+        self.assertIn('searchParams.setMarginStart(dp(12))', source)
+        self.assertIn('searchParams.setMarginEnd(dp(12))', source)
         self.assertLess(source.index('addView(actionScroll,'), source.index('addView(keyboard,'))
         self.assertIn('addAdjustments(actions, R.string.stage_key_short', keyboard)
         self.assertIn('R.string.stage_tempo_short', keyboard)
@@ -71,7 +77,8 @@ class HomeLayoutTests(unittest.TestCase):
         self.assertIn('addKey(row, "−"', keyboard)
         self.assertIn('addKey(row, "+"', keyboard)
         self.assertIn('listener.onBackspace()', keyboard)
-        self.assertIn('clearSearchText();', source)
+        self.assertIn('searchInput.getText().delete(start - 1, start)', source)
+        self.assertNotIn('stageSearchClearTask', (JAVA / 'MainActivity.java').read_text())
 
     def test_results_are_docked_above_stage_without_a_panel_background(self):
         screen = (JAVA / 'ui/HomeScreen.java').read_text()
@@ -171,8 +178,10 @@ class HomeLayoutTests(unittest.TestCase):
         self.assertNotIn('stagePane.addView(embeddedControls', build)
         self.assertNotIn('stageLayers.addView(embeddedControls', build)
         self.assertNotIn('utilities.addView(embeddedControls', build)
-        # Landscape has no embedded controls at all.
+        # Landscape controls live in a sibling utility column, never in the Stage.
         self.assertIn('if (!landscape) {', build)
+        self.assertIn('utilityPane.addView(embeddedControls', build)
+        self.assertIn('main.addView(utilityPane, contentParams)', build)
         expanded = activity.split('private void setStageControlsExpanded(', 1)[1].split('\n  }', 1)[0]
         self.assertNotIn('pageScroll.scrollTo', expanded)
         self.assertIn('pinStageForControls(expanded)', expanded)

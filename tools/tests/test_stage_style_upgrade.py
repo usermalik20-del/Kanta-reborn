@@ -235,6 +235,28 @@ class SoundFontBudgetContractTests(unittest.TestCase):
                        'budget_checks()'):
             self.assertIn(marker, test)
 
+    def test_open_failure_reason_reaches_importer(self):
+        # A memory refusal at import time must not be reported as a bad file:
+        # the loader records a reason and the importer surfaces it truthfully.
+        c = (ROOT / 'apps/android/app/src/main/cpp/soundfont.c').read_text(encoding='utf-8')
+        for marker in ('int kanta_sf_last_open_reason(void)',
+                       'KANTA_SF_OPEN_NO_MEMORY',
+                       'KANTA_SF_OPEN_BAD_STRUCTURE',
+                       'KANTA_SF_OPEN_OK'):
+            self.assertIn(marker, c)
+        self.assertIn(
+            'if (!synth) { s_last_open_reason = KANTA_SF_OPEN_NO_MEMORY; return NULL; }', c)
+        header = (ROOT / 'apps/android/app/src/main/cpp/soundfont.h').read_text(encoding='utf-8')
+        self.assertIn('int kanta_sf_last_open_reason(void);', header)
+        jni = (ROOT / 'apps/android/app/src/main/cpp/soundfont-jni.c').read_text(encoding='utf-8')
+        self.assertIn('Java_ph_kanta_reborn_NativeSoundFont_openReason', jni)
+        java = src('NativeSoundFont.java')
+        self.assertIn('static native int openReason();', java)
+        self.assertIn('OPEN_NO_MEMORY = 4', java)
+        repo = src('LibraryRepository.java')
+        self.assertIn('NativeSoundFont.openReason() == NativeSoundFont.OPEN_NO_MEMORY', repo)
+        self.assertIn('not enough free device memory to keep this SoundFont loaded', repo)
+
     def test_embedded_stage_receives_the_style(self):
         # The embedded renderer must not hardcode the old white/gold look.
         lyric = (JAVA / 'stage/LyricStage.java').read_text(encoding='utf-8')

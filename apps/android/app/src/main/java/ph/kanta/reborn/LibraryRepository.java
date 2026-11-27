@@ -559,7 +559,13 @@ final class LibraryRepository {
       }
       notifyProgress(fileSize, fileSize, "Validating structure...");
       long test = NativeSoundFont.open(temp.getAbsolutePath());
-      if (test == 0) throw new IOException("Unsupported SoundFont structure");
+      if (test == 0) {
+        if (NativeSoundFont.openReason() == NativeSoundFont.OPEN_NO_MEMORY)
+          throw new IOException(
+              "There is not enough free device memory to keep this SoundFont loaded. "
+                  + "Close other apps and try again.");
+        throw new IOException("Unsupported SoundFont structure");
+      }
       NativeSoundFont.close(test);
       notifyProgress(fileSize, fileSize, "Finalizing...");
       StringBuilder key = new StringBuilder();
