@@ -712,7 +712,7 @@ public final class StagePresenterImpl extends FrameLayout
     // While the reserved song waits for its first cue, the standby interlude owns the
     // primary line; animated interludes keep their text line in the embedded panel.
     lyricStage.setInterludeText(
-        session.preSongInterludeActive() ? session.interludeText() : null);
+        session.preSongInterludeActive() ? session.resolvedInterludeText() : null);
     android.graphics.drawable.Drawable interlude =
         session.preSongInterludeActive() ? session.interludeImage() : null;
     lyricStage.setInterludeImage(

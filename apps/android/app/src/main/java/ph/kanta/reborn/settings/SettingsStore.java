@@ -71,6 +71,9 @@ public final class SettingsStore {
   public static final String KEY_OLED_SHIFT = "display.oledShift";
   public static final String KEY_SAFE_ZONE_PERCENT = "display.safeZonePercent";
 
+  // Group: interlude quick messages (custom, user order)
+  public static final String KEY_INTERLUDE_QUICK_MESSAGES = "interlude.quickMessages";
+
   // Group: mic
   public static final String KEY_MIC_MONITOR_LEVEL = "mic.monitorLevel";
   public static final String KEY_MIC_GATE_THRESHOLD = "mic.gateThreshold";
@@ -298,6 +301,14 @@ public final class SettingsStore {
   }
   public void setSafeZonePercent(int v) {
     prefs.edit().putInt(KEY_SAFE_ZONE_PERCENT, Math.max(0, Math.min(10, v))).apply();
+  }
+
+  /** Custom interlude quick messages as a raw JSON string array, in user order. */
+  public String getInterludeQuickMessagesRaw() {
+    return prefs.getString(KEY_INTERLUDE_QUICK_MESSAGES, "");
+  }
+  public void setInterludeQuickMessagesRaw(String raw) {
+    prefs.edit().putString(KEY_INTERLUDE_QUICK_MESSAGES, raw).apply();
   }
 
   public void setLyricSyncOffsetOverride(String songId, int ms) {

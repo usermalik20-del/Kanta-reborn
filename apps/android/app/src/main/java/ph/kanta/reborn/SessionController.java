@@ -442,6 +442,32 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   public synchronized void setOledShift(boolean v) { settings.setOledShift(v); }
   public synchronized int safeZonePercent() { return settings.getSafeZonePercent(); }
   public synchronized void setSafeZonePercent(int v) { settings.setSafeZonePercent(v); }
+
+  public synchronized String interludeQuickMessagesRaw() {
+    return settings.getInterludeQuickMessagesRaw();
+  }
+  public synchronized void setInterludeQuickMessagesRaw(String raw) {
+    settings.setInterludeQuickMessagesRaw(raw);
+  }
+
+  /** Resolves live placeholders in an interlude message for display. */
+  public synchronized String resolveInterludeTokens(String raw) {
+    if (raw == null) return null;
+    String out = raw;
+    ReservationQueue.Entry next = queue.peek();
+    out = out.replace("{next_song}", next != null && next.song != null && next.song.title != null
+        ? next.song.title : "");
+    out = out.replace("{next_artist}", next != null && next.singer != null ? next.singer : "");
+    out = out.replace("{queue_count}", String.valueOf(queue.snapshot().size()));
+    out = out.replace("{time}", new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
+        .format(new java.util.Date()));
+    return out;
+  }
+
+  /** The stored interlude message with live placeholders resolved. */
+  public synchronized String resolvedInterludeText() {
+    return resolveInterludeTokens(settings.getInterludeText());
+  }
   public synchronized boolean lyricShowWatermark() { return settings.getLyricShowWatermark(); }
   public synchronized void setLyricShowWatermark(boolean value) {
     settings.setLyricShowWatermark(value);

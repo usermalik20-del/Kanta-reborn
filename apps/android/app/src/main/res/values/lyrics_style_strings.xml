@@ -29,6 +29,9 @@
     <string name="lyrics_show_countdown">Vocal countdown dots</string>
     <string name="lyrics_reset">Reset lyrics style</string>
     <string name="interlude_presets">Quick messages</string>
+    <string name="interlude_message_add">+ Add</string>
+    <string name="interlude_message_rename">Rename</string>
+    <string name="interlude_message_delete">Delete</string>
     <string name="interlude_preset_ready">Ready for Next Song</string>
     <string name="interlude_preset_birthday">Happy Birthday!</string>
     <string name="interlude_preset_singer">Next Singer Ready!</string>

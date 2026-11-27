@@ -2773,6 +2773,134 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     refreshVisualsPreview();
   }
 
+  /** Horizontal quick-message chips: 3 built-ins + custom (editable) + Add. */
+  private void addQuickMessageChips(LinearLayout target, final EditText message) {
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    String[] builtIns = {getString(R.string.interlude_preset_ready),
+        getString(R.string.interlude_preset_birthday), getString(R.string.interlude_preset_singer)};
+    java.util.List<String> customs = parseQuickMessages(session.interludeQuickMessagesRaw());
+    for (int i = 0; i < builtIns.length; i++) {
+      final String preset = builtIns[i];
+      row.addView(quickMessageChip(preset, v -> {
+        message.setText(preset);
+        session.setInterludeText(preset);
+        refreshVisualsPreview();
+      }));
+    }
+    for (int i = 0; i < customs.size(); i++) {
+      final int index = i;
+      final String custom = customs.get(i);
+      Button chip = quickMessageChip(custom, v -> {
+        message.setText(custom);
+        session.setInterludeText(custom);
+        refreshVisualsPreview();
+      });
+      chip.setOnLongClickListener(view -> {
+        new AlertDialog.Builder(this)
+            .setTitle(custom)
+            .setItems(new String[] {getString(R.string.interlude_message_rename),
+                getString(R.string.interlude_message_delete)},
+                (dialog, which) -> {
+                  if (which == 0) promptQuickMessageEdit(index, customs, message);
+                  else removeQuickMessage(index, customs);
+                })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+        return true;
+      });
+      row.addView(chip);
+    }
+    Button add = KantaTheme.secondaryButton(this, getString(R.string.interlude_message_add),
+        v -> promptQuickMessageAdd(customs, message));
+    add.setTag("kanta.interlude.preset.add");
+    add.setAllCaps(false);
+    add.setTextSize(11);
+    add.setMinWidth(0);
+    add.setMinHeight(dp(44));
+    add.setPadding(dp(6), dp(8), dp(6), dp(8));
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+    params.setMargins(dp(3), 0, dp(3), 0);
+    row.addView(add, params);
+    target.addView(row);
+  }
+
+  private Button quickMessageChip(String label, android.view.View.OnClickListener click) {
+    Button chip = KantaTheme.secondaryButton(this, label, click);
+    chip.setTag("kanta.interlude.preset");
+    chip.setAllCaps(false);
+    chip.setTextSize(11);
+    chip.setMinWidth(0);
+    chip.setMinHeight(dp(44));
+    chip.setPadding(dp(6), dp(8), dp(6), dp(8));
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+    params.setMargins(dp(3), 0, dp(3), 0);
+    return chip;
+  }
+
+  private java.util.List<String> parseQuickMessages(String raw) {
+    java.util.List<String> out = new java.util.ArrayList<>();
+    try {
+      org.json.JSONArray arr = new org.json.JSONArray(raw == null || raw.isEmpty() ? "[]" : raw);
+      for (int i = 0; i < arr.length(); i++) out.add(arr.getString(i));
+    } catch (Exception ignored) { }
+    return out;
+  }
+
+  private String quickMessagesRaw(java.util.List<String> list) {
+    org.json.JSONArray arr = new org.json.JSONArray();
+    for (String s : list) { try { arr.put(s); } catch (Exception ignored) { } }
+    return arr.toString();
+  }
+
+  private void promptQuickMessageAdd(final java.util.List<String> customs, final EditText message) {
+    EditText input = new EditText(this);
+    input.setHint(R.string.interlude_message_hint);
+    input.setSingleLine(true);
+    input.setMinHeight(dp(48));
+    new AlertDialog.Builder(this)
+        .setTitle(getString(R.string.interlude_message_add))
+        .setView(input)
+        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+          String value = input.getText().toString().trim();
+          if (value.isEmpty()) return;
+          customs.add(value);
+          session.setInterludeQuickMessagesRaw(quickMessagesRaw(customs));
+          message.setText(value);
+          session.setInterludeText(value);
+          render();
+          refreshVisualsPreview();
+        })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
+  }
+
+  private void promptQuickMessageEdit(int index, final java.util.List<String> customs,
+      final EditText message) {
+    EditText input = new EditText(this);
+    input.setText(customs.get(index));
+    input.setSingleLine(true);
+    input.setMinHeight(dp(48));
+    new AlertDialog.Builder(this)
+        .setTitle(getString(R.string.interlude_message_rename))
+        .setView(input)
+        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+          String value = input.getText().toString().trim();
+          if (value.isEmpty()) return;
+          customs.set(index, value);
+          session.setInterludeQuickMessagesRaw(quickMessagesRaw(customs));
+          render();
+        })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
+  }
+
+  private void removeQuickMessage(int index, final java.util.List<String> customs) {
+    customs.remove(index);
+    session.setInterludeQuickMessagesRaw(quickMessagesRaw(customs));
+    render();
+  }
+
   private void addInterludeVisualControls(LinearLayout target) {
     target.addView(sectionHeader(getString(R.string.interlude_heading)));
     target.addView(text(getString(R.string.interlude_intro), 14, KantaTheme.TEXT_SECONDARY));
@@ -2801,28 +2929,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     target.addView(message, new LinearLayout.LayoutParams(-1, -2));
 
     target.addView(text(getString(R.string.interlude_presets), 15, KantaTheme.TEXT_PRIMARY));
-    LinearLayout presets = new LinearLayout(this);
-    presets.setOrientation(LinearLayout.HORIZONTAL);
-    String[] presetMessages = {getString(R.string.interlude_preset_ready),
-        getString(R.string.interlude_preset_birthday), getString(R.string.interlude_preset_singer)};
-    for (int i = 0; i < presetMessages.length; i++) {
-      final String preset = presetMessages[i];
-      Button chip = KantaTheme.secondaryButton(this, preset, v -> {
-        message.setText(preset);
-        session.setInterludeText(preset);
-        refreshVisualsPreview();
-      });
-      chip.setTag("kanta.interlude.preset." + i);
-      chip.setAllCaps(false);
-      chip.setTextSize(11);
-      chip.setMinWidth(0);
-      chip.setMinHeight(dp(44));
-      chip.setPadding(dp(6), dp(8), dp(6), dp(8));
-      LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1f);
-      params.setMargins(dp(3), 0, dp(3), 0);
-      presets.addView(chip, params);
-    }
-    target.addView(presets);
+    addQuickMessageChips(target, message);
 
     target.addView(sectionHeader(getString(R.string.interlude_color)));
     addColorSwatches(target, "kanta.interlude.color", session.interludeTextColor(), color -> {
@@ -2943,7 +3050,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (tab == KantaVisualsScreen.INTERLUDE) {
       preview.setPlaceholder("");
       preview.setBackground(previewBackgroundBitmap(tab));
-      preview.setInterlude(session.interludeText(), session.interludeImage(), fonts.typeface(),
+      preview.setInterlude(session.resolvedInterludeText(), session.interludeImage(), fonts.typeface(),
           session.interludeTextColor(), session.interludeAnimation(),
           session.interludeImageScale(), session.interludeImagePlacement(),
           session.interludeShowWatermark());

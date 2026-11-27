@@ -1,3 +1,26 @@
+## Editable interlude quick messages + live tokens (2026-11-27)
+
+The three static interlude quick-message chips became a horizontal editable set: the
+same three built-ins plus unlimited user messages, persisted in user order as a JSON
+array in SettingsStore (no new backend). Tapping any chip fills the message field and
+the live preview; long-pressing a custom chip opens a Rename / Delete sheet; a "+ Add"
+chip prompts for a new message. The interlude message also supports live placeholder
+tokens resolved at render time in all three surfaces (embedded LyricStage via the
+presenter, fullscreen StageView, and the MiniStagePreview): {next_song} (queue head
+title), {next_artist} (queue head singer), {queue_count} (reserved songs), and {time}
+(HH:mm), so hosts can write phrases like "Next up: {next_song}" or "It is {time} -
+break". Resolution lives in SessionController.resolveInterludeTokens/resolvedInterludeText
+and is applied where the text is pushed/drawn, never in the stored raw value.
+
+Files changed:
+- settings/SettingsStore.java - interlude.quickMessages key + raw accessors.
+- SessionController.java - quick-message raw accessors + resolveInterludeTokens /
+  resolvedInterludeText (queue + clock based).
+- stage/StagePresenterImpl.java, StageView.java, ui/MiniStagePreview.java push path -
+  resolved interlude text.
+- MainActivity.java - addQuickMessageChips + add/edit/delete dialogs.
+- res/values/lyrics_style_strings.xml - add/rename/delete labels.
+
 ## Theme presets + display & session controls (2026-11-27)
 
 User theme presets: a horizontal preset bar sits above the Intermission editors with a

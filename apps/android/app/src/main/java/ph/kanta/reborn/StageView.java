@@ -168,7 +168,7 @@ final class StageView extends View {
       boolean interludeVisible = interlude && interludeAlpha > 0f;
       String current = session.current == null ? "Your music. Your stage." : cue != null ? cue.line
           : session.lyrics.isEmpty() ? session.current.title
-          : (interludeVisible ? session.interludeText() : "");
+          : (interludeVisible ? session.resolvedInterludeText() : "");
       MidiLyrics.Cue nextCue = cue != null && index + 1 < session.lyrics.size()
           ? session.lyrics.get(index + 1) : null;
       String next = session.current == null ? "Reserve your next song in CONTROL"
