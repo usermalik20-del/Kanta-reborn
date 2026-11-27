@@ -545,6 +545,18 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     publish();
   }
   public synchronized boolean interludeShowVisualizer() { return settings.getInterludeShowVisualizer(); }
+  public synchronized String interludeVisualizerMode() { return settings.getInterludeVisualizerMode(); }
+  public synchronized int interludeVisualizerSensitivity() { return settings.getInterludeVisualizerSensitivity(); }
+  public synchronized String interludeUpNextStyle() { return settings.getInterludeUpNextStyle(); }
+  public synchronized boolean interludeUpNextCount() { return settings.getInterludeUpNextCount(); }
+  public synchronized boolean interludeBgmEnabled() { return settings.getInterludeBgm(); }
+  public synchronized boolean interludeChimeEnabled() { return settings.getInterludeChime(); }
+  public synchronized void setInterludeVisualizerMode(String v) { settings.setInterludeVisualizerMode(v); publish(); }
+  public synchronized void setInterludeVisualizerSensitivity(int v) { settings.setInterludeVisualizerSensitivity(v); publish(); }
+  public synchronized void setInterludeUpNextStyle(String v) { settings.setInterludeUpNextStyle(v); publish(); }
+  public synchronized void setInterludeUpNextCount(boolean v) { settings.setInterludeUpNextCount(v); publish(); }
+  public synchronized void setInterludeBgm(boolean v) { settings.setInterludeBgm(v); updateIntermission(); }
+  public synchronized void setInterludeChime(boolean v) { settings.setInterludeChime(v); }
   public synchronized void setInterludeShowVisualizer(boolean value) {
     settings.setInterludeShowVisualizer(value);
     publish();
@@ -1582,6 +1594,10 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     updateIntermission();
   }
 
+  private void playTransitionChime() {
+    if (settings.getInterludeChime()) party.trigger(PartySounds.DING);
+  }
+
   private void updateIntermission() {
     Song selected =
         songs.stream()
@@ -1594,7 +1610,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
             && !auxiliaryInterrupted
             && current == null
             && !loading
-            && countingEntry == null;
+            && countingEntry == null
+            && settings.getInterludeBgm();
     if (allowed && audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
       allowed = false;
     if (selected != null && repository != null) {
@@ -1913,7 +1930,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                           if (!startPlan.startAudioImmediately) {
                             // Unknown melody (non-MIDI or no cues): legacy behavior counts
                             // first and starts the audio when the count ends.
-                            Runnable dismiss = countdownHost.show(countdownSeconds,
+                            playTransitionChime();
+                          Runnable dismiss = countdownHost.show(countdownSeconds,
                                 () -> startReady(candidate));
                             countdownEndsAt = SystemClock.elapsedRealtime()
                                 + countdownSeconds * 1000L;
@@ -1936,6 +1954,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
                                   scheduledMelodyCountdown = null;
                                   if (startToken != generation || !foreground
                                       || (player != candidate && pending != candidate)) return;
+                                  playTransitionChime();
                                   Runnable showDismiss = countdownHost.show(countdownSeconds,
                                       () -> {});
                                   countdownEndsAt = SystemClock.elapsedRealtime()

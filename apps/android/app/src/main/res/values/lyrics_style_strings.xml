@@ -47,4 +47,18 @@
     <string name="interlude_show_up_next">Show Up Next song banner</string>
     <string name="interlude_show_visualizer">Reactive audio visualizer bars</string>
     <string name="interlude_show_watermark">Show KANTA watermark</string>
+    <string name="upnext_style_heading">Up Next style</string>
+    <string name="upnext_style_ticker">Ticker Bar</string>
+    <string name="upnext_style_card">Floating Card</string>
+    <string name="upnext_style_badge">Corner Badge</string>
+    <string name="upnext_show_count">Show songs remaining in queue</string>
+    <string name="visualizer_style_heading">Visualizer style</string>
+    <string name="visualizer_mode_bars">Classic EQ Bars</string>
+    <string name="visualizer_mode_ring">Circular Bass Ring</string>
+    <string name="visualizer_mode_wave">Smooth Waveform</string>
+    <string name="visualizer_sensitivity_value">Sensitivity: %1$d%%</string>
+    <string name="party_audio_heading">Ambient interlude audio</string>
+    <string name="interlude_bgm">Background BGM loop</string>
+    <string name="interlude_chime">Transition chime into countdown</string>
+    <string name="interlude_bgm_help">Plays the lounge loop only while the stage is in standby interlude; it stops when a song starts.</string>
 </resources>

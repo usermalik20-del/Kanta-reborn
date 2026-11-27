@@ -14,6 +14,8 @@ public final class UpNextTicker extends FrameLayout {
   private static final int MAX_ITEMS = 8;
   private final TextView text;
   private boolean visualActive = true;
+  private String style = "ticker";
+  private boolean showCount = false;
 
   public UpNextTicker(Context context) {
     super(context);
@@ -48,6 +50,8 @@ public final class UpNextTicker extends FrameLayout {
     }
     if (entries.size() > MAX_ITEMS)
       label.append("   •   +").append(entries.size() - MAX_ITEMS).append(" more");
+    if (showCount && !entries.isEmpty())
+      label.append("   •   ").append(entries.size()).append(" in queue");
     String next = label.toString();
     // Clock/session publications must not reset the marquee or accessibility text.
     if (!TextUtils.equals(text.getText(), next)) text.setText(next);
@@ -67,9 +71,34 @@ public final class UpNextTicker extends FrameLayout {
     updateScrolling();
   }
 
+  public void setStyle(String s) {
+    style = (s == null || s.isEmpty()) ? "ticker" : s;
+    applyStyle();
+    updateScrolling();
+  }
+
+  public void setShowCount(boolean v) { showCount = v; }
+
+  private void applyStyle() {
+    text.setEllipsize(style.equals("ticker") ? TextUtils.TruncateAt.MARQUEE
+        : TextUtils.TruncateAt.END);
+    text.setMarqueeRepeatLimit(style.equals("ticker") ? -1 : 0);
+    if (style.equals("card")) {
+      text.setTextSize(18);
+      text.setGravity(Gravity.CENTER);
+    } else if (style.equals("badge")) {
+      text.setTextSize(12);
+      text.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+    } else {
+      text.setTextSize(14);
+      text.setGravity(Gravity.CENTER_VERTICAL);
+    }
+  }
+
   private void updateScrolling() {
     if (text != null)
-      text.setSelected(visualActive && isAttachedToWindow() && isShown()
+      text.setSelected(style.equals("ticker") && visualActive
+          && isAttachedToWindow() && isShown()
           && getWindowVisibility() == VISIBLE);
   }
 

@@ -1,5 +1,6 @@
 ## 2026-11-27 - Interlude typography and media (964)
-Interlude media/typography (964): InterludeStore owns the video slot (muted, REPEAT_MODE_ONE, backgrounded); StageSurface hosts an InterludeVideoHost TextureView (fullscreen/PiP); LyricStage/StageView draw glow/shadow, marquee speedMul, image scale, and side-by-side placement from StageStyle.
+Interlude media/typography (964): InterludeStore owns the video slot (muted, REPEAT_MODE_ONE, backgrounded); StageSurface hosts an InterludeVideoHost TextureView (fullscreen/PiP); LyricStage/StageView draw glow/shadow, marquee speedMul, image scale, and side-by-side placement from StageStyle.965: UpNextTicker setStyle/setShowCount (presentation variants + count, inset logic unchanged); StageView.drawVisualizerBars branches bars/ring/wave with a sensitivity gain; SessionController BGM gate on updateIntermission allowed + playTransitionChime at both countdown entry points. No new media stack; reuses PartyAudio Ding pad and the standby loop.
+
 
 ## Editable interlude quick messages + live tokens (2026-11-27)
 

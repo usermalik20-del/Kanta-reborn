@@ -1,5 +1,6 @@
 ## 2026-11-27 - Interlude typography and media (964)
-Updated test_stage_style_upgrade.py (quick-message chips + tokens in SessionController; marquee speedMul base pace) and test_android_home_layout.py (compact fixed-bottom keypad, retired dashboard search field). javac/java PATH pinned to JDK17 for subprocess contracts.
+Updated test_stage_style_upgrade.py (quick-message chips + tokens in SessionController; marquee speedMul base pace) and test_android_home_layout.py (compact fixed-bottom keypad, retired dashboard search field). javac/java PATH pinned to JDK17 for subprocess contracts.965: new tools/tests/test_interlude_overlays_batch_g.py pins settings keys, session accessors, visualizer modes+sensitivity in StageView, up-next style/count flow, BGM gate, and chime at both countdown sites; updated test_android_up_next_ticker.py for the ticker-only scroll gate.
+
 
 ## Editable interlude quick messages + live tokens (2026-11-27)
 

@@ -1,5 +1,8 @@
 ## 2026-11-27 - Interlude typography, media, and video (964)
-Batch F: the Interlude tab shares the lyric font picker (KANTA Default, Bold Videoke, Clean Sans, Retro LED, Classic Serif, custom .ttf), adds a glow toggle and a drop-shadow slider for text legibility over bright media, a marquee speed (Slow/Normal/Fast) and direction (RTL/LTR) selector, an image scale slider (50%-150%), and image placement (Above / Dimmed background / Side-by-side in landscape). A new looping-video slot (silent, muted, REPEAT_MODE_ONE, paused when backgrounded) renders behind the interlude in both the embedded stage and fullscreen.
+Batch F: the Interlude tab shares the lyric font picker (KANTA Default, Bold Videoke, Clean Sans, Retro LED, Classic Serif, custom .ttf), adds a glow toggle and a drop-shadow slider for text legibility over bright media, a marquee speed (Slow/Normal/Fast) and direction (RTL/LTR) selector, an image scale slider (50%-150%), and image placement (Above / Dimmed background / Side-by-side in landscape). A new looping-video slot (silent, muted, REPEAT_MODE_ONE, paused when backgrounded) renders behind the interlude in both the embedded stage and fullscreen.## 2026-11-27 - Interlude & stage overlays (965)
+Batch G of the interlude/overlay spec: (1) Up Next banner now has a style picker (Ticker Bar / Floating Card / Corner Badge presentation variants) plus an optional songs-remaining count; (2) the reactive interlude visualizer gained a style selector (Classic EQ Bars / Circular Bass Ring / Smooth Waveform) and a sensitivity slider; (3) new Ambient interlude audio section with a Background BGM loop toggle (gates the existing standby lounge loop) and a Transition Chime that plays the Ding pad when the interlude hands off into a vocal countdown. Auto-start interlude timer deferred to the next sub-batch.
+
+
 
 
 ## Editable interlude quick messages + live tokens (2026-11-27)

@@ -58,6 +58,12 @@ public final class SettingsStore {
   public static final String KEY_INTERLUDE_IMAGE_PLACEMENT = "interlude.imagePlacement";
   public static final String KEY_INTERLUDE_SHOW_UP_NEXT = "interlude.showUpNext";
   public static final String KEY_INTERLUDE_SHOW_VISUALIZER = "interlude.showVisualizer";
+  public static final String KEY_INTERLUDE_VISUALIZER_MODE = "interlude.visualizerMode";
+  public static final String KEY_INTERLUDE_VISUALIZER_SENSITIVITY = "interlude.visualizerSensitivity";
+  public static final String KEY_INTERLUDE_UP_NEXT_STYLE = "interlude.upNextStyle";
+  public static final String KEY_INTERLUDE_UP_NEXT_COUNT = "interlude.upNextCount";
+  public static final String KEY_INTERLUDE_BGM = "interlude.bgm";
+  public static final String KEY_INTERLUDE_CHIME = "interlude.chime";
   public static final String KEY_INTERLUDE_SHOW_WATERMARK = "interlude.showWatermark";
 
   // Group: stage readability
@@ -355,6 +361,18 @@ public final class SettingsStore {
   public void setInterludeMarqueeSpeed(int v) { prefs.edit().putInt(KEY_INTERLUDE_MARQUEE_SPEED, Math.max(0, Math.min(2, v))).apply(); }
   public String getInterludeMarqueeDir() { return "ltr".equals(prefs.getString(KEY_INTERLUDE_MARQUEE_DIR, "rtl")) ? "ltr" : "rtl"; }
   public void setInterludeMarqueeDir(String v) { prefs.edit().putString(KEY_INTERLUDE_MARQUEE_DIR, "ltr".equals(v) ? "ltr" : "rtl").apply(); }
+  public String getInterludeVisualizerMode() { return prefs.getString(KEY_INTERLUDE_VISUALIZER_MODE, "bars"); }
+  public void setInterludeVisualizerMode(String v) { prefs.edit().putString(KEY_INTERLUDE_VISUALIZER_MODE, v == null ? "bars" : v).apply(); }
+  public int getInterludeVisualizerSensitivity() { return prefs.getInt(KEY_INTERLUDE_VISUALIZER_SENSITIVITY, 50); }
+  public void setInterludeVisualizerSensitivity(int v) { prefs.edit().putInt(KEY_INTERLUDE_VISUALIZER_SENSITIVITY, v).apply(); }
+  public String getInterludeUpNextStyle() { return prefs.getString(KEY_INTERLUDE_UP_NEXT_STYLE, "ticker"); }
+  public void setInterludeUpNextStyle(String v) { prefs.edit().putString(KEY_INTERLUDE_UP_NEXT_STYLE, v == null ? "ticker" : v).apply(); }
+  public boolean getInterludeUpNextCount() { return prefs.getBoolean(KEY_INTERLUDE_UP_NEXT_COUNT, false); }
+  public void setInterludeUpNextCount(boolean v) { prefs.edit().putBoolean(KEY_INTERLUDE_UP_NEXT_COUNT, v).apply(); }
+  public boolean getInterludeBgm() { return prefs.getBoolean(KEY_INTERLUDE_BGM, false); }
+  public void setInterludeBgm(boolean v) { prefs.edit().putBoolean(KEY_INTERLUDE_BGM, v).apply(); }
+  public boolean getInterludeChime() { return prefs.getBoolean(KEY_INTERLUDE_CHIME, false); }
+  public void setInterludeChime(boolean v) { prefs.edit().putBoolean(KEY_INTERLUDE_CHIME, v).apply(); }
   public void setInterludeImageScale(float v) {
     prefs.edit().putFloat(KEY_INTERLUDE_IMAGE_SCALE, Math.max(0.2f, Math.min(1.6f, v))).apply();
   }

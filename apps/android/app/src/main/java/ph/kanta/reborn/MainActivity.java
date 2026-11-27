@@ -3087,6 +3087,52 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           session.setInterludeShowWatermark(checked);
           refreshVisualsPreview();
         }));
+    // Up Next banner style + queue count (Batch G)
+    if (session.interludeShowUpNext()) {
+      target.addView(sectionHeader(getString(R.string.upnext_style_heading)));
+      String upStyle = session.interludeUpNextStyle();
+      target.addView(pillGroup("kanta.interlude.upnext.style",
+          new String[] { getString(R.string.upnext_style_ticker),
+              getString(R.string.upnext_style_card), getString(R.string.upnext_style_badge) },
+          "card".equals(upStyle) ? 1 : "badge".equals(upStyle) ? 2 : 0,
+          index -> { session.setInterludeUpNextStyle(
+              new String[] { "ticker", "card", "badge" }[index]); refreshVisualsPreview(); }));
+      target.addView(styleToggle("kanta.interlude.upnext.count",
+          getString(R.string.upnext_show_count), session.interludeUpNextCount(),
+          (button, checked) -> { session.setInterludeUpNextCount(checked); refreshVisualsPreview(); }));
+    }
+    // Visualizer mode + sensitivity (Batch G)
+    if (session.interludeShowVisualizer()) {
+      target.addView(sectionHeader(getString(R.string.visualizer_style_heading)));
+      String viz = session.interludeVisualizerMode();
+      target.addView(pillGroup("kanta.interlude.visualizer.mode",
+          new String[] { getString(R.string.visualizer_mode_bars),
+              getString(R.string.visualizer_mode_ring), getString(R.string.visualizer_mode_wave) },
+          "ring".equals(viz) ? 1 : "wave".equals(viz) ? 2 : 0,
+          index -> { session.setInterludeVisualizerMode(
+              new String[] { "bars", "ring", "wave" }[index]); refreshVisualsPreview(); }));
+      TextView sensLabel = text(getString(R.string.visualizer_sensitivity_value,
+          session.interludeVisualizerSensitivity()), 15, KantaTheme.TEXT_PRIMARY);
+      sensLabel.setTag("kanta.interlude.visualizer.sens");
+      SeekBar sensSeek = new SeekBar(this);
+      sensSeek.setTag("kanta.interlude.visualizer.sens.slider");
+      sensSeek.setMax(100);
+      sensSeek.setProgress(session.interludeVisualizerSensitivity());
+      sensSeek.setOnSeekBarChangeListener(seekListener(v -> {
+        session.setInterludeVisualizerSensitivity(v);
+        sensLabel.setText(getString(R.string.visualizer_sensitivity_value, v));
+        refreshVisualsPreview();
+      }));
+      target.addView(sensLabel);
+      target.addView(sensSeek);
+    }
+    // Ambient interlude audio (Batch G)
+    target.addView(sectionHeader(getString(R.string.party_audio_heading)));
+    target.addView(styleToggle("kanta.interlude.bgm", getString(R.string.interlude_bgm),
+        session.interludeBgmEnabled(), (button, checked) -> session.setInterludeBgm(checked)));
+    target.addView(styleToggle("kanta.interlude.chime", getString(R.string.interlude_chime),
+        session.interludeChimeEnabled(), (button, checked) -> session.setInterludeChime(checked)));
+    target.addView(text(getString(R.string.interlude_bgm_help), 14, KantaTheme.TEXT_SECONDARY));
 
     Button reset = actionButton(getString(R.string.visuals_interlude_reset),
         R.drawable.kanta_submenu_reset, () -> { session.resetInterlude(); render(); });

@@ -759,6 +759,8 @@ public final class StagePresenterImpl extends FrameLayout
     java.util.List<ph.kanta.reborn.core.ReservationQueue.Entry> next = queue.snapshot();
     if (session.preSongInterludeActive() && !session.interludeShowUpNext())
       next = java.util.Collections.emptyList();
+    upNextTicker.setStyle(session.interludeUpNextStyle());
+    upNextTicker.setShowCount(session.interludeUpNextCount());
     upNextTicker.updateFromSnapshot(next);
     updateTickerInsets();
   }

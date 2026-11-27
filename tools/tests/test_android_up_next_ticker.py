@@ -20,11 +20,17 @@ class UpNextTickerTests(unittest.TestCase):
 
     def test_stops_for_host_visibility_and_detach(self):
         source = (JAVA / 'ui/components/UpNextTicker.java').read_text()
-        for marker in ('setVisualActive(boolean active)', 'visualActive && isAttachedToWindow() && isShown()',
+        for marker in ('setVisualActive(boolean active)',
+                       'style.equals("ticker") && visualActive',
+                       'isAttachedToWindow() && isShown()',
                        'onDetachedFromWindow()', 'text.setSelected(false)',
                        'onVisibilityChanged(View changedView, int visibility)',
                        'onWindowVisibilityChanged(int visibility)'):
             self.assertIn(marker, source)
+        # Batch G: only the ticker style scrolls; card/badge are static.
+        self.assertIn('style.equals("card")', source)
+        self.assertIn('style.equals("badge")', source)
+        self.assertIn('entries.size()).append(" in queue")', source)
 
     def test_stage_renderers_project_fifo_without_removing_repeats(self):
         for filename, snapshot in [('stage/StagePresenterImpl.java', 'queue.snapshot()'),

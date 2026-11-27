@@ -1,5 +1,6 @@
 ## 2026-11-27 - Interlude typography and media (964)
-Batch F reconstructed the interlude editor UI (font button, glow/shadow, marquee speed+dir, image scale, placement, video slot) and the video slot in InterludeStore + an InterludeVideoHost in StageSurface.
+Batch F reconstructed the interlude editor UI (font button, glow/shadow, marquee speed+dir, image scale, placement, video slot) and the video slot in InterludeStore + an InterludeVideoHost in StageSurface.965 (Batch G): overlays are additive configuration over the existing interlude owners (UpNextTicker, StageView visualizer, PartyAudio). Chime reuses party.trigger(DING); BGM reuses the standby loop gate. Auto-start countdown intentionally deferred.
+
 
 ## Editable interlude quick messages + live tokens (2026-11-27)
 

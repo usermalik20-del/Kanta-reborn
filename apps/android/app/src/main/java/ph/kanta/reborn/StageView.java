@@ -488,24 +488,60 @@ final class StageView extends View {
     return Math.max(0f, remaining / (float) total);
   }
 
-  /** Reactive bars along the bottom of the interlude, driven by the shared pitch energy. */
+  /** Reactive interlude visualizer: bars, circular ring, or smooth waveform. */
   private void drawVisualizerBars(Canvas canvas, float w, float h, float t) {
     float energy = LyricWordAnimation.pitchEnergy(
         session.currentPitchHz(), session.measuredAtMs(), SystemClock.elapsedRealtime());
-    int bars = 24;
     float density = getResources().getDisplayMetrics().density;
+    float gain = 0.4f + (session.interludeVisualizerSensitivity() / 100f) * 1.2f;
+    energy = Math.min(1f, energy * gain);
+    String mode = session.interludeVisualizerMode();
+    paint.setStyle(Paint.Style.FILL);
+    paint.setColor(0xCC76E4FF);
+    if ("ring".equals(mode)) {
+      float cx = w / 2f, cy = h * 0.5f;
+      float maxR = Math.min(w, h) * 0.28f;
+      for (int r = 0; r < 3; r++) {
+        float phase = t * 2.4f + r * 0.9f;
+        float pulse = 0.5f + 0.5f * (float) Math.sin(phase);
+        float radius = maxR * (0.35f + 0.65f * pulse) * (0.4f + 0.6f * Math.max(0.15f, energy));
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth((3f + r) * density);
+        paint.setARGB((int) ((150 - r * 35) * (0.4f + 0.6f * Math.max(0.2f, energy))), 118, 228, 255);
+        canvas.drawCircle(cx, cy + burnShiftY, radius, paint);
+      }
+      paint.setStyle(Paint.Style.FILL);
+      return;
+    }
+    if ("wave".equals(mode)) {
+      paint.setStyle(Paint.Style.STROKE);
+      paint.setStrokeWidth(3f * density);
+      paintPath(canvas, w, h - contentBottom - dp(28), dp(30) * Math.max(0.12f, energy), t);
+      paint.setStyle(Paint.Style.FILL);
+      return;
+    }
+    int bars = 24;
     float barW = 4f * density, gap = 3f * density;
     float totalW = bars * barW + (bars - 1) * gap;
     float x0 = (w - totalW) / 2f;
     float baseY = h - contentBottom - dp(26);
-    paint.setStyle(Paint.Style.FILL);
-    paint.setColor(0xCC76E4FF);
     for (int b = 0; b < bars; b++) {
       float wob = .5f + .5f * (float) Math.sin(t * 3.1 + b * .83);
       float amp = (.15f + .85f * wob) * Math.max(.18f, energy);
       float barH = Math.max(3f * density, amp * dp(34));
       canvas.drawRect(x0 + b * (barW + gap), baseY - barH, x0 + b * (barW + gap) + barW, baseY, paint);
     }
+  }
+
+  private void paintPath(Canvas canvas, float w, float baseY, float amp, float t) {
+    android.graphics.Path p = new android.graphics.Path();
+    p.moveTo(0, baseY);
+    for (int x = 0; x <= w; x += 3) {
+      float y = baseY + (float) Math.sin(x * 0.02 + t * 4f) * amp
+          + (float) Math.sin(x * 0.007 + t * 2.6f) * amp * 0.5f;
+      p.lineTo(x, y);
+    }
+    canvas.drawPath(p, paint);
   }
 
   /** Optional song title header above the lyric block. */
