@@ -64,6 +64,7 @@ public final class SettingsStore {
   public static final String KEY_INTERLUDE_UP_NEXT_COUNT = "interlude.upNextCount";
   public static final String KEY_INTERLUDE_BGM = "interlude.bgm";
   public static final String KEY_INTERLUDE_CHIME = "interlude.chime";
+  public static final String KEY_INTERLUDE_TIMER_SECONDS = "interlude.timerSeconds";
   public static final String KEY_INTERLUDE_SHOW_WATERMARK = "interlude.showWatermark";
 
   // Group: stage readability
@@ -373,6 +374,8 @@ public final class SettingsStore {
   public void setInterludeBgm(boolean v) { prefs.edit().putBoolean(KEY_INTERLUDE_BGM, v).apply(); }
   public boolean getInterludeChime() { return prefs.getBoolean(KEY_INTERLUDE_CHIME, false); }
   public void setInterludeChime(boolean v) { prefs.edit().putBoolean(KEY_INTERLUDE_CHIME, v).apply(); }
+  public int getInterludeTimerSeconds() { return prefs.getInt(KEY_INTERLUDE_TIMER_SECONDS, 0); }
+  public void setInterludeTimerSeconds(int v) { prefs.edit().putInt(KEY_INTERLUDE_TIMER_SECONDS, v).apply(); }
   public void setInterludeImageScale(float v) {
     prefs.edit().putFloat(KEY_INTERLUDE_IMAGE_SCALE, Math.max(0.2f, Math.min(1.6f, v))).apply();
   }

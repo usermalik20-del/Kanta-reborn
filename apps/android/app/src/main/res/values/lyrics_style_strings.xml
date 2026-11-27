@@ -61,4 +61,13 @@
     <string name="interlude_bgm">Background BGM loop</string>
     <string name="interlude_chime">Transition chime into countdown</string>
     <string name="interlude_bgm_help">Plays the lounge loop only while the stage is in standby interlude; it stops when a song starts.</string>
+    <string name="interlude_timer_heading">Interlude timer</string>
+    <string name="interlude_timer_off">Off</string>
+    <string name="interlude_timer_5s">5s</string>
+    <string name="interlude_timer_10s">10s</string>
+    <string name="interlude_timer_15s">15s</string>
+    <string name="interlude_timer_30s">30s</string>
+    <string name="interlude_timer_help">After a song ends, the next reserved song starts automatically when this countdown finishes. Use the stage bar to start it sooner.</string>
+    <string name="stage_timer_label">Next song starts in %1$s</string>
+    <string name="stage_timer_start_now">Start now</string>
 </resources>

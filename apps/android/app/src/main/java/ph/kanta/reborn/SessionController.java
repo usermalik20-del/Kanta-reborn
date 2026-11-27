@@ -410,6 +410,30 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
    *  clear where the first sung line lands. */
   public synchronized long countdownTotalMs() { return countdownTotalMs; }
 
+  /** Milliseconds remaining on the interlude timer countdown, or -1 when none is running. */
+  public synchronized long interludeTimerRemainingMs() {
+    if (interludeTimerEndsAt < 0) return -1;
+    return Math.max(0, interludeTimerEndsAt - SystemClock.elapsedRealtime());
+  }
+
+  /** Armed interlude timer seconds (0 = off, the legacy 3 s auto-advance). */
+  public synchronized int interludeTimerSeconds() { return settings.getInterludeTimerSeconds(); }
+
+  public synchronized void setInterludeTimerSeconds(int seconds) {
+    int value = 0;
+    if (seconds == 5 || seconds == 10 || seconds == 15 || seconds == 30) value = seconds;
+    settings.setInterludeTimerSeconds(value);
+    // A changed armed duration invalidates any running auto-advance/countdown.
+    cancelAutoAdvance();
+    publish();
+  }
+
+  /** Manual override: skip the interlude timer (or the wait) and start the next reserved song. */
+  public synchronized void startNextNow() {
+    if (!foreground || loading || current != null || queue.peek() == null) return;
+    next();
+  }
+
   // ---- Lyric stage style (persisted in SettingsStore, applied by StageView) ----
   public synchronized boolean lyricAllCaps() { return settings.getLyricAllCaps(); }
   public synchronized void setLyricAllCaps(boolean value) { settings.setLyricAllCaps(value); publish(); }
@@ -608,6 +632,8 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
   private boolean hostLoopStateSaved, loopEnabledBeforeHidden = true;
   private Runnable autoAdvance;
   private UUID autoAdvanceEntryId;
+  /** elapsedRealtime millis at which the running interlude timer countdown ends; -1 when none. */
+  private long interludeTimerEndsAt = -1;
   private Runnable scheduledMelodyCountdown;
   String loopSongId = "";
   /** Cached copy of the bundled standby interlude; null until prepared on startup. */
@@ -650,6 +676,7 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     if (autoAdvance != null) main.removeCallbacks(autoAdvance);
     autoAdvance = null;
     autoAdvanceEntryId = null;
+    interludeTimerEndsAt = -1;
   }
 
   private void discardPendingStart() {
@@ -2179,15 +2206,33 @@ public final class SessionController implements ph.kanta.reborn.core.PitchSource
     }
     cancelAutoAdvance();
     autoAdvanceEntryId = entry.id;
-    long delay = tier == null ? 3000L : ScoreRevealPlan.totalMillis(tier) + 5000L;
-    autoAdvance =
-        () -> {
-          autoAdvance = null;
-          autoAdvanceEntryId = null;
-          if (!foreground || loading || current != null || queue.peek() != entry) return;
-          next(); // The manual path, including prepare(), countdown, lyrics and scoring.
-        };
-    main.postDelayed(autoAdvance, delay);
+    long reveal = tier == null ? 0L : ScoreRevealPlan.totalMillis(tier);
+    int timerSeconds = settings.getInterludeTimerSeconds();
+    if (timerSeconds > 0) {
+      // Interlude timer: the reserved song starts after a visible stage countdown
+      // (the stage HUD bar); the brief grace keeps the count clear of the score reveal.
+      long delay = reveal + 500L + timerSeconds * 1000L;
+      interludeTimerEndsAt = SystemClock.elapsedRealtime() + delay;
+      autoAdvance =
+          () -> {
+            autoAdvance = null;
+            autoAdvanceEntryId = null;
+            interludeTimerEndsAt = -1;
+            if (!foreground || loading || current != null || queue.peek() != entry) return;
+            next(); // The manual path, including prepare(), countdown, lyrics and scoring.
+          };
+      main.postDelayed(autoAdvance, delay);
+      publish();
+    } else {
+      autoAdvance =
+          () -> {
+            autoAdvance = null;
+            autoAdvanceEntryId = null;
+            if (!foreground || loading || current != null || queue.peek() != entry) return;
+            next(); // The manual path, including prepare(), countdown, lyrics and scoring.
+          };
+      main.postDelayed(autoAdvance, tier == null ? 3000L : reveal + 5000L);
+    }
   }
 
   /** The music-session equalizer owner; UI reads bands from here. */

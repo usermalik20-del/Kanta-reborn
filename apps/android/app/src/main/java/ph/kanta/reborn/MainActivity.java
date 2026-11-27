@@ -82,6 +82,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     private boolean draggingVisualsControl;
     private LinearLayout stageSyncPill;
     private TextView stageSyncValue;
+    private LinearLayout stageTimerPill;
+    private TextView stageTimerValue;
+    private ProgressBar stageTimerBar;
   private StagePresenterImpl stagePresenter;
   private StageSurface fullscreenStage, externalStage;
   private KantaWorkspace workspace;
@@ -181,6 +184,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
           if (stagePresenter != null) stagePresenter.refresh();
           if (fullscreenStage != null) fullscreenStage.refresh();
           refreshStagePlaybackTime();
+          refreshStageTimerPill();
           refreshFullscreenControls();
           if (externalStage != null) externalStage.refresh();
           handler.postDelayed(this, 100);
@@ -462,6 +466,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
       stageSearchClearTask = null;
       stageSyncPill = null;
       stageSyncValue = null;
+      stageTimerPill = null;
+      stageTimerValue = null;
+      stageTimerBar = null;
       draggingLyricSync = false;
       intermissionMessageFocused = false;
       buildWindow(newOrient);
@@ -1030,6 +1037,43 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     syncPillParams.setMarginEnd(dp(2));
     syncPillParams.topMargin = dp(46);
     stageLayers.addView(stageSyncPill, syncPillParams);
+
+    // Interlude timer bar on the stage HUD: counts down to the automatic start of
+    // the next reserved song; Start now skips the wait.
+    stageTimerPill = new LinearLayout(this);
+    stageTimerPill.setOrientation(LinearLayout.HORIZONTAL);
+    stageTimerPill.setGravity(Gravity.CENTER_VERTICAL);
+    stageTimerPill.setTag("kanta.stage.timer");
+    stageTimerPill.setBackground(KantaTheme.backgroundDrawable(0x66000000, 14,
+        0x3341DF91, 1, getResources().getDisplayMetrics().density));
+    stageTimerPill.setPaddingRelative(dp(10), dp(4), dp(6), dp(4));
+    stageTimerPill.setVisibility(View.GONE);
+    stageTimerValue = text("", 13, KantaTheme.PRIMARY_CYAN);
+    stageTimerValue.setTag("kanta.stage.timer.value");
+    stageTimerValue.setPaddingRelative(0, 0, dp(10), 0);
+    stageTimerPill.addView(stageTimerValue, new LinearLayout.LayoutParams(-2, -2));
+    stageTimerBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+    stageTimerBar.setTag("kanta.stage.timer.bar");
+    stageTimerBar.setIndeterminate(false);
+    stageTimerBar.setMax(100);
+    stageTimerBar.setProgress(100);
+    LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(0, dp(4), 1f);
+    barParams.setMargins(dp(2), 0, dp(8), 0);
+    stageTimerPill.addView(stageTimerBar, barParams);
+    Button startNow = KantaTheme.secondaryButton(this, getString(R.string.stage_timer_start_now),
+        v -> session.startNextNow());
+    startNow.setTag("kanta.stage.timer.start");
+    startNow.setAllCaps(false);
+    startNow.setTextSize(12);
+    startNow.setMinWidth(0);
+    startNow.setMinimumWidth(0);
+    startNow.setMinHeight(dp(32));
+    startNow.setPaddingRelative(dp(10), dp(2), dp(10), dp(2));
+    stageTimerPill.addView(startNow, new LinearLayout.LayoutParams(-2, -2));
+    FrameLayout.LayoutParams timerPillParams =
+        new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+    timerPillParams.topMargin = dp(12);
+    stageLayers.addView(stageTimerPill, timerPillParams);
 
     // Icon-only camera action at the top right; the status dot stays, the caption goes.
     stageCameraToggle = stageChromeButton(R.string.stage_camera, R.drawable.kanta_stage_action_camera,
@@ -3134,6 +3178,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         session.interludeChimeEnabled(), (button, checked) -> session.setInterludeChime(checked)));
     target.addView(text(getString(R.string.interlude_bgm_help), 14, KantaTheme.TEXT_SECONDARY));
 
+    // Interlude timer (G4): auto-start the next reserved song after a visible countdown.
+    target.addView(sectionHeader(getString(R.string.interlude_timer_heading)));
+    int timerSeconds = session.interludeTimerSeconds();
+    target.addView(pillGroup("kanta.interlude.timer",
+        new String[] { getString(R.string.interlude_timer_off),
+            getString(R.string.interlude_timer_5s), getString(R.string.interlude_timer_10s),
+            getString(R.string.interlude_timer_15s), getString(R.string.interlude_timer_30s) },
+        timerSeconds == 5 ? 1 : timerSeconds == 10 ? 2
+            : timerSeconds == 15 ? 3 : timerSeconds == 30 ? 4 : 0,
+        index -> session.setInterludeTimerSeconds(
+            new int[] { 0, 5, 10, 15, 30 }[index])));
+    target.addView(text(getString(R.string.interlude_timer_help), 14, KantaTheme.TEXT_SECONDARY));
+
     Button reset = actionButton(getString(R.string.visuals_interlude_reset),
         R.drawable.kanta_submenu_reset, () -> { session.resetInterlude(); render(); });
     reset.setTag("kanta.visuals.interlude.reset");
@@ -5236,6 +5293,24 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     if (stagePlaybackTime == null) return;
     stagePlaybackTime.setVisibility(session.current == null ? View.GONE : View.VISIBLE);
     if (session.current != null) stagePlaybackTime.setText(playbackTimeLabel());
+  }
+
+  private void refreshStageTimerPill() {
+    if (stageTimerPill == null) return;
+    long remaining = session.interludeTimerRemainingMs();
+    boolean visible = remaining >= 0
+        && session.current == null && !session.loading && session.foreground
+        && session.queue.peek() != null;
+    if (!visible) {
+      if (stageTimerPill.getVisibility() != View.GONE) stageTimerPill.setVisibility(View.GONE);
+      return;
+    }
+    if (stageTimerPill.getVisibility() != View.VISIBLE) stageTimerPill.setVisibility(View.VISIBLE);
+    long total = Math.max(session.interludeTimerSeconds() * 1000L, remaining);
+    stageTimerBar.setProgress(total > 0 ? (int) (100 * remaining / total) : 0);
+    long secs = (remaining + 999) / 1000;
+    stageTimerValue.setText(getString(R.string.stage_timer_label,
+        String.format(java.util.Locale.ROOT, "%d:%02d", secs / 60, secs % 60)));
   }
 
   private void refreshFullscreenControls() {

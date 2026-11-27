@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude timer (966)
+G4 reuses the auto-advance ownership: nextIfReserved arms one posted runnable (autoAdvance) and, when interlude.timerSeconds > 0, SessionController.interludeTimerEndsAt exposes the countdown clock for the stage HUD bar (MainActivity.refreshStageTimerPill, 100 ms tick). cancelAutoAdvance() is the single clearing point (queue change, manual start, backgrounding, timer change), so the countdown can never outlive its target. startNextNow() is the manual override (same guards as manual next()). Intermission/BGM gating is unchanged: the lounge loop keeps playing through the countdown and stops when next() prepares.
+
 ## 2026-11-27 - Interlude typography and media (964)
 Interlude media/typography (964): InterludeStore owns the video slot (muted, REPEAT_MODE_ONE, backgrounded); StageSurface hosts an InterludeVideoHost TextureView (fullscreen/PiP); LyricStage/StageView draw glow/shadow, marquee speedMul, image scale, and side-by-side placement from StageStyle.965: UpNextTicker setStyle/setShowCount (presentation variants + count, inset logic unchanged); StageView.drawVisualizerBars branches bars/ring/wave with a sensitivity gain; SessionController BGM gate on updateIntermission allowed + playTransitionChime at both countdown entry points. No new media stack; reuses PartyAudio Ding pad and the standby loop.
 

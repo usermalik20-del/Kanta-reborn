@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude timer: auto-start with visible countdown (966)
+G4: an interlude timer (Off/5s/10s/15s/30s, persisted as interlude.timerSeconds) replaces the fixed 3 s auto-advance in nextIfReserved when armed: the countdown is surfaced in a new stage HUD bar (kanta.stage.timer, refreshed by the 100 ms stage tick) while the existing autoAdvance runnable fires next() at the end. Manual override: Start now calls SessionController.startNextNow(). Off keeps the legacy 3 s / score-reveal+5 s auto-advance.
+
 ## 2026-11-27 - Interlude typography and media (964)
 Batch F: the Interlude tab shares the lyric font picker (KANTA Default, Bold Videoke, Clean Sans, Retro LED, Classic Serif, custom .ttf), adds a glow toggle and a drop-shadow slider for text legibility over bright media, a marquee speed (Slow/Normal/Fast) and direction (RTL/LTR) selector, an image scale slider (50%-150%), and image placement (Above / Dimmed background / Side-by-side in landscape). A new looping-video slot (silent, muted, REPEAT_MODE_ONE, paused when backgrounded) renders behind the interlude in both the embedded stage and fullscreen.Interlude & stage overlays (965): Up Next style picker (ticker/card/badge) + queue count; visualizer style (bars/ring/wave) + sensitivity; ambient BGM loop + transition chime on countdown handoff. Auto-start timer deferred.
 

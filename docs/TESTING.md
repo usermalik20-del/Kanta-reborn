@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude timer (966)
+New tools/tests/test_interlude_timer_g4.py (4 tests): pins the settings key + session accessors + armed-duration validation, the timer branch in nextIfReserved (legacy 3 s Off path kept, clock cleared on cancellation, guarded startNextNow), the stage HUD bar wiring (tags, 100 ms tick refresh, Start now override), and the editor pills + strings. 329 contracts green.
+
 ## 2026-11-27 - Interlude typography and media (964)
 Updated test_stage_style_upgrade.py (quick-message chips + tokens in SessionController; marquee speedMul base pace) and test_android_home_layout.py (compact fixed-bottom keypad, retired dashboard search field). javac/java PATH pinned to JDK17 for subprocess contracts.965: new tools/tests/test_interlude_overlays_batch_g.py pins settings keys, session accessors, visualizer modes+sensitivity in StageView, up-next style/count flow, BGM gate, and chime at both countdown sites; updated test_android_up_next_ticker.py for the ticker-only scroll gate.
 

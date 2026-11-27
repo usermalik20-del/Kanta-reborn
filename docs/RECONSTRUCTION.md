@@ -1,3 +1,6 @@
+## 2026-11-27 - Interlude timer (966)
+G4 replaced the fixed 3 s post-song auto-advance (nextIfReserved) with a configurable interlude timer (Off/5s/10s/15s/30s). No new scheduling stack: the same autoAdvance runnable and publish() guards (queue peek, foreground, loading, current) apply, the countdown clock is one elapsedRealtime field cleared by cancelAutoAdvance(), and the UI is one HUD bar view in stageLayers (embedded stage) mirroring the sync-pill pattern.
+
 ## 2026-11-27 - Interlude typography and media (964)
 Batch F reconstructed the interlude editor UI (font button, glow/shadow, marquee speed+dir, image scale, placement, video slot) and the video slot in InterludeStore + an InterludeVideoHost in StageSurface.965 (Batch G): overlays are additive configuration over the existing interlude owners (UpNextTicker, StageView visualizer, PartyAudio). Chime reuses party.trigger(DING); BGM reuses the standby loop gate. Auto-start countdown intentionally deferred.
 
