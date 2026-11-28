@@ -162,9 +162,10 @@ public final class FontStoreChecks {
     } catch (Throwable t) {
       openError = t.getClass().getName() + ": " + t.getMessage();
     }
-    System.out.println("KANTA-FONT-DIAG asset open: " + (bytes == null ? "NULL" : (bytes.length + " bytes"))
-        + (openError != null ? " error=" + openError : "")
-        + " took=" + (SystemClock.uptimeMillis() - t0) + "ms");
+    StringBuilder diag = new StringBuilder("KANTA-FONT-DIAG anton.ttf; ");
+    diag.append("assetOpen=").append(bytes == null ? "NULL" : (bytes.length + "B"))
+        .append(openError != null ? (" err=" + openError) : "")
+        .append(" took=").append(SystemClock.uptimeMillis() - t0).append("ms; ");
 
     if (bytes != null) {
       File tmp = new File(context.getCacheDir(), "kanta-font-diag.ttf");
@@ -172,12 +173,14 @@ public final class FontStoreChecks {
       long t1 = SystemClock.uptimeMillis();
       try {
         Typeface face = new Typeface.Builder(tmp).build();
-        System.out.println("KANTA-FONT-DIAG Builder(File): " + (face == null ? "NULL" : "ok")
-            + " took=" + (SystemClock.uptimeMillis() - t1) + "ms");
+        diag.append("builderFile=").append(face == null ? "NULL" : "ok")
+            .append(" took=").append(SystemClock.uptimeMillis() - t1).append("ms; ");
       } catch (Throwable t) {
-        System.out.println("KANTA-FONT-DIAG Builder(File) threw: " + t);
+        diag.append("builderFile=THREW(").append(t).append("); ");
       }
       tmp.delete();
+    } else {
+      diag.append("builderFile=SKIPPED(no bytes); ");
     }
 
     final Object[] result = new Object[2];
@@ -194,14 +197,16 @@ public final class FontStoreChecks {
     long t2 = SystemClock.uptimeMillis();
     try { probe.join(10000); } catch (InterruptedException ignored) { }
     if (!Boolean.TRUE.equals(result[1])) {
-      System.out.println("KANTA-FONT-DIAG Builder(AssetManager): TIMED OUT (hang) after "
-          + (SystemClock.uptimeMillis() - t2) + "ms");
+      diag.append("builderAssetManager=HANG(>10000ms);");
     } else if (result[0] instanceof Throwable) {
-      System.out.println("KANTA-FONT-DIAG Builder(AssetManager) threw: " + result[0]);
+      diag.append("builderAssetManager=THREW(").append(result[0]).append(");");
     } else {
-      System.out.println("KANTA-FONT-DIAG Builder(AssetManager): " + (result[0] == null ? "NULL" : "ok")
-          + " took=" + (SystemClock.uptimeMillis() - t2) + "ms");
+      diag.append("builderAssetManager=").append(result[0] == null ? "NULL" : "ok")
+          .append(" took=").append(SystemClock.uptimeMillis() - t2).append("ms;");
     }
+    // Surface findings in the CI job log: System.out maps to logcat on Android, but an
+    // AssertionError message is printed by the instrumentation runner.
+    throw new AssertionError(diag.toString());
   }
 
   private static byte[] readAllBounded(InputStream in, long max) throws IOException {

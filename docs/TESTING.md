@@ -1,5 +1,5 @@
 ## 2026-11-28 — Bundled font device check emits a bounded diagnostic
-`FontStoreChecks.run` calls `diagnoseBundledFont(context)`, which prints to stdout (captured in the CI job log) the outcome of each bundled-font sub-step: the APK asset stream read (bytes/taken), the `Typeface.Builder(File)` decode of the copied bytes, and the `Typeface.Builder(AssetManager)` path on a daemon thread with a 10 s hang guard. Assertions and the 30 s `awaitFont` deadline are unchanged.
+`FontStoreChecks.run` calls `diagnoseBundledFont(context)`, which determines the outcome of each bundled-font sub-step (the APK asset stream read, the `Typeface.Builder(File)` decode of the copied bytes, and the `Typeface.Builder(AssetManager)` path on a daemon thread with a 10 s hang guard) and surfaces the findings by throwing an `AssertionError` carrying them (System.out maps to logcat on Android, but an assertion message is printed by the instrumentation runner into the CI job log). This is temporary diagnostic scaffolding to be removed once the root cause is fixed; the real assertions are unchanged.
 
 ## 2026-11-28 — Bundled font load order is file-first (970)
 `BundledLyricFonts.load` builds from a temp file before the stored asset. This is the order
