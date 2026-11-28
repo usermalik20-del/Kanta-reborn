@@ -1,3 +1,10 @@
+## 2026-11-28 — Bundled font asset-then-file load (969)
+- `BundledLyricFonts.load` tries `Typeface.Builder(AssetManager, …)` (fast, noCompress
+  stored asset) and falls back to a temp-file `Typeface.Builder(File)` (API 28+) when the
+  runtime returns null — matching the custom-font loader and covering emulators that
+  cannot map stored assets.
+- `FontStoreChecks.awaitFont` deadline raised 15 s → 30 s for the weak CI emulator.
+
 ## 2026-11-28 — noCompress ttf + stable two-line lyrics (968)
 - `aaptOptions { noCompress "ttf" }` so bundled lyric fonts are stored (asset-manager
   `Typeface.Builder` cannot map deflate-compressed fonts — the cause of "font could not be

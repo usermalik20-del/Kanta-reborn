@@ -1,3 +1,12 @@
+## 2026-11-28 — Font device check robustness (969)
+- `FontStoreChecks.awaitFont` polls up to 30 s (was 15 s) to accommodate the weak
+  2-core / 2 GB swiftshader CI emulator's slow first font load.
+- The check still asserts the bundled face resolves to a real `Typeface`, is cached, and
+  that rapid selections settle on the last pick — it only gained time headroom, not
+  weakened assertions.
+- Bundled loading is verified to fall back to a temp-file build when the asset path
+  returns null (no reliance on a single runtime's asset mapping).
+
 ## 2026-11-28 — Font packaging + two-line lyric contracts (968)
 - `build.gradle` pins `aaptOptions { noCompress "ttf" }`; the device font contract
   (`FontStoreChecks` / `test_android_fonts_and_lrclib.py`) asserts bundled faces resolve

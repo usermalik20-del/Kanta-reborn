@@ -3,6 +3,11 @@ package ph.kanta.reborn.font;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.os.Build;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +30,46 @@ final class BundledLyricFonts {
     }
 
     Typeface load(Context context) {
-      Typeface.Builder builder = new Typeface.Builder(context.getAssets(), "lyric-fonts/" + family + ".ttf");
+      Typeface fromAsset = buildFromAsset(context);
+      if (fromAsset != null) return fromAsset;
+      // Some runtimes (notably software-rendered x86_64 emulators) cannot map the
+      // stored asset for Typeface.Builder and return null even though the font is
+      // valid. Copy the bytes to a temp file and build from the file instead — the
+      // same proven path the custom-font loader already uses.
+      return buildFromTempFile(context);
+    }
+
+    private Typeface buildFromAsset(Context context) {
+      try {
+        return build(new Typeface.Builder(context.getAssets(), "lyric-fonts/" + family + ".ttf"));
+      } catch (RuntimeException malformedOrUnsupported) {
+        return null;
+      }
+    }
+
+    private Typeface buildFromTempFile(Context context) {
+      // Typeface.Builder(File) is API 28+; below it the stored-asset path is the
+      // only supported route, so there is no file fallback to offer.
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null;
+      File temporary = null;
+      try {
+        temporary = File.createTempFile("kanta-bundled-font-", ".ttf", context.getCacheDir());
+        try (InputStream input = context.getAssets().open("lyric-fonts/" + family + ".ttf");
+             FileOutputStream output = new FileOutputStream(temporary)) {
+          byte[] buffer = new byte[8192];
+          int count;
+          while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+        }
+        return build(new Typeface.Builder(temporary));
+      } catch (IOException | RuntimeException failed) {
+        return null;
+      } finally {
+        if (temporary != null) temporary.delete();
+      }
+    }
+
+    /** Applies the curated weight/variation to a builder and builds it. */
+    private Typeface build(Typeface.Builder builder) {
       if (weight != 0) {
         builder.setFontVariationSettings("'wght' " + weight);
         builder.setWeight(weight);

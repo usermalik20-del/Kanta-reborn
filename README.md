@@ -1,3 +1,10 @@
+## 2026-11-28 — Bundled font loading hardened (969)
+Following the 968 `noCompress` fix, bundled lyric fonts now load through the asset
+manager first and, where a runtime cannot map the stored asset (notably the
+software-rendered x86_64 CI emulator), fall back to copying the font bytes to a temp
+file and building from the file — the same proven path custom fonts already use. The
+device font check deadline was raised to 30 s to suit the 2-core / 2 GB CI emulator.
+
 ## 2026-11-28 — Bundled lyric fonts now load; stable two-line lyrics (968)
 **Bundled lyric fonts fixed.** All bundled lyric TTFs were shipped deflate-compressed
 in the APK, but asset-manager font loading (`Typeface.Builder` over `assets/`) requires

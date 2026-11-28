@@ -1,3 +1,11 @@
+## 2026-11-28 — Font load robustness (969)
+Bundled lyric fonts resolve via a two-tier loader: the stored-asset path
+(`Typeface.Builder(AssetManager, …)`, requires `noCompress "ttf"`) is primary; a
+temp-file `Typeface.Builder(File)` path (API 28+) is the fallback for runtimes that
+cannot map the stored asset. Both feed the single `FontStore` cache, so every consumer
+still shares one decoded face. The deprecated `Typeface.createFromFile` is intentionally
+not used (it does not report invalid data as null).
+
 ## 2026-11-28 — Font asset storage + two-line lyric geometry (968)
 - **Font asset storage:** asset-manager-backed typefaces (bundled lyric fonts, custom
   imported fonts) load through `AssetManager` mapping, which requires the file to be

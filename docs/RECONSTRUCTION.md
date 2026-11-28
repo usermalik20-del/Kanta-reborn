@@ -1,3 +1,11 @@
+## 2026-11-28 — Why bundled fonts needed a file fallback (969)
+The 968 `noCompress "ttf"` fix stores the fonts so the asset manager can map them — this
+works on real devices. The CI emulator (API 35, x86_64, 2 cores, 2 GB, swiftshader)
+still returned null from `Typeface.Builder(AssetManager, …)`, so the device check timed
+out. The fix adds the same temp-file load the custom-font path already uses, and raises
+the check deadline to 30 s. The font files themselves were verified valid (sfnt header)
+— this was an environment/mapping limitation, not corruption.
+
 ## 2026-11-28 — Why bundled fonts failed, and the stable two-line block (968)
 - **Font load root cause:** the bundled lyric TTFs were packaged deflate-compressed.
   `Typeface.Builder(assets, path)` mmaps the asset in place; a compressed entry cannot be

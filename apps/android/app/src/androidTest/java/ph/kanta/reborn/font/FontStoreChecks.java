@@ -127,10 +127,12 @@ public final class FontStoreChecks {
     return checks;
   }
 
-  /** Polls until the condition holds; the main looper keeps dispatching meanwhile. */
+  /** Polls until the condition holds; the main looper keeps dispatching meanwhile.
+   *  30 s: the CI emulator is a 2-core / 2 GB swiftshader x86_64 image where first
+   *  font loads (asset copy + Skia parse) are far slower than on a real device. */
   private static void awaitFont(BooleanSupplier condition, String message)
       throws InterruptedException {
-    long deadline = SystemClock.uptimeMillis() + 15000;
+    long deadline = SystemClock.uptimeMillis() + 30000;
     while (!condition.getAsBoolean() && SystemClock.uptimeMillis() < deadline) {
       SystemClock.sleep(50);
     }
