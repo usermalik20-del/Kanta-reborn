@@ -273,7 +273,10 @@ public final class LyricStage extends View {
           : StageLyricLayout.preferredSize(getResources(), getWidth(), false);
       activePaint.setTextSize(size);
       TextPaint preview = next != null && next.echo ? echoPaint : upcomingPaint;
-      preview.setTextSize(size * .65f);
+      // The next line renders at the same size as the sung line so the two-line
+      // block keeps a stable height: a sung line never grows and the rows never
+      // jump as the active cue advances.
+      preview.setTextSize(size);
       String nextLine = next == null ? ""
           : (style.allCaps ? oneToOneUpper(next.line) : next.line);
       android.text.Layout.Alignment align = "left".equals(style.alignment)
@@ -500,10 +503,14 @@ public final class LyricStage extends View {
     }
   }
 
-  /** Classic gold highlight for all active colors, ensuring visibility. */
+  /**
+ * Sung-portion highlight: a fixed bright amber so the reveal is visible against
+ * any chosen active color (a lightened copy of the active color vanished when the
+ * active color was already warm/gold).
+ */
   private static int highlightColor(int activeColor) {
     int alpha = (activeColor >>> 24) & 0xFF;
-    return (alpha << 24) | 0xF6CE77;
+    return (alpha << 24) | 0xFFD54F;
   }
 
   private int findCurrentLine(long positionMilliseconds) {

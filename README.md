@@ -1,3 +1,14 @@
+## 2026-11-28 — Bundled lyric fonts now load; stable two-line lyrics (968)
+**Bundled lyric fonts fixed.** All bundled lyric TTFs were shipped deflate-compressed
+in the APK, but asset-manager font loading (`Typeface.Builder` over `assets/`) requires
+the font to be stored uncompressed — so every bundled font (and the default selection)
+failed with "could not be loaded". `build.gradle` now marks `ttf` as `noCompress`, so the
+fonts are stored and map cleanly.
+**Two-line lyrics stabilised.** The next line now renders at the same size as the sung
+line, so the two-line block keeps a stable height and the rows no longer grow or jump as
+the active cue advances. The sung-portion reveal is a fixed bright amber, visible against
+any active lyric colour (a lightened copy of a warm/gold active colour was invisible).
+
 
 ## 2026-11-28 - CI build fix
 The AAPT2 override that unblocked local ARM64 builds was accidentally committed to `gradle.properties`; CI failed trying to exec a path that only exists on the local host. The override now lives only in the ignored `local.properties`, restoring CI's native AAPT2.

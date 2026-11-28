@@ -1,3 +1,17 @@
+## 2026-11-28 — Why bundled fonts failed, and the stable two-line block (968)
+- **Font load root cause:** the bundled lyric TTFs were packaged deflate-compressed.
+  `Typeface.Builder(assets, path)` mmaps the asset in place; a compressed entry cannot be
+  mapped and the builder returns null, so `FontStore` reset to the default and the UI
+  reported "could not be loaded" — for the default selection and every bundled face. The
+  fix is packaging, not code: store TTFs uncompressed (`noCompress "ttf"`).
+- **Two-line stability:** previously the next line drew at 0.65x, so when it became the
+  sung line it grew to full size and the block re-anchored — the lines appeared to move.
+  Both lines now draw at the same size with a fixed reference height, so only the
+  sung-portion highlight and the cross-fade change as cues advance.
+- **AAPT2 boundary:** the machine-specific AAPT2 override (ARM64 host) is kept out of
+  tracked `gradle.properties` (CI failed trying to exec a local-only path); it lives in
+  the ignored `local.properties` and the user-level Gradle properties.
+
 
 ## 2026-11-28 - AAPT2 override relocation
 The override was accidentally re-committed to `gradle.properties`; moved back to `local.properties` to restore CI.

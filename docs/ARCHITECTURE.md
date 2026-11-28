@@ -1,3 +1,15 @@
+## 2026-11-28 — Font asset storage + two-line lyric geometry (968)
+- **Font asset storage:** asset-manager-backed typefaces (bundled lyric fonts, custom
+  imported fonts) load through `AssetManager` mapping, which requires the file to be
+  stored uncompressed in the APK. `build.gradle` enforces `noCompress "ttf"` so the
+  asset manager can mmap every bundled face; this is a build-pipeline invariant, not a
+  per-font opt-in.
+- **Two-line lyric geometry:** `StageLyricLayout` lays out the sung line and the next
+  line at the same text size and reserves half the vertical budget for the second line,
+  giving a fixed-height, non-resizing two-line block shared by the embedded
+  `LyricStage` and the fullscreen/PiP `StageView`. The sung-portion reveal uses a fixed
+  bright amber so it stays legible against any active lyric colour.
+
 
 ## 2026-11-28 - Build config boundary
 Machine-specific AAPT2 paths stay in ignored `local.properties`; tracked `gradle.properties` holds only portable config.

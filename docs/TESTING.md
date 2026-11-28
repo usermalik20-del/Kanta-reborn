@@ -1,3 +1,13 @@
+## 2026-11-28 — Font packaging + two-line lyric contracts (968)
+- `build.gradle` pins `aaptOptions { noCompress "ttf" }`; the device font contract
+  (`FontStoreChecks` / `test_android_fonts_and_lrclib.py`) asserts bundled faces resolve
+  through the asset manager and that a selection completes.
+- `StageLyricLayout` reserves half the height for the second line; both renderers draw
+  the next line at the sung line's size, so the two-line block is a fixed height. The
+  sung-portion highlight is a fixed bright amber (visible against any active colour).
+- Local build: the AAPT2 override is applied from `local.properties` / user-level
+  `~/.gradle/gradle.properties`, keeping tracked `gradle.properties` portable for CI.
+
 
 ## 2026-11-28 - CI restore
 CI failed in `:app:processDebugResources` due to local AAPT2 override in tracked file. Fixed by relocating override to `local.properties`.

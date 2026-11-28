@@ -49,6 +49,12 @@ android {
         ).get()
         testInstrumentationRunner 'ph.kanta.reborn.RuntimeChecks'
     }
+    // Asset-manager font loading (Typeface.Builder over assets) requires the TTF to be
+    // stored uncompressed in the APK; deflate-compressed fonts fail to map and every
+    // bundled lyric font would report "could not be loaded".
+    aaptOptions {
+        noCompress "ttf"
+    }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     signingConfigs {
         releaseOwner {

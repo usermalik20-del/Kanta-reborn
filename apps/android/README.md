@@ -1,3 +1,13 @@
+## 2026-11-28 — noCompress ttf + stable two-line lyrics (968)
+- `aaptOptions { noCompress "ttf" }` so bundled lyric fonts are stored (asset-manager
+  `Typeface.Builder` cannot map deflate-compressed fonts — the cause of "font could not be
+  loaded" for the default and every bundled face).
+- `StageLyricLayout` reserves half the height for the second line and both renderers
+  (`LyricStage`, `StageView`) draw the next line at the sung line's size: a stable,
+  non-resizing two-line block. Sung-portion highlight is a fixed bright amber in both.
+- Local ARM64 AAPT2 override now lives in the ignored `local.properties` and the
+  user-level `~/.gradle/gradle.properties`, never in tracked `gradle.properties`.
+
 
 ## 2026-11-28 - CI build fix
 `android.aapt2FromMavenOverride` moved from tracked `gradle.properties` to ignored `local.properties`. CI's `:app:processDebugResources` now uses its native AAPT2.

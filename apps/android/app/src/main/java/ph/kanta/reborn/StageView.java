@@ -223,7 +223,10 @@ final class StageView extends View {
           lyricPaint.setColor(lineColor);
           applyOutline(lyricPaint, session.lyricOutline());
           TextPaint preview = new TextPaint(lyricPaint);
-          preview.setTextSize(font * .65f);
+          // The next line renders at the same size as the sung line so the two-line
+          // block keeps a stable height: a sung line never grows and the rows never
+          // jump as the active cue advances.
+          preview.setTextSize(font);
           preview.setColor(echo ? 0x55FFFFFF : upcomingColor);
           Layout.Alignment la = "left".equals(align)
               ? Layout.Alignment.ALIGN_NORMAL : Layout.Alignment.ALIGN_CENTER;
@@ -591,14 +594,13 @@ final class StageView extends View {
     }
   }
 
-  /** Sung-portion highlight: classic gold over the default white, else a lightened color. */
+  /**
+   * Sung-portion highlight: a fixed bright amber so the reveal is visible against
+   * any chosen active color (a lightened copy of the active color vanished when the
+   * active color was already warm/gold).
+   */
   private static int highlightColor(int lineColor) {
-    if (lineColor == 0xFFFFFFFF) return 0xFFFFD700;
-    int r = (lineColor >> 16) & 0xFF, g = (lineColor >> 8) & 0xFF, b = lineColor & 0xFF;
-    r += (255 - r) * 45 / 100;
-    g += (255 - g) * 45 / 100;
-    b += (255 - b) * 45 / 100;
-    return 0xFF000000 | (r << 16) | (g << 8) | b;
+    return 0xFFFFD54F;
   }
 
   private boolean standbyMode;

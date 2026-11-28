@@ -45,9 +45,11 @@ public final class StageLyricLayout {
     StaticLayout full = fitLine(text, style, style.getTextSize(), width, height, alignment);
     if (preview.isEmpty()) return new StageLyricLayout(full, null, 0);
 
-    // Try the preview without reducing the active cue first. If that fails, reserve
-    // only the space the preview actually needs at its readable minimum.
-    int previewBudget = height / 3;
+    // Try the second line without reducing the active cue first. The second line
+    // renders at the same size as the sung line (stable two-line block), so reserve
+    // half the height for it; if that fails, reserve only the space it needs at its
+    // readable minimum.
+    int previewBudget = height / 2;
     float ratio = previewStyle.getTextSize() / style.getTextSize();
     float fullSize = full.getPaint().getTextSize();
     if (fullSize * ratio < minimumPreviewSize) return new StageLyricLayout(full, null, 0);
