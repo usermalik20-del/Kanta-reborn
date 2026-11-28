@@ -1,3 +1,6 @@
+
+## 2026-11-28 - AAPT2 override relocation
+The 958 environment fix had written the aapt2 override into tracked `gradle.properties`; commit c9c34911 had previously done the reverse for the same reason. Relocated it to `local.properties` (ignored) with the same native path, restoring the CI-hosted aapt2 for GitHub Actions while local ARM64 builds keep working.
 ## 2026-11-28 - Search row, mic DSP, SoundFont caps, font store (967)
 The search pill was reconstructed as the Home EditText inside a presentation row rather than a mirror field, so every query safeguard stays with its owner. The mic increment keeps the existing capture owner and inserts bounded DSP in the documented order; Bluetooth input selection is best-effort and fails visibly when the platform does not honour it. The SoundFont validator was reconciled with the pinned loader's real invariants - each relaxation is paired with a loader proof and a regression fixture - and the over-strict loop guards were split from the genuine out-of-bounds rejection. The font store fix removes the aborting 1-slot queue that silently dropped selections; the failure path now toasts and resets, matching the monitor's behaviour.
 

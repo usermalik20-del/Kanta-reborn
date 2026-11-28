@@ -1,3 +1,6 @@
+
+## 2026-11-28 - CI restore after local build-config leak
+Run 46083334776 (967) failed in `:app:processDebugResources` because the tracked aapt2 override referenced a local-host binary. After relocating the override to ignored `local.properties`, the standard gate set (build, lint, domain regression, emulator walk) runs unmodified on CI.
 ## 2026-11-28 - Test evidence for the 967 batch
 New: tools/tests/test_android_mic_input.py (picker, DSP placement, clip, gate, persistence); MicrophoneInputRegressionTests (30 executable assertions including rapid-fire settle and route retirement); KantaFontPicker/FontStore contracts in test_android_fonts_and_lrclib.py (queue/cache, real-face rows, 31+default restore vs PROVENANCE.json, preview reset); tests/soundfont-file-test.c (bounded actual-file regression on the 4.2 GB bank) and kanta_sf_last_open_reason pins in soundfont-test.c plus test_stage_style_upgrade.py. Updated: Home layout/menu/result-action contracts for the search row; RuntimeChecks and FontStoreChecks device-side checks. Host evidence: 73,315 coreRegression checks, 334 Python contracts, zero lint, C battery under -O2 (UBSan clean). Device/instrumentation checks compile here and execute in the CI emulator walk, not on this host.
 

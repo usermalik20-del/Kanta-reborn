@@ -1,3 +1,6 @@
+
+## 2026-11-28 - Build config boundary: machine paths stay untracked
+Build-environment quirks (native aarch64 aapt2, grsecurity workarounds) are host concerns. Contract: tracked `apps/android/gradle.properties` holds only portable build config (version code, AndroidX, JVM args); host-specific overrides belong in the git-ignored `local.properties`, which the CI runner never reads.
 ## 2026-11-28 - Search row owner, mic DSP placement, SoundFont open reasons, font store (967)
 The Stage search row reuses the Home search owner (one EditText, one query source); the row is presentation only. Mic signal order is capture -> input gain -> dry analysis copies (meter, clip, pitch, SPICE, scoring) -> monitor-only noise gate -> existing monitor effects/correction, so the gate can never suppress scoring. SoundFont open failures carry a reason (unreadable / address space / bad structure / no memory) from the loader to the importer; the bounded allocator and its 3 GiB floor are unchanged. FontStore stays the single app-lifetime typeface source: serial I/O on one thread, shared cached bundled faces, a synchronous fast path for cached entries.
 
