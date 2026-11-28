@@ -162,7 +162,11 @@ public final class FontStoreChecks {
     } catch (Throwable t) {
       openError = t.getClass().getName() + ": " + t.getMessage();
     }
-    StringBuilder diag = new StringBuilder("KANTA-FONT-DIAG anton.ttf; ");
+    StringBuilder diag = new StringBuilder("KANTA-FONT-DIAG anton.ttf; ")
+        .append("testThread=").append(Thread.currentThread().getName())
+        .append(Thread.currentThread() == android.os.Looper.getMainLooper().getThread()
+            ? "(MAIN-DEADLOCK)" : "")
+        .append("; ");
     diag.append("assetOpen=").append(bytes == null ? "NULL" : (bytes.length + "B"))
         .append(openError != null ? (" err=" + openError) : "")
         .append(" took=").append(SystemClock.uptimeMillis() - t0).append("ms; ");
@@ -204,6 +208,20 @@ public final class FontStoreChecks {
       diag.append("builderAssetManager=").append(result[0] == null ? "NULL" : "ok")
           .append(" took=").append(SystemClock.uptimeMillis() - t2).append("ms;");
     }
+    // The font decodes fine, so the failure must be in async delivery: select() posts to
+    // the FontStore worker, which then does main.post(callback). Probe whether a plain
+    // post to the app main looper is actually dispatched from this (instrumentation)
+    // thread — if not, the callback can never run and select() can never complete.
+    final Object[] mainProbe = new Object[1];
+    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> mainProbe[0] = Boolean.TRUE);
+    long tm = SystemClock.uptimeMillis();
+    while (mainProbe[0] == null && SystemClock.uptimeMillis() - tm < 5000) SystemClock.sleep(25);
+    diag.append("mainLooperDispatch=")
+        .append(mainProbe[0] != null
+            ? ("ok took=" + (SystemClock.uptimeMillis() - tm) + "ms")
+            : "NOT_DISPATCHED_in_5000ms")
+        .append(";");
+
     // Surface findings in the CI job log: System.out maps to logcat on Android, but an
     // AssertionError message is printed by the instrumentation runner.
     throw new AssertionError(diag.toString());
