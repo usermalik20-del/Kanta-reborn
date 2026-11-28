@@ -1,3 +1,6 @@
+## 2026-11-28 — Why the font check now emits a diagnostic
+968–970 changed the bundled font load path three times (noCompress, asset-then-file, file-first) but the CI emulator check failed each time, and the failure reason (the logcat) was only in a 228 MB artifact that could not be retrieved here. Rather than keep guessing, the check now prints to stdout which sub-step fails on a runtime: asset stream read, `Typeface.Builder(File)` decode, or the `Typeface.Builder(AssetManager)` path (hang-guarded). The next CI run's job log gives the evidence for the real fix.
+
 ## 2026-11-28 — Why the bundled font fallback became file-first (970)
 The 968 `noCompress "ttf"` fix stores the fonts so the asset manager can map them — this
 fixed the real-device symptom. 969 added a file fallback after the asset path, but ordered

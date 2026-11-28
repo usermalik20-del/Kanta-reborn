@@ -9,8 +9,11 @@ import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -50,6 +53,10 @@ public final class FontStoreChecks {
       check(new SettingsStore(context).getLyricFont().equals("content://fixture/font.ttf"), "Font choice persists across store instances");
       settings.setLyricFont("");
       check(new SettingsStore(context).getLyricFont().isEmpty(), "Built-in font selection persists");
+
+      // Diagnostic (stdout is captured in the CI job log): pinpoint which bundled-font
+      // sub-step fails on this emulator so the fix is evidence-based, not a guess.
+      diagnoseBundledFont(context);
 
       // Bundled selection resolves, caches, and rapid re-selection settles on the last pick.
       FontStore store = FontStore.getInstance(context);
@@ -137,6 +144,77 @@ public final class FontStoreChecks {
       SystemClock.sleep(50);
     }
     check(condition.getAsBoolean(), message);
+  }
+
+  /**
+   * Reports, on stdout (captured by the CI job log, not just the logcat artifact), which
+   * bundled-font sub-step fails on a given runtime: the APK asset stream read, the
+   * {@code Typeface.Builder(File)} decode of the copied bytes, and the
+   * {@code Typeface.Builder(AssetManager)} path (guarded against hanging).
+   */
+  private static void diagnoseBundledFont(Context context) {
+    String asset = "lyric-fonts/anton.ttf";
+    long t0 = SystemClock.uptimeMillis();
+    byte[] bytes = null;
+    String openError = null;
+    try (InputStream in = context.getAssets().open(asset)) {
+      bytes = readAllBounded(in, 4L * 1024 * 1024);
+    } catch (Throwable t) {
+      openError = t.getClass().getName() + ": " + t.getMessage();
+    }
+    System.out.println("KANTA-FONT-DIAG asset open: " + (bytes == null ? "NULL" : (bytes.length + " bytes"))
+        + (openError != null ? " error=" + openError : "")
+        + " took=" + (SystemClock.uptimeMillis() - t0) + "ms");
+
+    if (bytes != null) {
+      File tmp = new File(context.getCacheDir(), "kanta-font-diag.ttf");
+      try (FileOutputStream out = new FileOutputStream(tmp)) { out.write(bytes); } catch (IOException ignored) { }
+      long t1 = SystemClock.uptimeMillis();
+      try {
+        Typeface face = new Typeface.Builder(tmp).build();
+        System.out.println("KANTA-FONT-DIAG Builder(File): " + (face == null ? "NULL" : "ok")
+            + " took=" + (SystemClock.uptimeMillis() - t1) + "ms");
+      } catch (Throwable t) {
+        System.out.println("KANTA-FONT-DIAG Builder(File) threw: " + t);
+      }
+      tmp.delete();
+    }
+
+    final Object[] result = new Object[2];
+    Thread probe = new Thread(() -> {
+      try {
+        result[0] = new Typeface.Builder(context.getAssets(), asset).build();
+      } catch (Throwable t) {
+        result[0] = t;
+      }
+      result[1] = Boolean.TRUE;
+    });
+    probe.setDaemon(true);
+    probe.start();
+    long t2 = SystemClock.uptimeMillis();
+    try { probe.join(10000); } catch (InterruptedException ignored) { }
+    if (!Boolean.TRUE.equals(result[1])) {
+      System.out.println("KANTA-FONT-DIAG Builder(AssetManager): TIMED OUT (hang) after "
+          + (SystemClock.uptimeMillis() - t2) + "ms");
+    } else if (result[0] instanceof Throwable) {
+      System.out.println("KANTA-FONT-DIAG Builder(AssetManager) threw: " + result[0]);
+    } else {
+      System.out.println("KANTA-FONT-DIAG Builder(AssetManager): " + (result[0] == null ? "NULL" : "ok")
+          + " took=" + (SystemClock.uptimeMillis() - t2) + "ms");
+    }
+  }
+
+  private static byte[] readAllBounded(InputStream in, long max) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    byte[] chunk = new byte[8192];
+    long total = 0;
+    int read;
+    while ((read = in.read(chunk)) != -1) {
+      buffer.write(chunk, 0, read);
+      total += read;
+      if (total > max) break;
+    }
+    return buffer.toByteArray();
   }
 
   private static boolean onMain(BooleanSupplier probe) {

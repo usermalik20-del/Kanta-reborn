@@ -1,3 +1,6 @@
+## 2026-11-28 — Bundled font device check emits a bounded diagnostic
+`FontStoreChecks.run` calls `diagnoseBundledFont(context)`, which prints to stdout (captured in the CI job log) the outcome of each bundled-font sub-step: the APK asset stream read (bytes/taken), the `Typeface.Builder(File)` decode of the copied bytes, and the `Typeface.Builder(AssetManager)` path on a daemon thread with a 10 s hang guard. Assertions and the 30 s `awaitFont` deadline are unchanged.
+
 ## 2026-11-28 — Bundled font load order is file-first (970)
 `BundledLyricFonts.load` builds from a temp file before the stored asset. This is the order
 that completes on the CI swiftshader x86_64 emulator, where the stored-asset `Typeface.Builder`
