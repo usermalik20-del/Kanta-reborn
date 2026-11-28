@@ -85,7 +85,10 @@ public final class FontStore {
       main.post(() -> {
         if (generation != selectionGeneration) return;
         typeface = loaded;
-        if (loaded == null) settings.setLyricFont("");
+        if (loaded == null) {
+          settings.setLyricFont("");
+          typeface = null; // Reset to built-in default on failure
+        }
         completed.accept(loaded != null);
       });
     }, () -> { settings.setLyricFont(""); completed.accept(false); });

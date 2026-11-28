@@ -500,18 +500,10 @@ public final class LyricStage extends View {
     }
   }
 
-  /** Classic gold highlight when the active color is white, a lightened tint otherwise. */
+  /** Classic gold highlight for all active colors, ensuring visibility. */
   private static int highlightColor(int activeColor) {
     int alpha = (activeColor >>> 24) & 0xFF;
-    int red = (activeColor >> 16) & 0xFF;
-    int green = (activeColor >> 8) & 0xFF;
-    int blue = activeColor & 0xFF;
-    if (red == 255 && green == 255 && blue == 255) return (alpha << 24) | 0xF6CE77;
-    int weight = 45;
-    return (alpha << 24)
-        | (Math.min(255, red + (255 - red) * weight / 100) << 16)
-        | (Math.min(255, green + (255 - green) * weight / 100) << 8)
-        | Math.min(255, blue + (255 - blue) * weight / 100);
+    return (alpha << 24) | 0xF6CE77;
   }
 
   private int findCurrentLine(long positionMilliseconds) {

@@ -1,4 +1,7 @@
 
+## 2026-11-28 - Build config boundary
+Machine-specific AAPT2 paths stay in ignored `local.properties`; tracked `gradle.properties` holds only portable config.
+
 ## 2026-11-28 - Build config boundary: machine paths stay untracked
 Build-environment quirks (native aarch64 aapt2, grsecurity workarounds) are host concerns. Contract: tracked `apps/android/gradle.properties` holds only portable build config (version code, AndroidX, JVM args); host-specific overrides belong in the git-ignored `local.properties`, which the CI runner never reads.
 ## 2026-11-28 - Search row owner, mic DSP placement, SoundFont open reasons, font store (967)

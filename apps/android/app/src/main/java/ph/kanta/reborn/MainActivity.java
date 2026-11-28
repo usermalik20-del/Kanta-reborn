@@ -2634,6 +2634,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         } else {
           Toast.makeText(this, "This font could not be loaded. Using the default font.",
               Toast.LENGTH_LONG).show();
+          noteLyricsFontChanged();
         }
         if (row.isAttachedToWindow()) {
           restyleFontChips(row, new SettingsStore(this).getLyricFont());

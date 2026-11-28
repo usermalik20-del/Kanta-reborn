@@ -1,4 +1,7 @@
 
+## 2026-11-28 - CI restore
+CI failed in `:app:processDebugResources` due to local AAPT2 override in tracked file. Fixed by relocating override to `local.properties`.
+
 ## 2026-11-28 - CI restore after local build-config leak
 Run 46083334776 (967) failed in `:app:processDebugResources` because the tracked aapt2 override referenced a local-host binary. After relocating the override to ignored `local.properties`, the standard gate set (build, lint, domain regression, emulator walk) runs unmodified on CI.
 ## 2026-11-28 - Test evidence for the 967 batch

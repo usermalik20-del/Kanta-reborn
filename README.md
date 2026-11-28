@@ -1,4 +1,7 @@
 
+## 2026-11-28 - CI build fix
+The AAPT2 override that unblocked local ARM64 builds was accidentally committed to `gradle.properties`; CI failed trying to exec a path that only exists on the local host. The override now lives only in the ignored `local.properties`, restoring CI's native AAPT2.
+
 ## 2026-11-28 - AAPT2 override kept out of tracked build config
 The machine-specific AAPT2 override that unblocked local ARM64 builds was left in `apps/android/gradle.properties`, and CI failed every AAR transform trying to exec a path that only exists on the local host. The override now lives only in the git-ignored `local.properties`; CI resolves AAPT2 from its own build-tools again, and `kantaVersionCode` remains the only version knob in the tracked file.
 ## 2026-11-28 - Stage search row, mic input controls, large SoundFonts, font picker (967)

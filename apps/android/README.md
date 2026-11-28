@@ -1,4 +1,7 @@
 
+## 2026-11-28 - CI build fix
+`android.aapt2FromMavenOverride` moved from tracked `gradle.properties` to ignored `local.properties`. CI's `:app:processDebugResources` now uses its native AAPT2.
+
 ## 2026-11-28 - AAPT2 override moved to local.properties
 `android.aapt2FromMavenOverride` points at this host's native aarch64 `aapt2` binary, so it belongs in the ignored `local.properties` (which CI never sees). Keeping it in tracked `gradle.properties` broke CI's `:app:processDebugResources` on every AAR transform. Local build command unchanged.
 ## 2026-11-28 - Stage search row, mic input controls, large SoundFonts, font picker (967)
