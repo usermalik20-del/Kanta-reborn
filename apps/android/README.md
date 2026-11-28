@@ -1,3 +1,6 @@
+## 2026-11-28 — Bundled font load is file-first (970)
+`BundledLyricFonts.load` now builds from a temp file first (the proven path the custom-font loader already uses) and only falls back to the stored asset. The 969 asset-then-file order was wrong for the CI emulator: there the stored-asset `Typeface.Builder` path does not complete, so asset-first blocked the single `FontStore` thread before the fallback could run. The loaded face is cached by `FontStore`, so the one-time small copy happens once per face; real devices keep the fast portable path.
+
 ## 2026-11-28 — Bundled font asset-then-file load (969)
 - `BundledLyricFonts.load` tries `Typeface.Builder(AssetManager, …)` (fast, noCompress
   stored asset) and falls back to a temp-file `Typeface.Builder(File)` (API 28+) when the

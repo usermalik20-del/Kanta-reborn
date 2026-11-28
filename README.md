@@ -1,3 +1,6 @@
+## 2026-11-28 — Bundled font load is file-first (970)
+The 969 asset-then-file fallback still failed the CI emulator font check: on the software-rendered x86_64 image the stored-asset path for `Typeface.Builder(AssetManager, …)` does not complete, so an asset-FIRST order blocks the single font thread and the file fallback is never reached. `BundledLyricFonts.load` now builds from a temp file first (the proven path the custom-font loader already uses) and only falls back to the stored asset; the result is cached by `FontStore`, so the small copy happens once per face. This also keeps the fast, portable path on real devices.
+
 ## 2026-11-28 — Bundled font loading hardened (969)
 Following the 968 `noCompress` fix, bundled lyric fonts now load through the asset
 manager first and, where a runtime cannot map the stored asset (notably the

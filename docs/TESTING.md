@@ -1,3 +1,10 @@
+## 2026-11-28 — Bundled font load order is file-first (970)
+`BundledLyricFonts.load` builds from a temp file before the stored asset. This is the order
+that completes on the CI swiftshader x86_64 emulator, where the stored-asset `Typeface.Builder`
+path hangs the single `FontStore` thread; the `FontStoreChecks` bundled-font device check relies
+on `select()` completing, which requires the file path to run first. Loaded faces are cached in
+`FontStore`, so the copy is once per face. The 30 s `awaitFont` deadline from 969 is retained.
+
 ## 2026-11-28 — Font device check robustness (969)
 - `FontStoreChecks.awaitFont` polls up to 30 s (was 15 s) to accommodate the weak
   2-core / 2 GB swiftshader CI emulator's slow first font load.

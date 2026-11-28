@@ -1,3 +1,12 @@
+## 2026-11-28 — Why the bundled font fallback became file-first (970)
+The 968 `noCompress "ttf"` fix stores the fonts so the asset manager can map them — this
+fixed the real-device symptom. 969 added a file fallback after the asset path, but ordered
+asset-FIRST. On the CI swiftshader x86_64 emulator the asset `Typeface.Builder` path does not
+return, and since `FontStore` uses a single-threaded pool, the fallback was never reached and
+the bundled-font device check timed out. 970 reverses the order: build from a temp file first
+(the proven custom-font path), fall back to the stored asset only if that fails. The loaded
+face is cached, so the copy is once per face.
+
 ## 2026-11-28 — Why bundled fonts needed a file fallback (969)
 The 968 `noCompress "ttf"` fix stores the fonts so the asset manager can map them — this
 works on real devices. The CI emulator (API 35, x86_64, 2 cores, 2 GB, swiftshader)

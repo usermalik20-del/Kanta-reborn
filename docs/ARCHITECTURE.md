@@ -1,3 +1,6 @@
+## 2026-11-28 — Font load order is file-first (970)
+`BundledLyricFonts.load` resolves a bundled face by building from a temp file first and falling back to the stored asset. File-first is deliberate: on software-rendered x86_64 emulators the stored-asset `Typeface.Builder(AssetManager, …)` path does not complete, and because `FontStore` runs all font I/O on a single thread, an asset-first order would block that thread and starve the file fallback. The loaded face is cached in `FontStore`, so the copy happens once per face.
+
 ## 2026-11-28 — Font load robustness (969)
 Bundled lyric fonts resolve via a two-tier loader: the stored-asset path
 (`Typeface.Builder(AssetManager, …)`, requires `noCompress "ttf"`) is primary; a

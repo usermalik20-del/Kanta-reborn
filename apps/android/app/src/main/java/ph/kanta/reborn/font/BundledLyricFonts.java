@@ -30,13 +30,13 @@ final class BundledLyricFonts {
     }
 
     Typeface load(Context context) {
-      Typeface fromAsset = buildFromAsset(context);
-      if (fromAsset != null) return fromAsset;
-      // Some runtimes (notably software-rendered x86_64 emulators) cannot map the
-      // stored asset for Typeface.Builder and return null even though the font is
-      // valid. Copy the bytes to a temp file and build from the file instead — the
-      // same proven path the custom-font loader already uses.
-      return buildFromTempFile(context);
+      // Build from a temp file first: this is the proven, portable path (the same
+      // one the custom-font loader uses) and it completes on software-rendered
+      // x86_64 emulators where the stored-asset mmap for Typeface.Builder does not.
+      // The one-time small copy is cached by FontStore, so it happens once per face.
+      Typeface fromFile = buildFromTempFile(context);
+      if (fromFile != null) return fromFile;
+      return buildFromAsset(context);
     }
 
     private Typeface buildFromAsset(Context context) {
