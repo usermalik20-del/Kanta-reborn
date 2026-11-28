@@ -9,11 +9,8 @@ import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -53,10 +50,6 @@ public final class FontStoreChecks {
       check(new SettingsStore(context).getLyricFont().equals("content://fixture/font.ttf"), "Font choice persists across store instances");
       settings.setLyricFont("");
       check(new SettingsStore(context).getLyricFont().isEmpty(), "Built-in font selection persists");
-
-      // Diagnostic (stdout is captured in the CI job log): pinpoint which bundled-font
-      // sub-step fails on this emulator so the fix is evidence-based, not a guess.
-      diagnoseBundledFont(context);
 
       // Bundled selection resolves, caches, and rapid re-selection settles on the last pick.
       FontStore store = FontStore.getInstance(context);
@@ -144,122 +137,6 @@ public final class FontStoreChecks {
       SystemClock.sleep(50);
     }
     check(condition.getAsBoolean(), message);
-  }
-
-  /**
-   * Reports, on stdout (captured by the CI job log, not just the logcat artifact), which
-   * bundled-font sub-step fails on a given runtime: the APK asset stream read, the
-   * {@code Typeface.Builder(File)} decode of the copied bytes, and the
-   * {@code Typeface.Builder(AssetManager)} path (guarded against hanging).
-   */
-  private static void diagnoseBundledFont(Context context) {
-    String asset = "lyric-fonts/anton.ttf";
-    long t0 = SystemClock.uptimeMillis();
-    byte[] bytes = null;
-    String openError = null;
-    try (InputStream in = context.getAssets().open(asset)) {
-      bytes = readAllBounded(in, 4L * 1024 * 1024);
-    } catch (Throwable t) {
-      openError = t.getClass().getName() + ": " + t.getMessage();
-    }
-    StringBuilder diag = new StringBuilder("KANTA-FONT-DIAG anton.ttf; ")
-        .append("testThread=").append(Thread.currentThread().getName())
-        .append(Thread.currentThread() == android.os.Looper.getMainLooper().getThread()
-            ? "(MAIN-DEADLOCK)" : "")
-        .append("; ");
-    diag.append("assetOpen=").append(bytes == null ? "NULL" : (bytes.length + "B"))
-        .append(openError != null ? (" err=" + openError) : "")
-        .append(" took=").append(SystemClock.uptimeMillis() - t0).append("ms; ");
-
-    if (bytes != null) {
-      File tmp = new File(context.getCacheDir(), "kanta-font-diag.ttf");
-      try (FileOutputStream out = new FileOutputStream(tmp)) { out.write(bytes); } catch (IOException ignored) { }
-      long t1 = SystemClock.uptimeMillis();
-      try {
-        Typeface face = new Typeface.Builder(tmp).build();
-        diag.append("builderFile=").append(face == null ? "NULL" : "ok")
-            .append(" took=").append(SystemClock.uptimeMillis() - t1).append("ms; ");
-      } catch (Throwable t) {
-        diag.append("builderFile=THREW(").append(t).append("); ");
-      }
-      tmp.delete();
-    } else {
-      diag.append("builderFile=SKIPPED(no bytes); ");
-    }
-
-    final Object[] result = new Object[2];
-    Thread probe = new Thread(() -> {
-      try {
-        result[0] = new Typeface.Builder(context.getAssets(), asset).build();
-      } catch (Throwable t) {
-        result[0] = t;
-      }
-      result[1] = Boolean.TRUE;
-    });
-    probe.setDaemon(true);
-    probe.start();
-    long t2 = SystemClock.uptimeMillis();
-    try { probe.join(10000); } catch (InterruptedException ignored) { }
-    if (!Boolean.TRUE.equals(result[1])) {
-      diag.append("builderAssetManager=HANG(>10000ms);");
-    } else if (result[0] instanceof Throwable) {
-      diag.append("builderAssetManager=THREW(").append(result[0]).append(");");
-    } else {
-      diag.append("builderAssetManager=").append(result[0] == null ? "NULL" : "ok")
-          .append(" took=").append(SystemClock.uptimeMillis() - t2).append("ms;");
-    }
-    // The font decodes fine, so the failure must be in async delivery: select() posts to
-    // the FontStore worker, which then does main.post(callback). Probe whether a plain
-    // post to the app main looper is actually dispatched from this (instrumentation)
-    // thread — if not, the callback can never run and select() can never complete.
-    final Object[] mainProbe = new Object[1];
-    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> mainProbe[0] = Boolean.TRUE);
-    long tm = SystemClock.uptimeMillis();
-    while (mainProbe[0] == null && SystemClock.uptimeMillis() - tm < 5000) SystemClock.sleep(25);
-    diag.append("mainLooperDispatch=")
-        .append(mainProbe[0] != null
-            ? ("ok took=" + (SystemClock.uptimeMillis() - tm) + "ms")
-            : "NOT_DISPATCHED_in_5000ms")
-        .append(";");
-
-    // Probe the REAL select() delivery: does the listener fire? And is FontStore's
-    // worker the problem, or thread pools in general on this emulator?
-    FontStore store = FontStore.getInstance(context);
-    Uri anton = Uri.parse("kanta-font://anton-regular");
-    java.util.concurrent.atomic.AtomicBoolean fired = new java.util.concurrent.atomic.AtomicBoolean();
-    long ts = SystemClock.uptimeMillis();
-    store.select(anton, ok -> fired.set(ok));
-    while (!fired.get() && SystemClock.uptimeMillis() - ts < 8000) SystemClock.sleep(25);
-    diag.append("realSelect=").append(fired.get()
-        ? ("fired took=" + (SystemClock.uptimeMillis() - ts) + "ms") : "NO_FIRE_8s").append(";");
-
-    final Object[] execRan = new Object[1];
-    java.util.concurrent.ThreadPoolExecutor probeExecutor =
-        new java.util.concurrent.ThreadPoolExecutor(1, 1, 0, java.util.concurrent.TimeUnit.MILLISECONDS,
-            new java.util.concurrent.LinkedBlockingQueue<Runnable>());
-    long te = SystemClock.uptimeMillis();
-    probeExecutor.execute(() -> execRan[0] = Boolean.TRUE);
-    while (execRan[0] == null && SystemClock.uptimeMillis() - te < 8000) SystemClock.sleep(25);
-    diag.append("newExecutor=").append(execRan[0] != null
-        ? ("ran took=" + (SystemClock.uptimeMillis() - te) + "ms") : "NO_RUN_8s").append(";");
-    probeExecutor.shutdownNow();
-
-    // Surface findings in the CI job log: System.out maps to logcat on Android, but an
-    // AssertionError message is printed by the instrumentation runner.
-    throw new AssertionError(diag.toString());
-  }
-
-  private static byte[] readAllBounded(InputStream in, long max) throws IOException {
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    byte[] chunk = new byte[8192];
-    long total = 0;
-    int read;
-    while ((read = in.read(chunk)) != -1) {
-      buffer.write(chunk, 0, read);
-      total += read;
-      if (total > max) break;
-    }
-    return buffer.toByteArray();
   }
 
   private static boolean onMain(BooleanSupplier probe) {

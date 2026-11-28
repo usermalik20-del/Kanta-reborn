@@ -80,6 +80,22 @@ public final class FontStore {
       completed.accept(true);
       return;
     }
+    if (BundledLyricFonts.SCHEME.equals(uri.getScheme())) {
+      // Bundled faces are small local OFL assets (decode in a few ms), not provider
+      // I/O. Load them synchronously on the calling thread so a slow or stuck
+      // custom-font load on the shared worker can never block default or bundled
+      // selection. load() caches the result, so a repeated select stays fast, and
+      // completion is immediate (no stale-generation window to guard).
+      Typeface loaded = load(context, uri);
+      typeface = loaded;
+      if (loaded == null) {
+        settings.setLyricFont("");
+        typeface = null; // Reset to built-in default on failure
+      }
+      completed.accept(loaded != null);
+      return;
+    }
+    // Custom (provider) fonts are real I/O; keep them off the main thread and serial.
     submit(() -> {
       Typeface loaded = load(context, uri);
       main.post(() -> {
@@ -138,6 +154,14 @@ public final class FontStore {
     Typeface cached = cachedBundled(uri);
     if (cached != null) {
       main.post(() -> completed.accept(cached));
+      return;
+    }
+    if (BundledLyricFonts.SCHEME.equals(uri.getScheme())) {
+      // Same liveness rule as select(): a bundled face is a small local asset, so load
+      // it here rather than queue it behind whatever (possibly stuck) custom-font work
+      // holds the shared worker. Picker/chip previews must never stall on it.
+      Typeface face = load(context, uri);
+      main.post(() -> completed.accept(face));
       return;
     }
     submit(() -> {
