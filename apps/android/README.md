@@ -1,5 +1,5 @@
 ## 2026-11-28 — Bundled font device check emits a bounded diagnostic
-`FontStoreChecks` now logs (stdout, in the CI job log) which bundled-font sub-step fails on a runtime: the APK asset stream read, the `Typeface.Builder(File)` decode of the copied bytes, and the `Typeface.Builder(AssetManager)` path with a 10 s hang guard. Diagnostic only; assertions unchanged.
+`FontStoreChecks` determines which bundled-font sub-step fails on a runtime (the APK asset stream read, the `Typeface.Builder(File)` decode of the copied bytes, and the `Typeface.Builder(AssetManager)` path with a 10 s hang guard) and surfaces the findings via a thrown `AssertionError` so they reach the CI job log. Temporary diagnostic scaffolding; assertions unchanged.
 
 ## 2026-11-28 — Bundled font load is file-first (970)
 `BundledLyricFonts.load` now builds from a temp file first (the proven path the custom-font loader already uses) and only falls back to the stored asset. The 969 asset-then-file order was wrong for the CI emulator: there the stored-asset `Typeface.Builder` path does not complete, so asset-first blocked the single `FontStore` thread before the fallback could run. The loaded face is cached by `FontStore`, so the one-time small copy happens once per face; real devices keep the fast portable path.
