@@ -222,6 +222,28 @@ public final class FontStoreChecks {
             : "NOT_DISPATCHED_in_5000ms")
         .append(";");
 
+    // Probe the REAL select() delivery: does the listener fire? And is FontStore's
+    // worker the problem, or thread pools in general on this emulator?
+    FontStore store = FontStore.getInstance(context);
+    Uri anton = Uri.parse("kanta-font://anton-regular");
+    java.util.concurrent.atomic.AtomicBoolean fired = new java.util.concurrent.atomic.AtomicBoolean();
+    long ts = SystemClock.uptimeMillis();
+    store.select(anton, ok -> fired.set(ok));
+    while (!fired.get() && SystemClock.uptimeMillis() - ts < 8000) SystemClock.sleep(25);
+    diag.append("realSelect=").append(fired.get()
+        ? ("fired took=" + (SystemClock.uptimeMillis() - ts) + "ms") : "NO_FIRE_8s").append(";");
+
+    final Object[] execRan = new Object[1];
+    java.util.concurrent.ThreadPoolExecutor probeExecutor =
+        new java.util.concurrent.ThreadPoolExecutor(1, 1, 0, java.util.concurrent.TimeUnit.MILLISECONDS,
+            new java.util.concurrent.LinkedBlockingQueue<Runnable>());
+    long te = SystemClock.uptimeMillis();
+    probeExecutor.execute(() -> execRan[0] = Boolean.TRUE);
+    while (execRan[0] == null && SystemClock.uptimeMillis() - te < 8000) SystemClock.sleep(25);
+    diag.append("newExecutor=").append(execRan[0] != null
+        ? ("ran took=" + (SystemClock.uptimeMillis() - te) + "ms") : "NO_RUN_8s").append(";");
+    probeExecutor.shutdownNow();
+
     // Surface findings in the CI job log: System.out maps to logcat on Android, but an
     // AssertionError message is printed by the instrumentation runner.
     throw new AssertionError(diag.toString());
